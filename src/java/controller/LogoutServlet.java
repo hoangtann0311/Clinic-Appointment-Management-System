@@ -32,18 +32,25 @@ public class LogoutServlet extends HttpServlet {
             throws IOException {
 
         HttpSession session = request.getSession(false);
+        boolean wasAdmin = false;
+
         if (session != null) {
-            // Lấy tên user để log trước khi hủy session
+            // Lấy thông tin user trước khi hủy session
             Object user = session.getAttribute("user");
             String email = (user instanceof com.clinic.model.User)
                     ? ((com.clinic.model.User) user).getEmail() : "unknown";
+            wasAdmin = (user instanceof com.clinic.model.User)
+                    && ((com.clinic.model.User) user).getRoleId() == 1;
 
             session.invalidate();
             System.out.println(">>> User logged out: " + email);
         }
 
-        // Chuyển về trang login với thông báo
-        HttpSession newSession = request.getSession(true);
-        response.sendRedirect(request.getContextPath() + "/login");
+        // Chuyển về trang login phù hợp: Admin → /admin/login, còn lại → /login
+        if (wasAdmin) {
+            response.sendRedirect(request.getContextPath() + "/admin/login");
+        } else {
+            response.sendRedirect(request.getContextPath() + "/login");
+        }
     }
 }

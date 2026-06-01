@@ -15,6 +15,11 @@ import java.sql.Statement;
  */
 public class UserDAO {
 
+    // Cache xem các cột migration có tồn tại không để tránh query lỗi lặp lại
+    private static Boolean hasCreatedAtColumn = null;
+    private static Boolean hasIsVerifiedColumn = null;
+    private static Boolean hasAuthProviderColumn = null;
+
     /**
      * Tìm user theo email.
      * @param email email cần tìm
@@ -110,6 +115,13 @@ public class UserDAO {
         user.setVerified(rs.getBoolean("is_verified"));
         user.setGoogleId(rs.getString("google_id"));
         user.setAuthProvider(rs.getString("auth_provider"));
+        // Đọc created_at (có thể null nếu migration chưa chạy)
+        try {
+            user.setCreatedAt(rs.getTimestamp("created_at"));
+        } catch (SQLException e) {
+            // Cột created_at chưa tồn tại — bỏ qua
+            user.setCreatedAt(null);
+        }
         return user;
     }
 
@@ -324,6 +336,354 @@ public class UserDAO {
         } finally {
             closeResources(conn, ps, null);
         }
+    }
+
+    // ============================================================
+    // CÁC PHƯƠNG THỨC CRUD — DÙNG CHO QUẢN LÝ USER
+    // ============================================================
+
+    /**
+     * Lấy danh sách user có phân trang + tìm kiếm + lọc.
+     * JOIN roles để lấy role_name.
+     * Tự động fallback nếu cột migration (created_at, is_verified, auth_provider) chưa tồn tại.
+     */
+    public java.util.List<User> findAll(int offset, int pageSize,
+                                         String search, Integer roleFilter, String statusFilter) {
+        // Thử query đầy đủ trước, nếu lỗi cột thì fallback
+        try {
+            return findAllInternal(offset, pageSize, search, roleFilter, statusFilter, true);
+        } catch (SQLException e) {
+            String msg = e.getMessage() != null ? e.getMessage() : "";
+            if (msg.contains("Invalid column name") || msg.contains("invalid column") ||
+                msg.contains("tên cột không hợp lệ") || msg.contains("colonne non valide")) {
+                System.err.println("[UserDAO] Falling back to base columns query: " + msg);
+                try {
+                    return findAllInternal(offset, pageSize, search, roleFilter, statusFilter, false);
+                } catch (SQLException e2) {
+                    System.err.println("[UserDAO] findAll fallback also failed: " + e2.getMessage());
+                    throw new RuntimeException("Lỗi database khi lấy danh sách users", e2);
+                }
+            }
+            System.err.println("[UserDAO] findAll error: " + e.getMessage());
+            throw new RuntimeException("Lỗi database khi lấy danh sách users", e);
+        }
+    }
+
+    /**
+     * Internal: thực thi query với hoặc không có cột migration.
+     */
+    private java.util.List<User> findAllInternal(int offset, int pageSize,
+                                                  String search, Integer roleFilter,
+                                                  String statusFilter, boolean fullColumns)
+            throws SQLException {
+        // Chọn cột: fullColumns=true dùng đủ cột, false dùng cột cơ bản (luôn tồn tại)
+        String columns;
+        if (fullColumns) {
+            columns = "u.id, u.full_name, u.email, u.phone, u.role_id, u.status, "
+                    + "u.created_at, u.is_verified, u.auth_provider, r.role_name";
+        } else {
+            columns = "u.id, u.full_name, u.email, u.phone, u.role_id, u.status, "
+                    + "r.role_name";
+        }
+        StringBuilder sql = new StringBuilder("SELECT ").append(columns)
+            .append(" FROM users u LEFT JOIN roles r ON u.role_id = r.id WHERE 1=1 ");
+
+        if (search != null && !search.trim().isEmpty()) {
+            sql.append("AND (u.full_name LIKE ? OR u.email LIKE ? OR u.phone LIKE ?) ");
+        }
+        if (roleFilter != null && roleFilter > 0) {
+            sql.append("AND u.role_id = ? ");
+        }
+        if (statusFilter != null && !statusFilter.trim().isEmpty()) {
+            sql.append("AND u.status = ? ");
+        }
+        sql.append("ORDER BY u.id DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
+
+        java.util.List<User> users = new java.util.ArrayList<>();
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql.toString());
+            int idx = 1;
+            if (search != null && !search.trim().isEmpty()) {
+                String like = "%" + search.trim() + "%";
+                ps.setString(idx++, like);
+                ps.setString(idx++, like);
+                ps.setString(idx++, like);
+            }
+            if (roleFilter != null && roleFilter > 0) {
+                ps.setInt(idx++, roleFilter);
+            }
+            if (statusFilter != null && !statusFilter.trim().isEmpty()) {
+                ps.setString(idx++, statusFilter.trim());
+            }
+            ps.setInt(idx++, offset);
+            ps.setInt(idx++, pageSize);
+            rs = ps.executeQuery();
+            while (rs.next()) {
+                users.add(mapRowWithRole(rs, fullColumns));
+            }
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return users;
+    }
+
+    /**
+     * Đếm tổng số user (có filter) — dùng cho phân trang.
+     */
+    public int countAll(String search, Integer roleFilter, String statusFilter) {
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) AS total FROM users WHERE 1=1 ");
+
+        if (search != null && !search.trim().isEmpty()) {
+            sql.append("AND (full_name LIKE ? OR email LIKE ? OR phone LIKE ?) ");
+        }
+        if (roleFilter != null && roleFilter > 0) {
+            sql.append("AND role_id = ? ");
+        }
+        if (statusFilter != null && !statusFilter.trim().isEmpty()) {
+            sql.append("AND status = ? ");
+        }
+
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql.toString());
+            int idx = 1;
+            if (search != null && !search.trim().isEmpty()) {
+                String like = "%" + search.trim() + "%";
+                ps.setString(idx++, like);
+                ps.setString(idx++, like);
+                ps.setString(idx++, like);
+            }
+            if (roleFilter != null && roleFilter > 0) {
+                ps.setInt(idx++, roleFilter);
+            }
+            if (statusFilter != null && !statusFilter.trim().isEmpty()) {
+                ps.setString(idx++, statusFilter.trim());
+            }
+            rs = ps.executeQuery();
+            if (rs.next()) return rs.getInt("total");
+        } catch (SQLException e) {
+            System.err.println("Lỗi countAll users: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return 0;
+    }
+
+    /**
+     * Cập nhật trạng thái user (Active/Inactive/Locked).
+     */
+    public boolean updateStatus(int userId, String newStatus) {
+        String sql = "UPDATE users SET status = ? WHERE id = ?";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, newStatus);
+            ps.setInt(2, userId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Lỗi updateStatus: " + e.getMessage());
+            return false;
+        } finally {
+            closeResources(conn, ps, null);
+        }
+    }
+
+    /**
+     * Xóa user theo id.
+     */
+    public boolean delete(int userId) {
+        String sql = "DELETE FROM users WHERE id = ?";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setInt(1, userId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Lỗi delete user: " + e.getMessage());
+            return false;
+        } finally {
+            closeResources(conn, ps, null);
+        }
+    }
+
+    /**
+     * Cập nhật thông tin user (full_name, phone, role_id, status).
+     */
+    public boolean update(User user) {
+        String sql = "UPDATE users SET full_name=?, phone=?, role_id=?, status=? WHERE id=?";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, user.getFullName());
+            ps.setString(2, user.getPhone());
+            ps.setInt(3, user.getRoleId());
+            ps.setString(4, user.getStatus());
+            ps.setInt(5, user.getId());
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Lỗi update user: " + e.getMessage());
+            return false;
+        } finally {
+            closeResources(conn, ps, null);
+        }
+    }
+
+    /** Map row có kèm role_name từ JOIN */
+    private User mapRowWithRole(ResultSet rs, boolean fullColumns) throws SQLException {
+        User u = new User();
+        u.setId(rs.getInt("id"));
+        u.setFullName(rs.getString("full_name"));
+        u.setEmail(rs.getString("email"));
+        u.setPhone(rs.getString("phone"));
+        u.setRoleId(rs.getInt("role_id"));
+        u.setStatus(rs.getString("status"));
+        if (fullColumns) {
+            try { u.setCreatedAt(rs.getTimestamp("created_at")); } catch (SQLException e) { u.setCreatedAt(null); }
+            try { u.setVerified(rs.getBoolean("is_verified")); } catch (SQLException e) { u.setVerified(false); }
+            try { u.setAuthProvider(rs.getString("auth_provider")); } catch (SQLException e) { u.setAuthProvider("local"); }
+        }
+        try { u.setRoleName(rs.getString("role_name")); } catch (SQLException e) { u.setRoleName("Unknown"); }
+        return u;
+    }
+
+    // ============================================================
+    // CÁC PHƯƠNG THỨC THỐNG KÊ — DÙNG CHO DASHBOARD
+    // ============================================================
+
+    /**
+     * Đếm tổng số user trong hệ thống.
+     * @return tổng số user, -1 nếu lỗi
+     */
+    public int getTotalUsers() {
+        String sql = "SELECT COUNT(*) AS total FROM users";
+        return executeCount(sql);
+    }
+
+    /**
+     * Đếm tổng số bác sĩ (user có role_id = 2).
+     * @return tổng số bác sĩ, -1 nếu lỗi
+     */
+    public int getTotalDoctors() {
+        String sql = "SELECT COUNT(*) AS total FROM users WHERE role_id = 2";
+        return executeCount(sql);
+    }
+
+    /**
+     * Lấy danh sách N user mới nhất (kèm tên role).
+     * JOIN với bảng roles để lấy role_name hiển thị.
+     * Tự động fallback nếu cột created_at chưa tồn tại.
+     * @param limit số lượng user cần lấy
+     * @return danh sách User (có roleName), rỗng nếu không có dữ liệu
+     */
+    public java.util.List<User> getRecentUsers(int limit) {
+        // Thử query đầy đủ trước, nếu lỗi cột thì fallback
+        try {
+            return getRecentUsersInternal(limit, true);
+        } catch (SQLException e) {
+            String msg = e.getMessage() != null ? e.getMessage() : "";
+            if (msg.contains("Invalid column name") || msg.contains("invalid column") ||
+                msg.contains("tên cột không hợp lệ") || msg.contains("colonne non valide")) {
+                System.err.println("[UserDAO] getRecentUsers falling back to base columns: " + msg);
+                try {
+                    return getRecentUsersInternal(limit, false);
+                } catch (SQLException e2) {
+                    System.err.println("[UserDAO] getRecentUsers fallback also failed: " + e2.getMessage());
+                    throw new RuntimeException("Lỗi database khi lấy recent users", e2);
+                }
+            }
+            System.err.println("[UserDAO] getRecentUsers error: " + e.getMessage());
+            throw new RuntimeException("Lỗi database khi lấy recent users", e);
+        }
+    }
+
+    private java.util.List<User> getRecentUsersInternal(int limit, boolean fullColumns)
+            throws SQLException {
+        String columns;
+        if (fullColumns) {
+            columns = "u.id, u.full_name, u.email, u.phone, u.role_id, u.status, "
+                    + "u.created_at, r.role_name";
+        } else {
+            columns = "u.id, u.full_name, u.email, u.phone, u.role_id, u.status, "
+                    + "r.role_name";
+        }
+        String sql = "SELECT TOP (?) " + columns + " "
+                   + "FROM users u "
+                   + "LEFT JOIN roles r ON u.role_id = r.id "
+                   + "ORDER BY u.id DESC";
+
+        java.util.List<User> users = new java.util.ArrayList<>();
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setInt(1, limit);
+            rs = ps.executeQuery();
+
+            while (rs.next()) {
+                User user = new User();
+                user.setId(rs.getInt("id"));
+                user.setFullName(rs.getString("full_name"));
+                user.setEmail(rs.getString("email"));
+                user.setPhone(rs.getString("phone"));
+                user.setRoleId(rs.getInt("role_id"));
+                user.setStatus(rs.getString("status"));
+                if (fullColumns) {
+                    try {
+                        user.setCreatedAt(rs.getTimestamp("created_at"));
+                    } catch (SQLException e) {
+                        user.setCreatedAt(null);
+                    }
+                }
+                // Lấy role_name từ JOIN
+                try {
+                    user.setRoleName(rs.getString("role_name"));
+                } catch (SQLException e) {
+                    user.setRoleName("Unknown");
+                }
+                users.add(user);
+            }
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return users;
+    }
+
+    /**
+     * Helper: thực thi câu COUNT và trả về giá trị.
+     */
+    private int executeCount(String sql) {
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt("total");
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi executeCount: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return -1;
     }
 
     /**

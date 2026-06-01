@@ -20,6 +20,9 @@ public class User implements Serializable {
     private boolean isVerified;
     private String googleId;
     private String authProvider;
+    private java.sql.Timestamp createdAt;
+    // Transient — không map từ DB, dùng cho hiển thị dashboard
+    private String roleName;
 
     public User() {
     }
@@ -120,6 +123,22 @@ public class User implements Serializable {
 
     public void setAuthProvider(String authProvider) {
         this.authProvider = authProvider;
+    }
+
+    public java.sql.Timestamp getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(java.sql.Timestamp createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public String getRoleName() {
+        return roleName;
+    }
+
+    public void setRoleName(String roleName) {
+        this.roleName = roleName;
     }
 
     @Override
