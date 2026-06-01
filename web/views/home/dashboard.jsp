@@ -72,46 +72,6 @@
                     <h5 class="card-title mb-0 fw-semibold">Truy Cập Nhanh</h5>
                 </div>
                 <div class="row g-3">
-                    <%-- Admin (roleId=1) --%>
-                    <c:if test="${user.roleId == 1}">
-                        <div class="col-sm-6">
-                            <a href="#" class="text-decoration-none">
-                                <div class="quick-link-card p-3 rounded-3 border">
-                                    <i class="bi bi-people-fill fs-4 text-primary"></i>
-                                    <h6 class="mt-2 mb-1">Quản Lý Người Dùng</h6>
-                                    <small class="text-muted">Thêm, sửa, xóa tài khoản</small>
-                                </div>
-                            </a>
-                        </div>
-                        <div class="col-sm-6">
-                            <a href="#" class="text-decoration-none">
-                                <div class="quick-link-card p-3 rounded-3 border">
-                                    <i class="bi bi-shield-lock-fill fs-4 text-warning"></i>
-                                    <h6 class="mt-2 mb-1">Phân Quyền</h6>
-                                    <small class="text-muted">Quản lý roles và quyền hạn</small>
-                                </div>
-                            </a>
-                        </div>
-                        <div class="col-sm-6">
-                            <a href="#" class="text-decoration-none">
-                                <div class="quick-link-card p-3 rounded-3 border">
-                                    <i class="bi bi-clipboard2-pulse fs-4 text-info"></i>
-                                    <h6 class="mt-2 mb-1">Audit Logs</h6>
-                                    <small class="text-muted">Xem lịch sử hoạt động</small>
-                                </div>
-                            </a>
-                        </div>
-                        <div class="col-sm-6">
-                            <a href="#" class="text-decoration-none">
-                                <div class="quick-link-card p-3 rounded-3 border">
-                                    <i class="bi bi-gear-fill fs-4 text-secondary"></i>
-                                    <h6 class="mt-2 mb-1">Cài Đặt Hệ Thống</h6>
-                                    <small class="text-muted">Cấu hình phòng khám</small>
-                                </div>
-                            </a>
-                        </div>
-                    </c:if>
-
                     <%-- Doctor (roleId=2) --%>
                     <c:if test="${user.roleId == 2}">
                         <div class="col-sm-6">

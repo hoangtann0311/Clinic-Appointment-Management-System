@@ -89,6 +89,7 @@ public class AuthService {
         newUser.setStatus(UserStatus.PENDING_VERIFICATION.getValue());
         newUser.setVerificationToken(verificationToken);
         newUser.setVerified(false);
+        newUser.setAuthProvider("local");  // Đăng ký thường = local, không phải Google OAuth
 
         // Bước 7: Insert vào database
         int generatedId = userDAO.insert(newUser);

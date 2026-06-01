@@ -35,6 +35,7 @@ public class AuthenticationFilter implements Filter {
     // Các public path không yêu cầu đăng nhập
     private static final Set<String> PUBLIC_PATHS = Set.of(
         "/login",
+        "/admin/login",
         "/register",
         "/verify-email",
         "/forgot-password",
