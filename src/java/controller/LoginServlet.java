@@ -2,6 +2,7 @@ package com.clinic.controller;
 
 import com.clinic.model.User;
 import com.clinic.service.AuthService;
+import com.clinic.service.RoleService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -12,6 +13,7 @@ import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Servlet xử lý đăng nhập.
@@ -74,6 +76,17 @@ public class LoginServlet extends HttpServlet {
         session.setAttribute("user", user);
         // Lưu thêm roleId để tiện kiểm tra nhanh
         session.setAttribute("roleId", user.getRoleId());
+
+        // Nạp danh sách quyền (permission keys) vào session để Authorization Filter sử dụng
+        try {
+            RoleService roleService = new RoleService();
+            Set<String> userPermissions = roleService.getPermissionKeysByUserId(user.getId());
+            session.setAttribute("userPermissions", userPermissions);
+            System.out.println(">>> Loaded " + userPermissions.size() + " permissions for user " + user.getEmail());
+        } catch (Exception e) {
+            System.err.println(">>> Failed to load permissions for user " + user.getEmail() + ": " + e.getMessage());
+            session.setAttribute("userPermissions", java.util.Collections.emptySet());
+        }
 
         // Ghi log đăng nhập (sẽ implement AuditUtil sau)
         System.out.println(">>> User logged in: " + user.getEmail()

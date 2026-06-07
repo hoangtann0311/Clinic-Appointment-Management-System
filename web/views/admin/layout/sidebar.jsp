@@ -62,15 +62,31 @@
             </a>
         </li>
         <li>
-            <a href="#" class="disabled" title="Đang phát triển">
+            <a href="${pageContext.request.contextPath}/admin/staff/"
+               class="${fn:contains(requestURI, '/admin/staff') ? 'active' : ''}">
+                <i class="bi bi-person-badge-fill"></i>
+                <span>Quản Lý Nhân Sự</span>
+            </a>
+        </li>
+        <li>
+            <a href="${pageContext.request.contextPath}/admin/services/"
+               class="${fn:contains(requestURI, '/admin/services') ? 'active' : ''}">
                 <i class="bi bi-activity"></i>
                 <span>Dịch Vụ</span>
             </a>
         </li>
         <li>
-            <a href="#" class="disabled" title="Đang phát triển">
+            <a href="${pageContext.request.contextPath}/admin/medicines/"
+               class="${fn:contains(requestURI, '/admin/medicines') ? 'active' : ''}">
                 <i class="bi bi-capsule"></i>
                 <span>Thuốc</span>
+            </a>
+        </li>
+        <li>
+            <a href="${pageContext.request.contextPath}/admin/pricing/"
+               class="${fn:contains(requestURI, '/admin/pricing') ? 'active' : ''}">
+                <i class="bi bi-cash-coin"></i>
+                <span>Biểu Giá</span>
             </a>
         </li>
 

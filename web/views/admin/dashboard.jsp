@@ -23,16 +23,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap"
           rel="stylesheet">
 
-    <!-- Admin CSS (file ngoài — nếu có) -->
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+
+    <!-- Admin CSS -->
     <link href="${pageContext.request.contextPath}/assets/css/admin.css" rel="stylesheet">
 
-    <%-- ============================================================
-         TOÀN BỘ CSS NHÚNG TRỰC TIẾP — đảm bảo luôn hiển thị đúng
-         dù file admin.css ngoài chưa được link hoặc không tồn tại
-         ============================================================ --%>
     <style>
 /* ============================================================
-   CAMS Admin — Pink Rose Dashboard v3.0
+   CAMS Admin — Pink Rose Dashboard v4.0
+   Full Dashboard: KPI Cards, Charts, Tables, Alerts
    ============================================================ */
 
 :root {
@@ -54,7 +54,6 @@
     --c-bg:              #fff5f9;
     --c-surface:         #ffffff;
     --c-surface-variant: #fff0f5;
-    --c-surface-container: #fce8f0;
     --c-primary:         #c2185b;
     --c-primary-light:   #ff4d94;
     --c-primary-dark:    #9c0f4a;
@@ -77,35 +76,28 @@
     --sb-border:       rgba(255,255,255,0.07);
     --sb-accent:       #ff80b3;
 
-    --status-active-bg:   #e8f5e9;
-    --status-active-fg:   #2e7d32;
-    --status-inactive-bg: #f5f5f5;
-    --status-inactive-fg: #757575;
-    --status-locked-bg:   #ffebee;
-    --status-locked-fg:   #c62828;
-    --status-pending-bg:  #fff8e1;
-    --status-pending-fg:  #f57f17;
+    --green-500: #10b981;
+    --amber-500: #f59e0b;
+    --blue-500:  #3b82f6;
+    --purple-500:#8b5cf6;
+    --cyan-500:  #06b6d4;
 
     --shadow-xs:   0 1px 3px rgba(194,24,91,0.07);
     --shadow-sm:   0 2px 8px rgba(194,24,91,0.10);
     --shadow-md:   0 4px 20px rgba(194,24,91,0.13);
     --shadow-lg:   0 8px 32px rgba(194,24,91,0.16);
-    --shadow-xl:   0 16px 56px rgba(194,24,91,0.20);
     --shadow-pink: 0 4px 24px rgba(233,30,140,0.30);
 
-    --r-sm:   8px;  --r-md: 12px; --r-lg: 16px;
-    --r-xl:   22px; --r-pill: 999px;
+    --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 22px; --r-pill: 999px;
     --t-fast: 0.15s ease; --t-normal: 0.25s ease;
     --t-slow: 0.35s cubic-bezier(0.4,0,0.2,1);
     --font-display: 'Nunito', 'Be Vietnam Pro', sans-serif;
     --font-body:    'Inter', 'Be Vietnam Pro', sans-serif;
 }
 
-/* ── Reset ── */
 *, *::before, *::after { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 
-/* Bootstrap overrides */
 body, .btn, .form-control, .table, .badge, .card {
     font-family: var(--font-body);
 }
@@ -137,7 +129,6 @@ body.admin-body {
     box-shadow: var(--shadow-xs);
 }
 .admin-topbar-left { display: flex; align-items: center; gap: 0.875rem; }
-
 .admin-topbar-brand {
     font-family: var(--font-display);
     font-weight: 900;
@@ -178,15 +169,26 @@ body.admin-body {
 
 .admin-topbar-right { display: flex; align-items: center; gap: 0.75rem; }
 
+.topbar-date {
+    font-size: 0.8rem; color: var(--c-muted);
+    display: flex; align-items: center; gap: 0.35rem;
+    padding: 0.35rem 0.75rem;
+    background: var(--c-surface-variant);
+    border-radius: var(--r-pill);
+    border: 1px solid var(--c-outline-variant);
+}
+.topbar-date i { color: var(--pink-400); font-size: 0.9rem; }
+
 .admin-topbar-user {
     display: flex; align-items: center; gap: 0.6rem;
     padding: 0.375rem 0.875rem;
     background: var(--pink-50);
     border-radius: var(--r-pill);
     border: 1px solid var(--pink-200);
+    cursor: pointer;
+    position: relative;
 }
 .admin-topbar-user span { font-size: 0.875rem; font-weight: 600; color: var(--c-primary-dark); }
-
 .admin-avatar-sm {
     width: 34px; height: 34px; border-radius: 50%;
     background: linear-gradient(135deg, var(--pink-500), var(--rose-400));
@@ -222,12 +224,10 @@ body.admin-body {
 }
 .admin-sidebar::-webkit-scrollbar { width: 3px; }
 .admin-sidebar::-webkit-scrollbar-thumb { background: rgba(255,128,179,0.25); border-radius: 3px; }
-
 .admin-sidebar::before {
     content: ''; display: block; height: 3px;
     background: linear-gradient(90deg, var(--pink-500), var(--rose-400), transparent);
 }
-
 .admin-sidebar-user {
     padding: 1.5rem 1.25rem 1.25rem; text-align: center;
     border-bottom: 1px solid var(--sb-border);
@@ -253,7 +253,6 @@ body.admin-body {
     color: #fff; letter-spacing: 0.05em; text-transform: uppercase;
 }
 .admin-sidebar-menu { list-style: none; padding: 0.75rem 0 1rem; margin: 0; }
-
 .admin-sidebar-section {
     font-family: var(--font-body); font-size: 0.62rem; font-weight: 700;
     letter-spacing: 0.1em; text-transform: uppercase;
@@ -293,7 +292,6 @@ body.admin-body {
     display: flex; align-items: flex-start; justify-content: space-between;
     flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;
 }
-.admin-page-header-left {}
 .admin-page-title {
     font-family: var(--font-display); font-size: 1.85rem; font-weight: 900;
     color: var(--c-on-bg); margin: 0 0 0.25rem; letter-spacing: -0.04em;
@@ -317,7 +315,7 @@ body.admin-body {
 /* ── Welcome Banner ── */
 .admin-welcome-banner {
     background: linear-gradient(135deg, var(--pink-700) 0%, var(--pink-500) 55%, var(--rose-400) 100%);
-    border-radius: var(--r-lg); padding: 1.6rem 2rem; margin-bottom: 1.75rem;
+    border-radius: var(--r-lg); padding: 1.5rem 2rem; margin-bottom: 1.75rem;
     display: flex; align-items: center; justify-content: space-between;
     flex-wrap: wrap; gap: 1rem; position: relative; overflow: hidden;
     box-shadow: var(--shadow-pink);
@@ -332,13 +330,14 @@ body.admin-body {
     width: 220px; height: 220px; border-radius: 50%;
     background: rgba(255,255,255,0.05); pointer-events: none;
 }
+.admin-welcome-banner .welcome-left { position: relative; z-index: 1; }
 .admin-welcome-banner h2 {
     font-family: var(--font-display); color: #fff; font-size: 1.35rem;
     font-weight: 900; margin: 0 0 0.4rem;
-    display: flex; align-items: center; gap: 0.5rem; position: relative;
+    display: flex; align-items: center; gap: 0.5rem;
 }
 .admin-welcome-banner p {
-    color: rgba(255,255,255,0.88); margin: 0; font-size: 0.88rem; position: relative;
+    color: rgba(255,255,255,0.88); margin: 0; font-size: 0.88rem;
 }
 .badge-role {
     display: inline-flex; align-items: center; gap: 0.4rem;
@@ -346,50 +345,46 @@ body.admin-body {
     background: rgba(255,255,255,0.2); color: #fff;
     font-size: 0.8rem; font-weight: 700;
     border: 1px solid rgba(255,255,255,0.3); backdrop-filter: blur(4px);
+    position: relative; z-index: 1;
 }
 
-/* ── Stat Cards ── */
-.stat-card {
+/* ── KPI Cards ── */
+.kpi-card {
+    background: var(--c-surface) !important;
     border-radius: var(--r-lg) !important;
     border: 1px solid var(--c-outline-variant) !important;
     box-shadow: var(--shadow-sm) !important;
-    overflow: hidden; transition: transform var(--t-normal), box-shadow var(--t-normal);
+    overflow: hidden;
+    transition: transform var(--t-normal), box-shadow var(--t-normal);
+    height: 100%;
 }
-.stat-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md) !important; }
-
-.stat-card .card-body {
-    background: var(--c-surface) !important;
-    padding: 1.4rem 1.35rem !important;
+.kpi-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md) !important; }
+.kpi-card .card-body {
+    padding: 1.25rem 1.25rem !important;
     display: flex !important; align-items: center !important; gap: 1rem !important;
 }
-.stat-card.users   .card-body { border-top: 3px solid var(--pink-400) !important; }
-.stat-card.doctors .card-body { border-top: 3px solid #ce3fa7 !important; }
-.stat-card.appts   .card-body { border-top: 3px solid var(--rose-500) !important; }
-.stat-card.revenue .card-body { border-top: 3px solid var(--pink-600) !important; }
-
-.stat-card-icon {
+.kpi-icon {
     width: 52px; height: 52px; border-radius: var(--r-md);
     display: flex; align-items: center; justify-content: center;
     font-size: 1.4rem; flex-shrink: 0;
 }
-.stat-card-icon.users   { background: var(--pink-100); color: var(--pink-600); }
-.stat-card-icon.doctors { background: #fce4f3;         color: #9c0f6e; }
-.stat-card-icon.appts   { background: #fdeaf6;         color: var(--rose-600); }
-.stat-card-icon.revenue { background: var(--pink-50);  color: var(--pink-700); }
+.kpi-patients      .kpi-icon { background: #ede9fe; color: #7c3aed; }
+.kpi-appointments  .kpi-icon { background: #dbeafe; color: #2563eb; }
+.kpi-waiting       .kpi-icon { background: #fef3c7; color: #d97706; }
+.kpi-doctors       .kpi-icon { background: #d1fae5; color: #059669; }
+.kpi-ultrasound    .kpi-icon { background: #cffafe; color: #0891b2; }
+.kpi-revenue       .kpi-icon { background: var(--pink-100); color: var(--pink-600); }
 
-.stat-card-content { flex: 1; min-width: 0; }
-.stat-card-value {
-    font-family: var(--font-display); font-size: 1.9rem; font-weight: 900;
+.kpi-content { flex: 1; min-width: 0; }
+.kpi-value {
+    font-family: var(--font-display); font-size: 1.75rem; font-weight: 900;
     color: var(--c-on-surface); line-height: 1.1; letter-spacing: -0.04em;
 }
-.stat-card-label { font-size: 0.8rem; font-weight: 600; color: var(--c-on-surface-var); margin-top: 0.15rem; }
-.stat-card-trend {
-    font-size: 0.73rem; font-weight: 600;
-    display: flex; align-items: center; gap: 0.3rem; margin-top: 0.3rem;
+.kpi-label { font-size: 0.8rem; font-weight: 600; color: var(--c-on-surface-var); margin-top: 0.15rem; }
+.kpi-sub {
+    font-size: 0.7rem; font-weight: 500; color: var(--c-muted);
+    display: flex; align-items: center; gap: 0.3rem; margin-top: 0.25rem;
 }
-.stat-card-trend.up      { color: #2e7d32; }
-.stat-card-trend.down    { color: var(--rose-600); }
-.stat-card-trend.neutral { color: var(--c-muted); }
 
 /* ── Admin Card ── */
 .admin-card {
@@ -402,81 +397,107 @@ body.admin-body {
 .admin-card .card-header {
     background: var(--pink-50) !important;
     border-bottom: 1px solid var(--pink-200) !important;
-    padding: 1rem 1.25rem !important;
+    padding: 0.9rem 1.25rem !important;
 }
 .admin-card .card-header h5 {
-    font-family: var(--font-display); font-size: 0.95rem; font-weight: 800;
+    font-family: var(--font-display); font-size: 0.9rem; font-weight: 800;
     color: var(--c-primary-dark); margin: 0;
     display: flex; align-items: center; gap: 0.5rem;
 }
 .admin-card .card-header h5 i { color: var(--pink-500); }
 .admin-card .card-body { background: var(--c-surface) !important; padding: 1.25rem !important; }
 
+/* ── Chart Containers ── */
+.chart-container {
+    position: relative; width: 100%;
+}
+.chart-container canvas { width: 100% !important; }
+
 /* ── Table ── */
 .admin-table-wrapper { overflow-x: auto; }
 .admin-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
 .admin-table thead th {
-    font-family: var(--font-display); font-size: 0.72rem; font-weight: 800;
+    font-family: var(--font-display); font-size: 0.7rem; font-weight: 800;
     text-transform: uppercase; letter-spacing: 0.07em;
-    color: var(--c-primary); padding: 0.875rem 1rem;
+    color: var(--c-primary); padding: 0.75rem 0.875rem;
     background: var(--pink-50); border-bottom: 2px solid var(--pink-200); white-space: nowrap;
 }
 .admin-table tbody tr {
     border-bottom: 1px solid var(--c-outline-variant); transition: background var(--t-fast);
 }
 .admin-table tbody tr:hover { background: var(--pink-50); }
-.admin-table tbody td { padding: 0.75rem 1rem; color: var(--c-on-surface); vertical-align: middle; }
-
-/* ── Quick Actions ── */
-.quick-action-btn {
-    display: flex; align-items: center; gap: 0.875rem; padding: 0.75rem 1rem;
-    border-radius: var(--r-md); text-decoration: none; color: var(--c-on-surface);
-    transition: all var(--t-fast); border: 1px solid transparent; margin-bottom: 0.5rem;
-}
-.quick-action-btn:hover {
-    background: var(--pink-50); border-color: var(--pink-200);
-    transform: translateX(4px); color: var(--c-primary-dark);
-}
-.quick-action-icon {
-    width: 42px; height: 42px; border-radius: var(--r-sm);
-    background: var(--pink-100); color: var(--pink-600);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.1rem; flex-shrink: 0; transition: all var(--t-fast);
-}
-.quick-action-btn:hover .quick-action-icon {
-    background: linear-gradient(135deg, var(--pink-500), var(--rose-400));
-    color: #fff; box-shadow: 0 4px 12px rgba(233,30,140,0.3);
-}
-.quick-action-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.quick-action-text span { font-size: 0.875rem; font-weight: 700; color: var(--c-on-surface); }
-.quick-action-text small { font-size: 0.75rem; color: var(--c-muted); }
-
-/* ── System Info ── */
-.admin-info-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.25rem; }
-.admin-info-list li {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0.5rem 0; border-bottom: 1px solid var(--c-outline-variant); font-size: 0.85rem;
-}
-.admin-info-list li:last-child { border-bottom: none; }
-.info-label { display: flex; align-items: center; gap: 0.5rem; color: var(--c-on-surface-var); }
-.info-label i { color: var(--pink-400); }
-.info-value { font-weight: 600; color: var(--c-on-surface); }
-.info-value.good { color: #2e7d32; }
+.admin-table tbody td { padding: 0.7rem 0.875rem; color: var(--c-on-surface); vertical-align: middle; }
+.admin-table.compact thead th { padding: 0.55rem 0.75rem; font-size: 0.65rem; }
+.admin-table.compact tbody td { padding: 0.5rem 0.75rem; font-size: 0.8rem; }
 
 /* ── Badges ── */
-.badge-role-tag {
+.badge-status {
+    display: inline-block; padding: 3px 10px; border-radius: var(--r-pill);
+    font-size: 0.7rem; font-weight: 700;
+}
+.badge-approved  { background: #d1fae5; color: #065f46; }
+.badge-pending   { background: #fef3c7; color: #92400e; }
+.badge-rejected  { background: #fee2e2; color: #991b1b; }
+.badge-role-tag  {
     display: inline-block; padding: 2px 10px; border-radius: var(--r-pill);
     font-size: 0.7rem; font-weight: 700;
     background: var(--pink-100); color: var(--pink-700); border: 1px solid var(--pink-200);
 }
-.badge-status {
-    display: inline-block; padding: 3px 10px; border-radius: var(--r-pill);
-    font-size: 0.72rem; font-weight: 700;
+.badge-active    { background: #d1fae5; color: #065f46; }
+.badge-inactive  { background: #f3f4f6; color: #6b7280; }
+.badge-locked    { background: #fee2e2; color: #991b1b; }
+.badge-pending-verify { background: #fef3c7; color: #92400e; }
+
+/* ── Alert Cards ── */
+.alert-item {
+    display: flex; align-items: flex-start; gap: 0.75rem;
+    padding: 0.75rem; border-radius: var(--r-md);
+    margin-bottom: 0.5rem;
+    transition: background var(--t-fast);
 }
-.badge-status-active    { background: var(--status-active-bg);   color: var(--status-active-fg); }
-.badge-status-inactive  { background: var(--status-inactive-bg); color: var(--status-inactive-fg); }
-.badge-status-locked    { background: var(--status-locked-bg);   color: var(--status-locked-fg); }
-.badge-status-pending   { background: var(--status-pending-bg);  color: var(--status-pending-fg); }
+.alert-item:last-child { margin-bottom: 0; }
+.alert-item.warning { background: #fffbeb; border: 1px solid #fde68a; }
+.alert-item.danger  { background: #fef2f2; border: 1px solid #fecaca; }
+.alert-item.info   { background: #eff6ff; border: 1px solid #bfdbfe; }
+.alert-item .alert-icon {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; flex-shrink: 0;
+}
+.alert-item.warning .alert-icon { background: #fef3c7; color: #d97706; }
+.alert-item.danger  .alert-icon { background: #fee2e2; color: #dc2626; }
+.alert-item.info   .alert-icon { background: #dbeafe; color: #2563eb; }
+.alert-item .alert-body { flex: 1; min-width: 0; }
+.alert-item .alert-title {
+    font-size: 0.8rem; font-weight: 700; color: var(--c-on-surface); margin-bottom: 2px;
+}
+.alert-item .alert-msg { font-size: 0.75rem; color: var(--c-muted); }
+.alert-item .alert-count {
+    font-family: var(--font-display); font-size: 1.1rem; font-weight: 900;
+    padding: 0.25rem 0.6rem; border-radius: var(--r-pill); flex-shrink: 0;
+}
+.alert-item.warning .alert-count { background: #fde68a; color: #92400e; }
+.alert-item.danger  .alert-count { background: #fecaca; color: #991b1b; }
+.alert-item.info   .alert-count { background: #bfdbfe; color: #1e40af; }
+
+/* ── Slots Bar ── */
+.slots-bar {
+    display: flex; align-items: center; gap: 0.5rem;
+}
+.slots-bar .progress {
+    flex: 1; height: 6px; background: var(--pink-100); border-radius: 3px; overflow: hidden;
+}
+.slots-bar .progress .progress-bar {
+    height: 100%; border-radius: 3px;
+    background: linear-gradient(90deg, var(--pink-400), var(--pink-500));
+    transition: width var(--t-slow);
+}
+.slots-bar .progress .progress-bar.full {
+    background: linear-gradient(90deg, var(--rose-400), var(--rose-600));
+}
+.slots-bar .slots-text {
+    font-size: 0.75rem; font-weight: 700; color: var(--c-on-surface-var); white-space: nowrap;
+}
 
 /* ── Empty State ── */
 .admin-empty-state { text-align: center; padding: 2.5rem 1rem; color: var(--c-muted); }
@@ -500,12 +521,13 @@ body.admin-body {
     to   { opacity: 1; transform: translateY(0); }
 }
 .fade-in-up { animation: fadeInUp 0.4s ease forwards; }
-.fade-in-up:nth-child(1) { animation-delay: 0.00s; }
-.fade-in-up:nth-child(2) { animation-delay: 0.06s; }
-.fade-in-up:nth-child(3) { animation-delay: 0.12s; }
-.fade-in-up:nth-child(4) { animation-delay: 0.18s; }
 
 /* ── Responsive ── */
+@media (max-width: 1199.98px) {
+    .kpi-card .card-body { padding: 1rem !important; gap: 0.75rem !important; }
+    .kpi-value { font-size: 1.4rem; }
+    .kpi-icon { width: 42px; height: 42px; font-size: 1.1rem; }
+}
 @media (max-width: 991.98px) {
     .admin-sidebar-toggle { display: inline-flex; }
     .admin-sidebar { transform: translateX(-100%); box-shadow: none; }
@@ -516,8 +538,8 @@ body.admin-body {
     .admin-main { padding: 1rem; }
     .admin-page-title { font-size: 1.4rem; }
     .admin-welcome-banner { padding: 1.25rem 1.5rem; }
-    .stat-card .card-body { padding: 1rem !important; gap: 0.75rem !important; }
-    .stat-card-value { font-size: 1.5rem; }
+    .topbar-date { display: none; }
+    .kpi-value { font-size: 1.25rem; }
 }
 @media (max-width: 575.98px) {
     .admin-topbar { padding: 0 0.875rem; }
@@ -541,6 +563,13 @@ body.admin-body {
         </a>
     </div>
     <div class="admin-topbar-right">
+        <%-- Ngày hiện tại --%>
+        <div class="topbar-date d-none d-lg-flex">
+            <i class="bi bi-calendar3"></i>
+            ${not empty todayDisplay ? todayDisplay : 'Hôm nay'}
+        </div>
+
+        <%-- Thông tin người dùng --%>
         <div class="admin-topbar-user d-none d-md-flex">
             <div class="admin-avatar-sm">
                 ${fn:substring(sessionScope.user.fullName, 0, 1)}
@@ -550,7 +579,9 @@ body.admin-body {
                 <i class="bi bi-shield-check me-1"></i>Admin
             </span>
         </div>
-        <a href="${pageContext.request.contextPath}/logout" class="admin-topbar-logout">
+
+        <%-- Đăng xuất --%>
+        <a href="${pageContext.request.contextPath}/logout" class="admin-topbar-logout" title="Đăng xuất">
             <i class="bi bi-box-arrow-right"></i>
             <span class="d-none d-md-inline">Đăng xuất</span>
         </a>
@@ -569,8 +600,7 @@ body.admin-body {
             <h1 class="admin-page-title">Dashboard</h1>
             <div class="admin-page-subtitle">
                 <i class="bi bi-calendar3"></i>
-                Hôm nay, <%= java.time.LocalDate.now().format(
-                    java.time.format.DateTimeFormatter.ofPattern("dd 'tháng' MM, yyyy")) %>
+                ${not empty todayDisplay ? todayDisplay : 'Hôm nay'}
             </div>
         </div>
         <button class="btn-refresh" onclick="location.reload()">
@@ -581,224 +611,509 @@ body.admin-body {
 
     <%-- Welcome Banner --%>
     <div class="admin-welcome-banner">
-        <div>
+        <div class="welcome-left">
             <h2>
                 <i class="bi bi-stars"></i>
                 Xin chào, ${sessionScope.user.fullName}!
             </h2>
-            <p>Chào mừng bạn đến với hệ thống quản trị CAMS. Hệ thống đang hoạt động bình thường.</p>
+            <p>Chào mừng bạn đến với hệ thống quản trị CAMS. Dưới đây là tổng quan hoạt động của phòng khám.</p>
         </div>
-        <div>
-            <span class="badge-role">
-                <i class="bi bi-person-badge-fill"></i>
-                Quản Trị Viên
-            </span>
+        <span class="badge-role">
+            <i class="bi bi-person-badge-fill"></i>
+            Quản Trị Viên
+        </span>
+    </div>
+
+    <%-- ════════════════════════════════════════════ --%>
+    <%-- 6 KPI CARDS --%>
+    <%-- ════════════════════════════════════════════ --%>
+    <div class="row g-3 mb-4">
+        <%-- 1. Tổng số bệnh nhân --%>
+        <div class="col-xl-2 col-lg-4 col-md-6">
+            <div class="card kpi-card kpi-patients fade-in-up">
+                <div class="card-body">
+                    <div class="kpi-icon"><i class="bi bi-people-fill"></i></div>
+                    <div class="kpi-content">
+                        <div class="kpi-value">${not empty totalPatients ? totalPatients : 0}</div>
+                        <div class="kpi-label">Tổng Bệnh Nhân</div>
+                        <div class="kpi-sub"><i class="bi bi-database"></i> Toàn hệ thống</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <%-- 2. Lịch hẹn hôm nay --%>
+        <div class="col-xl-2 col-lg-4 col-md-6">
+            <div class="card kpi-card kpi-appointments fade-in-up">
+                <div class="card-body">
+                    <div class="kpi-icon"><i class="bi bi-calendar-check-fill"></i></div>
+                    <div class="kpi-content">
+                        <div class="kpi-value">${not empty totalAppointmentsToday ? totalAppointmentsToday : 0}</div>
+                        <div class="kpi-label">Lịch Hẹn Hôm Nay</div>
+                        <div class="kpi-sub"><i class="bi bi-clock"></i> Cập nhật thực</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <%-- 3. Bệnh nhân đang chờ --%>
+        <div class="col-xl-2 col-lg-4 col-md-6">
+            <div class="card kpi-card kpi-waiting fade-in-up">
+                <div class="card-body">
+                    <div class="kpi-icon"><i class="bi bi-hourglass-split"></i></div>
+                    <div class="kpi-content">
+                        <div class="kpi-value">${not empty waitingPatients ? waitingPatients : 0}</div>
+                        <div class="kpi-label">Đang Chờ Khám</div>
+                        <div class="kpi-sub"><i class="bi bi-person"></i> Hôm nay</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <%-- 4. Bác sĩ đang làm việc --%>
+        <div class="col-xl-2 col-lg-4 col-md-6">
+            <div class="card kpi-card kpi-doctors fade-in-up">
+                <div class="card-body">
+                    <div class="kpi-icon"><i class="bi bi-person-badge-fill"></i></div>
+                    <div class="kpi-content">
+                        <div class="kpi-value">${not empty doctorsWorkingToday ? doctorsWorkingToday : 0}</div>
+                        <div class="kpi-label">Bác Sĩ Đang Làm</div>
+                        <div class="kpi-sub"><i class="bi bi-check-circle"></i> Đã duyệt lịch</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <%-- 5. Ca siêu âm hôm nay --%>
+        <div class="col-xl-2 col-lg-4 col-md-6">
+            <div class="card kpi-card kpi-ultrasound fade-in-up">
+                <div class="card-body">
+                    <div class="kpi-icon"><i class="bi bi-soundwave"></i></div>
+                    <div class="kpi-content">
+                        <div class="kpi-value">${not empty ultrasoundToday ? ultrasoundToday : 0}</div>
+                        <div class="kpi-label">Ca Siêu Âm</div>
+                        <div class="kpi-sub"><i class="bi bi-calendar-day"></i> Hôm nay</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <%-- 6. Doanh thu hôm nay --%>
+        <div class="col-xl-2 col-lg-4 col-md-6">
+            <div class="card kpi-card kpi-revenue fade-in-up">
+                <div class="card-body">
+                    <div class="kpi-icon"><i class="bi bi-cash-coin"></i></div>
+                    <div class="kpi-content">
+                        <div class="kpi-value" style="font-size:1.2rem;">${not empty revenueToday ? revenueToday : '0 VNĐ'}</div>
+                        <div class="kpi-label">Doanh Thu Hôm Nay</div>
+                        <div class="kpi-sub"><i class="bi bi-graph-up"></i> Đã thanh toán</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <%-- Stat Cards --%>
+    <%-- ════════════════════════════════════════════ --%>
+    <%-- CẢNH BÁO HỆ THỐNG --%>
+    <%-- ════════════════════════════════════════════ --%>
+    <c:if test="${not empty systemAlerts}">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="admin-card">
+                <div class="card-header">
+                    <h5>
+                        <i class="bi bi-exclamation-diamond-fill"></i>
+                        Cảnh Báo &amp; Thông Báo
+                    </h5>
+                </div>
+                <div class="card-body p-3">
+                    <div class="row g-2">
+                        <c:forEach var="alert" items="${systemAlerts}">
+                        <div class="col-lg-3 col-md-6">
+                            <div class="alert-item ${alert.type}">
+                                <div class="alert-icon"><i class="bi ${alert.icon}"></i></div>
+                                <div class="alert-body">
+                                    <div class="alert-title">${alert.title}</div>
+                                    <div class="alert-msg">${alert.message}</div>
+                                </div>
+                                <span class="alert-count">${alert.count}</span>
+                            </div>
+                        </div>
+                        </c:forEach>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </c:if>
+
+    <%-- ════════════════════════════════════════════ --%>
+    <%-- BIỂU ĐỒ: Lịch hẹn 7 ngày + Doanh thu 12 tháng --%>
+    <%-- ════════════════════════════════════════════ --%>
     <div class="row g-3 mb-4">
-
-        <div class="col-xl-3 col-md-6">
-            <div class="card stat-card users fade-in-up">
-                <div class="card-body">
-                    <div class="stat-card-icon users">
-                        <i class="bi bi-people-fill"></i>
-                    </div>
-                    <div class="stat-card-content">
-                        <div class="stat-card-value">${not empty totalUsers ? totalUsers : '0'}</div>
-                        <div class="stat-card-label">Tổng Người Dùng</div>
-                        <div class="stat-card-trend neutral">
-                            <i class="bi bi-circle-fill" style="font-size:0.45rem;"></i>
-                            Toàn hệ thống
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6">
-            <div class="card stat-card doctors fade-in-up">
-                <div class="card-body">
-                    <div class="stat-card-icon doctors">
-                        <i class="bi bi-person-badge-fill"></i>
-                    </div>
-                    <div class="stat-card-content">
-                        <div class="stat-card-value">${not empty totalDoctors ? totalDoctors : '0'}</div>
-                        <div class="stat-card-label">Bác Sĩ</div>
-                        <div class="stat-card-trend up">
-                            <i class="bi bi-circle-fill" style="font-size:0.45rem;"></i>
-                            Đang hoạt động
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6">
-            <div class="card stat-card appts fade-in-up">
-                <div class="card-body">
-                    <div class="stat-card-icon appts">
-                        <i class="bi bi-calendar-check-fill"></i>
-                    </div>
-                    <div class="stat-card-content">
-                        <div class="stat-card-value">${not empty totalAppointmentsToday ? totalAppointmentsToday : '0'}</div>
-                        <div class="stat-card-label">Lịch Hẹn Hôm Nay</div>
-                        <div class="stat-card-trend up">
-                            <i class="bi bi-circle-fill" style="font-size:0.45rem;"></i>
-                            Cập nhật thời gian thực
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6">
-            <div class="card stat-card revenue fade-in-up">
-                <div class="card-body">
-                    <div class="stat-card-icon revenue">
-                        <i class="bi bi-cash-coin"></i>
-                    </div>
-                    <div class="stat-card-content">
-                        <div class="stat-card-value" style="font-size:1.4rem;">
-                            ${not empty monthlyRevenue ? monthlyRevenue : '0'} VND
-                        </div>
-                        <div class="stat-card-label">Doanh Thu Tháng</div>
-                        <div class="stat-card-trend neutral">
-                            <i class="bi bi-circle-fill" style="font-size:0.45rem;"></i>
-                            Tháng hiện tại
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    </div><%-- /row stats --%>
-
-    <%-- Bottom Row: Users Table + Quick Actions --%>
-    <div class="row g-3">
-
-        <%-- Users Table --%>
-        <div class="col-lg-8">
+        <%-- Biểu đồ lịch hẹn theo ngày (7 ngày) --%>
+        <div class="col-xl-6">
             <div class="admin-card h-100">
                 <div class="card-header">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <h5>
-                            <i class="bi bi-people-fill"></i>
-                            Người Dùng Mới Nhất
-                        </h5>
-                        <a href="${pageContext.request.contextPath}/admin/users/"
-                           style="font-size:0.8rem;font-weight:700;color:var(--pink-500);text-decoration:none;">
-                            Xem tất cả →
-                        </a>
+                    <h5>
+                        <i class="bi bi-graph-up-arrow"></i>
+                        Lịch Hẹn 7 Ngày Qua
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="appointmentsChart" height="260"></canvas>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <%-- Biểu đồ doanh thu theo tháng (12 tháng) --%>
+        <div class="col-xl-6">
+            <div class="admin-card h-100">
+                <div class="card-header">
+                    <h5>
+                        <i class="bi bi-graph-up-arrow"></i>
+                        Doanh Thu 12 Tháng
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="revenueChart" height="260"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <%-- ════════════════════════════════════════════ --%>
+    <%-- HÀNG GIỮA: Hiệu suất bác sĩ + Lịch làm việc --%>
+    <%-- ════════════════════════════════════════════ --%>
+    <div class="row g-3 mb-4">
+        <%-- Bảng hiệu suất bác sĩ --%>
+        <div class="col-xl-7">
+            <div class="admin-card h-100">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <h5>
+                        <i class="bi bi-trophy-fill"></i>
+                        Hiệu Suất Bác Sĩ
+                    </h5>
+                    <a href="${pageContext.request.contextPath}/admin/doctors/"
+                       style="font-size:0.78rem;font-weight:700;color:var(--pink-500);text-decoration:none;">
+                        Quản lý bác sĩ →
+                    </a>
+                </div>
                 <div class="card-body p-0">
-                    <div class="admin-table-wrapper">
-                        <table class="admin-table">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Họ Tên</th>
-                                    <th>Email</th>
-                                    <th>Vai Trò</th>
-                                    <th>Trạng Thái</th>
-                                    <th>Ngày Tạo</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <c:choose>
-                                    <c:when test="${not empty recentUsers}">
-                                        <c:forEach var="u" items="${recentUsers}">
+                    <c:choose>
+                        <c:when test="${not empty doctorPerformance}">
+                            <div class="admin-table-wrapper">
+                                <table class="admin-table compact">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Bác Sĩ</th>
+                                            <th>Chuyên Khoa</th>
+                                            <th class="text-center">Tổng BN Đã Khám</th>
+                                            <th class="text-center">Hôm Nay</th>
+                                            <th class="text-end">Doanh Thu</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <c:forEach var="dp" items="${doctorPerformance}" varStatus="loop">
                                             <tr>
-                                                <td style="color:var(--c-muted);font-size:0.8rem;">#${u.id}</td>
-                                                <td style="font-weight:600;">${u.fullName}</td>
-                                                <td style="color:var(--c-muted);font-size:0.82rem;">${u.email}</td>
-                                                <td>
-                                                    <span class="badge-role-tag">
-                                                        ${not empty u.roleName ? u.roleName : u.roleId}
-                                                    </span>
+                                                <td style="color:var(--c-muted);width:40px;">${loop.index + 1}</td>
+                                                <td style="font-weight:600;">${dp.doctorName}</td>
+                                                <td style="color:var(--c-muted);font-size:0.8rem;">${dp.specialization}</td>
+                                                <td class="text-center">
+                                                    <span style="font-weight:700;color:var(--purple-500);">${dp.totalPatients}</span>
                                                 </td>
-                                                <td>
-                                                    <span class="badge-status badge-status-${fn:toLowerCase(u.status)}">
-                                                        ${u.status}
-                                                    </span>
-                                                </td>
-                                                <td style="color:var(--c-muted);font-size:0.8rem;">
+                                                <td class="text-center">
                                                     <c:choose>
-                                                        <c:when test="${not empty u.createdAt}">
-                                                            <fmt:formatDate value="${u.createdAt}" pattern="dd/MM/yyyy" />
+                                                        <c:when test="${dp.appointmentsToday > 0}">
+                                                            <span style="font-weight:700;color:var(--green-500);">${dp.appointmentsToday}</span>
                                                         </c:when>
-                                                        <c:otherwise>—</c:otherwise>
+                                                        <c:otherwise>
+                                                            <span style="color:var(--c-muted);">0</span>
+                                                        </c:otherwise>
+                                                    </c:choose>
+                                                </td>
+                                                <td class="text-end" style="font-weight:600;">
+                                                    <fmt:formatNumber value="${dp.revenueGenerated}" pattern="#,###" /> VNĐ
+                                                </td>
+                                            </tr>
+                                        </c:forEach>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </c:when>
+                        <c:otherwise>
+                            <div class="admin-empty-state">
+                                <i class="bi bi-person-badge"></i>
+                                <h6>Chưa có dữ liệu bác sĩ</h6>
+                                <p>Thêm bác sĩ vào hệ thống để xem hiệu suất.</p>
+                            </div>
+                        </c:otherwise>
+                    </c:choose>
+                </div>
+            </div>
+        </div>
+
+        <%-- Lịch làm việc hôm nay --%>
+        <div class="col-xl-5">
+            <div class="admin-card h-100">
+                <div class="card-header">
+                    <h5>
+                        <i class="bi bi-calendar-week-fill"></i>
+                        Lịch Làm Việc Hôm Nay
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <c:choose>
+                        <c:when test="${not empty todaySchedules}">
+                            <div class="admin-table-wrapper">
+                                <table class="admin-table compact">
+                                    <thead>
+                                        <tr>
+                                            <th>Bác Sĩ</th>
+                                            <th>Giờ</th>
+                                            <th>Slots</th>
+                                            <th>Trạng Thái</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <c:forEach var="sch" items="${todaySchedules}">
+                                            <tr>
+                                                <td>
+                                                    <div style="font-weight:600;">${sch.doctorName}</div>
+                                                    <div style="font-size:0.7rem;color:var(--c-muted);">${sch.specialization}</div>
+                                                </td>
+                                                <td style="font-family:var(--font-display);font-weight:600;color:var(--c-primary);">
+                                                    ${sch.startTime} - ${sch.endTime}
+                                                </td>
+                                                <td>
+                                                    <div class="slots-bar">
+                                                        <div class="progress">
+                                                            <c:set var="pct" value="${sch.maxSlots > 0 ? (sch.bookedSlots * 100 / sch.maxSlots) : 0}" />
+                                                            <div class="progress-bar${sch.bookedSlots >= sch.maxSlots ? ' full' : ''}"
+                                                                 style="width:${pct}%;"></div>
+                                                        </div>
+                                                        <span class="slots-text">${sch.bookedSlots}/${sch.maxSlots}</span>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <c:choose>
+                                                        <c:when test="${sch.isApproved}">
+                                                            <span class="badge-status badge-approved">Đã duyệt</span>
+                                                        </c:when>
+                                                        <c:otherwise>
+                                                            <span class="badge-status badge-pending">Chờ duyệt</span>
+                                                        </c:otherwise>
                                                     </c:choose>
                                                 </td>
                                             </tr>
                                         </c:forEach>
-                                    </c:when>
-                                    <c:otherwise>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </c:when>
+                        <c:otherwise>
+                            <div class="admin-empty-state">
+                                <i class="bi bi-calendar-x"></i>
+                                <h6>Chưa có lịch làm việc</h6>
+                                <p>Hôm nay chưa có bác sĩ nào đăng ký lịch làm việc.</p>
+                            </div>
+                        </c:otherwise>
+                    </c:choose>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <%-- ════════════════════════════════════════════ --%>
+    <%-- HÀNG DƯỚI: Siêu Âm + Bệnh Nhân Mới + Nhật Ký --%>
+    <%-- ════════════════════════════════════════════ --%>
+    <div class="row g-3 mb-4">
+        <%-- Thống kê dịch vụ siêu âm --%>
+        <div class="col-xl-4">
+            <div class="admin-card h-100">
+                <div class="card-header">
+                    <h5>
+                        <i class="bi bi-soundwave"></i>
+                        Thống Kê Dịch Vụ Siêu Âm
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <c:choose>
+                        <c:when test="${not empty ultrasoundStats}">
+                            <div class="admin-table-wrapper">
+                                <table class="admin-table compact">
+                                    <thead>
                                         <tr>
-                                            <td colspan="6" class="p-0">
-                                                <div class="admin-empty-state">
-                                                    <i class="bi bi-inbox"></i>
-                                                    <h6>Chưa có dữ liệu</h6>
-                                                    <p>Chưa có người dùng nào trong hệ thống.</p>
-                                                </div>
-                                            </td>
+                                            <th>Dịch Vụ</th>
+                                            <th class="text-center">Tổng Ca</th>
+                                            <th class="text-center">Hôm Nay</th>
+                                            <th class="text-end">Giá</th>
                                         </tr>
-                                    </c:otherwise>
-                                </c:choose>
-                            </tbody>
-                        </table>
-                    </div>
+                                    </thead>
+                                    <tbody>
+                                        <c:forEach var="us" items="${ultrasoundStats}">
+                                            <tr>
+                                                <td style="font-weight:600;">${us.serviceName}</td>
+                                                <td class="text-center" style="font-weight:700;">${us.totalCases}</td>
+                                                <td class="text-center">
+                                                    <c:choose>
+                                                        <c:when test="${us.casesToday > 0}">
+                                                            <span class="badge-status badge-active">${us.casesToday}</span>
+                                                        </c:when>
+                                                        <c:otherwise>0</c:otherwise>
+                                                    </c:choose>
+                                                </td>
+                                                <td class="text-end" style="font-weight:600;">
+                                                    <fmt:formatNumber value="${us.price}" pattern="#,###" /> đ
+                                                </td>
+                                            </tr>
+                                        </c:forEach>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </c:when>
+                        <c:otherwise>
+                            <div class="admin-empty-state">
+                                <i class="bi bi-inbox"></i>
+                                <h6>Chưa có dịch vụ siêu âm</h6>
+                                <p>Thêm dịch vụ siêu âm vào hệ thống.</p>
+                            </div>
+                        </c:otherwise>
+                    </c:choose>
                 </div>
             </div>
         </div>
 
-        <%-- Right Column --%>
-        <div class="col-lg-4 d-flex flex-column gap-3">
-
-            <%-- Quick Actions --%>
-            <div class="admin-card">
-                <div class="card-header">
+        <%-- Bệnh nhân mới đăng ký --%>
+        <div class="col-xl-4">
+            <div class="admin-card h-100">
+                <div class="card-header d-flex align-items-center justify-content-between">
                     <h5>
-                        <i class="bi bi-lightning-charge-fill"></i>
-                        Thao Tác Nhanh
+                        <i class="bi bi-person-plus-fill"></i>
+                        Bệnh Nhân Mới Đăng Ký
                     </h5>
+                    <a href="${pageContext.request.contextPath}/admin/users/"
+                       style="font-size:0.78rem;font-weight:700;color:var(--pink-500);text-decoration:none;">
+                        Xem tất cả →
+                    </a>
                 </div>
-                <div class="card-body">
-                    <a href="${pageContext.request.contextPath}/admin/users/" class="quick-action-btn">
-                        <div class="quick-action-icon"><i class="bi bi-person-plus-fill"></i></div>
-                        <div class="quick-action-text">
-                            <span>Thêm Người Dùng</span>
-                            <small>Tạo tài khoản mới trong hệ thống</small>
-                        </div>
-                    </a>
-                    <a href="${pageContext.request.contextPath}/admin/settings/" class="quick-action-btn">
-                        <div class="quick-action-icon"><i class="bi bi-gear-fill"></i></div>
-                        <div class="quick-action-text">
-                            <span>Cài Đặt Hệ Thống</span>
-                            <small>Cấu hình và tùy chỉnh phòng khám</small>
-                        </div>
-                    </a>
-                    <a href="${pageContext.request.contextPath}/admin/audit-logs/" class="quick-action-btn">
-                        <div class="quick-action-icon"><i class="bi bi-clipboard-data-fill"></i></div>
-                        <div class="quick-action-text">
-                            <span>Nhật Ký Hoạt Động</span>
-                            <small>Theo dõi lịch sử thao tác</small>
-                        </div>
-                    </a>
-                    <a href="#" class="quick-action-btn" style="margin-bottom:0;">
-                        <div class="quick-action-icon"><i class="bi bi-file-earmark-bar-graph-fill"></i></div>
-                        <div class="quick-action-text">
-                            <span>Báo Cáo &amp; Thống Kê</span>
-                            <small>Xem phân tích chi tiết</small>
-                        </div>
-                    </a>
+                <div class="card-body p-0">
+                    <c:choose>
+                        <c:when test="${not empty recentPatients}">
+                            <div class="admin-table-wrapper">
+                                <table class="admin-table compact">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Họ Tên</th>
+                                            <th>Email / SĐT</th>
+                                            <th>Ngày ĐK</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <c:forEach var="rp" items="${recentPatients}">
+                                            <tr>
+                                                <td style="color:var(--c-muted);font-size:0.78rem;">#${rp.id}</td>
+                                                <td style="font-weight:600;">${rp.fullName}</td>
+                                                <td style="font-size:0.78rem;">
+                                                    <div>${rp.email}</div>
+                                                    <c:if test="${not empty rp.phone}">
+                                                        <div style="color:var(--c-muted);">${rp.phone}</div>
+                                                    </c:if>
+                                                </td>
+                                                <td style="color:var(--c-muted);font-size:0.78rem;white-space:nowrap;">
+                                                    ${rp.createdAt}
+                                                </td>
+                                            </tr>
+                                        </c:forEach>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </c:when>
+                        <c:otherwise>
+                            <div class="admin-empty-state">
+                                <i class="bi bi-people"></i>
+                                <h6>Chưa có bệnh nhân mới</h6>
+                                <p>Bệnh nhân mới đăng ký sẽ hiển thị ở đây.</p>
+                            </div>
+                        </c:otherwise>
+                    </c:choose>
                 </div>
             </div>
+        </div>
 
-            <%-- System Info --%>
-            <div class="admin-card flex-grow-1">
+        <%-- Nhật ký hệ thống --%>
+        <div class="col-xl-4">
+            <div class="admin-card h-100">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <h5>
+                        <i class="bi bi-clipboard-data-fill"></i>
+                        Nhật Ký Hệ Thống
+                    </h5>
+                    <a href="${pageContext.request.contextPath}/admin/audit-logs/"
+                       style="font-size:0.78rem;font-weight:700;color:var(--pink-500);text-decoration:none;">
+                        Xem tất cả →
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <c:choose>
+                        <c:when test="${not empty recentAuditLogs}">
+                            <div class="admin-table-wrapper">
+                                <table class="admin-table compact">
+                                    <thead>
+                                        <tr>
+                                            <th>Người Dùng</th>
+                                            <th>Hành Động</th>
+                                            <th>Thời Gian</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <c:forEach var="log" items="${recentAuditLogs}">
+                                            <tr>
+                                                <td>
+                                                    <span style="font-weight:600;">${log.userName}</span>
+                                                </td>
+                                                <td>
+                                                    <span style="font-size:0.78rem;">${log.action}</span>
+                                                    <c:if test="${not empty log.tableName}">
+                                                        <div style="font-size:0.68rem;color:var(--c-muted);">
+                                                            Bảng: ${log.tableName}
+                                                        </div>
+                                                    </c:if>
+                                                </td>
+                                                <td style="color:var(--c-muted);font-size:0.75rem;white-space:nowrap;">
+                                                    ${log.createdAt}
+                                                </td>
+                                            </tr>
+                                        </c:forEach>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </c:when>
+                        <c:otherwise>
+                            <div class="admin-empty-state">
+                                <i class="bi bi-clipboard"></i>
+                                <h6>Chưa có nhật ký</h6>
+                                <p>Hoạt động hệ thống sẽ được ghi lại ở đây.</p>
+                            </div>
+                        </c:otherwise>
+                    </c:choose>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <%-- ════════════════════════════════════════════ --%>
+    <%-- THÔNG TIN HỆ THỐNG --%>
+    <%-- ════════════════════════════════════════════ --%>
+    <div class="row g-3">
+        <div class="col-lg-4">
+            <div class="admin-card">
                 <div class="card-header">
                     <h5>
                         <i class="bi bi-info-circle-fill"></i>
@@ -806,39 +1121,122 @@ body.admin-body {
                     </h5>
                 </div>
                 <div class="card-body">
-                    <ul class="admin-info-list">
-                        <li>
-                            <span class="info-label"><i class="bi bi-box-seam-fill"></i>Phiên bản</span>
-                            <span class="info-value">v1.0.0</span>
+                    <ul class="system-info-list" style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0.35rem;">
+                        <li style="display:flex;justify-content:space-between;padding:0.45rem 0;border-bottom:1px solid var(--c-outline-variant);font-size:0.85rem;">
+                            <span style="display:flex;align-items:center;gap:0.5rem;color:var(--c-on-surface-var);"><i class="bi bi-box-seam-fill" style="color:var(--pink-400);"></i>Phiên bản</span>
+                            <span style="font-weight:600;">v1.0.0</span>
                         </li>
-                        <li>
-                            <span class="info-label"><i class="bi bi-server"></i>Database</span>
-                            <span class="info-value">SQL Server</span>
+                        <li style="display:flex;justify-content:space-between;padding:0.45rem 0;border-bottom:1px solid var(--c-outline-variant);font-size:0.85rem;">
+                            <span style="display:flex;align-items:center;gap:0.5rem;color:var(--c-on-surface-var);"><i class="bi bi-server" style="color:var(--pink-400);"></i>Database</span>
+                            <span style="font-weight:600;">SQL Server</span>
                         </li>
-                        <li>
-                            <span class="info-label"><i class="bi bi-hdd-stack-fill"></i>Server</span>
-                            <span class="info-value">Tomcat 10.1</span>
+                        <li style="display:flex;justify-content:space-between;padding:0.45rem 0;border-bottom:1px solid var(--c-outline-variant);font-size:0.85rem;">
+                            <span style="display:flex;align-items:center;gap:0.5rem;color:var(--c-on-surface-var);"><i class="bi bi-hdd-stack-fill" style="color:var(--pink-400);"></i>Server</span>
+                            <span style="font-weight:600;">Tomcat 10.1</span>
                         </li>
-                        <li>
-                            <span class="info-label"><i class="bi bi-cpu-fill"></i>Java</span>
-                            <span class="info-value">JDK 17 LTS</span>
+                        <li style="display:flex;justify-content:space-between;padding:0.45rem 0;border-bottom:1px solid var(--c-outline-variant);font-size:0.85rem;">
+                            <span style="display:flex;align-items:center;gap:0.5rem;color:var(--c-on-surface-var);"><i class="bi bi-cpu-fill" style="color:var(--pink-400);"></i>Java</span>
+                            <span style="font-weight:600;">JDK 17 LTS</span>
                         </li>
-                        <li>
-                            <span class="info-label"><i class="bi bi-shield-lock-fill"></i>Bảo mật</span>
-                            <span class="info-value good">
-                                <i class="bi bi-check-circle-fill me-1"></i>BCrypt Active
-                            </span>
+                        <li style="display:flex;justify-content:space-between;padding:0.45rem 0;border-bottom:1px solid var(--c-outline-variant);font-size:0.85rem;">
+                            <span style="display:flex;align-items:center;gap:0.5rem;color:var(--c-on-surface-var);"><i class="bi bi-shield-lock-fill" style="color:var(--pink-400);"></i>Bảo mật</span>
+                            <span style="font-weight:600;color:#059669;"><i class="bi bi-check-circle-fill me-1"></i>BCrypt</span>
                         </li>
-                        <li>
-                            <span class="info-label"><i class="bi bi-circle-fill" style="color:#10b981;"></i>Trạng thái</span>
-                            <span class="info-value good">Hoạt động bình thường</span>
+                        <li style="display:flex;justify-content:space-between;padding:0.45rem 0;font-size:0.85rem;">
+                            <span style="display:flex;align-items:center;gap:0.5rem;color:var(--c-on-surface-var);"><i class="bi bi-circle-fill" style="color:#10b981;font-size:0.5rem;"></i>Trạng thái</span>
+                            <span style="font-weight:600;color:#059669;">Hoạt động</span>
                         </li>
                     </ul>
                 </div>
             </div>
+        </div>
 
-        </div><%-- /col-lg-4 --%>
-    </div><%-- /row --%>
+        <%-- Thao tác nhanh --%>
+        <div class="col-lg-4">
+            <div class="admin-card h-100">
+                <div class="card-header">
+                    <h5>
+                        <i class="bi bi-lightning-charge-fill"></i>
+                        Thao Tác Nhanh
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <a href="${pageContext.request.contextPath}/admin/users/" class="d-flex align-items-center gap-3 p-2 rounded-3 text-decoration-none"
+                       style="transition:all var(--t-fast);margin-bottom:0.35rem;"
+                       onmouseover="this.style.background='var(--pink-50)';this.style.transform='translateX(4px)';"
+                       onmouseout="this.style.background='transparent';this.style.transform='translateX(0)';">
+                        <div style="width:38px;height:38px;border-radius:8px;background:var(--pink-100);color:var(--pink-600);display:flex;align-items:center;justify-content:center;font-size:1rem;">
+                            <i class="bi bi-person-plus-fill"></i>
+                        </div>
+                        <div>
+                            <div style="font-size:0.85rem;font-weight:700;color:var(--c-on-surface);">Thêm Người Dùng</div>
+                            <small style="color:var(--c-muted);">Tạo tài khoản mới</small>
+                        </div>
+                    </a>
+                    <a href="${pageContext.request.contextPath}/admin/roles/" class="d-flex align-items-center gap-3 p-2 rounded-3 text-decoration-none"
+                       style="transition:all var(--t-fast);margin-bottom:0.35rem;"
+                       onmouseover="this.style.background='var(--pink-50)';this.style.transform='translateX(4px)';"
+                       onmouseout="this.style.background='transparent';this.style.transform='translateX(0)';">
+                        <div style="width:38px;height:38px;border-radius:8px;background:var(--pink-100);color:var(--pink-600);display:flex;align-items:center;justify-content:center;font-size:1rem;">
+                            <i class="bi bi-shield-lock-fill"></i>
+                        </div>
+                        <div>
+                            <div style="font-size:0.85rem;font-weight:700;color:var(--c-on-surface);">Phân Quyền</div>
+                            <small style="color:var(--c-muted);">Quản lý vai trò & quyền</small>
+                        </div>
+                    </a>
+                    <a href="${pageContext.request.contextPath}/admin/settings/" class="d-flex align-items-center gap-3 p-2 rounded-3 text-decoration-none"
+                       style="transition:all var(--t-fast);margin-bottom:0.35rem;"
+                       onmouseover="this.style.background='var(--pink-50)';this.style.transform='translateX(4px)';"
+                       onmouseout="this.style.background='transparent';this.style.transform='translateX(0)';">
+                        <div style="width:38px;height:38px;border-radius:8px;background:var(--pink-100);color:var(--pink-600);display:flex;align-items:center;justify-content:center;font-size:1rem;">
+                            <i class="bi bi-gear-fill"></i>
+                        </div>
+                        <div>
+                            <div style="font-size:0.85rem;font-weight:700;color:var(--c-on-surface);">Cài Đặt</div>
+                            <small style="color:var(--c-muted);">Cấu hình hệ thống</small>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <%-- Tổng quan nhanh --%>
+        <div class="col-lg-4">
+            <div class="admin-card h-100">
+                <div class="card-header">
+                    <h5>
+                        <i class="bi bi-pie-chart-fill"></i>
+                        Tổng Quan Chung
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="system-info-list" style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0.35rem;">
+                        <li style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--c-outline-variant);font-size:0.85rem;">
+                            <span style="display:flex;align-items:center;gap:0.5rem;color:var(--c-on-surface-var);"><i class="bi bi-people-fill" style="color:var(--pink-400);"></i>Tổng người dùng</span>
+                            <span style="font-weight:700;font-family:var(--font-display);">${not empty totalUsers ? totalUsers : 0}</span>
+                        </li>
+                        <li style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--c-outline-variant);font-size:0.85rem;">
+                            <span style="display:flex;align-items:center;gap:0.5rem;color:var(--c-on-surface-var);"><i class="bi bi-person-badge-fill" style="color:var(--pink-400);"></i>Tổng bác sĩ</span>
+                            <span style="font-weight:700;font-family:var(--font-display);">${not empty totalDoctors ? totalDoctors : 0}</span>
+                        </li>
+                        <li style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--c-outline-variant);font-size:0.85rem;">
+                            <span style="display:flex;align-items:center;gap:0.5rem;color:var(--c-on-surface-var);"><i class="bi bi-people" style="color:var(--pink-400);"></i>Tổng bệnh nhân</span>
+                            <span style="font-weight:700;font-family:var(--font-display);">${not empty totalPatients ? totalPatients : 0}</span>
+                        </li>
+                        <li style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--c-outline-variant);font-size:0.85rem;">
+                            <span style="display:flex;align-items:center;gap:0.5rem;color:var(--c-on-surface-var);"><i class="bi bi-calendar-check" style="color:var(--pink-400);"></i>Lịch hẹn hôm nay</span>
+                            <span style="font-weight:700;font-family:var(--font-display);">${not empty totalAppointmentsToday ? totalAppointmentsToday : 0}</span>
+                        </li>
+                        <li style="display:flex;justify-content:space-between;padding:0.5rem 0;font-size:0.85rem;">
+                            <span style="display:flex;align-items:center;gap:0.5rem;color:var(--c-on-surface-var);"><i class="bi bi-cash-stack" style="color:var(--pink-400);"></i>Doanh thu hôm nay</span>
+                            <span style="font-weight:700;font-family:var(--font-display);color:var(--pink-600);">${not empty revenueToday ? revenueToday : '0 VNĐ'}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
 
 </main>
 
@@ -847,6 +1245,9 @@ body.admin-body {
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
         crossorigin="anonymous"></script>
 
+<%-- ════════════════════════════════════════════ --%>
+<%-- SIDEBAR SCRIPTS --%>
+<%-- ════════════════════════════════════════════ --%>
 <script>
 var toggleBtn = document.getElementById('sidebarToggle');
 if (toggleBtn) toggleBtn.addEventListener('click', toggleSidebar);
@@ -855,6 +1256,7 @@ document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closeSidebar();
 });
 
+// Active link highlight
 (function() {
     var links = document.querySelectorAll('.admin-sidebar-menu li a');
     for (var i = 0; i < links.length; i++) {
@@ -869,5 +1271,123 @@ document.addEventListener('keydown', function(e) {
     }
 })();
 </script>
+
+<%-- ════════════════════════════════════════════ --%>
+<%-- CHART.JS INITIALIZATION --%>
+<%-- ════════════════════════════════════════════ --%>
+<script>
+(function() {
+    // Common chart colors
+    var pink500 = '#e91e8c';
+    var pink200 = '#ffb3d1';
+    var pink100 = '#ffe0ef';
+
+    // ── Appointments Chart (7 days) ──
+    var apptCtx = document.getElementById('appointmentsChart');
+    if (apptCtx) {
+        new Chart(apptCtx, {
+            type: 'bar',
+            data: {
+                labels: [
+                    <c:forEach var="lbl" items="${apptChartLabels}" varStatus="s">
+                        '${lbl}'${s.last ? '' : ','}
+                    </c:forEach>
+                ],
+                datasets: [{
+                    label: 'Lịch hẹn',
+                    data: [
+                        <c:forEach var="val" items="${apptChartValues}" varStatus="s">
+                            ${val}${s.last ? '' : ','}
+                        </c:forEach>
+                    ],
+                    backgroundColor: pink500,
+                    borderColor: '#c2185b',
+                    borderWidth: 1,
+                    borderRadius: 6,
+                    hoverBackgroundColor: '#ff4d94'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1, font: { size: 11 } },
+                        grid: { color: '#f5dfe9' }
+                    },
+                    x: {
+                        ticks: { font: { size: 11 } },
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+    // ── Revenue Chart (12 months) ──
+    var revCtx = document.getElementById('revenueChart');
+    if (revCtx) {
+        new Chart(revCtx, {
+            type: 'line',
+            data: {
+                labels: [
+                    <c:forEach var="lbl" items="${revenueChartLabels}" varStatus="s">
+                        '${lbl}'${s.last ? '' : ','}
+                    </c:forEach>
+                ],
+                datasets: [{
+                    label: 'Doanh thu (VNĐ)',
+                    data: [
+                        <c:forEach var="val" items="${revenueChartValues}" varStatus="s">
+                            ${val}${s.last ? '' : ','}
+                        </c:forEach>
+                    ],
+                    borderColor: pink500,
+                    backgroundColor: 'rgba(233,30,140,0.08)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: pink500,
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 5,
+                    pointHoverRadius: 7
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                if (value >= 1000000000) return (value/1000000000).toFixed(1) + 'B';
+                                if (value >= 1000000) return (value/1000000).toFixed(0) + 'M';
+                                if (value >= 1000) return (value/1000).toFixed(0) + 'K';
+                                return value;
+                            },
+                            font: { size: 11 }
+                        },
+                        grid: { color: '#f5dfe9' }
+                    },
+                    x: {
+                        ticks: { font: { size: 11 } },
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+})();
+</script>
+
 </body>
 </html>

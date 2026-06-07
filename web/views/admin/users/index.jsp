@@ -232,6 +232,7 @@
                         <tr>
                             <th>ID</th>
                             <th>Họ Tên</th>
+                            <th>Tên ĐN</th>
                             <th>Email</th>
                             <th>Điện Thoại</th>
                             <th>Vai Trò</th>
@@ -252,6 +253,7 @@
                                                 <i class="bi bi-google text-muted ms-1" title="Google"></i>
                                             </c:if>
                                         </td>
+                                        <td style="font-size:0.82rem;font-weight:500;">${not empty u.username ? u.username : '—'}</td>
                                         <td style="font-size:0.82rem;">${u.email}</td>
                                         <td style="font-size:0.82rem;">${not empty u.phone ? u.phone : '—'}</td>
                                         <td><span class="badge-role-tag">${not empty u.roleName ? u.roleName : roleMap[u.roleId]}</span></td>
@@ -273,7 +275,7 @@
                                             <div class="d-flex gap-1">
                                                 <%-- Edit button --%>
                                                 <button class="btn btn-sm btn-outline-secondary btn-action"
-                                                        onclick="openEditModal('${u.id}','${fn:escapeXml(u.fullName)}','${fn:escapeXml(u.phone)}','${u.roleId}','${u.status}')"
+                                                        onclick="openEditModal('${u.id}','${fn:escapeXml(u.fullName)}','${fn:escapeXml(u.username)}','${fn:escapeXml(u.phone)}','${u.roleId}','${u.status}')"
                                                         title="Sửa">
                                                     <i class="bi bi-pencil-square"></i>
                                                 </button>
@@ -307,7 +309,7 @@
                                                     <input type="hidden" name="action" value="delete">
                                                     <input type="hidden" name="userId" value="${u.id}">
                                                     <button type="submit" class="btn btn-sm btn-outline-danger btn-action"
-                                                            title="Xóa" onclick="return confirm('Xóa người dùng #${u.id} — ${fn:escapeXml(u.fullName)}?\nHành động này không thể hoàn tác.')">
+                                                            title="Xóa" onclick="return confirm('Vô hiệu hóa người dùng #${u.id} — ${fn:escapeXml(u.fullName)}?\nTài khoản sẽ bị khóa và không thể đăng nhập. Dữ liệu liên quan vẫn được giữ nguyên.')">
                                                         <i class="bi bi-trash3-fill"></i>
                                                     </button>
                                                 </form>
@@ -318,7 +320,7 @@
                             </c:when>
                             <c:otherwise>
                                 <tr>
-                                    <td colspan="8" class="p-0">
+                                    <td colspan="9" class="p-0">
                                         <div class="admin-empty-state">
                                             <i class="bi bi-inbox"></i>
                                             <h6>Không tìm thấy người dùng</h6>
@@ -391,6 +393,11 @@
                             <input type="email" name="email" class="form-control" required maxlength="100">
                         </div>
                         <div class="col-md-6">
+                            <label class="form-label fw-semibold">Tên đăng nhập <span class="text-danger">*</span></label>
+                            <input type="text" name="username" class="form-control" required maxlength="50"
+                                   placeholder="Ít nhất 4 ký tự">
+                        </div>
+                        <div class="col-md-6">
                             <label class="form-label fw-semibold">Mật khẩu <span class="text-danger">*</span></label>
                             <input type="password" name="password" class="form-control" required minlength="6" placeholder="Ít nhất 6 ký tự">
                         </div>
@@ -449,6 +456,10 @@
                             <input type="text" name="fullName" id="editFullName" class="form-control" required maxlength="100">
                         </div>
                         <div class="col-md-6">
+                            <label class="form-label fw-semibold">Tên đăng nhập <span class="text-danger">*</span></label>
+                            <input type="text" name="username" id="editUsername" class="form-control" required maxlength="50">
+                        </div>
+                        <div class="col-md-6">
                             <label class="form-label fw-semibold">Số điện thoại</label>
                             <input type="text" name="phone" id="editPhone" class="form-control" maxlength="20">
                         </div>
@@ -504,9 +515,10 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
 })();
 
 <%-- Edit modal helper --%>
-function openEditModal(id, fullName, phone, roleId, status) {
+function openEditModal(id, fullName, username, phone, roleId, status) {
     document.getElementById('editUserId').value = id;
     document.getElementById('editFullName').value = fullName;
+    document.getElementById('editUsername').value = username || '';
     document.getElementById('editPhone').value = phone || '';
     document.getElementById('editRoleId').value = roleId;
     document.getElementById('editStatus').value = status;

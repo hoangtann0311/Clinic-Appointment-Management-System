@@ -10,7 +10,7 @@ import java.util.Map;
 
 /**
  * Service xử lý nghiệp vụ quản lý người dùng cho Admin.
- * Đơn giản: gọi DAO + validate cơ bản.
+ * Bao gồm: CRUD tài khoản nhân viên, soft delete, validate.
  */
 public class UserService {
 
@@ -49,26 +49,52 @@ public class UserService {
         return userDAO.updateStatus(userId, newStatus);
     }
 
-    /** Xóa user */
+    /** Xóa user (hard delete — giữ lại cho tương thích ngược) */
     public boolean deleteUser(int userId) {
         return userDAO.delete(userId);
     }
 
+    /** Soft delete user — vô hiệu hóa tài khoản, giữ nguyên dữ liệu liên quan */
+    public boolean softDeleteUser(int userId) {
+        return userDAO.softDelete(userId);
+    }
+
     /** Tạo user mới (admin side) */
-    public boolean createUser(String fullName, String email, String password,
-                              String phone, int roleId, String status,
+    public boolean createUser(String fullName, String email, String username,
+                              String password, String phone, int roleId, String status,
                               Map<String, String> errors) {
         // Validate cơ bản
         if (fullName == null || fullName.trim().isEmpty()) {
             errors.put("fullName", "Vui lòng nhập họ tên.");
             return false;
         }
+        if (fullName.trim().length() < 2) {
+            errors.put("fullName", "Họ tên phải có ít nhất 2 ký tự.");
+            return false;
+        }
         if (email == null || !email.matches("^[\\w.-]+@[\\w.-]+\\.\\w{2,}$")) {
             errors.put("email", "Email không hợp lệ.");
             return false;
         }
+        if (username == null || username.trim().isEmpty()) {
+            errors.put("username", "Vui lòng nhập tên đăng nhập.");
+            return false;
+        }
+        if (username.trim().length() < 4) {
+            errors.put("username", "Tên đăng nhập phải có ít nhất 4 ký tự.");
+            return false;
+        }
+        if (!username.trim().matches("^[a-zA-Z0-9_]+$")) {
+            errors.put("username", "Tên đăng nhập chỉ được chứa chữ cái, số và dấu gạch dưới.");
+            return false;
+        }
         if (password == null || password.length() < 6) {
             errors.put("password", "Mật khẩu ít nhất 6 ký tự.");
+            return false;
+        }
+        if (phone != null && !phone.trim().isEmpty()
+                && !phone.trim().matches("^(0[3|5|7|8|9])[0-9]{8}$")) {
+            errors.put("phone", "Số điện thoại không hợp lệ (10 chữ số, bắt đầu 03|05|07|08|09).");
             return false;
         }
         // Kiểm tra email trùng
@@ -76,10 +102,16 @@ public class UserService {
             errors.put("email", "Email đã tồn tại.");
             return false;
         }
+        // Kiểm tra username trùng
+        if (userDAO.findByUsername(username.trim().toLowerCase()) != null) {
+            errors.put("username", "Tên đăng nhập đã tồn tại.");
+            return false;
+        }
 
         User u = new User();
         u.setFullName(fullName.trim());
         u.setEmail(email.trim().toLowerCase());
+        u.setUsername(username.trim().toLowerCase());
         u.setPasswordHash(com.clinic.utils.BCryptUtil.hashPassword(password));
         u.setPhone(phone != null ? phone.trim() : "");
         u.setRoleId(roleId);
@@ -97,11 +129,19 @@ public class UserService {
     }
 
     /** Cập nhật user (admin side — không đổi password) */
-    public boolean updateUser(int userId, String fullName, String phone,
-                              int roleId, String status,
+    public boolean updateUser(int userId, String fullName, String username,
+                              String phone, int roleId, String status,
                               Map<String, String> errors) {
         if (fullName == null || fullName.trim().isEmpty()) {
             errors.put("fullName", "Vui lòng nhập họ tên.");
+            return false;
+        }
+        if (username == null || username.trim().isEmpty()) {
+            errors.put("username", "Vui lòng nhập tên đăng nhập.");
+            return false;
+        }
+        if (!username.trim().matches("^[a-zA-Z0-9_]+$")) {
+            errors.put("username", "Tên đăng nhập chỉ được chứa chữ cái, số và dấu gạch dưới.");
             return false;
         }
         User u = userDAO.findById(userId);
@@ -109,15 +149,37 @@ public class UserService {
             errors.put("general", "User không tồn tại.");
             return false;
         }
+        // Kiểm tra username trùng (ngoại trừ chính nó)
+        User existing = userDAO.findByUsername(username.trim().toLowerCase());
+        if (existing != null && existing.getId() != userId) {
+            errors.put("username", "Tên đăng nhập đã được sử dụng bởi người dùng khác.");
+            return false;
+        }
         u.setFullName(fullName.trim());
+        u.setUsername(username.trim().toLowerCase());
         u.setPhone(phone != null ? phone.trim() : "");
         u.setRoleId(roleId);
         u.setStatus(status);
         return userDAO.update(u);
     }
 
+    /** Reset mật khẩu cho user (admin side) */
+    public boolean resetPassword(int userId, String newPassword, Map<String, String> errors) {
+        if (newPassword == null || newPassword.length() < 6) {
+            errors.put("password", "Mật khẩu ít nhất 6 ký tự.");
+            return false;
+        }
+        return userDAO.updatePassword(userId,
+                com.clinic.utils.BCryptUtil.hashPassword(newPassword));
+    }
+
     /** Lấy user theo id */
     public User getUserById(int userId) {
         return userDAO.findById(userId);
+    }
+
+    /** Tìm user theo username */
+    public User getUserByUsername(String username) {
+        return userDAO.findByUsername(username);
     }
 }

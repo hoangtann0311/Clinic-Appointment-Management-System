@@ -11,6 +11,7 @@ public class Role implements Serializable {
 
     private int id;
     private String roleName;
+    private String description;
 
     public Role() {
     }
@@ -34,6 +35,14 @@ public class Role implements Serializable {
 
     public void setRoleName(String roleName) {
         this.roleName = roleName;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     @Override

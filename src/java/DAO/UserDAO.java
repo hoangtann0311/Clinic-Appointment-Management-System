@@ -21,13 +21,45 @@ public class UserDAO {
     private static Boolean hasAuthProviderColumn = null;
 
     /**
+     * Tìm user theo username.
+     * @param username tên đăng nhập cần tìm
+     * @return User nếu tìm thấy, null nếu không tìm thấy
+     */
+    public User findByUsername(String username) {
+        String sql = "SELECT id, full_name, email, username, password_hash, phone, role_id, status, "
+                   + "verification_token, is_verified, google_id, auth_provider, is_deleted "
+                   + "FROM users WHERE username = ? AND is_deleted = 0";
+
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, username);
+            rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return mapRowToUser(rs);
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi khi tìm user theo username: " + e.getMessage());
+            throw new RuntimeException("Lỗi database khi tìm user theo username", e);
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return null;
+    }
+
+    /**
      * Tìm user theo email.
      * @param email email cần tìm
      * @return User nếu tìm thấy, null nếu không tìm thấy
      */
     public User findByEmail(String email) {
-        String sql = "SELECT id, full_name, email, password_hash, phone, role_id, status, "
-                   + "verification_token, is_verified, google_id, auth_provider "
+        String sql = "SELECT id, full_name, email, username, password_hash, phone, role_id, status, "
+                   + "verification_token, is_verified, google_id, auth_provider, is_deleted "
                    + "FROM users WHERE email = ?";
 
         Connection conn = null;
@@ -58,9 +90,9 @@ public class UserDAO {
      * @return id của user vừa tạo
      */
     public int insert(User user) {
-        String sql = "INSERT INTO users (full_name, email, password_hash, phone, role_id, status, "
+        String sql = "INSERT INTO users (full_name, email, username, password_hash, phone, role_id, status, "
                    + "verification_token, is_verified, google_id, auth_provider) "
-                   + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                   + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         Connection conn = null;
         PreparedStatement ps = null;
@@ -71,14 +103,15 @@ public class UserDAO {
             ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
             ps.setString(1, user.getFullName());
             ps.setString(2, user.getEmail());
-            ps.setString(3, user.getPasswordHash());
-            ps.setString(4, user.getPhone());
-            ps.setInt(5, user.getRoleId());
-            ps.setString(6, user.getStatus());
-            ps.setString(7, user.getVerificationToken());
-            ps.setBoolean(8, user.isVerified());
-            ps.setString(9, user.getGoogleId());
-            ps.setString(10, user.getAuthProvider());
+            ps.setString(3, user.getUsername());
+            ps.setString(4, user.getPasswordHash());
+            ps.setString(5, user.getPhone());
+            ps.setInt(6, user.getRoleId());
+            ps.setString(7, user.getStatus());
+            ps.setString(8, user.getVerificationToken());
+            ps.setBoolean(9, user.isVerified());
+            ps.setString(10, user.getGoogleId());
+            ps.setString(11, user.getAuthProvider());
 
             int affectedRows = ps.executeUpdate();
             if (affectedRows == 0) {
@@ -115,6 +148,12 @@ public class UserDAO {
         user.setVerified(rs.getBoolean("is_verified"));
         user.setGoogleId(rs.getString("google_id"));
         user.setAuthProvider(rs.getString("auth_provider"));
+        // Đọc username (có thể null nếu migration chưa chạy)
+        try {
+            user.setUsername(rs.getString("username"));
+        } catch (SQLException e) {
+            user.setUsername(null);
+        }
         // Đọc created_at (có thể null nếu migration chưa chạy)
         try {
             user.setCreatedAt(rs.getTimestamp("created_at"));
@@ -379,14 +418,14 @@ public class UserDAO {
         // Chọn cột: fullColumns=true dùng đủ cột, false dùng cột cơ bản (luôn tồn tại)
         String columns;
         if (fullColumns) {
-            columns = "u.id, u.full_name, u.email, u.phone, u.role_id, u.status, "
+            columns = "u.id, u.full_name, u.email, u.username, u.phone, u.role_id, u.status, "
                     + "u.created_at, u.is_verified, u.auth_provider, r.role_name";
         } else {
-            columns = "u.id, u.full_name, u.email, u.phone, u.role_id, u.status, "
+            columns = "u.id, u.full_name, u.email, u.username, u.phone, u.role_id, u.status, "
                     + "r.role_name";
         }
         StringBuilder sql = new StringBuilder("SELECT ").append(columns)
-            .append(" FROM users u LEFT JOIN roles r ON u.role_id = r.id WHERE 1=1 ");
+            .append(" FROM users u LEFT JOIN roles r ON u.role_id = r.id WHERE u.is_deleted = 0 ");
 
         if (search != null && !search.trim().isEmpty()) {
             sql.append("AND (u.full_name LIKE ? OR u.email LIKE ? OR u.phone LIKE ?) ");
@@ -435,7 +474,7 @@ public class UserDAO {
      * Đếm tổng số user (có filter) — dùng cho phân trang.
      */
     public int countAll(String search, Integer roleFilter, String statusFilter) {
-        StringBuilder sql = new StringBuilder("SELECT COUNT(*) AS total FROM users WHERE 1=1 ");
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) AS total FROM users WHERE is_deleted = 0 ");
 
         if (search != null && !search.trim().isEmpty()) {
             sql.append("AND (full_name LIKE ? OR email LIKE ? OR phone LIKE ?) ");
@@ -498,7 +537,8 @@ public class UserDAO {
     }
 
     /**
-     * Xóa user theo id.
+     * Xóa user theo id (hard delete — chỉ dùng cho dữ liệu test).
+     * Nên dùng softDelete() cho môi trường production.
      */
     public boolean delete(int userId) {
         String sql = "DELETE FROM users WHERE id = ?";
@@ -518,10 +558,31 @@ public class UserDAO {
     }
 
     /**
+     * Soft delete user: đặt is_deleted = 1 thay vì xóa vật lý.
+     * Giữ nguyên dữ liệu liên quan (bệnh án, lịch hẹn, hóa đơn...).
+     */
+    public boolean softDelete(int userId) {
+        String sql = "UPDATE users SET is_deleted = 1, status = 'Inactive', updated_at = GETDATE() WHERE id = ?";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setInt(1, userId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Lỗi softDelete user: " + e.getMessage());
+            return false;
+        } finally {
+            closeResources(conn, ps, null);
+        }
+    }
+
+    /**
      * Cập nhật thông tin user (full_name, phone, role_id, status).
      */
     public boolean update(User user) {
-        String sql = "UPDATE users SET full_name=?, phone=?, role_id=?, status=? WHERE id=?";
+        String sql = "UPDATE users SET full_name=?, phone=?, username=?, role_id=?, status=?, updated_at=GETDATE() WHERE id=?";
         Connection conn = null;
         PreparedStatement ps = null;
         try {
@@ -529,9 +590,10 @@ public class UserDAO {
             ps = conn.prepareStatement(sql);
             ps.setString(1, user.getFullName());
             ps.setString(2, user.getPhone());
-            ps.setInt(3, user.getRoleId());
-            ps.setString(4, user.getStatus());
-            ps.setInt(5, user.getId());
+            ps.setString(3, user.getUsername());
+            ps.setInt(4, user.getRoleId());
+            ps.setString(5, user.getStatus());
+            ps.setInt(6, user.getId());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("Lỗi update user: " + e.getMessage());
@@ -548,6 +610,7 @@ public class UserDAO {
         u.setFullName(rs.getString("full_name"));
         u.setEmail(rs.getString("email"));
         u.setPhone(rs.getString("phone"));
+        try { u.setUsername(rs.getString("username")); } catch (SQLException e) { u.setUsername(null); }
         u.setRoleId(rs.getInt("role_id"));
         u.setStatus(rs.getString("status"));
         if (fullColumns) {
