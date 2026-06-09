@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="https://jakarta.ee/xml/ns/jakartaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
+                             https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd"
+         version="6.0">
+
+    <display-name>Clinic Appointment Management System</display-name>
+
+    <welcome-file-list>
+        <welcome-file>index.jsp</welcome-file>
+    </welcome-file-list>
+
+    <!-- Session timeout: 30 phút -->
+    <session-config>
+        <session-timeout>30</session-timeout>
+    </session-config>
+
+    <!-- ============================================================
+         Google OAuth 2.0 Configuration
+         ============================================================
+         Mỗi developer/máy chủ cần có Client ID riêng từ Google Cloud Console.
+
+         Cách lấy:
+         1. Vào https://console.cloud.google.com/
+         2. Tạo project → "APIs & Services" → "Credentials"
+         3. Tạo "OAuth 2.0 Client ID" (Web application)
+         4. Thêm vào "Authorized JavaScript origins":
+              - http://localhost
+              - http://localhost:8080
+              - http://localhost:8081   (thêm tất cả port bạn dùng)
+         5. Thêm vào "Authorized redirect URIs":
+              - http://localhost:8080/ClinicAppointmentManagementSystem/google-login-server
+              - http://localhost:8081/ClinicAppointmentManagementSystem/google-login-server
+              - (với từng port bạn dùng, context path tương ứng)
+         6. Copy Client ID và dán vào giá trị bên dưới
+
+         LƯU Ý: File này (web.xml) KHÔNG commit lên git để tránh lộ Client ID.
+         Mỗi developer giữ bản web.xml riêng với Client ID của họ.
+    -->
+    <context-param>
+        <param-name>google.client.id</param-name>
+        <param-value>437305021332-tkk9gu93jltirvu07q9h9a27012a3eua.apps.googleusercontent.com</param-value>
+        <description>Google OAuth 2.0 Client ID từ Google Cloud Console</description>
+    </context-param>
+
+    <context-param>
+        <param-name>google.client.secret</param-name>
+        <param-value>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</param-value>
+        <description>Google OAuth 2.0 Client Secret (chỉ dùng cho server-side flow)</description>
+    </context-param>
+
+    <!-- Error pages -->
+    <error-page>
+        <error-code>404</error-code>
+        <location>/views/errors/404.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>500</error-code>
+        <location>/views/errors/500.jsp</location>
+    </error-page>
+
+</web-app>

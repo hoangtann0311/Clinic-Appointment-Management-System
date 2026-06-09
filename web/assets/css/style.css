@@ -1,0 +1,222 @@
+/* ============================================================
+   CAMS - Clinic Appointment Management System
+   Custom Stylesheet
+   ============================================================ */
+
+/* ---------- Vietnamese Font Override ---------- */
+/* Ghi đè Bootstrap font variable để hỗ trợ tiếng Việt trên toàn bộ app */
+:root {
+    --bs-body-font-family: 'Be Vietnam Pro', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+body {
+    font-family: var(--bs-body-font-family);
+}
+
+/* ---------- Login Page ---------- */
+.login-card {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.3s ease;
+}
+.login-card:hover {
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.12);
+}
+
+.login-icon-wrapper {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(13, 110, 253, 0.1), rgba(13, 110, 253, 0.05));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+}
+.login-icon-wrapper i {
+    font-size: 2.25rem;
+}
+
+/* ---------- Toggle Password Button ---------- */
+.toggle-password {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-left: none;
+}
+.toggle-password:hover {
+    background-color: #f0f0f0;
+}
+.toggle-password:focus {
+    box-shadow: none;
+}
+
+/* ---------- Input Group Validation ---------- */
+.input-group .form-control.is-invalid {
+    /* Bootstrap handles this natively */
+}
+.input-group .invalid-feedback {
+    display: block;
+    width: 100%;
+}
+
+/* ---------- Avatar Circle ---------- */
+.avatar-circle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.25);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+}
+
+/* ---------- Dashboard Welcome Banner ---------- */
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #0d6efd, #0a58ca) !important;
+}
+
+/* ---------- Quick Link Cards ---------- */
+.quick-link-card {
+    background: #fff;
+    border-color: #e9ecef;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    color: inherit;
+}
+.quick-link-card:hover {
+    border-color: #0d6efd;
+    box-shadow: 0 4px 16px rgba(13, 110, 253, 0.1);
+    transform: translateY(-2px);
+}
+.quick-link-card h6 {
+    color: #212529;
+}
+.quick-link-card small {
+    color: #6c757d;
+}
+
+/* ---------- Icon Circle ---------- */
+.icon-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* ---------- Error Page ---------- */
+.error-icon-wrapper {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ---------- Alert Styling ---------- */
+.alert {
+    border: none;
+    border-radius: 10px;
+    font-size: 0.925rem;
+}
+
+/* ---------- Dropdown ---------- */
+.dropdown-menu {
+    border-radius: 12px;
+    padding: 0.5rem 0;
+}
+.dropdown-item {
+    padding: 0.6rem 1.25rem;
+    font-size: 0.925rem;
+    transition: background-color 0.15s;
+}
+.dropdown-item:hover {
+    background-color: #f5f7fa;
+}
+.dropdown-header {
+    padding: 0.5rem 1.25rem 0.25rem;
+}
+
+/* ---------- Form Validation Feedback ---------- */
+.was-validated .form-control:invalid,
+.form-control.is-invalid {
+    border-color: #dc3545;
+    padding-right: calc(1.5em + 0.75rem);
+    background-image: none; /* disable Bootstrap's default icon */
+}
+.was-validated .form-control:invalid:focus,
+.form-control.is-invalid:focus {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.15);
+}
+
+/* ---------- Footer ---------- */
+footer {
+    font-size: 0.875rem;
+    border-top: 1px solid #e9ecef;
+}
+
+/* ---------- Responsive Fixes ---------- */
+@media (max-width: 576px) {
+    .login-card {
+        border-radius: 12px;
+        padding: 1.5rem !important;
+    }
+    .card-body {
+        padding: 1.25rem !important;
+    }
+}
+
+/* ---------- Button Enhancements ---------- */
+.btn-lg {
+    padding: 12px 28px;
+    font-size: 1.05rem;
+    border-radius: 10px;
+}
+
+/* ---------- Smooth transitions ---------- */
+a, .btn, .quick-link-card, .form-control {
+    transition: all 0.2s ease;
+}
+
+/* ---------- Divider With Text ---------- */
+.divider-with-text {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    gap: 1rem;
+}
+.divider-with-text::before,
+.divider-with-text::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #dee2e6;
+}
+.divider-text {
+    font-size: 0.85rem;
+    font-weight: 500;
+    white-space: nowrap;
+    letter-spacing: 0.5px;
+}
+
+/* ---------- Google Sign-In Button ---------- */
+#googleSignInButton {
+    min-height: 48px;
+}
+#googleSignInButton iframe {
+    /* Đảm bảo Google button không bị overflow */
+    max-width: 100%;
+}
+#googleLoginError {
+    background-color: #fff5f5;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    padding: 8px 12px;
+}
