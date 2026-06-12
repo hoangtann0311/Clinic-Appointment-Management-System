@@ -99,7 +99,7 @@ public class LoginServlet extends HttpServlet {
             case 1: return "/admin/dashboard";
             case 2: return "/doctor/dashboard";
             case 3: return "/manager/dashboard";
-            case 4: return "/staff/dashboard";
+            case 4: return "/admin/reception";
             case 5: return "/home";
             case 6: return "/sonographer/dashboard";
             default: return "/home";

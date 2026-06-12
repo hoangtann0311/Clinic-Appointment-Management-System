@@ -50,7 +50,7 @@ public class EmailUtil {
     // ========================================================
 
     /** App URL dùng trong link xác thực */
-    private static final String APP_BASE_URL = "http://localhost:8080/ClinicAppointmentManagementSystem";
+    private static final String APP_BASE_URL = "http://localhost:9999/ClinicAppointmentManagementSystem";
 
     /** Cờ đánh dấu email đã được cấu hình hay chưa */
     private static boolean configured = false;

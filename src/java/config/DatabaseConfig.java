@@ -21,49 +21,49 @@ public class DatabaseConfig {
 
     // SQL Server Authentication credentials (chỉ dùng khi Windows Auth thất bại)
     private static final String DB_USER = "sa";
-    private static final String DB_PASSWORD = "123";
+    private static final String DB_PASSWORD = "sa";
 
     // Danh sách các URL kết nối sẽ thử lần lượt
     private static final String[] CONNECTION_URLS = {
-        // Windows Authentication - Default instance port 1433
-        "jdbc:sqlserver://localhost:1433;"
-                + "databaseName=" + DATABASE_NAME + ";"
-                + "integratedSecurity=true;"
-                + "encrypt=true;"
-                + "trustServerCertificate=true;",
+            // Windows Authentication - Default instance port 1433
+            "jdbc:sqlserver://localhost:1433;"
+                    + "databaseName=" + DATABASE_NAME + ";"
+                    + "integratedSecurity=true;"
+                    + "encrypt=true;"
+                    + "trustServerCertificate=true;",
 
-        // Windows Authentication - Named instance SQLEXPRESS
-        "jdbc:sqlserver://localhost\\SQLEXPRESS;"
-                + "databaseName=" + DATABASE_NAME + ";"
-                + "integratedSecurity=true;"
-                + "encrypt=true;"
-                + "trustServerCertificate=true;",
+            // Windows Authentication - Named instance SQLEXPRESS
+            "jdbc:sqlserver://localhost\\SQLEXPRESS;"
+                    + "databaseName=" + DATABASE_NAME + ";"
+                    + "integratedSecurity=true;"
+                    + "encrypt=true;"
+                    + "trustServerCertificate=true;",
 
-        // Windows Authentication - Named instance MSSQLSERVER
-        "jdbc:sqlserver://localhost\\MSSQLSERVER;"
-                + "databaseName=" + DATABASE_NAME + ";"
-                + "integratedSecurity=true;"
-                + "encrypt=true;"
-                + "trustServerCertificate=true;",
+            // Windows Authentication - Named instance MSSQLSERVER
+            "jdbc:sqlserver://localhost\\MSSQLSERVER;"
+                    + "databaseName=" + DATABASE_NAME + ";"
+                    + "integratedSecurity=true;"
+                    + "encrypt=true;"
+                    + "trustServerCertificate=true;",
 
-        // Windows Auth - Không chỉ định port (tự động)
-        "jdbc:sqlserver://localhost;"
-                + "databaseName=" + DATABASE_NAME + ";"
-                + "integratedSecurity=true;"
-                + "encrypt=true;"
-                + "trustServerCertificate=true;",
+            // Windows Auth - Không chỉ định port (tự động)
+            "jdbc:sqlserver://localhost;"
+                    + "databaseName=" + DATABASE_NAME + ";"
+                    + "integratedSecurity=true;"
+                    + "encrypt=true;"
+                    + "trustServerCertificate=true;",
 
-        // SQL Server Authentication - Default instance
-        "jdbc:sqlserver://localhost:1433;"
-                + "databaseName=" + DATABASE_NAME + ";"
-                + "encrypt=true;"
-                + "trustServerCertificate=true;",
+            // SQL Server Authentication - Default instance
+            "jdbc:sqlserver://localhost:1433;"
+                    + "databaseName=" + DATABASE_NAME + ";"
+                    + "encrypt=true;"
+                    + "trustServerCertificate=true;",
 
-        // SQL Server Authentication - Named instance SQLEXPRESS
-        "jdbc:sqlserver://localhost\\SQLEXPRESS;"
-                + "databaseName=" + DATABASE_NAME + ";"
-                + "encrypt=true;"
-                + "trustServerCertificate=true;",
+            // SQL Server Authentication - Named instance SQLEXPRESS
+            "jdbc:sqlserver://localhost\\SQLEXPRESS;"
+                    + "databaseName=" + DATABASE_NAME + ";"
+                    + "encrypt=true;"
+                    + "trustServerCertificate=true;",
     };
 
     private static String activeUrl = null;
@@ -79,7 +79,8 @@ public class DatabaseConfig {
     }
 
     /**
-     * Lấy connection đến database. Tự động thử các URL cho đến khi kết nối thành công.
+     * Lấy connection đến database. Tự động thử các URL cho đến khi kết nối thành
+     * công.
      *
      * @return Connection object
      * @throws SQLException nếu tất cả các cách kết nối đều thất bại
@@ -133,18 +134,18 @@ public class DatabaseConfig {
         // Tất cả đều thất bại
         throw new SQLException(
                 "KHÔNG THỂ KẾT NỐI SQL SERVER.\n"
-                + "Vui lòng kiểm tra:\n"
-                + "1. SQL Server đã được cài đặt và đang chạy chưa?\n"
-                + "   Mở Services.msc, tìm 'SQL Server (MSSQLSERVER)' hoặc 'SQL Server (SQLEXPRESS)'\n"
-                + "2. TCP/IP đã được bật trong SQL Server Configuration Manager chưa?\n"
-                + "   SQL Server Configuration Manager > SQL Server Network Configuration\n"
-                + "   > Protocols for MSSQLSERVER > TCP/IP > Enable = Yes\n"
-                + "3. SQL Server Browser service đã chạy chưa? (nếu dùng named instance)\n"
-                + "   Services.msc > SQL Server Browser > Start\n"
-                + "4. Windows Firewall có đang chặn port 1433 không?\n"
-                + "5. Nếu dùng SQL Auth (sa/123), SQL Server đã bật Mixed Mode chưa?\n"
-                + "   SSMS > Click phải Server > Properties > Security > SQL Server and Windows Authentication mode\n\n"
-                + "Lỗi gốc: " + lastException.getMessage(),
+                        + "Vui lòng kiểm tra:\n"
+                        + "1. SQL Server đã được cài đặt và đang chạy chưa?\n"
+                        + "   Mở Services.msc, tìm 'SQL Server (MSSQLSERVER)' hoặc 'SQL Server (SQLEXPRESS)'\n"
+                        + "2. TCP/IP đã được bật trong SQL Server Configuration Manager chưa?\n"
+                        + "   SQL Server Configuration Manager > SQL Server Network Configuration\n"
+                        + "   > Protocols for MSSQLSERVER > TCP/IP > Enable = Yes\n"
+                        + "3. SQL Server Browser service đã chạy chưa? (nếu dùng named instance)\n"
+                        + "   Services.msc > SQL Server Browser > Start\n"
+                        + "4. Windows Firewall có đang chặn port 1433 không?\n"
+                        + "5. Nếu dùng SQL Auth (sa/123), SQL Server đã bật Mixed Mode chưa?\n"
+                        + "   SSMS > Click phải Server > Properties > Security > SQL Server and Windows Authentication mode\n\n"
+                        + "Lỗi gốc: " + lastException.getMessage(),
                 lastException);
     }
 

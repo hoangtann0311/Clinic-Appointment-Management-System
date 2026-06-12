@@ -1,0 +1,35 @@
+# --- Java & Build outputs ---
+*.class
+*.bluej
+*.pkg
+*.ctxt
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+build/
+dist/
+nbdist/
+
+# --- NetBeans private configurations (CRITICAL) ---
+nbproject/private/
+nbproject/private.properties
+
+# --- IntelliJ & VS Code configurations ---
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# --- Temporary/OS files ---
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+*.tmp
+*.log

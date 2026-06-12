@@ -118,6 +118,12 @@ public class AuthenticationFilter implements Filter {
             return;
         }
 
+        // Cho phép Staff (roleId=4) truy cập phân hệ lễ tân nằm dưới /admin/reception
+        if (roleId == 4 && (path.equals("/admin/reception") || path.startsWith("/admin/reception/"))) {
+            chain.doFilter(request, response);
+            return;
+        }
+
         // Không có quyền: trả về 403
         httpResponse.setStatus(HttpServletResponse.SC_FORBIDDEN);
         request.setAttribute("errorTitle", "Truy Cập Bị Từ Chối");
