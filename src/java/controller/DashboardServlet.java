@@ -19,7 +19,6 @@ import java.util.Map;
  */
 @WebServlet(urlPatterns = {
     "/admin/dashboard",
-    "/doctor/dashboard",
     "/manager/dashboard",
     "/staff/dashboard",
     "/home",

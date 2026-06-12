@@ -21,7 +21,7 @@ public class DatabaseConfig {
 
     // SQL Server Authentication credentials (chỉ dùng khi Windows Auth thất bại)
     private static final String DB_USER = "sa";
-    private static final String DB_PASSWORD = "123";
+    private static final String DB_PASSWORD = "admin";
 
     // Danh sách các URL kết nối sẽ thử lần lượt
     private static final String[] CONNECTION_URLS = {
