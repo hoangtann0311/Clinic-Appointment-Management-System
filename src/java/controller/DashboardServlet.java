@@ -1,4 +1,4 @@
-package com.clinic.controller;
+package controller;
 
 import com.clinic.dao.DashboardDAO;
 import com.clinic.model.User;

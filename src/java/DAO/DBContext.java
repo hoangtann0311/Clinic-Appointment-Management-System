@@ -14,7 +14,7 @@ import java.sql.SQLException;
  */
 public class DBContext {
 
-    private static final String DATABASE_NAME = "ObstetricsClinicDB1";
+    private static final String DATABASE_NAME = "ObstetricsClinicDB";
     private static final String DB_USER = "sa";
     private static final String DB_PASSWORD = "123";
 

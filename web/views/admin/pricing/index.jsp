@@ -216,6 +216,18 @@
                 Quản lý đơn giá dịch vụ y tế và thuốc — cập nhật giá mới sẽ áp dụng cho toàn hệ thống
             </div>
         </div>
+        <c:choose>
+            <c:when test="${tab eq 'medicines'}">
+                <button class="btn btn-primary-pink" data-bs-toggle="modal" data-bs-target="#addMedicineModal">
+                    <i class="bi bi-plus-circle-fill me-1"></i>Thêm Thuốc Mới
+                </button>
+            </c:when>
+            <c:otherwise>
+                <button class="btn btn-primary-pink" data-bs-toggle="modal" data-bs-target="#addServiceModal">
+                    <i class="bi bi-plus-circle-fill me-1"></i>Thêm Dịch Vụ Mới
+                </button>
+            </c:otherwise>
+        </c:choose>
     </div>
 
     <%-- ── STATISTICS CARDS ── --%>
@@ -262,6 +274,7 @@
             <i class="bi bi-check-circle-fill me-2 fs-5"></i>
             <div>
                 <c:choose>
+                    <c:when test="${success eq 'created'}"><strong>Thành công!</strong> Đã thêm mới vào danh mục. Mục mới sẽ có hiệu lực ngay lập tức trong toàn hệ thống.</c:when>
                     <c:when test="${success eq 'updated'}"><strong>Thành công!</strong> Đơn giá đã được cập nhật. Hệ thống sẽ sử dụng mức giá mới cho các giao dịch tiếp theo.</c:when>
                     <c:otherwise><strong>Thành công!</strong> Thao tác hoàn tất.</c:otherwise>
                 </c:choose>
@@ -382,7 +395,7 @@
                                                 </c:choose>
                                             </td>
                                             <td style="font-size:0.82rem;">
-                                                ${svc.durationMins > 0 ? svc.durationMins.concat(' phút') : '—'}
+                                                ${svc.durationMins > 0 ? svc.durationMins.toString().concat(' phút') : '—'}
                                             </td>
                                             <td>
                                                 <c:if test="${svc.requiresFasting}">
@@ -732,6 +745,173 @@
     </div>
 </div>
 
+<%-- ============================================================
+     MODAL: THÊM DỊCH VỤ MỚI
+     ============================================================ --%>
+<div class="modal fade" id="addServiceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-plus-circle-fill me-2"></i>Thêm Dịch Vụ Mới
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="${pageContext.request.contextPath}/admin/pricing/">
+                <input type="hidden" name="action" value="createService">
+                <input type="hidden" name="tab" value="services">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Mã dịch vụ <span class="text-danger">*</span></label>
+                            <input type="text" name="serviceCode" class="form-control" required maxlength="50"
+                                   placeholder="VD: SVC-KHAI-THAI" value="${formData.serviceCode}">
+                            <c:if test="${not empty errors.serviceCode}">
+                                <div class="text-danger mt-1" style="font-size:0.78rem;">${errors.serviceCode}</div>
+                            </c:if>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Tên dịch vụ <span class="text-danger">*</span></label>
+                            <input type="text" name="serviceName" class="form-control" required maxlength="100"
+                                   placeholder="VD: Khám thai định kỳ" value="${formData.serviceName}">
+                            <c:if test="${not empty errors.serviceName}">
+                                <div class="text-danger mt-1" style="font-size:0.78rem;">${errors.serviceName}</div>
+                            </c:if>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Mô tả</label>
+                            <textarea name="description" class="form-control" rows="2" maxlength="500"
+                                      placeholder="Mô tả chi tiết dịch vụ...">${formData.description}</textarea>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Đơn giá (VNĐ) <span class="text-danger">*</span></label>
+                            <input type="number" name="price" class="form-control" required min="1000" step="1000"
+                                   placeholder="VD: 500000" value="${formData.price}">
+                            <c:if test="${not empty errors.price}">
+                                <div class="text-danger mt-1" style="font-size:0.78rem;">${errors.price}</div>
+                            </c:if>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Thời gian (phút)</label>
+                            <input type="number" name="durationMins" class="form-control" min="0"
+                                   placeholder="VD: 30" value="${formData.durationMins}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Phòng yêu cầu</label>
+                            <input type="text" name="requiredRoomType" class="form-control" maxlength="50"
+                                   placeholder="VD: Phòng siêu âm" value="${formData.requiredRoomType}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Chuyên khoa</label>
+                            <input type="text" name="allowedSpecialties" class="form-control" maxlength="255"
+                                   placeholder="VD: Sản khoa, Phụ khoa" value="${formData.allowedSpecialties}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Category ID</label>
+                            <input type="number" name="categoryId" class="form-control" min="0"
+                                   placeholder="1-4" value="${formData.categoryId}">
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end gap-3 pb-2">
+                            <div class="form-check">
+                                <input type="checkbox" name="requiresFasting" class="form-check-input" id="addSvcFasting">
+                                <label class="form-check-label" for="addSvcFasting" style="font-size:0.82rem;">Nhịn ăn</label>
+                            </div>
+                            <div class="form-check">
+                                <input type="checkbox" name="requiresFullBladder" class="form-check-input" id="addSvcBladder">
+                                <label class="form-check-label" for="addSvcBladder" style="font-size:0.82rem;">Đầy bàng quang</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Hủy
+                    </button>
+                    <button type="submit" class="btn btn-primary-pink">
+                        <i class="bi bi-check-lg me-1"></i>Tạo Dịch Vụ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<%-- ============================================================
+     MODAL: THÊM THUỐC MỚI
+     ============================================================ --%>
+<div class="modal fade" id="addMedicineModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-plus-circle-fill me-2"></i>Thêm Thuốc Mới
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="${pageContext.request.contextPath}/admin/pricing/">
+                <input type="hidden" name="action" value="createMedicine">
+                <input type="hidden" name="tab" value="medicines">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Mã thuốc <span class="text-danger">*</span></label>
+                            <input type="text" name="medicineCode" class="form-control" required maxlength="50"
+                                   placeholder="VD: MED-ACID-FOLIC" value="${formData.medicineCode}">
+                            <c:if test="${not empty errors.medicineCode}">
+                                <div class="text-danger mt-1" style="font-size:0.78rem;">${errors.medicineCode}</div>
+                            </c:if>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Tên thuốc <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control" required maxlength="100"
+                                   placeholder="VD: Acid Folic 400mcg" value="${formData.name}">
+                            <c:if test="${not empty errors.name}">
+                                <div class="text-danger mt-1" style="font-size:0.78rem;">${errors.name}</div>
+                            </c:if>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Mô tả</label>
+                            <textarea name="description" class="form-control" rows="2" maxlength="500"
+                                      placeholder="Mô tả công dụng, chỉ định...">${formData.description}</textarea>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Hàm lượng</label>
+                            <input type="text" name="dosage" class="form-control" maxlength="100"
+                                   placeholder="VD: 400mcg" value="${formData.dosage}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Đơn vị tính</label>
+                            <input type="text" name="unit" class="form-control" maxlength="50"
+                                   placeholder="VD: Viên" value="${formData.unit}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Tồn kho</label>
+                            <input type="number" name="stockQuantity" class="form-control" min="0"
+                                   placeholder="VD: 100" value="${formData.stockQuantity}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Đơn giá (VNĐ) <span class="text-danger">*</span></label>
+                            <input type="number" name="price" class="form-control" required min="1" step="1000"
+                                   placeholder="VD: 2500" value="${formData.price}">
+                            <c:if test="${not empty errors.price}">
+                                <div class="text-danger mt-1" style="font-size:0.78rem;">${errors.price}</div>
+                            </c:if>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Hủy
+                    </button>
+                    <button type="submit" class="btn btn-primary-pink">
+                        <i class="bi bi-check-lg me-1"></i>Tạo Thuốc
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
@@ -795,6 +975,14 @@ document.addEventListener('DOMContentLoaded', function() {
     tooltipTriggerList.map(function (el) {
         return new bootstrap.Tooltip(el);
     });
+
+    // Auto-open create modals nếu validation fail
+    <c:if test="${showCreateServiceModal}">
+        new bootstrap.Modal(document.getElementById('addServiceModal')).show();
+    </c:if>
+    <c:if test="${showCreateMedicineModal}">
+        new bootstrap.Modal(document.getElementById('addMedicineModal')).show();
+    </c:if>
 });
 </script>
 </body>

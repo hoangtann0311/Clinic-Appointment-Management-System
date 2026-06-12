@@ -1,4 +1,4 @@
-package com.clinic.controller;
+package controller;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;

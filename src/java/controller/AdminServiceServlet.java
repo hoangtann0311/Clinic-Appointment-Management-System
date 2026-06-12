@@ -1,4 +1,4 @@
-package com.clinic.controller;
+package controller;
 
 import com.clinic.model.Service;
 import com.clinic.service.ServiceService;

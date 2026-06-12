@@ -184,12 +184,25 @@ public class DashboardDAO {
      * DTO cho hiệu suất bác sĩ.
      */
     public static class DoctorPerformance {
-        public int doctorId;
-        public String doctorName;
-        public String specialization;
-        public int totalPatients;
-        public int appointmentsToday;
-        public double revenueGenerated;
+        private int doctorId;
+        private String doctorName;
+        private String specialization;
+        private int totalPatients;
+        private int appointmentsToday;
+        private double revenueGenerated;
+
+        public int getDoctorId() { return doctorId; }
+        public void setDoctorId(int doctorId) { this.doctorId = doctorId; }
+        public String getDoctorName() { return doctorName; }
+        public void setDoctorName(String doctorName) { this.doctorName = doctorName; }
+        public String getSpecialization() { return specialization; }
+        public void setSpecialization(String specialization) { this.specialization = specialization; }
+        public int getTotalPatients() { return totalPatients; }
+        public void setTotalPatients(int totalPatients) { this.totalPatients = totalPatients; }
+        public int getAppointmentsToday() { return appointmentsToday; }
+        public void setAppointmentsToday(int appointmentsToday) { this.appointmentsToday = appointmentsToday; }
+        public double getRevenueGenerated() { return revenueGenerated; }
+        public void setRevenueGenerated(double revenueGenerated) { this.revenueGenerated = revenueGenerated; }
     }
 
     /**
@@ -243,14 +256,31 @@ public class DashboardDAO {
      * DTO cho lịch làm việc bác sĩ hôm nay.
      */
     public static class TodaySchedule {
-        public int scheduleId;
-        public String doctorName;
-        public String specialization;
-        public String startTime;
-        public String endTime;
-        public int maxSlots;
-        public int bookedSlots;
-        public boolean isApproved;
+        private int scheduleId;
+        private String doctorName;
+        private String specialization;
+        private String startTime;
+        private String endTime;
+        private int maxSlots;
+        private int bookedSlots;
+        private boolean isApproved;
+
+        public int getScheduleId() { return scheduleId; }
+        public void setScheduleId(int scheduleId) { this.scheduleId = scheduleId; }
+        public String getDoctorName() { return doctorName; }
+        public void setDoctorName(String doctorName) { this.doctorName = doctorName; }
+        public String getSpecialization() { return specialization; }
+        public void setSpecialization(String specialization) { this.specialization = specialization; }
+        public String getStartTime() { return startTime; }
+        public void setStartTime(String startTime) { this.startTime = startTime; }
+        public String getEndTime() { return endTime; }
+        public void setEndTime(String endTime) { this.endTime = endTime; }
+        public int getMaxSlots() { return maxSlots; }
+        public void setMaxSlots(int maxSlots) { this.maxSlots = maxSlots; }
+        public int getBookedSlots() { return bookedSlots; }
+        public void setBookedSlots(int bookedSlots) { this.bookedSlots = bookedSlots; }
+        public boolean getIsApproved() { return isApproved; }
+        public void setIsApproved(boolean isApproved) { this.isApproved = isApproved; }
     }
 
     /**
@@ -309,10 +339,19 @@ public class DashboardDAO {
      * DTO cho thống kê dịch vụ siêu âm.
      */
     public static class UltrasoundStat {
-        public String serviceName;
-        public int totalCases;
-        public int casesToday;
-        public double price;
+        private String serviceName;
+        private int totalCases;
+        private int casesToday;
+        private double price;
+
+        public String getServiceName() { return serviceName; }
+        public void setServiceName(String serviceName) { this.serviceName = serviceName; }
+        public int getTotalCases() { return totalCases; }
+        public void setTotalCases(int totalCases) { this.totalCases = totalCases; }
+        public int getCasesToday() { return casesToday; }
+        public void setCasesToday(int casesToday) { this.casesToday = casesToday; }
+        public double getPrice() { return price; }
+        public void setPrice(double price) { this.price = price; }
     }
 
     /**
@@ -365,11 +404,22 @@ public class DashboardDAO {
      * DTO cho bệnh nhân mới đăng ký.
      */
     public static class RecentPatient {
-        public int id;
-        public String fullName;
-        public String email;
-        public String phone;
-        public String createdAt;
+        private int id;
+        private String fullName;
+        private String email;
+        private String phone;
+        private String createdAt;
+
+        public int getId() { return id; }
+        public void setId(int id) { this.id = id; }
+        public String getFullName() { return fullName; }
+        public void setFullName(String fullName) { this.fullName = fullName; }
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+        public String getPhone() { return phone; }
+        public void setPhone(String phone) { this.phone = phone; }
+        public String getCreatedAt() { return createdAt; }
+        public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
     }
 
     /**
@@ -453,11 +503,22 @@ public class DashboardDAO {
      * DTO cho audit log hiển thị dashboard.
      */
     public static class AuditLogEntry {
-        public int id;
-        public String userName;
-        public String action;
-        public String tableName;
-        public String createdAt;
+        private int id;
+        private String userName;
+        private String action;
+        private String tableName;
+        private String createdAt;
+
+        public int getId() { return id; }
+        public void setId(int id) { this.id = id; }
+        public String getUserName() { return userName; }
+        public void setUserName(String userName) { this.userName = userName; }
+        public String getAction() { return action; }
+        public void setAction(String action) { this.action = action; }
+        public String getTableName() { return tableName; }
+        public void setTableName(String tableName) { this.tableName = tableName; }
+        public String getCreatedAt() { return createdAt; }
+        public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
     }
 
     /**
@@ -512,11 +573,22 @@ public class DashboardDAO {
      * DTO cho một cảnh báo.
      */
     public static class Alert {
-        public String type;       // warning, danger, info
-        public String icon;        // bootstrap icon class
-        public String title;
-        public String message;
-        public int count;
+        private String type;       // warning, danger, info
+        private String icon;        // bootstrap icon class
+        private String title;
+        private String message;
+        private int count;
+
+        public String getType() { return type; }
+        public void setType(String type) { this.type = type; }
+        public String getIcon() { return icon; }
+        public void setIcon(String icon) { this.icon = icon; }
+        public String getTitle() { return title; }
+        public void setTitle(String title) { this.title = title; }
+        public String getMessage() { return message; }
+        public void setMessage(String message) { this.message = message; }
+        public int getCount() { return count; }
+        public void setCount(int count) { this.count = count; }
     }
 
     /**

@@ -140,27 +140,45 @@ public class UserService {
             errors.put("username", "Vui lòng nhập tên đăng nhập.");
             return false;
         }
-        if (!username.trim().matches("^[a-zA-Z0-9_]+$")) {
-            errors.put("username", "Tên đăng nhập chỉ được chứa chữ cái, số và dấu gạch dưới.");
-            return false;
-        }
+
+        // Load user hiện tại từ DB
         User u = userDAO.findById(userId);
         if (u == null) {
-            errors.put("general", "User không tồn tại.");
+            errors.put("general", "User không tồn tại hoặc đã bị xóa.");
             return false;
         }
-        // Kiểm tra username trùng (ngoại trừ chính nó)
-        User existing = userDAO.findByUsername(username.trim().toLowerCase());
-        if (existing != null && existing.getId() != userId) {
-            errors.put("username", "Tên đăng nhập đã được sử dụng bởi người dùng khác.");
-            return false;
+
+        String newUsername = username.trim().toLowerCase();
+
+        // Chỉ kiểm tra định dạng + trùng lặp username khi admin THAY ĐỔI username.
+        // Nếu giữ nguyên username cũ thì bỏ qua validate (cho phép user có username
+        // ký tự đặc biệt do được tạo trực tiếp từ DB trước đây).
+        boolean usernameChanged = (u.getUsername() == null)
+                || !newUsername.equals(u.getUsername().toLowerCase());
+
+        if (usernameChanged) {
+            if (!newUsername.matches("^[a-zA-Z0-9_]+$")) {
+                errors.put("username", "Tên đăng nhập chỉ được chứa chữ cái, số và dấu gạch dưới.");
+                return false;
+            }
+            // Kiểm tra username trùng (ngoại trừ chính nó)
+            User existing = userDAO.findByUsername(newUsername);
+            if (existing != null && existing.getId() != userId) {
+                errors.put("username", "Tên đăng nhập đã được sử dụng bởi người dùng khác.");
+                return false;
+            }
         }
+
         u.setFullName(fullName.trim());
-        u.setUsername(username.trim().toLowerCase());
+        u.setUsername(newUsername);
         u.setPhone(phone != null ? phone.trim() : "");
         u.setRoleId(roleId);
         u.setStatus(status);
-        return userDAO.update(u);
+        if (!userDAO.update(u)) {
+            errors.put("general", "Cập nhật thất bại — có thể có lỗi cơ sở dữ liệu. Vui lòng thử lại.");
+            return false;
+        }
+        return true;
     }
 
     /** Reset mật khẩu cho user (admin side) */

@@ -3,11 +3,20 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
+            <file>file:/C:/Users/A/Downloads/CodeNETbeans/ClinicAppointmentManagementSystem/src/java/controller/AdminStaffServlet.java</file>
             <file>file:/C:/Users/A/Downloads/CodeNETbeans/ClinicAppointmentManagementSystem/src/java/controller/RegisterServlet.java</file>
-            <file>file:/C:/Users/A/Downloads/CodeNETbeans/ClinicAppointmentManagementSystem/src/java/utils/EmailUtil.java</file>
-            <file>file:/C:/Users/A/Downloads/CodeNETbeans/ClinicAppointmentManagementSystem/src/java/utils/BCryptUtil.java</file>
+            <file>file:/C:/Users/A/Downloads/CodeNETbeans/ClinicAppointmentManagementSystem/web/views/admin/dashboard.jsp</file>
             <file>file:/C:/Users/A/Downloads/CodeNETbeans/ClinicAppointmentManagementSystem/src/java/DAO/DBContext.java</file>
             <file>file:/C:/Users/A/Downloads/CodeNETbeans/ClinicAppointmentManagementSystem/web/WEB-INF/web.xml</file>
+            <file>file:/C:/Users/A/Downloads/CodeNETbeans/ClinicAppointmentManagementSystem/src/java/com/clinic/service/ServiceService.java</file>
+            <file>file:/C:/Users/A/Downloads/CodeNETbeans/ClinicAppointmentManagementSystem/web/views/common/header.jsp</file>
+            <file>file:/C:/Users/A/Downloads/CodeNETbeans/ClinicAppointmentManagementSystem/src/java/utils/EmailUtil.java</file>
+            <file>file:/C:/Users/A/Downloads/CodeNETbeans/ClinicAppointmentManagementSystem/src/java/utils/BCryptUtil.java</file>
+            <file>file:/C:/Users/A/Downloads/CodeNETbeans/ClinicAppointmentManagementSystem/src/java/controller/ForgotPasswordServlet.java</file>
+            <file>file:/C:/Users/A/Downloads/CodeNETbeans/ClinicAppointmentManagementSystem/web/views/admin/login.jsp</file>
+            <file>file:/C:/Users/A/Downloads/CodeNETbeans/ClinicAppointmentManagementSystem/web/views/admin/medicines/index.jsp</file>
+            <file>file:/C:/Users/A/Downloads/CodeNETbeans/ClinicAppointmentManagementSystem/web/views/admin/users/index.jsp</file>
+            <file>file:/C:/Users/A/Downloads/CodeNETbeans/ClinicAppointmentManagementSystem/web/views/admin/layout/sidebar.jsp</file>
             <file>file:/C:/Users/A/Downloads/CodeNETbeans/ClinicAppointmentManagementSystem/src/java/service/AuthService.java</file>
         </group>
     </open-files>

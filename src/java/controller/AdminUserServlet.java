@@ -1,4 +1,4 @@
-package com.clinic.controller;
+package controller;
 
 import com.clinic.model.User;
 import com.clinic.service.UserService;
@@ -104,12 +104,22 @@ public class AdminUserServlet extends HttpServlet {
                     String phone = req.getParameter("phone");
                     int roleId = parseInt(req.getParameter("roleId"), 5);
                     String status = req.getParameter("status");
+
+                    System.out.println("[AdminUserServlet] edit: userId=" + userId
+                        + ", fullName=" + fullName + ", username=" + username
+                        + ", phone=" + phone + ", roleId=" + roleId + ", status=" + status);
+
                     Map<String, String> errors = new HashMap<>();
                     if (userService.updateUser(userId, fullName, username, phone, roleId, status, errors)) {
                         resp.sendRedirect(redirectUrl + "?success=updated");
                     } else {
-                        resp.sendRedirect(redirectUrl + "?error=" + java.net.URLEncoder.encode(
-                            errors.getOrDefault("general", "Cập nhật thất bại"), "UTF-8"));
+                        // Show most specific error message available
+                        String errorMsg = errors.getOrDefault("general", null);
+                        if (errorMsg == null) {
+                            errorMsg = errors.values().stream().findFirst().orElse("Cập nhật thất bại");
+                        }
+                        System.out.println("[AdminUserServlet] edit FAILED: " + errorMsg);
+                        resp.sendRedirect(redirectUrl + "?error=" + java.net.URLEncoder.encode(errorMsg, "UTF-8"));
                     }
                     return;
                 }

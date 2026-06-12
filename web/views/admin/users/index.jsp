@@ -43,9 +43,11 @@
             --t-fast: 0.15s ease;
             --font-display: 'Nunito', sans-serif;
             --font-body: 'Inter', sans-serif;
+            /* Ghi đè biến Bootstrap để toàn bộ component (modal, card, ...) dùng chung font */
+            --bs-body-font-family: var(--font-body);
         }
         *, *::before, *::after { box-sizing: border-box; }
-        body, .btn, .form-control, .table, .badge, .card { font-family: var(--font-body); }
+        body, .btn, .form-control, .form-select, .form-label, .table, .badge, .card, .modal { font-family: var(--font-body); }
         h1,h2,h3,h4,h5,h6 { font-family: var(--font-display); }
         body.admin-body { font-family: var(--font-body); background: var(--c-bg); color: var(--c-on-bg); margin: 0; padding: 0; line-height: 1.6; -webkit-font-smoothing: antialiased; }
 
@@ -164,7 +166,7 @@
 
     <div class="admin-page-header">
         <div class="admin-page-header-left">
-            <h1 class="admin-page-title">Quản Lý Người Dùng</h1>
+            <h1 class="admin-page-title">Quản Lý Người Dùng </h1>
             <div class="admin-page-subtitle">
                 <i class="bi bi-people-fill"></i>
                 Tổng: <strong>${totalUsers}</strong> người dùng
@@ -210,7 +212,6 @@
                     <option value="">Tất cả trạng thái</option>
                     <option value="Active" ${statusFilter eq 'Active' ? 'selected' : ''}>Active</option>
                     <option value="Inactive" ${statusFilter eq 'Inactive' ? 'selected' : ''}>Inactive</option>
-                    <option value="Locked" ${statusFilter eq 'Locked' ? 'selected' : ''}>Locked</option>
                     <option value="Pending Verification" ${statusFilter eq 'Pending Verification' ? 'selected' : ''}>Pending</option>
                 </select>
                 <button type="submit" class="btn btn-primary-pink">
@@ -244,9 +245,9 @@
                     <tbody>
                         <c:choose>
                             <c:when test="${not empty users}">
-                                <c:forEach var="u" items="${users}">
+                                <c:forEach var="u" items="${users}" varStatus="loop">
                                     <tr>
-                                        <td style="color:var(--c-muted);font-size:0.8rem;">#${u.id}</td>
+                                        <td style="color:var(--c-muted);font-size:0.8rem;font-weight:600;">#${(currentPage - 1) * pageSize + loop.index + 1}</td>
                                         <td style="font-weight:600;">
                                             ${u.fullName}
                                             <c:if test="${u.authProvider eq 'google'}">
@@ -255,7 +256,7 @@
                                         </td>
                                         <td style="font-size:0.82rem;font-weight:500;">${not empty u.username ? u.username : '—'}</td>
                                         <td style="font-size:0.82rem;">${u.email}</td>
-                                        <td style="font-size:0.82rem;">${not empty u.phone ? u.phone : '—'}</td>
+                                        <td style="font-size:0.82rem;">${not empty u.phone ? fn:escapeXml(u.phone) : '—'}</td>
                                         <td><span class="badge-role-tag">${not empty u.roleName ? u.roleName : roleMap[u.roleId]}</span></td>
                                         <td>
                                             <c:set var="statusClass" value="${not empty u.status ? fn:toLowerCase(fn:replace(u.status, ' ', '-')) : 'inactive'}" />
@@ -274,8 +275,14 @@
                                         <td>
                                             <div class="d-flex gap-1">
                                                 <%-- Edit button --%>
-                                                <button class="btn btn-sm btn-outline-secondary btn-action"
-                                                        onclick="openEditModal('${u.id}','${fn:escapeXml(u.fullName)}','${fn:escapeXml(u.username)}','${fn:escapeXml(u.phone)}','${u.roleId}','${u.status}')"
+                                                <button class="btn btn-sm btn-outline-secondary btn-action btn-edit-user"
+                                                        data-id="${u.id}"
+                                                        data-fullname="${fn:escapeXml(u.fullName)}"
+                                                        data-username="${fn:escapeXml(u.username)}"
+                                                        data-email="${fn:escapeXml(u.email)}"
+                                                        data-phone="${fn:escapeXml(u.phone)}"
+                                                        data-roleid="${u.roleId}"
+                                                        data-status="${fn:escapeXml(u.status)}"
                                                         title="Sửa">
                                                     <i class="bi bi-pencil-square"></i>
                                                 </button>
@@ -457,7 +464,8 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Tên đăng nhập <span class="text-danger">*</span></label>
-                            <input type="text" name="username" id="editUsername" class="form-control" required maxlength="50">
+                            <input type="text" name="username" id="editUsername" class="form-control" maxlength="50"
+                                   placeholder="Ít nhất 4 ký tự">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Số điện thoại</label>
@@ -514,16 +522,24 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
     }
 })();
 
-<%-- Edit modal helper --%>
-function openEditModal(id, fullName, username, phone, roleId, status) {
-    document.getElementById('editUserId').value = id;
-    document.getElementById('editFullName').value = fullName;
-    document.getElementById('editUsername').value = username || '';
-    document.getElementById('editPhone').value = phone || '';
-    document.getElementById('editRoleId').value = roleId;
-    document.getElementById('editStatus').value = status;
-    new bootstrap.Modal(document.getElementById('editUserModal')).show();
-}
+<%-- Edit modal: dùng data-* attributes thay vì inline onclick để tránh lỗi escape ký tự đặc biệt --%>
+document.querySelectorAll('.btn-edit-user').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var ds = this.dataset;
+        document.getElementById('editUserId').value     = ds.id;
+        document.getElementById('editFullName').value   = ds.fullname;
+        // Nếu username rỗng, tự động tạo từ email (phần trước dấu @)
+        var username = ds.username || '';
+        if (!username && ds.email) {
+            username = ds.email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
+        }
+        document.getElementById('editUsername').value   = username;
+        document.getElementById('editPhone').value      = ds.phone || '';
+        document.getElementById('editRoleId').value     = ds.roleid;
+        document.getElementById('editStatus').value     = ds.status;
+        new bootstrap.Modal(document.getElementById('editUserModal')).show();
+    });
+});
 </script>
 </body>
 </html>

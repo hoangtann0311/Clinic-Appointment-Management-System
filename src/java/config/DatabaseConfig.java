@@ -25,45 +25,51 @@ public class DatabaseConfig {
 
     // Danh sách các URL kết nối sẽ thử lần lượt
     private static final String[] CONNECTION_URLS = {
+        // SQL Server Authentication - 127.0.0.1 (nhanh nhất, không DNS lookup)
+        "jdbc:sqlserver://127.0.0.1:1433;"
+                + "databaseName=" + DATABASE_NAME + ";"
+                + "encrypt=true;"
+                + "trustServerCertificate=true;"
+                + "loginTimeout=10;"
+                + "connectTimeout=10;",
+
+        // SQL Server Authentication - localhost
+        "jdbc:sqlserver://localhost:1433;"
+                + "databaseName=" + DATABASE_NAME + ";"
+                + "encrypt=true;"
+                + "trustServerCertificate=true;"
+                + "loginTimeout=10;",
+
         // Windows Authentication - Default instance port 1433
+        "jdbc:sqlserver://127.0.0.1:1433;"
+                + "databaseName=" + DATABASE_NAME + ";"
+                + "integratedSecurity=true;"
+                + "encrypt=true;"
+                + "trustServerCertificate=true;"
+                + "loginTimeout=10;",
+
+        // Windows Authentication - localhost
         "jdbc:sqlserver://localhost:1433;"
                 + "databaseName=" + DATABASE_NAME + ";"
                 + "integratedSecurity=true;"
                 + "encrypt=true;"
-                + "trustServerCertificate=true;",
-
-        // Windows Authentication - Named instance SQLEXPRESS
-        "jdbc:sqlserver://localhost\\SQLEXPRESS;"
-                + "databaseName=" + DATABASE_NAME + ";"
-                + "integratedSecurity=true;"
-                + "encrypt=true;"
-                + "trustServerCertificate=true;",
-
-        // Windows Authentication - Named instance MSSQLSERVER
-        "jdbc:sqlserver://localhost\\MSSQLSERVER;"
-                + "databaseName=" + DATABASE_NAME + ";"
-                + "integratedSecurity=true;"
-                + "encrypt=true;"
-                + "trustServerCertificate=true;",
+                + "trustServerCertificate=true;"
+                + "loginTimeout=10;",
 
         // Windows Auth - Không chỉ định port (tự động)
-        "jdbc:sqlserver://localhost;"
+        "jdbc:sqlserver://127.0.0.1;"
                 + "databaseName=" + DATABASE_NAME + ";"
                 + "integratedSecurity=true;"
                 + "encrypt=true;"
-                + "trustServerCertificate=true;",
+                + "trustServerCertificate=true;"
+                + "loginTimeout=10;",
 
-        // SQL Server Authentication - Default instance
-        "jdbc:sqlserver://localhost:1433;"
+        // SQL Auth - localhost không port
+        "jdbc:sqlserver://localhost;"
                 + "databaseName=" + DATABASE_NAME + ";"
                 + "encrypt=true;"
-                + "trustServerCertificate=true;",
-
-        // SQL Server Authentication - Named instance SQLEXPRESS
-        "jdbc:sqlserver://localhost\\SQLEXPRESS;"
-                + "databaseName=" + DATABASE_NAME + ";"
-                + "encrypt=true;"
-                + "trustServerCertificate=true;",
+                + "trustServerCertificate=true;"
+                + "loginTimeout=10;",
     };
 
     private static String activeUrl = null;
@@ -105,7 +111,7 @@ public class DatabaseConfig {
         // Phase 1: Thử Windows Authentication
         for (int i = 0; i < CONNECTION_URLS.length; i++) {
             String url = CONNECTION_URLS[i];
-            boolean isSqlAuth = (i >= 4); // 4 URL đầu là Windows Auth, còn lại là SQL Auth
+            boolean isSqlAuth = !url.contains("integratedSecurity=true");
 
             try {
                 Connection conn;

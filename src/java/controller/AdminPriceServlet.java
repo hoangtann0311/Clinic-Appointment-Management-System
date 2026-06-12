@@ -1,4 +1,4 @@
-package com.clinic.controller;
+package controller;
 
 import com.clinic.model.Medicine;
 import com.clinic.model.Service;
@@ -262,6 +262,58 @@ public class AdminPriceServlet extends HttpServlet {
                     return;
                 }
 
+                // ── THÊM MỚI DỊCH VỤ ──
+                case "createService": {
+                    String serviceCode = req.getParameter("serviceCode");
+                    String serviceName = req.getParameter("serviceName");
+                    String description = req.getParameter("description");
+                    String price = req.getParameter("price");
+                    String durationMins = req.getParameter("durationMins");
+                    boolean requiresFasting = "on".equals(req.getParameter("requiresFasting"));
+                    boolean requiresFullBladder = "on".equals(req.getParameter("requiresFullBladder"));
+                    String requiredRoomType = req.getParameter("requiredRoomType");
+                    String allowedSpecialties = req.getParameter("allowedSpecialties");
+                    String categoryId = req.getParameter("categoryId");
+
+                    Map<String, String> errors = new HashMap<>();
+                    if (serviceService.createService(serviceCode, serviceName, description,
+                            price, durationMins, requiresFasting, requiresFullBladder,
+                            requiredRoomType, allowedSpecialties, categoryId, errors)) {
+                        logAudit(req, "CREATE_SERVICE", "Thêm dịch vụ: " + serviceName + " (giá=" + price + ")");
+                        resp.sendRedirect(redirectUrl + "&success=created");
+                    } else {
+                        req.setAttribute("errors", errors);
+                        req.setAttribute("formData", buildServiceFormData(req));
+                        req.setAttribute("showCreateServiceModal", true);
+                        doGet(req, resp);
+                    }
+                    return;
+                }
+
+                // ── THÊM MỚI THUỐC ──
+                case "createMedicine": {
+                    String medicineCode = req.getParameter("medicineCode");
+                    String medicineName = req.getParameter("name");
+                    String description = req.getParameter("description");
+                    String dosage = req.getParameter("dosage");
+                    String unit = req.getParameter("unit");
+                    String price = req.getParameter("price");
+                    String stockQuantity = req.getParameter("stockQuantity");
+
+                    Map<String, String> errors = new HashMap<>();
+                    if (medicineService.createMedicine(medicineCode, medicineName, description,
+                            dosage, unit, price, stockQuantity, errors)) {
+                        logAudit(req, "CREATE_MEDICINE", "Thêm thuốc: " + medicineName + " (giá=" + price + ")");
+                        resp.sendRedirect(redirectUrl + "&success=created");
+                    } else {
+                        req.setAttribute("errors", errors);
+                        req.setAttribute("formData", buildMedicineFormData(req));
+                        req.setAttribute("showCreateMedicineModal", true);
+                        doGet(req, resp);
+                    }
+                    return;
+                }
+
                 case "quickUpdateMedicinePrice": {
                     int id = parseInt(req.getParameter("id"), -1);
                     String newPriceStr = req.getParameter("price");
@@ -309,6 +361,33 @@ public class AdminPriceServlet extends HttpServlet {
             e.printStackTrace(System.err);
             resp.sendRedirect(redirectUrl + "&error=Lỗi+hệ+thống");
         }
+    }
+
+    /** Lưu form data dịch vụ để hiển thị lại khi validation fail */
+    private Map<String, String> buildServiceFormData(HttpServletRequest req) {
+        Map<String, String> data = new HashMap<>();
+        data.put("serviceCode", req.getParameter("serviceCode"));
+        data.put("serviceName", req.getParameter("serviceName"));
+        data.put("description", req.getParameter("description"));
+        data.put("price", req.getParameter("price"));
+        data.put("durationMins", req.getParameter("durationMins"));
+        data.put("requiredRoomType", req.getParameter("requiredRoomType"));
+        data.put("allowedSpecialties", req.getParameter("allowedSpecialties"));
+        data.put("categoryId", req.getParameter("categoryId"));
+        return data;
+    }
+
+    /** Lưu form data thuốc để hiển thị lại khi validation fail */
+    private Map<String, String> buildMedicineFormData(HttpServletRequest req) {
+        Map<String, String> data = new HashMap<>();
+        data.put("medicineCode", req.getParameter("medicineCode"));
+        data.put("name", req.getParameter("name"));
+        data.put("description", req.getParameter("description"));
+        data.put("dosage", req.getParameter("dosage"));
+        data.put("unit", req.getParameter("unit"));
+        data.put("price", req.getParameter("price"));
+        data.put("stockQuantity", req.getParameter("stockQuantity"));
+        return data;
     }
 
     /** Ghi log thao tác sửa biểu giá */

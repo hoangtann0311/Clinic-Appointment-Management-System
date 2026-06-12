@@ -1,4 +1,4 @@
-package com.clinic.controller;
+package controller;
 
 import com.clinic.config.GoogleConfig;
 import com.clinic.model.User;
