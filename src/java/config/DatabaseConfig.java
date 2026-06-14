@@ -30,6 +30,7 @@ public class DatabaseConfig {
                 + "databaseName=" + DATABASE_NAME + ";"
                 + "encrypt=true;"
                 + "trustServerCertificate=true;"
+                + "sendStringParametersAsUnicode=true;"
                 + "loginTimeout=10;"
                 + "connectTimeout=10;",
 
@@ -38,6 +39,7 @@ public class DatabaseConfig {
                 + "databaseName=" + DATABASE_NAME + ";"
                 + "encrypt=true;"
                 + "trustServerCertificate=true;"
+                + "sendStringParametersAsUnicode=true;"
                 + "loginTimeout=10;",
 
         // Windows Authentication - Default instance port 1433
@@ -46,6 +48,7 @@ public class DatabaseConfig {
                 + "integratedSecurity=true;"
                 + "encrypt=true;"
                 + "trustServerCertificate=true;"
+                + "sendStringParametersAsUnicode=true;"
                 + "loginTimeout=10;",
 
         // Windows Authentication - localhost
@@ -54,6 +57,7 @@ public class DatabaseConfig {
                 + "integratedSecurity=true;"
                 + "encrypt=true;"
                 + "trustServerCertificate=true;"
+                + "sendStringParametersAsUnicode=true;"
                 + "loginTimeout=10;",
 
         // Windows Auth - Không chỉ định port (tự động)
@@ -62,6 +66,7 @@ public class DatabaseConfig {
                 + "integratedSecurity=true;"
                 + "encrypt=true;"
                 + "trustServerCertificate=true;"
+                + "sendStringParametersAsUnicode=true;"
                 + "loginTimeout=10;",
 
         // SQL Auth - localhost không port
@@ -69,6 +74,7 @@ public class DatabaseConfig {
                 + "databaseName=" + DATABASE_NAME + ";"
                 + "encrypt=true;"
                 + "trustServerCertificate=true;"
+                + "sendStringParametersAsUnicode=true;"
                 + "loginTimeout=10;",
     };
 

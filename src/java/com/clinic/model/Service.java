@@ -28,6 +28,9 @@ public class Service implements Serializable {
 
     // Transient — không map từ DB, dùng cho hiển thị
     private String categoryName;
+    private String categoryIcon;
+    private int usageCount;         // số lượt sử dụng dịch vụ
+    private long totalRevenue;      // tổng doanh thu từ dịch vụ này
 
     public Service() {
     }
@@ -151,6 +154,30 @@ public class Service implements Serializable {
 
     public void setCategoryName(String categoryName) {
         this.categoryName = categoryName;
+    }
+
+    public String getCategoryIcon() {
+        return categoryIcon;
+    }
+
+    public void setCategoryIcon(String categoryIcon) {
+        this.categoryIcon = categoryIcon;
+    }
+
+    public int getUsageCount() {
+        return usageCount;
+    }
+
+    public void setUsageCount(int usageCount) {
+        this.usageCount = usageCount;
+    }
+
+    public long getTotalRevenue() {
+        return totalRevenue;
+    }
+
+    public void setTotalRevenue(long totalRevenue) {
+        this.totalRevenue = totalRevenue;
     }
 
     @Override

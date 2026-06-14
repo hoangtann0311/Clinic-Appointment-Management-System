@@ -23,6 +23,11 @@ public class Medicine implements Serializable {
     private Timestamp createdAt;
     private Timestamp updatedAt;
 
+    // Transient — hiển thị
+    private String categoryName;
+    private String categoryIcon;
+    private Integer categoryId;
+
     public Medicine() {
     }
 
@@ -114,6 +119,13 @@ public class Medicine implements Serializable {
     public void setUpdatedAt(Timestamp updatedAt) {
         this.updatedAt = updatedAt;
     }
+
+    public String getCategoryName() { return categoryName; }
+    public void setCategoryName(String categoryName) { this.categoryName = categoryName; }
+    public String getCategoryIcon() { return categoryIcon; }
+    public void setCategoryIcon(String categoryIcon) { this.categoryIcon = categoryIcon; }
+    public Integer getCategoryId() { return categoryId; }
+    public void setCategoryId(Integer categoryId) { this.categoryId = categoryId; }
 
     @Override
     public String toString() {

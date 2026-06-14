@@ -74,12 +74,34 @@ public class DashboardServlet extends HttpServlet {
                 loadAdminDashboardData(request);
                 targetJsp = "/views/admin/dashboard.jsp";
                 break;
+            case 3: // Manager → giao diện manager với theme Teal/Emerald
+                loadManagerDashboardData(request);
+                targetJsp = "/views/manager/dashboard.jsp";
+                break;
             default: // Các role khác giữ nguyên giao diện chung
                 targetJsp = "/views/home/dashboard.jsp";
                 break;
         }
 
         request.getRequestDispatcher(targetJsp).forward(request, response);
+    }
+
+    /**
+     * Load dữ liệu thống kê cho Manager Dashboard.
+     * Manager tập trung vào quản lý dịch vụ, thuốc và biểu giá.
+     */
+    private void loadManagerDashboardData(HttpServletRequest request) {
+        DashboardService dashboardService = new DashboardService();
+        com.clinic.service.MedicineService medicineService = new com.clinic.service.MedicineService();
+        com.clinic.service.ServiceService serviceService = new com.clinic.service.ServiceService();
+
+        // Tổng số dịch vụ và thuốc
+        request.setAttribute("totalServices", serviceService.getTotalServices(null, null));
+        request.setAttribute("totalMedicines", medicineService.getTotalMedicines(null, null));
+
+        // Số dịch vụ và thuốc đang active
+        request.setAttribute("activeServicesCount", serviceService.getTotalServices(null, true));
+        request.setAttribute("activeMedicinesCount", medicineService.getTotalMedicines(null, true));
     }
 
     /**

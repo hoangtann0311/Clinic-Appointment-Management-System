@@ -89,8 +89,118 @@ public class MedicineDAO {
     }
 
     /**
+     * Lấy danh sách thuốc kèm tên nhóm — dùng cho Manager.
+     */
+    public List<Medicine> findAllWithCategory(int offset, int pageSize,
+                                               String search, Boolean activeFilter,
+                                               Integer categoryId) {
+        StringBuilder sql = new StringBuilder(
+            "SELECT m.id, m.medicine_code, m.name, m.description, m.dosage, "
+            + "m.unit, m.price, m.stock_quantity, m.is_active, m.created_at, m.updated_at, "
+            + "mc.category_name, mc.icon AS category_icon, m.category_id "
+            + "FROM medicines m "
+            + "LEFT JOIN medicine_categories mc ON mc.id = m.category_id "
+            + "WHERE 1=1 ");
+
+        if (search != null && !search.trim().isEmpty()) {
+            sql.append("AND (m.name LIKE ? OR m.medicine_code LIKE ?) ");
+        }
+        if (activeFilter != null) {
+            sql.append("AND m.is_active = ? ");
+        }
+        if (categoryId != null && categoryId > 0) {
+            sql.append("AND m.category_id = ? ");
+        }
+        sql.append("ORDER BY m.id ASC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
+
+        List<Medicine> list = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql.toString());
+            int idx = 1;
+            if (search != null && !search.trim().isEmpty()) {
+                String like = "%" + search.trim() + "%";
+                ps.setString(idx++, like);
+                ps.setString(idx++, like);
+            }
+            if (activeFilter != null) {
+                ps.setBoolean(idx++, activeFilter);
+            }
+            if (categoryId != null && categoryId > 0) {
+                ps.setInt(idx++, categoryId);
+            }
+            ps.setInt(idx++, offset);
+            ps.setInt(idx++, pageSize);
+            rs = ps.executeQuery();
+            while (rs.next()) {
+                Medicine m = mapRow(rs, true);
+                try { m.setCategoryName(rs.getString("category_name")); } catch (SQLException e) { m.setCategoryName(null); }
+                try { m.setCategoryIcon(rs.getString("category_icon")); } catch (SQLException e) { m.setCategoryIcon(null); }
+                try { m.setCategoryId((Integer) rs.getObject("category_id")); } catch (SQLException e) { m.setCategoryId(null); }
+                list.add(m);
+            }
+        } catch (SQLException e) {
+            String msg = e.getMessage() != null ? e.getMessage() : "";
+            if (msg.contains("Invalid object name") || msg.contains("invalid column")) {
+                System.err.println("[MedicineDAO] findAllWithCategory fallback: " + msg);
+                return findAll(offset, pageSize, search, activeFilter);
+            }
+            System.err.println("[MedicineDAO] findAllWithCategory ERROR: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return list;
+    }
+
+    /** Đếm tổng số thuốc (có filter category). */
+    public int countAllWithFilter(String search, Boolean activeFilter, Integer categoryId) {
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) AS total FROM medicines WHERE 1=1 ");
+
+        if (search != null && !search.trim().isEmpty()) {
+            sql.append("AND (name LIKE ? OR medicine_code LIKE ?) ");
+        }
+        if (activeFilter != null) {
+            sql.append("AND is_active = ? ");
+        }
+        if (categoryId != null && categoryId > 0) {
+            sql.append("AND category_id = ? ");
+        }
+
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql.toString());
+            int idx = 1;
+            if (search != null && !search.trim().isEmpty()) {
+                String like = "%" + search.trim() + "%";
+                ps.setString(idx++, like);
+                ps.setString(idx++, like);
+            }
+            if (activeFilter != null) {
+                ps.setBoolean(idx++, activeFilter);
+            }
+            if (categoryId != null && categoryId > 0) {
+                ps.setInt(idx++, categoryId);
+            }
+            rs = ps.executeQuery();
+            if (rs.next()) return rs.getInt("total");
+        } catch (SQLException e) {
+            System.err.println("[MedicineDAO] countAllWithFilter ERROR: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return 0;
+    }
+
+    /**
      * Đếm tổng số thuốc (có filter) — dùng cho phân trang.
      */
+    @Deprecated
     public int countAll(String search, Boolean activeFilter) {
         StringBuilder sql = new StringBuilder("SELECT COUNT(*) AS total FROM medicines WHERE 1=1 ");
 
@@ -184,8 +294,8 @@ public class MedicineDAO {
      */
     public int insert(Medicine medicine) {
         String sql = "INSERT INTO medicines (medicine_code, name, description, dosage, unit, "
-                   + "price, stock_quantity, is_active) "
-                   + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                   + "price, stock_quantity, is_active, category_id) "
+                   + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         Connection conn = null;
         PreparedStatement ps = null;
@@ -201,6 +311,11 @@ public class MedicineDAO {
             ps.setBigDecimal(6, medicine.getPrice());
             ps.setInt(7, medicine.getStockQuantity());
             ps.setBoolean(8, medicine.isActive());
+            if (medicine.getCategoryId() != null) {
+                ps.setInt(9, medicine.getCategoryId());
+            } else {
+                ps.setNull(9, Types.INTEGER);
+            }
 
             int affectedRows = ps.executeUpdate();
             if (affectedRows == 0) {
@@ -225,7 +340,7 @@ public class MedicineDAO {
      */
     public boolean update(Medicine medicine) {
         String sql = "UPDATE medicines SET medicine_code=?, name=?, description=?, dosage=?, "
-                   + "unit=?, price=?, stock_quantity=?, is_active=?, updated_at=GETDATE() "
+                   + "unit=?, price=?, stock_quantity=?, is_active=?, category_id=?, updated_at=GETDATE() "
                    + "WHERE id=?";
 
         Connection conn = null;
@@ -241,7 +356,12 @@ public class MedicineDAO {
             ps.setBigDecimal(6, medicine.getPrice());
             ps.setInt(7, medicine.getStockQuantity());
             ps.setBoolean(8, medicine.isActive());
-            ps.setInt(9, medicine.getId());
+            if (medicine.getCategoryId() != null) {
+                ps.setInt(9, medicine.getCategoryId());
+            } else {
+                ps.setNull(9, Types.INTEGER);
+            }
+            ps.setInt(10, medicine.getId());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("Lỗi update medicine: " + e.getMessage());
@@ -294,6 +414,45 @@ public class MedicineDAO {
             closeResources(conn, ps, rs);
         }
         return list;
+    }
+
+    /**
+     * Kích hoạt lại thuốc.
+     */
+    public boolean activate(int id) {
+        String sql = "UPDATE medicines SET is_active = 1, updated_at = GETDATE() WHERE id = ?";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setInt(1, id);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("[MedicineDAO] activate ERROR: " + e.getMessage());
+            return false;
+        } finally {
+            closeResources(conn, ps, null);
+        }
+    }
+
+    /** Đếm số thuốc đang hoạt động. */
+    public int countActive() {
+        String sql = "SELECT COUNT(*) AS total FROM medicines WHERE is_active = 1";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            rs = ps.executeQuery();
+            if (rs.next()) return rs.getInt("total");
+        } catch (SQLException e) {
+            System.err.println("[MedicineDAO] countActive ERROR: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return 0;
     }
 
     /**

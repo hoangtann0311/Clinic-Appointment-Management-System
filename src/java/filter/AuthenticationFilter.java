@@ -107,7 +107,14 @@ public class AuthenticationFilter implements Filter {
         Map.entry("/doctor/dashboard", "report.view_dashboard"),
         Map.entry("/manager/dashboard", "report.view_dashboard"),
         Map.entry("/staff/dashboard", "report.view_dashboard"),
-        Map.entry("/sonographer/dashboard", "report.view_dashboard")
+        Map.entry("/sonographer/dashboard", "report.view_dashboard"),
+        // Manager — quản lý biểu giá, dịch vụ, thuốc
+        Map.entry("/manager/pricing/", "service.view"),
+        Map.entry("/manager/pricing", "service.view"),
+        Map.entry("/manager/services/", "service.view"),
+        Map.entry("/manager/services", "service.view"),
+        Map.entry("/manager/medicines/", "medicine.view"),
+        Map.entry("/manager/medicines", "medicine.view")
     );
 
     @Override

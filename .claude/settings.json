@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\A\\\\Downloads\\\\CodeNETbeans\\\\ClinicAppointmentManagementSystem\" -Recurse -Directory | ForEach-Object { $_.FullName } | Sort-Object)",
+      "PowerShell($url = \"https://repo1.maven.org/maven2/jakarta/activation/jakarta.activation-api/2.0.1/jakarta.activation-api-2.0.1.jar\"; $output = \"c:\\\\Users\\\\A\\\\Downloads\\\\CodeNETbeans\\\\ClinicAppointmentManagementSystem\\\\web\\\\WEB-INF\\\\lib\\\\jakarta.activation-api-2.0.1.jar\"; Invoke-WebRequest -Uri $url -OutFile $output; Write-Host \"Downloaded successfully: $\\(\\(Get-Item $output\\).Length\\) bytes\")",
+      "PowerShell(ant clean build 2>&1)",
+      "WebFetch(domain:repo1.maven.org)",
+      "PowerShell($url = \"https://repo1.maven.org/maven2/com/sun/activation/jakarta.activation/2.0.1/jakarta.activation-2.0.1.jar\"; $dest = \"web\\\\WEB-INF\\\\lib\\\\jakarta.activation-2.0.1.jar\"; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri $url -OutFile $dest -UseBasicParsing; if \\($?\\) { Write-Output \"Downloaded successfully\"; \\(Get-Item $dest\\).Length } else { Write-Output \"Download failed\" })",
+      "PowerShell(Add-Type -AssemblyName System.IO.Compression.FileSystem; $jar = [System.IO.Compression.ZipFile]::OpenRead\\(\"web/WEB-INF/lib/jakarta.activation-2.0.1.jar\"\\); $entry = $jar.Entries | Where-Object { $_.FullName -eq \"com/sun/activation/registries/LogSupport.class\" }; if \\($entry\\) { Write-Output \"FOUND: com.sun.activation.registries.LogSupport.class\" } else { Write-Output \"NOT FOUND\" }; $jar.Dispose\\(\\))",
+      "PowerShell(Copy-Item \"web\\\\WEB-INF\\\\lib\\\\jakarta.activation-2.0.1.jar\" \"build\\\\web\\\\WEB-INF\\\\lib\\\\jakarta.activation-2.0.1.jar\" -Force)",
+      "Bash(javap -c \"build_v2/com/clinic/filter/EncodingFilter.class\")",
+      "Bash(ant clean *)",
+      "Bash(where javac *)",
+      "Read(//c/Program Files/Java/**)",
+      "Read(//c/Program Files/Java//**)",
+      "Bash(ls \"C:/Program Files/Apache Software Foundation/Tomcat 10.1/lib/\" 2>/dev/null | grep -i servlet)",
+      "Read(//c/Program Files/Apache Software Foundation/Tomcat 10.1/lib/**)"
+    ]
+  }
+}

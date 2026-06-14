@@ -62,7 +62,7 @@ public class ServiceDAO {
         if (activeFilter != null) {
             sql.append("AND s.is_active = ? ");
         }
-        sql.append("ORDER BY s.id DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
+        sql.append("ORDER BY s.id ASC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
 
         List<Service> list = new ArrayList<>();
         Connection conn = null;
@@ -275,7 +275,8 @@ public class ServiceDAO {
             ps.setInt(12, service.getId());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            System.err.println("Lỗi update service: " + e.getMessage());
+            System.err.println("[ServiceDAO] update ERROR: " + e.getMessage());
+            e.printStackTrace(System.err);
             return false;
         } finally {
             closeResources(conn, ps, null);
@@ -325,6 +326,221 @@ public class ServiceDAO {
             closeResources(conn, ps, rs);
         }
         return list;
+    }
+
+    /**
+     * Lấy danh sách dịch vụ kèm tên nhóm + số lượt sử dụng.
+     * Dùng cho Manager — hiển thị đầy đủ thông tin.
+     */
+    public List<Service> findAllWithUsage(int offset, int pageSize,
+                                           String search, Boolean activeFilter,
+                                           Integer categoryId) {
+        StringBuilder sql = new StringBuilder(
+            "SELECT s.id, s.service_code, s.service_name, s.description, s.price, "
+            + "s.duration_mins, s.requires_fasting, s.requires_full_bladder, "
+            + "s.required_room_type, s.allowed_specialties, s.category_id, "
+            + "s.is_active, s.created_at, s.updated_at, "
+            + "sc.category_name, sc.icon AS category_icon, "
+            + "COALESCE(usage_cnt.cnt, 0) AS usage_count "
+            + "FROM services s "
+            + "LEFT JOIN service_categories sc ON sc.id = s.category_id "
+            + "LEFT JOIN ("
+            + "  SELECT a.service_id, COUNT(*) AS cnt "
+            + "  FROM appointments a WHERE a.service_id IS NOT NULL GROUP BY a.service_id"
+            + ") usage_cnt ON usage_cnt.service_id = s.id "
+            + "WHERE 1=1 ");
+
+        if (search != null && !search.trim().isEmpty()) {
+            sql.append("AND (s.service_name LIKE ? OR s.service_code LIKE ?) ");
+        }
+        if (activeFilter != null) {
+            sql.append("AND s.is_active = ? ");
+        }
+        if (categoryId != null && categoryId > 0) {
+            sql.append("AND s.category_id = ? ");
+        }
+        sql.append("ORDER BY s.id ASC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
+
+        List<Service> list = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql.toString());
+            int idx = 1;
+            if (search != null && !search.trim().isEmpty()) {
+                String like = "%" + search.trim() + "%";
+                ps.setString(idx++, like);
+                ps.setString(idx++, like);
+            }
+            if (activeFilter != null) {
+                ps.setBoolean(idx++, activeFilter);
+            }
+            if (categoryId != null && categoryId > 0) {
+                ps.setInt(idx++, categoryId);
+            }
+            ps.setInt(idx++, offset);
+            ps.setInt(idx++, pageSize);
+            rs = ps.executeQuery();
+            while (rs.next()) {
+                Service s = mapRow(rs, true);
+                try { s.setCategoryName(rs.getString("category_name")); } catch (SQLException e) { s.setCategoryName(null); }
+                try { s.setCategoryIcon(rs.getString("category_icon")); } catch (SQLException e) { s.setCategoryIcon(null); }
+                try { s.setUsageCount(rs.getInt("usage_count")); } catch (SQLException e) { s.setUsageCount(0); }
+                list.add(s);
+            }
+        } catch (SQLException e) {
+            String msg = e.getMessage() != null ? e.getMessage() : "";
+            if (msg.contains("Invalid column name") || msg.contains("invalid column")) {
+                // Fallback về query cũ không join
+                System.err.println("[ServiceDAO] findAllWithUsage fallback: " + msg);
+                return findAll(offset, pageSize, search, activeFilter);
+            }
+            System.err.println("[ServiceDAO] findAllWithUsage ERROR: " + e.getMessage());
+            throw new RuntimeException("Lỗi database khi lấy danh sách dịch vụ", e);
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return list;
+    }
+
+    /** Đếm tổng số dịch vụ (có filter category). */
+    public int countAllWithFilter(String search, Boolean activeFilter, Integer categoryId) {
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) AS total FROM services WHERE 1=1 ");
+
+        if (search != null && !search.trim().isEmpty()) {
+            sql.append("AND (service_name LIKE ? OR service_code LIKE ?) ");
+        }
+        if (activeFilter != null) {
+            sql.append("AND is_active = ? ");
+        }
+        if (categoryId != null && categoryId > 0) {
+            sql.append("AND category_id = ? ");
+        }
+
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql.toString());
+            int idx = 1;
+            if (search != null && !search.trim().isEmpty()) {
+                String like = "%" + search.trim() + "%";
+                ps.setString(idx++, like);
+                ps.setString(idx++, like);
+            }
+            if (activeFilter != null) {
+                ps.setBoolean(idx++, activeFilter);
+            }
+            if (categoryId != null && categoryId > 0) {
+                ps.setInt(idx++, categoryId);
+            }
+            rs = ps.executeQuery();
+            if (rs.next()) return rs.getInt("total");
+        } catch (SQLException e) {
+            System.err.println("[ServiceDAO] countAllWithFilter ERROR: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return 0;
+    }
+
+    /** Lấy số lượt sử dụng của một dịch vụ. */
+    public int getUsageCount(int serviceId) {
+        String sql = "SELECT COUNT(*) AS cnt FROM appointments WHERE service_id = ?";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setInt(1, serviceId);
+            rs = ps.executeQuery();
+            if (rs.next()) return rs.getInt("cnt");
+        } catch (SQLException e) {
+            System.err.println("[ServiceDAO] getUsageCount ERROR: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return 0;
+    }
+
+    /** Thống kê doanh thu theo nhóm dịch vụ (từ invoices + invoice_items). */
+    public List<Service> getRevenueByCategory() {
+        String sql = "SELECT sc.id AS category_id, sc.category_name, sc.icon, "
+                   + "COUNT(DISTINCT a.id) AS total_bookings, "
+                   + "COALESCE(SUM(ii.amount), 0) AS total_revenue "
+                   + "FROM service_categories sc "
+                   + "LEFT JOIN services s ON s.category_id = sc.id "
+                   + "LEFT JOIN appointments a ON a.service_id = s.id "
+                   + "LEFT JOIN invoices i ON i.appointment_id = a.id AND i.status IN ('paid', 'pending') "
+                   + "LEFT JOIN invoice_items ii ON ii.invoice_id = i.id "
+                   + "WHERE sc.is_active = 1 "
+                   + "GROUP BY sc.id, sc.category_name, sc.icon "
+                   + "ORDER BY total_revenue DESC";
+
+        List<Service> list = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            rs = ps.executeQuery();
+            while (rs.next()) {
+                Service s = new Service();
+                s.setCategoryId(rs.getInt("category_id"));
+                s.setCategoryName(rs.getString("category_name"));
+                try { s.setCategoryIcon(rs.getString("icon")); } catch (SQLException e) { }
+                s.setUsageCount(rs.getInt("total_bookings"));
+                s.setTotalRevenue(rs.getLong("total_revenue"));
+                list.add(s);
+            }
+        } catch (SQLException e) {
+            System.err.println("[ServiceDAO] getRevenueByCategory ERROR: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return list;
+    }
+
+    /** Đếm số dịch vụ đang hoạt động. */
+    public int countActive() {
+        String sql = "SELECT COUNT(*) AS total FROM services WHERE is_active = 1";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            rs = ps.executeQuery();
+            if (rs.next()) return rs.getInt("total");
+        } catch (SQLException e) {
+            System.err.println("[ServiceDAO] countActive ERROR: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return 0;
+    }
+
+    /** Kích hoạt lại dịch vụ. */
+    public boolean activate(int id) {
+        String sql = "UPDATE services SET is_active = 1, updated_at = GETDATE() WHERE id = ?";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setInt(1, id);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("[ServiceDAO] activate ERROR: " + e.getMessage());
+            return false;
+        } finally {
+            closeResources(conn, ps, null);
+        }
     }
 
     /** Ánh xạ ResultSet → Service entity. */
