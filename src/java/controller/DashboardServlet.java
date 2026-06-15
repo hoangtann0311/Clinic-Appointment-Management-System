@@ -74,16 +74,13 @@ public class DashboardServlet extends HttpServlet {
                 loadAdminDashboardData(request);
                 targetJsp = "/views/admin/dashboard.jsp";
                 break;
-<<<<<<< HEAD
             case 4: // Staff → redirect sang trang lễ tân của họ
                 response.sendRedirect(request.getContextPath() + "/admin/reception");
                 return;
-=======
             case 3: // Manager → giao diện manager với theme Teal/Emerald
                 loadManagerDashboardData(request);
                 targetJsp = "/views/manager/dashboard.jsp";
                 break;
->>>>>>> origin/hieupt
             default: // Các role khác giữ nguyên giao diện chung
                 targetJsp = "/views/home/dashboard.jsp";
                 break;
