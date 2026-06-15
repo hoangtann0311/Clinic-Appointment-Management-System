@@ -88,12 +88,13 @@ public class DashboardServlet extends HttpServlet {
 
     /**
      * Load dữ liệu thống kê cho Manager Dashboard.
-     * Manager tập trung vào quản lý dịch vụ, thuốc và biểu giá.
+     * Manager tập trung vào quản lý dịch vụ, thuốc, biểu giá và thống kê dịch vụ.
      */
     private void loadManagerDashboardData(HttpServletRequest request) {
         DashboardService dashboardService = new DashboardService();
         com.clinic.service.MedicineService medicineService = new com.clinic.service.MedicineService();
         com.clinic.service.ServiceService serviceService = new com.clinic.service.ServiceService();
+        com.clinic.service.ServiceStatisticsService statsService = new com.clinic.service.ServiceStatisticsService();
 
         // Tổng số dịch vụ và thuốc
         request.setAttribute("totalServices", serviceService.getTotalServices(null, null));
@@ -102,6 +103,24 @@ public class DashboardServlet extends HttpServlet {
         // Số dịch vụ và thuốc đang active
         request.setAttribute("activeServicesCount", serviceService.getTotalServices(null, true));
         request.setAttribute("activeMedicinesCount", medicineService.getTotalMedicines(null, true));
+
+        // ─── Thống kê dịch vụ (Service Statistics KPI cho Manager Dashboard) ───
+        int totalUsageToday = statsService.getTotalUsageToday();
+        double totalRevenueToday = statsService.getTotalRevenueToday();
+        double usageGrowthRate = statsService.getUsageGrowthRate();
+        String topServiceName = statsService.getTopServiceName();
+        int topServiceUsage = statsService.getTopServiceUsage();
+        int servicesUsedToday = statsService.getServicesUsedToday();
+
+        request.setAttribute("totalUsageToday", totalUsageToday);
+        request.setAttribute("totalRevenueTodayFormatted",
+                com.clinic.service.ServiceStatisticsService.formatCurrency(totalRevenueToday));
+        request.setAttribute("usageGrowthRate", usageGrowthRate);
+        request.setAttribute("usageGrowthFormatted",
+                com.clinic.service.ServiceStatisticsService.formatGrowthPercent(usageGrowthRate));
+        request.setAttribute("topServiceName", topServiceName);
+        request.setAttribute("topServiceUsage", topServiceUsage);
+        request.setAttribute("servicesUsedToday", servicesUsedToday);
     }
 
     /**

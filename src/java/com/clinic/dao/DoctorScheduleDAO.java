@@ -68,7 +68,7 @@ public class DoctorScheduleDAO {
             params.add(dateTo);
         }
 
-        sql.append("ORDER BY ds.work_date DESC, ds.start_time ASC ")
+        sql.append("ORDER BY ds.id ASC ")
            .append("OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
         params.add(offset);
         params.add(pageSize);

@@ -114,7 +114,10 @@ public class AuthenticationFilter implements Filter {
         Map.entry("/manager/services/", "service.view"),
         Map.entry("/manager/services", "service.view"),
         Map.entry("/manager/medicines/", "medicine.view"),
-        Map.entry("/manager/medicines", "medicine.view")
+        Map.entry("/manager/medicines", "medicine.view"),
+        // Manager — thống kê dịch vụ
+        Map.entry("/manager/statistics/", "service.view"),
+        Map.entry("/manager/statistics", "service.view")
     );
 
     @Override

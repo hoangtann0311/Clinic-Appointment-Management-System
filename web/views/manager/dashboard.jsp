@@ -188,9 +188,9 @@
         </span>
     </div>
 
-    <%-- 4 KPI CARDS — Manager Focus --%>
+    <%-- 6 KPI CARDS — Manager Focus (Quản lý + Thống kê dịch vụ) --%>
     <div class="row g-3 mb-4">
-        <div class="col-xl-3 col-lg-6">
+        <div class="col-xl-2 col-lg-4 col-md-6">
             <div class="card kpi-card kpi-services fade-in-up">
                 <div class="card-body">
                     <div class="kpi-icon"><i class="bi bi-activity"></i></div>
@@ -202,7 +202,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-xl-3 col-lg-6">
+        <div class="col-xl-2 col-lg-4 col-md-6">
             <div class="card kpi-card kpi-medicines fade-in-up">
                 <div class="card-body">
                     <div class="kpi-icon"><i class="bi bi-capsule"></i></div>
@@ -214,7 +214,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-xl-3 col-lg-6">
+        <div class="col-xl-2 col-lg-4 col-md-6">
             <div class="card kpi-card kpi-pricing fade-in-up">
                 <div class="card-body">
                     <div class="kpi-icon"><i class="bi bi-cash-coin"></i></div>
@@ -229,7 +229,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-xl-3 col-lg-6">
+        <div class="col-xl-2 col-lg-4 col-md-6">
             <div class="card kpi-card kpi-active fade-in-up">
                 <div class="card-body">
                     <div class="kpi-icon"><i class="bi bi-check2-circle"></i></div>
@@ -237,6 +237,44 @@
                         <div class="kpi-value">${not empty activeServicesCount ? activeServicesCount : 0}</div>
                         <div class="kpi-label">Dịch Vụ Đang Áp Dụng</div>
                         <div class="kpi-sub"><i class="bi bi-check-circle-fill"></i> Có hiệu lực</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <%-- KPI Thống kê: Lượt sử dụng hôm nay --%>
+        <div class="col-xl-2 col-lg-4 col-md-6">
+            <div class="card kpi-card kpi-stat-usage fade-in-up" style="--kpi-accent:#3b82f6;">
+                <div class="card-body" style="border-top:3px solid #3b82f6 !important;">
+                    <div class="kpi-icon" style="background:#dbeafe;color:#2563eb;"><i class="bi bi-people-fill"></i></div>
+                    <div class="kpi-content">
+                        <div class="kpi-value">${not empty totalUsageToday ? totalUsageToday : 0}</div>
+                        <div class="kpi-label">Lượt SD Hôm Nay</div>
+                        <div class="kpi-sub"><i class="bi bi-calendar-check"></i> Dịch vụ</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <%-- KPI Thống kê: Doanh thu hôm nay --%>
+        <div class="col-xl-2 col-lg-4 col-md-6">
+            <div class="card kpi-card kpi-stat-revenue fade-in-up" style="--kpi-accent:#10b981;">
+                <div class="card-body" style="border-top:3px solid #10b981 !important;">
+                    <div class="kpi-icon" style="background:#d1fae5;color:#059669;"><i class="bi bi-cash-stack"></i></div>
+                    <div class="kpi-content">
+                        <div class="kpi-value" style="font-size:1.1rem;">${not empty totalRevenueTodayFormatted ? totalRevenueTodayFormatted : '0'}</div>
+                        <div class="kpi-label">Doanh Thu Hôm Nay</div>
+                        <div class="kpi-sub">
+                            <c:choose>
+                                <c:when test="${usageGrowthRate > 0}">
+                                    <i class="bi bi-arrow-up-circle-fill" style="color:#059669;"></i>
+                                    <span style="color:#059669;">${usageGrowthFormatted}</span>
+                                </c:when>
+                                <c:otherwise>
+                                    <i class="bi bi-info-circle"></i> Dịch vụ
+                                </c:otherwise>
+                            </c:choose>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -283,11 +321,11 @@
                             </a>
                         </div>
                         <div class="col-md-3 col-sm-6">
-                            <a href="${pageContext.request.contextPath}/manager/pricing/" class="quick-action-btn">
-                                <span class="quick-action-icon"><i class="bi bi-graph-up-arrow"></i></span>
+                            <a href="${pageContext.request.contextPath}/manager/statistics/" class="quick-action-btn">
+                                <span class="quick-action-icon"><i class="bi bi-file-earmark-bar-graph"></i></span>
                                 <span class="quick-action-text">
-                                    <span>Xem Biểu Giá</span>
-                                    <small>Tổng quan tất cả bảng giá</small>
+                                    <span>Thống Kê Dịch Vụ</span>
+                                    <small>KPI, biểu đồ &amp; phân tích</small>
                                 </span>
                             </a>
                         </div>
@@ -297,7 +335,7 @@
         </div>
     </div>
 
-    <%-- QUICK STATS — At a Glance + Hướng dẫn --%>
+    <%-- QUICK STATS — Thống kê nhanh + Thông tin dịch vụ --%>
     <div class="row g-3 mb-4">
         <div class="col-xl-6">
             <div class="admin-card h-100">
@@ -310,22 +348,28 @@
                 </div>
                 <div class="card-body p-3">
                     <ul class="activity-feed">
-                        <li class="activity-item">
-                            <span class="activity-dot create"></span>
-                            <div class="activity-body">
-                                <div class="act-title">Quản lý biểu giá — sẵn sàng cập nhật</div>
-                                <div class="act-meta">
-                                    <span><i class="bi bi-tag me-1"></i>Biểu Giá</span>
-                                    <span><i class="bi bi-clock me-1"></i>Hôm nay</span>
+                        <c:if test="${not empty topServiceName && topServiceUsage > 0}">
+                            <li class="activity-item">
+                                <span class="activity-dot create"></span>
+                                <div class="activity-body">
+                                    <div class="act-title">
+                                        <strong>${topServiceName}</strong> — dịch vụ được sử dụng nhiều nhất hôm nay
+                                    </div>
+                                    <div class="act-meta">
+                                        <span><i class="bi bi-bar-chart-fill me-1"></i>${topServiceUsage} lượt hôm nay</span>
+                                        <span><i class="bi bi-clock me-1"></i>Top 1</span>
+                                    </div>
                                 </div>
-                            </div>
-                        </li>
+                            </li>
+                        </c:if>
                         <li class="activity-item">
                             <span class="activity-dot update"></span>
                             <div class="activity-body">
-                                <div class="act-title">Danh mục dịch vụ y tế — sẵn sàng quản lý</div>
+                                <div class="act-title">
+                                    <strong>${not empty totalUsageToday ? totalUsageToday : 0} lượt</strong> sử dụng dịch vụ được ghi nhận hôm nay
+                                </div>
                                 <div class="act-meta">
-                                    <span><i class="bi bi-activity me-1"></i>Dịch Vụ</span>
+                                    <span><i class="bi bi-people me-1"></i>${not empty servicesUsedToday ? servicesUsedToday : 0} loại dịch vụ</span>
                                     <span><i class="bi bi-clock me-1"></i>Hôm nay</span>
                                 </div>
                             </div>
@@ -333,10 +377,22 @@
                         <li class="activity-item">
                             <span class="activity-dot create"></span>
                             <div class="activity-body">
-                                <div class="act-title">Danh mục thuốc — sẵn sàng quản lý</div>
+                                <div class="act-title">
+                                    <c:choose>
+                                        <c:when test="${usageGrowthRate > 0}">
+                                            <span style="color:#059669;">Tăng <strong>${usageGrowthFormatted}</strong></span> lượt sử dụng so với hôm qua
+                                        </c:when>
+                                        <c:when test="${usageGrowthRate < 0}">
+                                            <span style="color:#dc2626;">Giảm <strong>${usageGrowthFormatted}</strong></span> lượt sử dụng so với hôm qua
+                                        </c:when>
+                                        <c:otherwise>
+                                            Lượt sử dụng <strong>không đổi</strong> so với hôm qua
+                                        </c:otherwise>
+                                    </c:choose>
+                                </div>
                                 <div class="act-meta">
-                                    <span><i class="bi bi-capsule me-1"></i>Thuốc</span>
-                                    <span><i class="bi bi-clock me-1"></i>Hôm nay</span>
+                                    <span><i class="bi bi-graph-up-arrow me-1"></i>Tăng trưởng</span>
+                                    <span><i class="bi bi-clock me-1"></i>24h qua</span>
                                 </div>
                             </div>
                         </li>
@@ -370,9 +426,9 @@
                             <div class="stat-mini-sub">Quản lý danh mục<br>&amp; tồn kho thuốc</div>
                         </div>
                         <div class="stat-mini">
-                            <span class="stat-mini-icon" style="color:#2e7d32;"><i class="bi bi-check-circle-fill"></i></span>
-                            <div class="stat-mini-label">Áp Dụng</div>
-                            <div class="stat-mini-sub">Giá mới có hiệu lực<br>ngay trong hệ thống</div>
+                            <span class="stat-mini-icon" style="color:#3b82f6;"><i class="bi bi-4-circle-fill"></i></span>
+                            <div class="stat-mini-label">Thống Kê</div>
+                            <div class="stat-mini-sub">Phân tích KPI<br>dịch vụ &amp; doanh thu</div>
                         </div>
                     </div>
                 </div>
@@ -478,11 +534,16 @@
                                 </tr>
                                 <tr>
                                     <td style="font-weight:700;">
-                                        <i class="bi bi-graph-up-arrow me-2" style="color:var(--c-muted);"></i>Báo Cáo
+                                        <i class="bi bi-file-earmark-bar-graph me-2" style="color:#3b82f6;"></i>Thống Kê
                                     </td>
-                                    <td style="color:var(--c-muted);">Báo cáo doanh thu &amp; thống kê</td>
-                                    <td><span style="color:var(--c-muted);">&mdash;</span></td>
-                                    <td><span class="badge-status badge-status-pending">Sắp ra mắt</span></td>
+                                    <td style="color:var(--c-muted);">Thống kê, KPI &amp; phân tích dịch vụ y tế</td>
+                                    <td>
+                                        <a href="${pageContext.request.contextPath}/manager/statistics/"
+                                           style="color:var(--pink-500);font-weight:600;text-decoration:none;">
+                                            /manager/statistics &rarr;
+                                        </a>
+                                    </td>
+                                    <td><span class="badge-status badge-status-active">Hoạt động</span></td>
                                 </tr>
                             </tbody>
                         </table>

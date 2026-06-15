@@ -87,7 +87,8 @@
             </a>
         </li>
         <li>
-            <a href="#" class="disabled" title="Đang phát triển">
+            <a href="${pageContext.request.contextPath}/manager/statistics/"
+               class="${fn:contains(requestURI, '/manager/statistics') ? 'active' : ''}">
                 <i class="bi bi-file-earmark-bar-graph"></i>
                 <span>Thống Kê Dịch Vụ</span>
             </a>
