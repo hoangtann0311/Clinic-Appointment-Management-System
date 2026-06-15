@@ -1,0 +1,80 @@
+package com.clinic.controller;
+
+import com.clinic.dao.MedicalRecordDAO;
+import com.clinic.dao.PrescriptionDAO;
+import com.clinic.model.MedicalRecord;
+import com.clinic.model.Prescription;
+import com.clinic.model.User;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.*;
+
+import java.io.IOException;
+import java.util.List;
+
+/**
+ * Cho phép bệnh nhân xem lịch sử hồ sơ bệnh án và đơn thuốc của bản thân.
+ *
+ * URL patterns:
+ *   GET /patient/medical-records              → danh sách hồ sơ của bệnh nhân đang đăng nhập
+ *   GET /patient/medical-records?recordId=X   → chi tiết 1 hồ sơ + đơn thuốc
+ */
+@WebServlet("/patient/medical-records")
+public class PatientMedicalRecordServlet extends HttpServlet {
+
+    private final MedicalRecordDAO recordDAO       = new MedicalRecordDAO();
+    private final PrescriptionDAO  prescriptionDAO = new PrescriptionDAO();
+
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute("user") == null) {
+            response.sendRedirect(request.getContextPath() + "/login");
+            return;
+        }
+        User user = (User) session.getAttribute("user");
+
+        String recordIdParam = request.getParameter("recordId");
+
+        if (recordIdParam != null) {
+            // Chi tiết 1 hồ sơ
+            int recordId;
+            try { recordId = Integer.parseInt(recordIdParam); }
+            catch (NumberFormatException e) {
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST); return;
+            }
+
+            MedicalRecord record = recordDAO.getById(recordId);
+            if (record == null) {
+                response.sendError(HttpServletResponse.SC_NOT_FOUND); return;
+            }
+
+            // Bảo mật: chỉ xem được hồ sơ của chính mình
+            // (getById JOIN users; ta kiểm tra bằng cách lấy danh sách rồi tìm trong đó)
+            List<MedicalRecord> myRecords = recordDAO.getByPatientId(user.getId());
+            boolean mine = myRecords.stream().anyMatch(r -> r.getId() == recordId);
+            if (!mine) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN); return;
+            }
+
+            Prescription prescription = prescriptionDAO.getByMedicalRecordId(recordId);
+
+            request.setAttribute("record",       record);
+            request.setAttribute("prescription", prescription);
+            request.setAttribute("mode",         "detail");
+            request.getRequestDispatcher("/views/patient/medical_record_detail.jsp")
+                   .forward(request, response);
+
+        } else {
+            // Danh sách tất cả hồ sơ
+            List<MedicalRecord> records = recordDAO.getByPatientId(user.getId());
+            request.setAttribute("records", records);
+            request.setAttribute("mode",    "list");
+            request.getRequestDispatcher("/views/patient/medical_record_detail.jsp")
+                   .forward(request, response);
+        }
+    }
+}
