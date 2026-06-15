@@ -2,7 +2,7 @@
    CAMS Admin — Pink Rose Dashboard Stylesheet v3.0
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800;900&family=Nunito:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
     --sidebar-w: 270px;
@@ -87,8 +87,8 @@
     --t-slow:   0.35s cubic-bezier(0.4,0,0.2,1);
 
     /* === FONTS === */
-    --font-display: 'Nunito', 'Be Vietnam Pro', sans-serif;
-    --font-body:    'Inter', 'Be Vietnam Pro', sans-serif;
+    --font-display: 'Be Vietnam Pro', 'Nunito', 'Segoe UI', system-ui, -apple-system, Arial, sans-serif;
+    --font-body:    'Be Vietnam Pro', 'Inter', 'Segoe UI', system-ui, -apple-system, Arial, sans-serif;
 }
 
 /* ── Reset ── */

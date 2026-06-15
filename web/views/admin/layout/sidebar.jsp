@@ -62,17 +62,13 @@
             </a>
         </li>
         <li>
-            <a href="#" class="disabled" title="Đang phát triển">
-                <i class="bi bi-activity"></i>
-                <span>Dịch Vụ</span>
+            <a href="${pageContext.request.contextPath}/admin/staff/"
+               class="${fn:contains(requestURI, '/admin/staff') ? 'active' : ''}">
+                <i class="bi bi-person-badge-fill"></i>
+                <span>Quản Lý Nhân Sự</span>
             </a>
         </li>
-        <li>
-            <a href="#" class="disabled" title="Đang phát triển">
-                <i class="bi bi-capsule"></i>
-                <span>Thuốc</span>
-            </a>
-        </li>
+        <!-- Dịch Vụ, Thuốc, Biểu Giá → Đã chuyển sang Manager -->
 
         <!-- NỘI DUNG -->
         <li class="admin-sidebar-section">Nội Dung</li>
