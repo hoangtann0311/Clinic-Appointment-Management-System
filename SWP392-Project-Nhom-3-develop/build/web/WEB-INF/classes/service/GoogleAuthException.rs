@@ -1,1 +1,0 @@
-com.clinic.service.GoogleAuthException

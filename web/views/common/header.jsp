@@ -58,84 +58,188 @@
         }
     </style>
 </head>
-<body>
-<!-- Navbar -->
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
-    <div class="container">
-        <a class="navbar-brand" href="${pageContext.request.contextPath}/">
-            <i class="bi bi-hospital me-2"></i>CAMS
-        </a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav ms-auto align-items-lg-center">
+<c:choose>
+    <c:when test="${not empty sessionScope.user && (sessionScope.user.roleId == 2 || sessionScope.user.roleId == 6)}">
+        <!-- Rose Pink Theme Header/Sidebar for Doctor (2) and Sonographer (6) -->
+        <link href="${pageContext.request.contextPath}/assets/css/admin.css" rel="stylesheet">
+        <body class="admin-body">
+        
+        <%-- TOP BAR --%>
+        <nav class="admin-topbar">
+            <div class="admin-topbar-left">
+                <button class="admin-sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar" onclick="toggleSidebar()">
+                    <i class="bi bi-list"></i>
+                </button>
+                <a href="${pageContext.request.contextPath}/home" class="admin-topbar-brand">
+                    <i class="bi bi-hospital-fill"></i>
+                    CAMS
+                    <span class="brand-badge">${sessionScope.user.roleId == 2 ? 'Doctor' : 'Sonographer'}</span>
+                </a>
+            </div>
+            <div class="admin-topbar-right">
+                <div class="admin-topbar-user d-none d-md-flex">
+                    <div class="admin-avatar-sm">
+                        ${fn:substring(sessionScope.user.fullName, 0, 1)}
+                    </div>
+                    <span>${sessionScope.user.fullName}</span>
+                    <span class="admin-topbar-role">
+                        <i class="bi bi-briefcase-fill me-1"></i>${sessionScope.user.roleId == 2 ? 'Bác Sĩ' : 'KTV Siêu Âm'}
+                    </span>
+                </div>
+                <a href="${pageContext.request.contextPath}/logout" class="admin-topbar-logout" title="Đăng xuất">
+                    <i class="bi bi-box-arrow-right"></i>
+                    <span class="d-none d-md-inline">Đăng xuất</span>
+                </a>
+            </div>
+        </nav>
 
-                <%-- ========== Khi chưa đăng nhập ========== --%>
-                <c:if test="${empty sessionScope.user}">
-                    <li class="nav-item">
-                        <a class="nav-link" href="${pageContext.request.contextPath}/login">
-                            <i class="bi bi-box-arrow-in-right me-1"></i>Đăng nhập
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="${pageContext.request.contextPath}/register">
-                            <i class="bi bi-person-plus me-1"></i>Đăng ký
-                        </a>
-                    </li>
-                </c:if>
+        <!-- Sidebar Backdrop (mobile) -->
+        <div class="admin-sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
 
-                <%-- ========== Khi đã đăng nhập ========== --%>
-                <c:if test="${not empty sessionScope.user}">
-                    <%-- Link về Dashboard --%>
-                    <li class="nav-item">
-                        <a class="nav-link" href="${pageContext.request.contextPath}/home">
-                            <i class="bi bi-speedometer2 me-1"></i>Dashboard
-                        </a>
-                    </li>
+        <!-- Sidebar -->
+        <aside class="admin-sidebar" id="adminSidebar">
+            <div class="admin-sidebar-user">
+                <div class="admin-sidebar-avatar">
+                    ${fn:substring(sessionScope.user.fullName, 0, 1)}
+                </div>
+                <div class="admin-sidebar-name">${sessionScope.user.fullName}</div>
+                <span class="admin-sidebar-badge">
+                    <i class="bi bi-person-badge-fill"></i>${sessionScope.user.roleId == 2 ? 'Bác Sĩ' : 'KTV Siêu Âm'}
+                </span>
+            </div>
 
-                    <%-- Dropdown tài khoản --%>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#"
-                           id="userDropdown" role="button" data-bs-toggle="dropdown"
-                           aria-expanded="false">
-                            <span class="avatar-circle me-2">
-                                ${fn:substring(user.fullName, 0, 1)}
-                            </span>
-                            ${user.fullName}
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3"
-                            aria-labelledby="userDropdown">
-                            <li>
-                                <div class="dropdown-header">
-                                    <small class="text-muted">${user.email}</small>
-                                </div>
-                            </li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <a class="dropdown-item" href="#">
-                                    <i class="bi bi-person me-2"></i>Hồ sơ cá nhân
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" href="#">
-                                    <i class="bi bi-gear me-2"></i>Cài đặt
-                                </a>
-                            </li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <a class="dropdown-item text-danger" href="${pageContext.request.contextPath}/logout">
-                                    <i class="bi bi-box-arrow-right me-2"></i>Đăng xuất
-                                </a>
-                            </li>
-                        </ul>
-                    </li>
-                </c:if>
+            <ul class="admin-sidebar-menu">
+                <c:choose>
+                    <c:when test="${sessionScope.user.roleId == 2}">
+                        <li class="admin-sidebar-section">Chức Năng Bác Sĩ</li>
+                        <li>
+                            <a href="${pageContext.request.contextPath}/doctor/dashboard">
+                                <i class="bi bi-speedometer2"></i>
+                                <span>Dashboard</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="${pageContext.request.contextPath}/doctor/appointments">
+                                <i class="bi bi-calendar2-week"></i>
+                                <span>Lịch Hẹn Hôm Nay</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="${pageContext.request.contextPath}/doctor/medical-records">
+                                <i class="bi bi-journal-medical"></i>
+                                <span>Quản Lý Bệnh Án</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="${pageContext.request.contextPath}/doctor/prescriptions-list">
+                                <i class="bi bi-prescription2"></i>
+                                <span>Đơn Thuốc</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="${pageContext.request.contextPath}/doctor/patients">
+                                <i class="bi bi-people"></i>
+                                <span>Danh Sách Bệnh Nhân</span>
+                            </a>
+                        </li>
+                    </c:when>
+                    <c:when test="${sessionScope.user.roleId == 6}">
+                        <li class="admin-sidebar-section">Chức Năng Siêu Âm</li>
+                        <li>
+                            <a href="${pageContext.request.contextPath}/sonographer/waiting-list">
+                                <i class="bi bi-hourglass-split"></i>
+                                <span>Danh Sách Chờ Siêu Âm</span>
+                            </a>
+                        </li>
+                    </c:when>
+                </c:choose>
             </ul>
-        </div>
-    </div>
-</nav>
+        </aside>
 
-<!-- Main Content Container -->
-<main class="container my-4">
+        <!-- Main Content Wrapper -->
+        <main class="admin-main" id="adminMain">
+    </c:when>
+    <c:otherwise>
+        <body>
+        <!-- Navbar -->
+        <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+            <div class="container">
+                <a class="navbar-brand" href="${pageContext.request.contextPath}/">
+                    <i class="bi bi-hospital me-2"></i>CAMS
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto align-items-lg-center">
+
+                        <%-- ========== Khi chưa đăng nhập ========== --%>
+                        <c:if test="${empty sessionScope.user}">
+                            <li class="nav-item">
+                                <a class="nav-link" href="${pageContext.request.contextPath}/login">
+                                    <i class="bi bi-box-arrow-in-right me-1"></i>Đăng nhập
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="${pageContext.request.contextPath}/register">
+                                    <i class="bi bi-person-plus me-1"></i>Đăng ký
+                                </a>
+                            </li>
+                        </c:if>
+
+                        <%-- ========== Khi đã đăng nhập ========== --%>
+                        <c:if test="${not empty sessionScope.user}">
+                            <%-- Link về Dashboard --%>
+                            <li class="nav-item">
+                                <a class="nav-link" href="${pageContext.request.contextPath}/home">
+                                    <i class="bi bi-speedometer2 me-1"></i>Dashboard
+                                </a>
+                            </li>
+
+                            <%-- Dropdown tài khoản --%>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle d-flex align-items-center" href="#"
+                                   id="userDropdown" role="button" data-bs-toggle="dropdown"
+                                   aria-expanded="false">
+                                    <span class="avatar-circle me-2">
+                                        ${fn:substring(sessionScope.user.fullName, 0, 1)}
+                                    </span>
+                                    ${sessionScope.user.fullName}
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3"
+                                    aria-labelledby="userDropdown">
+                                    <li>
+                                        <div class="dropdown-header">
+                                            <small class="text-muted">${sessionScope.user.email}</small>
+                                        </div>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item" href="#">
+                                            <i class="bi bi-person me-2"></i>Hồ sơ cá nhân
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="#">
+                                            <i class="bi bi-gear me-2"></i>Cài đặt
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item text-danger" href="${pageContext.request.contextPath}/logout">
+                                            <i class="bi bi-box-arrow-right me-2"></i>Đăng xuất
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                        </c:if>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content Container -->
+        <main class="container my-4">
+    </c:otherwise>
+</c:choose>

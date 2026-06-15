@@ -1,6 +1,7 @@
 package com.clinic.dao;
 
 import com.clinic.config.DatabaseConfig;
+import com.clinic.utils.EncryptionUtil;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -426,7 +427,10 @@ public class DashboardDAO {
      * Lấy danh sách bệnh nhân mới đăng ký gần đây (role_id = 5).
      */
     public List<RecentPatient> getRecentPatients(int limit) {
-        String sql = "SELECT TOP (?) id, full_name, email, phone, created_at "
+        String sql = "SELECT TOP (?) id, full_name, "
+                   + EncryptionUtil.decryptEmailSql("email") + " AS email, "
+                   + EncryptionUtil.decryptPhoneSql("phone") + " AS phone, "
+                   + "created_at "
                    + "FROM users WHERE role_id = 5 "
                    + "ORDER BY id DESC";
 
@@ -467,7 +471,9 @@ public class DashboardDAO {
     }
 
     private List<RecentPatient> getRecentPatientsFallback(int limit) {
-        String sql = "SELECT TOP (?) id, full_name, email, phone "
+        String sql = "SELECT TOP (?) id, full_name, "
+                   + EncryptionUtil.decryptEmailSql("email") + " AS email, "
+                   + EncryptionUtil.decryptPhoneSql("phone") + " AS phone "
                    + "FROM users WHERE role_id = 5 ORDER BY id DESC";
         List<RecentPatient> list = new ArrayList<>();
         Connection conn = null;

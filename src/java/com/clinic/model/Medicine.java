@@ -127,6 +127,11 @@ public class Medicine implements Serializable {
     public Integer getCategoryId() { return categoryId; }
     public void setCategoryId(Integer categoryId) { this.categoryId = categoryId; }
 
+    // Compatibility alias
+    public String getCategory() { return categoryName; }
+    public void setCategory(String category) { this.categoryName = category; }
+
+
     @Override
     public String toString() {
         return "Medicine{" +

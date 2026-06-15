@@ -2,6 +2,7 @@ package com.clinic.dao;
 
 import com.clinic.config.DatabaseConfig;
 import com.clinic.model.Service;
+import com.clinic.model.ServiceItem;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -567,9 +568,57 @@ public class ServiceDAO {
         return s;
     }
 
+    public List<ServiceItem> getAllServices() {
+        List<ServiceItem> list = new ArrayList<>();
+        String sql = "SELECT id, service_name, price, duration_mins, requires_fasting, requires_full_bladder, required_room_type FROM services";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                list.add(new ServiceItem(
+                        rs.getInt("id"),
+                        rs.getString("service_name"),
+                        rs.getDouble("price"),
+                        rs.getInt("duration_mins"),
+                        rs.getBoolean("requires_fasting"),
+                        rs.getBoolean("requires_full_bladder"),
+                        rs.getString("required_room_type")
+                ));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    public ServiceItem findServiceById(int id) {
+        String sql = "SELECT id, service_name, price, duration_mins, requires_fasting, requires_full_bladder, required_room_type FROM services WHERE id = ?";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return new ServiceItem(
+                            rs.getInt("id"),
+                            rs.getString("service_name"),
+                            rs.getDouble("price"),
+                            rs.getInt("duration_mins"),
+                            rs.getBoolean("requires_fasting"),
+                            rs.getBoolean("requires_full_bladder"),
+                            rs.getString("required_room_type")
+                    );
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     private void closeResources(Connection conn, PreparedStatement ps, ResultSet rs) {
         if (rs != null) { try { rs.close(); } catch (SQLException e) { } }
         if (ps != null) { try { ps.close(); } catch (SQLException e) { } }
         DatabaseConfig.closeConnection(conn);
     }
 }
+

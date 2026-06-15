@@ -1,90 +1,124 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
+<%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <title>Thay Đổi Lịch Khám - CAMS Staff</title>
+    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="${pageContext.request.contextPath}/assets/css/style.css" rel="stylesheet">
+    <!-- Theme CSS -->
+    <link href="${pageContext.request.contextPath}/assets/css/admin.css" rel="stylesheet">
     <link href="${pageContext.request.contextPath}/assets/css/staff.css" rel="stylesheet">
 </head>
-<body>
+<body class="admin-body">
+
+<c:set var="requestURI" value="${pageContext.request.servletPath}" />
 
 <!-- Top Header Bar -->
-<div class="top-header">
-    <a href="${pageContext.request.contextPath}/admin/reception" class="header-left text-decoration-none">
-        <div class="header-logo-icon">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                <path d="M19 10.5H13.5V5C13.5 4.45 13.05 4 12.5 4H11.5C10.95 4 10.5 4.45 10.5 5V10.5H5C4.45 10.5 4 10.95 4 11.5V12.5C4 13.05 4.45 13.5 5 13.5H10.5V19C10.5 19.55 10.95 20 11.5 20H12.5C13.05 20 13.5 19.55 13.5 19V13.5H19C19.55 13.5 20 13.05 20 12.5V11.5C20 10.95 19.55 10.5 19 10.5Z"/>
-            </svg>
-        </div>
-        <div class="header-brand-name">CAMS</div>
-        <span class="header-role-badge">STAFF</span>
-    </a>
-
-    <div class="header-right">
-        <div class="header-date-pill">
-            <i class="bi bi-calendar-event"></i>
-            <span>06 tháng 06, 2026</span>
-        </div>
-        <div class="header-user-badge">
-            <div class="header-avatar-circle">T</div>
-            <span class="header-display-name">Hoàng Văn Tân</span>
-            <span class="header-role-label">LỄ TÂN</span>
-        </div>
-        <a href="${pageContext.request.contextPath}/logout" class="btn-header-logout">
-            <i class="bi bi-box-arrow-right"></i> Đăng xuất
+<nav class="admin-topbar">
+    <div class="admin-topbar-left">
+        <button class="admin-sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+            <i class="bi bi-list"></i>
+        </button>
+        <a href="${pageContext.request.contextPath}/admin/reception" class="admin-topbar-brand">
+            <i class="bi bi-hospital-fill"></i>
+            CAMS
+            <span class="brand-badge">Staff</span>
         </a>
     </div>
-</div>
+
+    <div class="admin-topbar-right">
+        <div class="topbar-date d-none d-lg-flex">
+            <i class="bi bi-calendar3"></i>
+            <span>06 tháng 06, 2026</span>
+        </div>
+        <div class="admin-topbar-user d-none d-md-flex">
+            <div class="admin-avatar-sm">
+                ${fn:substring(sessionScope.user.fullName, 0, 1)}
+            </div>
+            <span class="header-display-name">Hoàng Văn Tân</span>
+            <span class="admin-topbar-role">
+                <i class="bi bi-shield-check me-1"></i>Lễ Tân
+            </span>
+        </div>
+        <a href="${pageContext.request.contextPath}/logout" class="admin-topbar-logout" title="Đăng xuất">
+            <i class="bi bi-box-arrow-right"></i>
+            <span class="d-none d-md-inline">Đăng xuất</span>
+        </a>
+    </div>
+</nav>
 
 <div class="wrapper">
+    <!-- Sidebar Backdrop (mobile) -->
+    <div class="admin-sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+
     <!-- Left Sidebar -->
-    <div class="sidebar">
-        <div class="sidebar-profile">
-            <div class="sidebar-avatar">T</div>
-            <h6 class="sidebar-name">Hoàng Văn Tân</h6>
-            <span class="sidebar-role-badge">LỄ TÂN / CALL CENTER</span>
+    <aside class="admin-sidebar" id="adminSidebar">
+        <div class="admin-sidebar-user">
+            <div class="admin-sidebar-avatar">
+                ${fn:substring(sessionScope.user.fullName, 0, 1)}
+            </div>
+            <div class="admin-sidebar-name">${sessionScope.user.fullName}</div>
+            <span class="admin-sidebar-badge">
+                <i class="bi bi-shield-check"></i>LỄ TÂN / CALL CENTER
+            </span>
         </div>
 
-        <div class="sidebar-menu">
-            <div class="menu-section-title">Tổng quan</div>
-            <a href="${pageContext.request.contextPath}/admin/reception" class="menu-item">
-                <i class="bi bi-speedometer2"></i> Hàng Đợi Tiếp Đón
-            </a>
+        <ul class="admin-sidebar-menu">
+            <li class="admin-sidebar-section">Tổng quan</li>
+            <li>
+                <a href="${pageContext.request.contextPath}/admin/reception" 
+                   class="${fn:contains(requestURI, '/reception') && !fn:contains(requestURI, 'booking') && !fn:contains(requestURI, 'sos') ? 'active' : ''}">
+                    <i class="bi bi-speedometer2"></i>
+                    <span>Hàng Đợi Tiếp Đón</span>
+                </a>
+            </li>
 
-            <div class="menu-section-title">Quản lý tiếp đón</div>
-            <a href="${pageContext.request.contextPath}/admin/reception/booking" class="menu-item">
-                <i class="bi bi-calendar-plus"></i> Đặt Lịch Thủ Công
-            </a>
-            <a href="${pageContext.request.contextPath}/admin/reception/sos" class="menu-item">
-                <i class="bi bi-bell-slash text-danger"></i> Giám Sát Cảnh Báo SOS
-                <c:if test="${activeSos > 0}">
-                    <span class="badge bg-danger ms-2"><c:out value="${activeSos}"/></span>
-                </c:if>
-            </a>
-        </div>
-    </div>
+            <li class="admin-sidebar-section">Quản lý tiếp đón</li>
+            <li>
+                <a href="${pageContext.request.contextPath}/admin/reception/booking" 
+                   class="${fn:contains(requestURI, 'booking') ? 'active' : ''}">
+                    <i class="bi bi-calendar-plus"></i>
+                    <span>Đặt Lịch Thủ Công</span>
+                </a>
+            </li>
+            <li>
+                <a href="${pageContext.request.contextPath}/admin/reception/sos" 
+                   class="${fn:contains(requestURI, 'sos') ? 'active' : ''}">
+                    <i class="bi bi-bell-slash text-danger"></i>
+                    <span>Giám Sát Cảnh Báo SOS</span>
+                    <c:if test="${activeSos > 0}">
+                        <span class="badge bg-danger ms-2"><c:out value="${activeSos}"/></span>
+                    </c:if>
+                </a>
+            </li>
+        </ul>
+    </aside>
 
     <!-- Main Content Area -->
-    <div class="main-content">
+    <main class="admin-main" id="adminMain">
         <!-- Page Title Row -->
-        <div class="page-title-row">
-            <div>
-                <h3 class="page-title">Thay Đổi Lịch Khám</h3>
-                <span class="page-subtitle">Quản lý Tiếp đón &gt; Sửa đổi thông tin lịch hẹn #${apt.id}</span>
+        <div class="admin-page-header">
+            <div class="admin-page-header-left">
+                <h1 class="admin-page-title">Thay Đổi Lịch Khám</h1>
+                <div class="admin-page-subtitle">
+                    Quản lý Tiếp đón &gt; Sửa đổi thông tin lịch hẹn #${apt.id}
+                </div>
             </div>
         </div>
 
-        <div class="cams-card">
-            <div class="cams-card-header">
-                <h5 class="cams-card-title"><i class="bi bi-pencil-square"></i> Điều chỉnh thời gian, bác sĩ hoặc gói khám</h5>
+        <div class="admin-card">
+            <div class="card-header">
+                <h5><i class="bi bi-pencil-square"></i> Điều chỉnh thời gian, bác sĩ hoặc gói khám</h5>
             </div>
-            <div class="cams-card-body">
+            <div class="card-body">
                 <c:if test="${not empty errors}">
                     <div class="alert alert-danger">
                         <strong>Không thể cập nhật lịch hẹn:</strong>
@@ -166,7 +200,7 @@
                         </div>
                         <div class="col-md-4 cams-form-group">
                             <label class="cams-form-label">Tổng chi phí tạm tính</label>
-                            <div class="alert alert-info py-2 px-3 m-0 fw-bold fs-5 text-pink" id="total-price-box" style="border-color: var(--cams-border-pink); color: var(--cams-deep-pink);">
+                            <div class="alert alert-info py-2 px-3 m-0 fw-bold fs-5" id="total-price-box" style="border-color: var(--c-outline-variant); color: var(--c-primary-dark); background: var(--pink-50);">
                                 0đ
                             </div>
                         </div>
@@ -214,7 +248,7 @@
                 </form>
             </div>
         </div>
-    </div>
+    </main>
 </div>
 
 <script>
@@ -347,7 +381,35 @@
             calculateLMPAge();
         }
     };
-</script>
 
+    // Sidebar Toggle Script
+    function openSidebar() {
+        var s = document.getElementById('adminSidebar');
+        var b = document.getElementById('sidebarBackdrop');
+        if (!s) return;
+        s.classList.add('show');
+        if (b) b.classList.add('show');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeSidebar() {
+        var s = document.getElementById('adminSidebar');
+        var b = document.getElementById('sidebarBackdrop');
+        if (!s) return;
+        s.classList.remove('show');
+        if (b) b.classList.remove('show');
+        document.body.style.overflow = '';
+    }
+    function toggleSidebar() {
+        var s = document.getElementById('adminSidebar');
+        if (!s) return;
+        s.classList.contains('show') ? closeSidebar() : openSidebar();
+    }
+    var toggleBtn = document.getElementById('sidebarToggle');
+    if (toggleBtn) toggleBtn.addEventListener('click', toggleSidebar);
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeSidebar();
+    });
+</script>
 </body>
 </html>
