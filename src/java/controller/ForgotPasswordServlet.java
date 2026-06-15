@@ -1,4 +1,4 @@
-package controller;
+package com.clinic.controller;
 
 import com.clinic.service.PasswordService;
 import jakarta.servlet.ServletException;

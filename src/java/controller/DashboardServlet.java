@@ -1,6 +1,5 @@
-package controller;
+package com.clinic.controller;
 
-import com.clinic.dao.DashboardDAO;
 import com.clinic.model.User;
 import com.clinic.service.DashboardService;
 import jakarta.servlet.ServletException;
@@ -11,21 +10,16 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
 import java.io.IOException;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
  * Servlet xử lý các trang dashboard theo role.
  * Hiển thị dashboard tương ứng cho từng vai trò người dùng.
- *
- * Admin Dashboard: đầy đủ 6 KPI cards, biểu đồ lịch hẹn & doanh thu,
- * bảng hiệu suất bác sĩ, lịch làm việc, thống kê siêu âm,
- * bệnh nhân mới, nhật ký hệ thống và cảnh báo.
  */
 @WebServlet(urlPatterns = {
     "/admin/dashboard",
+    "/doctor/dashboard",
     "/manager/dashboard",
     "/staff/dashboard",
     "/home",
@@ -61,24 +55,12 @@ public class DashboardServlet extends HttpServlet {
         request.setAttribute("roleName", roleName);
         request.setAttribute("dashboardTitle", "Dashboard " + roleName);
 
-        // Ngày hiện tại cho hiển thị
-        LocalDate today = LocalDate.now();
-        request.setAttribute("todayDisplay",
-                today.format(DateTimeFormatter.ofPattern("dd 'tháng' MM, yyyy")));
-
         // Route đến dashboard JSP tương ứng với role
         String targetJsp;
         switch (roleId) {
             case 1: // Admin → giao diện admin riêng với sidebar layout
                 loadAdminDashboardData(request);
                 targetJsp = "/views/admin/dashboard.jsp";
-                break;
-            case 4: // Staff → redirect sang trang lễ tân của họ
-                response.sendRedirect(request.getContextPath() + "/admin/reception");
-                return;
-            case 3: // Manager → giao diện manager với theme Teal/Emerald
-                loadManagerDashboardData(request);
-                targetJsp = "/views/manager/dashboard.jsp";
                 break;
             default: // Các role khác giữ nguyên giao diện chung
                 targetJsp = "/views/home/dashboard.jsp";
@@ -89,71 +71,19 @@ public class DashboardServlet extends HttpServlet {
     }
 
     /**
-     * Load dữ liệu thống kê cho Manager Dashboard.
-     * Manager tập trung vào quản lý dịch vụ, thuốc và biểu giá.
-     */
-    private void loadManagerDashboardData(HttpServletRequest request) {
-        DashboardService dashboardService = new DashboardService();
-        com.clinic.service.MedicineService medicineService = new com.clinic.service.MedicineService();
-        com.clinic.service.ServiceService serviceService = new com.clinic.service.ServiceService();
-
-        // Tổng số dịch vụ và thuốc
-        request.setAttribute("totalServices", serviceService.getTotalServices(null, null));
-        request.setAttribute("totalMedicines", medicineService.getTotalMedicines(null, null));
-
-        // Số dịch vụ và thuốc đang active
-        request.setAttribute("activeServicesCount", serviceService.getTotalServices(null, true));
-        request.setAttribute("activeMedicinesCount", medicineService.getTotalMedicines(null, true));
-    }
-
-    /**
-     * Load toàn bộ dữ liệu thống kê cho Admin Dashboard.
-     * Gọi DashboardService để lấy số liệu thực từ database.
+     * Load dữ liệu thống kê cho Admin Dashboard từ database.
+     * Gọi DashboardService để lấy số liệu thực thay vì hardcode.
      */
     private void loadAdminDashboardData(HttpServletRequest request) {
         DashboardService dashboardService = new DashboardService();
 
-        // ─── 6 KPI Cards ───
-        request.setAttribute("totalPatients", dashboardService.getTotalPatients());
-        request.setAttribute("totalAppointmentsToday", dashboardService.getTotalAppointmentsToday());
-        request.setAttribute("waitingPatients", dashboardService.getWaitingPatients());
-        request.setAttribute("doctorsWorkingToday", dashboardService.getDoctorsWorkingToday());
-        request.setAttribute("ultrasoundToday", dashboardService.getUltrasoundToday());
-        request.setAttribute("revenueToday", dashboardService.getRevenueToday());
-
-        // Tổng số users + doctors (legacy KPI)
+        // Thống kê tổng quan
         request.setAttribute("totalUsers", dashboardService.getTotalUsers());
         request.setAttribute("totalDoctors", dashboardService.getTotalDoctors());
+        request.setAttribute("totalAppointmentsToday", dashboardService.getTotalAppointmentsToday());
+        request.setAttribute("monthlyRevenue", dashboardService.getMonthlyRevenue());
 
-        // ─── Biểu đồ lịch hẹn 7 ngày ───
-        Map<String, Integer> apptChart = dashboardService.getAppointmentsChartData();
-        request.setAttribute("apptChartLabels", apptChart.keySet());
-        request.setAttribute("apptChartValues", apptChart.values());
-
-        // ─── Biểu đồ doanh thu 12 tháng ───
-        Map<String, Double> revenueChart = dashboardService.getRevenueChartData();
-        request.setAttribute("revenueChartLabels", revenueChart.keySet());
-        request.setAttribute("revenueChartValues", revenueChart.values());
-
-        // ─── Bảng hiệu suất bác sĩ ───
-        request.setAttribute("doctorPerformance", dashboardService.getDoctorPerformance());
-
-        // ─── Lịch làm việc hôm nay ───
-        request.setAttribute("todaySchedules", dashboardService.getTodaySchedules());
-
-        // ─── Thống kê dịch vụ siêu âm ───
-        request.setAttribute("ultrasoundStats", dashboardService.getUltrasoundStats());
-
-        // ─── Bệnh nhân mới đăng ký ───
-        request.setAttribute("recentPatients", dashboardService.getRecentPatients(8));
-
-        // ─── Người dùng mới nhất (legacy table) ───
+        // Danh sách người dùng mới nhất (5 người)
         request.setAttribute("recentUsers", dashboardService.getRecentUsers(5));
-
-        // ─── Nhật ký hệ thống ───
-        request.setAttribute("recentAuditLogs", dashboardService.getRecentAuditLogs(10));
-
-        // ─── Cảnh báo hệ thống ───
-        request.setAttribute("systemAlerts", dashboardService.getSystemAlerts());
     }
 }

@@ -1,4 +1,4 @@
-package controller;
+package com.clinic.controller;
 
 import com.clinic.model.User;
 import com.clinic.service.UserService;
@@ -82,13 +82,12 @@ public class AdminUserServlet extends HttpServlet {
                 case "create": {
                     String fullName = req.getParameter("fullName");
                     String email = req.getParameter("email");
-                    String username = req.getParameter("username");
                     String password = req.getParameter("password");
                     String phone = req.getParameter("phone");
                     int roleId = parseInt(req.getParameter("roleId"), 5);
                     String status = req.getParameter("status");
                     Map<String, String> errors = new HashMap<>();
-                    if (userService.createUser(fullName, email, username, password, phone, roleId, status, errors)) {
+                    if (userService.createUser(fullName, email, password, phone, roleId, status, errors)) {
                         resp.sendRedirect(redirectUrl + "?success=created");
                     } else {
                         req.setAttribute("errors", errors);
@@ -100,34 +99,22 @@ public class AdminUserServlet extends HttpServlet {
                 case "edit": {
                     int userId = parseInt(req.getParameter("userId"), -1);
                     String fullName = req.getParameter("fullName");
-                    String username = req.getParameter("username");
                     String phone = req.getParameter("phone");
                     int roleId = parseInt(req.getParameter("roleId"), 5);
                     String status = req.getParameter("status");
-
-                    System.out.println("[AdminUserServlet] edit: userId=" + userId
-                        + ", fullName=" + fullName + ", username=" + username
-                        + ", phone=" + phone + ", roleId=" + roleId + ", status=" + status);
-
                     Map<String, String> errors = new HashMap<>();
-                    if (userService.updateUser(userId, fullName, username, phone, roleId, status, errors)) {
+                    if (userService.updateUser(userId, fullName, phone, roleId, status, errors)) {
                         resp.sendRedirect(redirectUrl + "?success=updated");
                     } else {
-                        // Show most specific error message available
-                        String errorMsg = errors.getOrDefault("general", null);
-                        if (errorMsg == null) {
-                            errorMsg = errors.values().stream().findFirst().orElse("Cập nhật thất bại");
-                        }
-                        System.out.println("[AdminUserServlet] edit FAILED: " + errorMsg);
-                        resp.sendRedirect(redirectUrl + "?error=" + java.net.URLEncoder.encode(errorMsg, "UTF-8"));
+                        resp.sendRedirect(redirectUrl + "?error=" + java.net.URLEncoder.encode(
+                            errors.getOrDefault("general", "Cập nhật thất bại"), "UTF-8"));
                     }
                     return;
                 }
 
                 case "delete": {
-                    // Sử dụng Soft Delete thay vì Hard Delete để bảo toàn dữ liệu
                     int userId = parseInt(req.getParameter("userId"), -1);
-                    if (userService.softDeleteUser(userId)) {
+                    if (userService.deleteUser(userId)) {
                         resp.sendRedirect(redirectUrl + "?success=deleted");
                     } else {
                         resp.sendRedirect(redirectUrl + "?error=Xóa+thất+bại");

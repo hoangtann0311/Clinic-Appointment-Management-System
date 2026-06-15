@@ -16,7 +16,7 @@ public class DBContext {
 
     private static final String DATABASE_NAME = "ObstetricsClinicDB";
     private static final String DB_USER = "sa";
-    private static final String DB_PASSWORD = "admin";
+    private static final String DB_PASSWORD = "123";
 
     private static DBContext instance;
     private Connection connection;

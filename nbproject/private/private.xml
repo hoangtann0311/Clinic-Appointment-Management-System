@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project-private xmlns="http://www.netbeans.org/ns/project-private/1">
+    <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
+    <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
+        <group>
+            <file>file:/E:/SWP391-SU26/SWP392-Project-Nhom-3-master/src/java/model/User.java</file>
+            <file>file:/E:/SWP391-SU26/SWP392-Project-Nhom-3-master/web/views/admin/sonographer/waiting-list.jsp</file>
+            <file>file:/E:/SWP391-SU26/SWP392-Project-Nhom-3-master/web/views/admin/dashboard.jsp</file>
+            <file>file:/E:/SWP391-SU26/SWP392-Project-Nhom-3-master/src/java/DAO/DBContext.java</file>
+            <file>file:/E:/SWP391-SU26/SWP392-Project-Nhom-3-master/src/java/config/DatabaseConfig.java</file>
+            <file>file:/E:/SWP391-SU26/SWP392-Project-Nhom-3-master/src/java/DAO/UltrasoundOrderDAO.java</file>
+            <file>file:/E:/SWP391-SU26/SWP392-Project-Nhom-3-master/src/java/utils/EmailUtil.java</file>
+        </group>
+    </open-files>
+</project-private>
