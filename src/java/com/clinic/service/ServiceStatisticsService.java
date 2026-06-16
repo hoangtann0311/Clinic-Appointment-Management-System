@@ -52,6 +52,21 @@ public class ServiceStatisticsService {
         return formatCurrency(getTotalRevenueToday());
     }
 
+    /** Tổng doanh thu dịch vụ hôm qua (VND). */
+    public double getTotalRevenueYesterday() {
+        try {
+            return statsDAO.getTotalRevenueYesterday();
+        } catch (Exception e) {
+            System.err.println("[ServiceStatisticsService] getTotalRevenueYesterday ERROR: " + e.getMessage());
+            return 0.0;
+        }
+    }
+
+    /** Tổng doanh thu dịch vụ hôm qua — định dạng VNĐ. */
+    public String getTotalRevenueYesterdayFormatted() {
+        return formatCurrency(getTotalRevenueYesterday());
+    }
+
     /** Số dịch vụ đang hoạt động. */
     public int getActiveServiceCount() {
         try {

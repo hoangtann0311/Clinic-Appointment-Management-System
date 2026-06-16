@@ -104,6 +104,21 @@ public class DashboardServlet extends HttpServlet {
         request.setAttribute("activeServicesCount", serviceService.getTotalServices(null, true));
         request.setAttribute("activeMedicinesCount", medicineService.getTotalMedicines(null, true));
 
+        // ─── Widget "Top Dịch Vụ Hôm Nay" — 5 dịch vụ có lượt sử dụng cao nhất ───
+        request.setAttribute("topServicesToday", statsService.getTopServicesByUsage(5));
+
+        // ─── Widget "Cảnh Báo Tồn Kho" — thuốc sắp hết (stock ≤ 10) ───
+        request.setAttribute("lowStockMedicines", medicineService.getLowStockMedicines(10, 5));
+
+        // ─── Doanh thu hôm qua cho KPI card so sánh ───
+        double revenueYesterday = statsService.getTotalRevenueYesterday();
+        double revenueGrowthRate = statsService.getRevenueGrowthRate();
+        request.setAttribute("revenueYesterdayFormatted",
+                com.clinic.service.ServiceStatisticsService.formatCurrency(revenueYesterday));
+        request.setAttribute("revenueGrowthRate", revenueGrowthRate);
+        request.setAttribute("revenueGrowthFormatted",
+                com.clinic.service.ServiceStatisticsService.formatGrowthPercent(revenueGrowthRate));
+
         // ─── Thống kê dịch vụ (Service Statistics KPI cho Manager Dashboard) ───
         int totalUsageToday = statsService.getTotalUsageToday();
         double totalRevenueToday = statsService.getTotalRevenueToday();

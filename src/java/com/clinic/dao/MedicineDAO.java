@@ -476,6 +476,42 @@ public class MedicineDAO {
         }
     }
 
+    /**
+     * Lấy danh sách thuốc sắp hết hàng — dùng cho Dashboard cảnh báo tồn kho.
+     * Chỉ lấy thuốc đang active, sắp xếp theo tồn kho tăng dần (hết → ít → nhiều).
+     *
+     * @param threshold Ngưỡng tồn kho cảnh báo (VD: 10 → thuốc có stock ≤ 10)
+     * @param limit     Số lượng tối đa trả về
+     */
+    public List<Medicine> findLowStock(int threshold, int limit) {
+        String sql = "SELECT id, medicine_code, name, description, dosage, unit, price, "
+                   + "stock_quantity, is_active, created_at, updated_at "
+                   + "FROM medicines "
+                   + "WHERE is_active = 1 AND stock_quantity <= ? "
+                   + "ORDER BY stock_quantity ASC, name ASC "
+                   + "OFFSET 0 ROWS FETCH NEXT ? ROWS ONLY";
+
+        List<Medicine> list = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setInt(1, threshold);
+            ps.setInt(2, limit);
+            rs = ps.executeQuery();
+            while (rs.next()) {
+                list.add(mapRow(rs, true));
+            }
+        } catch (SQLException e) {
+            System.err.println("[MedicineDAO] findLowStock ERROR: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return list;
+    }
+
     /** Ánh xạ ResultSet → Medicine entity. */
     private Medicine mapRow(ResultSet rs, boolean fullColumns) throws SQLException {
         Medicine m = new Medicine();

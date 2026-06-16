@@ -40,13 +40,6 @@
         <!-- QUAN LY KINH DOANH -->
         <li class="admin-sidebar-section">Quản Lý Kinh Doanh</li>
         <li>
-            <a href="${pageContext.request.contextPath}/manager/pricing/?tab=services"
-               class="${fn:contains(requestURI, '/manager/pricing') ? 'active' : ''}">
-                <i class="bi bi-cash-coin"></i>
-                <span>Biểu Giá</span>
-            </a>
-        </li>
-        <li>
             <a href="${pageContext.request.contextPath}/manager/services/"
                class="${fn:contains(requestURI, '/manager/services') ? 'active' : ''}">
                 <i class="bi bi-activity"></i>
