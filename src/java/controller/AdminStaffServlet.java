@@ -130,6 +130,7 @@ public class AdminStaffServlet extends HttpServlet {
                 case "edit": {
                     int userId = parseInt(req.getParameter("userId"), -1);
                     String fullName = req.getParameter("fullName");
+                    String email = req.getParameter("email");
                     String username = req.getParameter("username");
                     String phone = req.getParameter("phone");
                     int roleId = parseInt(req.getParameter("roleId"), 4);
@@ -138,13 +139,30 @@ public class AdminStaffServlet extends HttpServlet {
                     if (!STAFF_ROLE_IDS.contains(roleId)) {
                         roleId = 4;
                     }
+
+                    System.out.println("[AdminStaffServlet] edit: userId=" + userId
+                        + ", fullName=" + fullName + ", email=" + email
+                        + ", username=" + username + ", phone=" + phone
+                        + ", roleId=" + roleId + ", status=" + status);
+
                     Map<String, String> errors = new HashMap<>();
-                    if (userService.updateUser(userId, fullName, username, phone, roleId, status, errors)) {
+                    if (userService.updateUser(userId, fullName, username, email, phone, roleId, status, errors)) {
                         logAudit(req, "EDIT_STAFF", "Sửa nhân viên #" + userId + ": " + fullName);
                         resp.sendRedirect(redirectUrl + "?success=updated");
                     } else {
-                        resp.sendRedirect(redirectUrl + "?error=" + java.net.URLEncoder.encode(
-                            errors.getOrDefault("general", "Cập nhật thất bại"), "UTF-8"));
+                        // Lưu lại giá trị form để hiển thị lại trong modal
+                        req.setAttribute("editUserId", userId);
+                        req.setAttribute("formEditFullName", fullName);
+                        req.setAttribute("formEditEmail", email);
+                        req.setAttribute("formEditUsername", username);
+                        req.setAttribute("formEditPhone", phone);
+                        req.setAttribute("formEditRoleId", roleId);
+                        req.setAttribute("formEditStatus", status);
+                        req.setAttribute("editErrors", errors);
+                        req.setAttribute("showEditModal", true);
+
+                        System.out.println("[AdminStaffServlet] edit FAILED: " + errors);
+                        doGet(req, resp);
                     }
                     return;
                 }

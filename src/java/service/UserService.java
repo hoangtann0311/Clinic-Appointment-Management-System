@@ -128,9 +128,9 @@ public class UserService {
         }
     }
 
-    /** Cập nhật user (admin side — không đổi password) */
+    /** Cập nhật user (admin side — không đổi password, có thể đổi email) */
     public boolean updateUser(int userId, String fullName, String username,
-                              String phone, int roleId, String status,
+                              String email, String phone, int roleId, String status,
                               Map<String, String> errors) {
         if (fullName == null || fullName.trim().isEmpty()) {
             errors.put("fullName", "Vui lòng nhập họ tên.");
@@ -148,11 +148,34 @@ public class UserService {
             return false;
         }
 
+        // ── Validate email ──
+        String newEmail = (email != null) ? email.trim().toLowerCase() : "";
+        if (newEmail.isEmpty()) {
+            errors.put("email", "Vui lòng nhập email.");
+            return false;
+        }
+        if (!newEmail.matches("^[\\w.-]+@[\\w.-]+\\.\\w{2,}$")) {
+            errors.put("email", "Email không hợp lệ.");
+            return false;
+        }
+        // Kiểm tra email trùng (ngoại trừ chính nó)
+        User emailOwner = userDAO.findByEmail(newEmail);
+        if (emailOwner != null && emailOwner.getId() != userId) {
+            errors.put("email", "Email đã được sử dụng bởi người dùng khác.");
+            return false;
+        }
+        // Cảnh báo nếu user Google bị đổi email (Google ID vẫn giữ nguyên)
+        boolean emailChanged = (u.getEmail() == null) || !newEmail.equals(u.getEmail().toLowerCase());
+        if (emailChanged && "google".equalsIgnoreCase(u.getAuthProvider())) {
+            // Vẫn cho phép đổi nhưng ghi log để audit
+            System.out.println("[UserService] WARNING: Thay đổi email của Google user #"
+                    + userId + " từ " + u.getEmail() + " sang " + newEmail);
+        }
+
+        // ── Validate username ──
         String newUsername = username.trim().toLowerCase();
 
         // Chỉ kiểm tra định dạng + trùng lặp username khi admin THAY ĐỔI username.
-        // Nếu giữ nguyên username cũ thì bỏ qua validate (cho phép user có username
-        // ký tự đặc biệt do được tạo trực tiếp từ DB trước đây).
         boolean usernameChanged = (u.getUsername() == null)
                 || !newUsername.equals(u.getUsername().toLowerCase());
 
@@ -170,6 +193,7 @@ public class UserService {
         }
 
         u.setFullName(fullName.trim());
+        u.setEmail(newEmail);          // ← cho phép cập nhật email
         u.setUsername(newUsername);
         u.setPhone(phone != null ? phone.trim() : "");
         u.setRoleId(roleId);

@@ -660,11 +660,12 @@ public class UserDAO {
     }
 
     /**
-     * Cập nhật thông tin user (full_name, phone, username, role_id, status).
+     * Cập nhật thông tin user (full_name, email, phone, username, role_id, status).
      * Tự động fallback nếu cột updated_at chưa được migration.
      */
     public boolean update(User user) {
-        String sql = "UPDATE users SET full_name=?, phone=" + ENCRYPT_PHONE_PARAM
+        String sql = "UPDATE users SET full_name=?, email=" + ENCRYPT_EMAIL_PARAM
+                   + ", phone=" + ENCRYPT_PHONE_PARAM
                    + ", username=?, role_id=?, status=?, updated_at=GETDATE() WHERE id=?";
         // Thử query đầy đủ trước, nếu lỗi cột updated_at thì fallback
         try {
@@ -675,7 +676,8 @@ public class UserDAO {
                 || msg.contains("tên cột không hợp lệ") || msg.contains("colonne non valide")) {
                 System.err.println("[UserDAO] update falling back (no updated_at column): " + msg);
                 try {
-                    String fallbackSql = "UPDATE users SET full_name=?, phone=" + ENCRYPT_PHONE_PARAM
+                    String fallbackSql = "UPDATE users SET full_name=?, email=" + ENCRYPT_EMAIL_PARAM
+                                       + ", phone=" + ENCRYPT_PHONE_PARAM
                                        + ", username=?, role_id=?, status=? WHERE id=?";
                     return updateInternalFallback(user, fallbackSql);
                 } catch (SQLException e2) {
@@ -696,11 +698,12 @@ public class UserDAO {
             conn = DatabaseConfig.getConnection();
             ps = conn.prepareStatement(sql);
             ps.setString(1, user.getFullName());
-            ps.setString(2, user.getPhone());
-            ps.setString(3, user.getUsername());
-            ps.setInt(4, user.getRoleId());
-            ps.setString(5, user.getStatus());
-            ps.setInt(6, user.getId());
+            ps.setString(2, user.getEmail());       // email (mã hoá)
+            ps.setString(3, user.getPhone());       // phone (mã hoá)
+            ps.setString(4, user.getUsername());
+            ps.setInt(5, user.getRoleId());
+            ps.setString(6, user.getStatus());
+            ps.setInt(7, user.getId());
             return ps.executeUpdate() > 0;
         } finally {
             closeResources(conn, ps, null);
@@ -715,11 +718,12 @@ public class UserDAO {
             conn = DatabaseConfig.getConnection();
             ps = conn.prepareStatement(sql);
             ps.setString(1, user.getFullName());
-            ps.setString(2, user.getPhone());
-            ps.setString(3, user.getUsername());
-            ps.setInt(4, user.getRoleId());
-            ps.setString(5, user.getStatus());
-            ps.setInt(6, user.getId());
+            ps.setString(2, user.getEmail());       // email (mã hoá)
+            ps.setString(3, user.getPhone());       // phone (mã hoá)
+            ps.setString(4, user.getUsername());
+            ps.setInt(5, user.getRoleId());
+            ps.setString(6, user.getStatus());
+            ps.setInt(7, user.getId());
             return ps.executeUpdate() > 0;
         } finally {
             closeResources(conn, ps, null);

@@ -87,11 +87,28 @@ public class AdminUserServlet extends HttpServlet {
                     String phone = req.getParameter("phone");
                     int roleId = parseInt(req.getParameter("roleId"), 5);
                     String status = req.getParameter("status");
+
+                    System.out.println("[AdminUserServlet] create: fullName=" + fullName
+                        + ", email=" + email + ", username=" + username
+                        + ", phone=" + phone + ", roleId=" + roleId + ", status=" + status);
+
                     Map<String, String> errors = new HashMap<>();
                     if (userService.createUser(fullName, email, username, password, phone, roleId, status, errors)) {
                         resp.sendRedirect(redirectUrl + "?success=created");
                     } else {
+                        // Lưu lại giá trị form để hiển thị lại trong modal
+                        req.setAttribute("formFullName", fullName);
+                        req.setAttribute("formEmail", email);
+                        req.setAttribute("formUsername", username);
+                        req.setAttribute("formPhone", phone);
+                        req.setAttribute("formRoleId", roleId);
+                        req.setAttribute("formStatus", status);
                         req.setAttribute("errors", errors);
+                        req.setAttribute("showAddModal", true);
+
+                        // In log lỗi để debug
+                        System.out.println("[AdminUserServlet] create FAILED: " + errors);
+
                         doGet(req, resp);
                     }
                     return;
@@ -100,26 +117,34 @@ public class AdminUserServlet extends HttpServlet {
                 case "edit": {
                     int userId = parseInt(req.getParameter("userId"), -1);
                     String fullName = req.getParameter("fullName");
+                    String email = req.getParameter("email");
                     String username = req.getParameter("username");
                     String phone = req.getParameter("phone");
                     int roleId = parseInt(req.getParameter("roleId"), 5);
                     String status = req.getParameter("status");
 
                     System.out.println("[AdminUserServlet] edit: userId=" + userId
-                        + ", fullName=" + fullName + ", username=" + username
-                        + ", phone=" + phone + ", roleId=" + roleId + ", status=" + status);
+                        + ", fullName=" + fullName + ", email=" + email
+                        + ", username=" + username + ", phone=" + phone
+                        + ", roleId=" + roleId + ", status=" + status);
 
                     Map<String, String> errors = new HashMap<>();
-                    if (userService.updateUser(userId, fullName, username, phone, roleId, status, errors)) {
+                    if (userService.updateUser(userId, fullName, username, email, phone, roleId, status, errors)) {
                         resp.sendRedirect(redirectUrl + "?success=updated");
                     } else {
-                        // Show most specific error message available
-                        String errorMsg = errors.getOrDefault("general", null);
-                        if (errorMsg == null) {
-                            errorMsg = errors.values().stream().findFirst().orElse("Cập nhật thất bại");
-                        }
-                        System.out.println("[AdminUserServlet] edit FAILED: " + errorMsg);
-                        resp.sendRedirect(redirectUrl + "?error=" + java.net.URLEncoder.encode(errorMsg, "UTF-8"));
+                        // Lưu lại giá trị form để hiển thị lại trong modal
+                        req.setAttribute("editUserId", userId);
+                        req.setAttribute("formEditFullName", fullName);
+                        req.setAttribute("formEditEmail", email);
+                        req.setAttribute("formEditUsername", username);
+                        req.setAttribute("formEditPhone", phone);
+                        req.setAttribute("formEditRoleId", roleId);
+                        req.setAttribute("formEditStatus", status);
+                        req.setAttribute("editErrors", errors);
+                        req.setAttribute("showEditModal", true);
+
+                        System.out.println("[AdminUserServlet] edit FAILED: " + errors);
+                        doGet(req, resp);
                     }
                     return;
                 }

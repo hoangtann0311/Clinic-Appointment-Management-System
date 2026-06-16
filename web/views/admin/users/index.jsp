@@ -195,6 +195,25 @@
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     </c:if>
+    <%-- Fallback: hiển thị lỗi validation từ map errors (phòng trường hợp modal không show được) --%>
+    <c:if test="${not empty errors and empty showAddModal}">
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+            <strong>Lỗi khi tạo người dùng:</strong>
+            <c:if test="${not empty errors['general']}">${errors['general']}</c:if>
+            <c:if test="${empty errors['general']}">Vui lòng kiểm tra lại thông tin đã nhập.</c:if>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </c:if>
+    <c:if test="${not empty editErrors and empty showEditModal}">
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+            <strong>Lỗi khi cập nhật người dùng:</strong>
+            <c:if test="${not empty editErrors['general']}">${editErrors['general']}</c:if>
+            <c:if test="${empty editErrors['general']}">Vui lòng kiểm tra lại thông tin đã nhập.</c:if>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </c:if>
 
     <%-- Filter + Search Bar --%>
     <div class="admin-card mb-3">
@@ -278,11 +297,12 @@
                                                 <button class="btn btn-sm btn-outline-secondary btn-action btn-edit-user"
                                                         data-id="${u.id}"
                                                         data-fullname="${fn:escapeXml(u.fullName)}"
-                                                        data-username="${fn:escapeXml(u.username)}"
                                                         data-email="${fn:escapeXml(u.email)}"
+                                                        data-username="${fn:escapeXml(u.username)}"
                                                         data-phone="${fn:escapeXml(u.phone)}"
                                                         data-roleid="${u.roleId}"
                                                         data-status="${fn:escapeXml(u.status)}"
+                                                        data-authprovider="${fn:escapeXml(u.authProvider)}"
                                                         title="Sửa">
                                                     <i class="bi bi-pencil-square"></i>
                                                 </button>
@@ -387,45 +407,77 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="post" action="${pageContext.request.contextPath}/admin/users/">
+            <form method="post" action="${pageContext.request.contextPath}/admin/users/" novalidate>
                 <input type="hidden" name="action" value="create">
                 <div class="modal-body">
+                    <%-- Error summary cho lỗi chung (DB, hệ thống) --%>
+                    <c:if test="${not empty errors['general']}">
+                        <div class="alert alert-danger py-2 mb-3 d-flex align-items-center gap-2">
+                            <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+                            <span>${errors['general']}</span>
+                        </div>
+                    </c:if>
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Họ tên <span class="text-danger">*</span></label>
-                            <input type="text" name="fullName" class="form-control" required maxlength="100">
+                            <input type="text" name="fullName" class="form-control ${not empty errors['fullName'] ? 'is-invalid' : ''}"
+                                   required maxlength="100" value="${fn:escapeXml(formFullName)}">
+                            <c:if test="${not empty errors['fullName']}">
+                                <div class="invalid-feedback">${errors['fullName']}</div>
+                            </c:if>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Email <span class="text-danger">*</span></label>
-                            <input type="email" name="email" class="form-control" required maxlength="100">
+                            <input type="email" name="email" class="form-control ${not empty errors['email'] ? 'is-invalid' : ''}"
+                                   required maxlength="100" value="${fn:escapeXml(formEmail)}">
+                            <c:if test="${not empty errors['email']}">
+                                <div class="invalid-feedback">${errors['email']}</div>
+                            </c:if>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Tên đăng nhập <span class="text-danger">*</span></label>
-                            <input type="text" name="username" class="form-control" required maxlength="50"
-                                   placeholder="Ít nhất 4 ký tự">
+                            <input type="text" name="username" class="form-control ${not empty errors['username'] ? 'is-invalid' : ''}"
+                                   required minlength="4" maxlength="50" pattern="[a-zA-Z0-9_]+"
+                                   placeholder="Ít nhất 4 ký tự, chỉ chữ/số/_"
+                                   title="Tên đăng nhập phải có ít nhất 4 ký tự, chỉ được chứa chữ cái (a-z), số (0-9) và dấu gạch dưới (_)"
+                                   value="${fn:escapeXml(formUsername)}">
+                            <c:if test="${not empty errors['username']}">
+                                <div class="invalid-feedback">${errors['username']}</div>
+                            </c:if>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Mật khẩu <span class="text-danger">*</span></label>
-                            <input type="password" name="password" class="form-control" required minlength="6" placeholder="Ít nhất 6 ký tự">
+                            <input type="password" name="password" class="form-control ${not empty errors['password'] ? 'is-invalid' : ''}"
+                                   required minlength="6" placeholder="Ít nhất 6 ký tự">
+                            <c:if test="${not empty errors['password']}">
+                                <div class="invalid-feedback">${errors['password']}</div>
+                            </c:if>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Số điện thoại</label>
-                            <input type="text" name="phone" class="form-control" maxlength="20">
+                            <input type="text" name="phone" class="form-control ${not empty errors['phone'] ? 'is-invalid' : ''}"
+                                   maxlength="20" placeholder="VD: 0912345678" value="${fn:escapeXml(formPhone)}">
+                            <c:if test="${not empty errors['phone']}">
+                                <div class="invalid-feedback">${errors['phone']}</div>
+                            </c:if>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Vai trò</label>
-                            <select name="roleId" class="form-select">
+                            <select name="roleId" class="form-select ${not empty errors['roleId'] ? 'is-invalid' : ''}">
                                 <c:forEach var="entry" items="${roleMap}">
-                                    <option value="${entry.key}" ${entry.key == 5 ? 'selected' : ''}>${entry.value}</option>
+                                    <option value="${entry.key}" ${not empty formRoleId ? (entry.key == formRoleId ? 'selected' : '') : (entry.key == 5 ? 'selected' : '')}>${entry.value}</option>
                                 </c:forEach>
                             </select>
+                            <c:if test="${not empty errors['roleId']}">
+                                <div class="invalid-feedback">${errors['roleId']}</div>
+                            </c:if>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Trạng thái</label>
                             <select name="status" class="form-select">
-                                <option value="Active">Active</option>
-                                <option value="Inactive">Inactive</option>
-                                <option value="Locked">Locked</option>
+                                <option value="Active" ${formStatus eq 'Active' ? 'selected' : ''}>Active</option>
+                                <option value="Inactive" ${formStatus eq 'Inactive' ? 'selected' : ''}>Inactive</option>
+                                <option value="Locked" ${formStatus eq 'Locked' ? 'selected' : ''}>Locked</option>
                             </select>
                         </div>
                     </div>
@@ -453,38 +505,68 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="post" action="${pageContext.request.contextPath}/admin/users/">
+            <form method="post" action="${pageContext.request.contextPath}/admin/users/" novalidate>
                 <input type="hidden" name="action" value="edit">
-                <input type="hidden" name="userId" id="editUserId">
+                <input type="hidden" name="userId" id="editUserId" value="${editUserId}">
                 <div class="modal-body">
+                    <%-- Error summary cho lỗi chung --%>
+                    <c:if test="${not empty editErrors['general']}">
+                        <div class="alert alert-danger py-2 mb-3 d-flex align-items-center gap-2">
+                            <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+                            <span>${editErrors['general']}</span>
+                        </div>
+                    </c:if>
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Họ tên <span class="text-danger">*</span></label>
-                            <input type="text" name="fullName" id="editFullName" class="form-control" required maxlength="100">
+                            <input type="text" name="fullName" id="editFullName" class="form-control ${not empty editErrors['fullName'] ? 'is-invalid' : ''}"
+                                   required maxlength="100" value="${fn:escapeXml(formEditFullName)}">
+                            <c:if test="${not empty editErrors['fullName']}">
+                                <div class="invalid-feedback">${editErrors['fullName']}</div>
+                            </c:if>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Email <span class="text-danger">*</span></label>
+                            <input type="email" name="email" id="editEmail" class="form-control ${not empty editErrors['email'] ? 'is-invalid' : ''}"
+                                   required maxlength="100" value="${fn:escapeXml(formEditEmail)}">
+                            <small id="editEmailGoogleNote" class="form-text text-warning d-none" style="font-size:0.72rem;">
+                                <i class="bi bi-google"></i> Tài khoản Google — thay đổi email có thể ảnh hưởng đến đăng nhập Google.
+                            </small>
+                            <c:if test="${not empty editErrors['email']}">
+                                <div class="invalid-feedback">${editErrors['email']}</div>
+                            </c:if>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Tên đăng nhập <span class="text-danger">*</span></label>
-                            <input type="text" name="username" id="editUsername" class="form-control" maxlength="50"
-                                   placeholder="Ít nhất 4 ký tự">
+                            <input type="text" name="username" id="editUsername" class="form-control ${not empty editErrors['username'] ? 'is-invalid' : ''}"
+                                   required minlength="4" maxlength="50" pattern="[a-zA-Z0-9_]+"
+                                   placeholder="Ít nhất 4 ký tự, chỉ chữ/số/_"
+                                   title="Tên đăng nhập phải có ít nhất 4 ký tự, chỉ được chứa chữ cái (a-z), số (0-9) và dấu gạch dưới (_)"
+                                   value="${fn:escapeXml(formEditUsername)}">
+                            <c:if test="${not empty editErrors['username']}">
+                                <div class="invalid-feedback">${editErrors['username']}</div>
+                            </c:if>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Số điện thoại</label>
-                            <input type="text" name="phone" id="editPhone" class="form-control" maxlength="20">
+                            <input type="text" name="phone" id="editPhone" class="form-control"
+                                   maxlength="20" placeholder="VD: 0912345678"
+                                   value="${fn:escapeXml(formEditPhone)}">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Vai trò</label>
                             <select name="roleId" id="editRoleId" class="form-select">
                                 <c:forEach var="entry" items="${roleMap}">
-                                    <option value="${entry.key}">${entry.value}</option>
+                                    <option value="${entry.key}" ${not empty formEditRoleId ? (entry.key == formEditRoleId ? 'selected' : '') : ''}>${entry.value}</option>
                                 </c:forEach>
                             </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Trạng thái</label>
                             <select name="status" id="editStatus" class="form-select">
-                                <option value="Active">Active</option>
-                                <option value="Inactive">Inactive</option>
-                                <option value="Locked">Locked</option>
+                                <option value="Active" ${formEditStatus eq 'Active' ? 'selected' : ''}>Active</option>
+                                <option value="Inactive" ${formEditStatus eq 'Inactive' ? 'selected' : ''}>Inactive</option>
+                                <option value="Locked" ${formEditStatus eq 'Locked' ? 'selected' : ''}>Locked</option>
                             </select>
                         </div>
                     </div>
@@ -528,6 +610,7 @@ document.querySelectorAll('.btn-edit-user').forEach(function(btn) {
         var ds = this.dataset;
         document.getElementById('editUserId').value     = ds.id;
         document.getElementById('editFullName').value   = ds.fullname;
+        document.getElementById('editEmail').value      = ds.email || '';
         // Nếu username rỗng, tự động tạo từ email (phần trước dấu @)
         var username = ds.username || '';
         if (!username && ds.email) {
@@ -537,9 +620,43 @@ document.querySelectorAll('.btn-edit-user').forEach(function(btn) {
         document.getElementById('editPhone').value      = ds.phone || '';
         document.getElementById('editRoleId').value     = ds.roleid;
         document.getElementById('editStatus').value     = ds.status;
+
+        // Hiển thị/ẩn cảnh báo Google nếu user đăng nhập qua Google
+        var googleNote = document.getElementById('editEmailGoogleNote');
+        var emailInput = document.getElementById('editEmail');
+        if (ds.authprovider === 'google') {
+            if (googleNote) googleNote.classList.remove('d-none');
+            emailInput.setAttribute('title', 'Tài khoản Google — chỉ đổi email khi thực sự cần thiết');
+        } else {
+            if (googleNote) googleNote.classList.add('d-none');
+            emailInput.removeAttribute('title');
+        }
+
         new bootstrap.Modal(document.getElementById('editUserModal')).show();
     });
 });
+
+<%-- Auto-show add user modal khi có lỗi validation (form submit thất bại) --%>
+<c:if test="${showAddModal}">
+(function() {
+    var addModalEl = document.getElementById('addUserModal');
+    if (addModalEl) {
+        var addModal = new bootstrap.Modal(addModalEl);
+        addModal.show();
+    }
+})();
+</c:if>
+
+<%-- Auto-show edit user modal khi có lỗi validation --%>
+<c:if test="${showEditModal}">
+(function() {
+    var editModalEl = document.getElementById('editUserModal');
+    if (editModalEl) {
+        var editModal = new bootstrap.Modal(editModalEl);
+        editModal.show();
+    }
+})();
+</c:if>
 </script>
 </body>
 </html>
