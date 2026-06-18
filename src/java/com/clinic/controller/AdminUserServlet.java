@@ -1,4 +1,4 @@
-package com.clinic.controller;
+package controller;
 
 import com.clinic.model.User;
 import com.clinic.service.UserService;
@@ -87,11 +87,28 @@ public class AdminUserServlet extends HttpServlet {
                     String phone = req.getParameter("phone");
                     int roleId = parseInt(req.getParameter("roleId"), 5);
                     String status = req.getParameter("status");
+
+                    System.out.println("[AdminUserServlet] create: fullName=" + fullName
+                        + ", email=" + email + ", username=" + username
+                        + ", phone=" + phone + ", roleId=" + roleId + ", status=" + status);
+
                     Map<String, String> errors = new HashMap<>();
                     if (userService.createUser(fullName, email, username, password, phone, roleId, status, errors)) {
                         resp.sendRedirect(redirectUrl + "?success=created");
                     } else {
+                        // Lưu lại giá trị form để hiển thị lại trong modal
+                        req.setAttribute("formFullName", fullName);
+                        req.setAttribute("formEmail", email);
+                        req.setAttribute("formUsername", username);
+                        req.setAttribute("formPhone", phone);
+                        req.setAttribute("formRoleId", roleId);
+                        req.setAttribute("formStatus", status);
                         req.setAttribute("errors", errors);
+                        req.setAttribute("showAddModal", true);
+
+                        // In log lỗi để debug
+                        System.out.println("[AdminUserServlet] create FAILED: " + errors);
+
                         doGet(req, resp);
                     }
                     return;
@@ -100,23 +117,42 @@ public class AdminUserServlet extends HttpServlet {
                 case "edit": {
                     int userId = parseInt(req.getParameter("userId"), -1);
                     String fullName = req.getParameter("fullName");
+                    String email = req.getParameter("email");
                     String username = req.getParameter("username");
                     String phone = req.getParameter("phone");
                     int roleId = parseInt(req.getParameter("roleId"), 5);
                     String status = req.getParameter("status");
+
+                    System.out.println("[AdminUserServlet] edit: userId=" + userId
+                        + ", fullName=" + fullName + ", email=" + email
+                        + ", username=" + username + ", phone=" + phone
+                        + ", roleId=" + roleId + ", status=" + status);
+
                     Map<String, String> errors = new HashMap<>();
-                    if (userService.updateUser(userId, fullName, username, phone, roleId, status, errors)) {
+                    if (userService.updateUser(userId, fullName, username, email, phone, roleId, status, errors)) {
                         resp.sendRedirect(redirectUrl + "?success=updated");
                     } else {
-                        resp.sendRedirect(redirectUrl + "?error=" + java.net.URLEncoder.encode(
-                            errors.getOrDefault("general", "Cập nhật thất bại"), "UTF-8"));
+                        // Lưu lại giá trị form để hiển thị lại trong modal
+                        req.setAttribute("editUserId", userId);
+                        req.setAttribute("formEditFullName", fullName);
+                        req.setAttribute("formEditEmail", email);
+                        req.setAttribute("formEditUsername", username);
+                        req.setAttribute("formEditPhone", phone);
+                        req.setAttribute("formEditRoleId", roleId);
+                        req.setAttribute("formEditStatus", status);
+                        req.setAttribute("editErrors", errors);
+                        req.setAttribute("showEditModal", true);
+
+                        System.out.println("[AdminUserServlet] edit FAILED: " + errors);
+                        doGet(req, resp);
                     }
                     return;
                 }
 
                 case "delete": {
+                    // Sử dụng Soft Delete thay vì Hard Delete để bảo toàn dữ liệu
                     int userId = parseInt(req.getParameter("userId"), -1);
-                    if (userService.deleteUser(userId)) {
+                    if (userService.softDeleteUser(userId)) {
                         resp.sendRedirect(redirectUrl + "?success=deleted");
                     } else {
                         resp.sendRedirect(redirectUrl + "?error=Xóa+thất+bại");

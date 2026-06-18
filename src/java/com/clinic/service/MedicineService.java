@@ -263,4 +263,23 @@ public class MedicineService {
     public int getTotalPriceHistory() {
         return priceHistoryDAO.countAll();
     }
+
+    // ── Cảnh báo tồn kho ──
+
+    /**
+     * Lấy danh sách thuốc sắp hết hàng cho Dashboard cảnh báo tồn kho.
+     * Chỉ lấy thuốc đang active, sắp xếp theo tồn kho tăng dần.
+     *
+     * @param threshold Ngưỡng tồn kho (VD: 10 → thuốc có stock ≤ 10)
+     * @param limit     Số lượng tối đa trả về
+     * @return Danh sách thuốc sắp hết, rỗng nếu không có cảnh báo
+     */
+    public List<Medicine> getLowStockMedicines(int threshold, int limit) {
+        try {
+            return medicineDAO.findLowStock(threshold, limit);
+        } catch (Exception e) {
+            System.err.println("[MedicineService] getLowStockMedicines ERROR: " + e.getMessage());
+            return Collections.emptyList();
+        }
+    }
 }
