@@ -41,6 +41,12 @@ public class ManagerMedicineServlet extends HttpServlet {
 
         String action = req.getParameter("action");
 
+        // Xem chi tiết thuốc
+        if ("detail".equals(action)) {
+            handleDetail(req, resp);
+            return;
+        }
+
         // Xem lịch sử giá thuốc toàn hệ thống
         if ("price-history".equals(action)) {
             handlePriceHistory(req, resp);
@@ -184,6 +190,32 @@ public class ManagerMedicineServlet extends HttpServlet {
             e.printStackTrace(System.err);
             resp.sendRedirect(redirectUrl + "?error=Lỗi+hệ+thống:+vui+lòng+thử+lại");
         }
+    }
+
+    /** Xử lý xem chi tiết thuốc */
+    private void handleDetail(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+        int id = parseInt(req.getParameter("id"), -1);
+        if (id < 1) {
+            resp.sendRedirect(req.getContextPath() + "/manager/medicines/?error=Không+tìm+thấy+thuốc");
+            return;
+        }
+
+        Medicine medicine = medicineService.getMedicineById(id);
+        if (medicine == null) {
+            resp.sendRedirect(req.getContextPath() + "/manager/medicines/?error=Không+tìm+thấy+thuốc");
+            return;
+        }
+
+        List<MedicinePriceHistory> priceHistory = medicineService.getPriceHistory(id);
+
+        req.setAttribute("detailMedicine", medicine);
+        req.setAttribute("priceHistory", priceHistory);
+
+        // Load danh mục cho hiển thị
+        req.setAttribute("categories", medicineService.getCategories());
+
+        req.getRequestDispatcher("/views/manager/medicines/detail.jsp").forward(req, resp);
     }
 
     /** Xử lý xem toàn bộ lịch sử giá thuốc */

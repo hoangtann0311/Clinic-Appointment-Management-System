@@ -24,6 +24,8 @@ public class User implements Serializable {
     private java.sql.Timestamp createdAt;
     // Transient — không map từ DB, dùng cho hiển thị dashboard
     private String roleName;
+    // Soft delete flag
+    private boolean deleted;
 
     public User() {
     }
@@ -148,6 +150,14 @@ public class User implements Serializable {
 
     public void setRoleName(String roleName) {
         this.roleName = roleName;
+    }
+
+    public boolean isDeleted() {
+        return deleted;
+    }
+
+    public void setDeleted(boolean deleted) {
+        this.deleted = deleted;
     }
 
     @Override

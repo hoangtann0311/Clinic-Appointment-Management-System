@@ -22,10 +22,11 @@ public class UserService {
 
     /** Lấy danh sách user có phân trang + filter */
     public List<User> getUsers(int page, int pageSize,
-                               String search, Integer roleFilter, String statusFilter) {
+                               String search, Integer roleFilter, String statusFilter,
+                               boolean includeDeleted) {
         int offset = (page - 1) * pageSize;
         try {
-            return userDAO.findAll(offset, pageSize, search, roleFilter, statusFilter);
+            return userDAO.findAll(offset, pageSize, search, roleFilter, statusFilter, includeDeleted);
         } catch (Exception e) {
             System.err.println("[UserService] getUsers ERROR: " + e.getMessage());
             e.printStackTrace(System.err);
@@ -34,9 +35,9 @@ public class UserService {
     }
 
     /** Tổng số user (để tính số trang) */
-    public int getTotalUsers(String search, Integer roleFilter, String statusFilter) {
+    public int getTotalUsers(String search, Integer roleFilter, String statusFilter, boolean includeDeleted) {
         try {
-            return userDAO.countAll(search, roleFilter, statusFilter);
+            return userDAO.countAll(search, roleFilter, statusFilter, includeDeleted);
         } catch (Exception e) {
             System.err.println("[UserService] getTotalUsers ERROR: " + e.getMessage());
             e.printStackTrace(System.err);

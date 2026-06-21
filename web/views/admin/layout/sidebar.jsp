@@ -61,13 +61,6 @@
                 <span>Quản Lý Bác Sĩ</span>
             </a>
         </li>
-        <li>
-            <a href="${pageContext.request.contextPath}/admin/staff/"
-               class="${fn:contains(requestURI, '/admin/staff') ? 'active' : ''}">
-                <i class="bi bi-person-badge-fill"></i>
-                <span>Quản Lý Nhân Sự</span>
-            </a>
-        </li>
         <!-- Dịch Vụ, Thuốc, Biểu Giá → Đã chuyển sang Manager -->
 
         <!-- NỘI DUNG -->
