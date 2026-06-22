@@ -157,7 +157,7 @@
                             <thead class="table-light">
                                 <tr>
                                     <th style="min-width:240px;">Tên thuốc</th>
-                                    <th style="width:100px;">Số lượng</th>
+                                    <th style="width:110px;">Số lượng</th>
                                     <th style="min-width:200px;">Liều dùng / Hướng dẫn</th>
                                     <th style="width:44px;"></th>
                                 </tr>
@@ -174,19 +174,24 @@
                                                         <option value="">— Chọn thuốc —</option>
                                                         <c:forEach var="med" items="${medicines}">
                                                             <option value="${med.id}"
-                                                                    data-cat="${med.category}"
+                                                                    data-cat="${med.categoryName}"
+                                                                    data-unit="${med.unit}"
+                                                                    data-stock="${med.stockQuantity}"
                                                                     data-desc="${med.description}"
                                                                     <c:if test="${med.id == item.medicineId}">selected</c:if>>
-                                                                ${med.name}<c:if test="${not empty med.category}"> [${med.category}]</c:if>
+                                                                ${med.name}<c:if test="${not empty med.categoryName}"> [${med.categoryName}]</c:if>
                                                             </option>
                                                         </c:forEach>
                                                     </select>
                                                     <div class="med-desc-hint text-muted small mt-1" style="font-size:.75rem;"></div>
                                                 </td>
                                                 <td>
-                                                    <input type="number" name="quantity[]"
-                                                           class="form-control form-control-sm rounded-3 text-center"
-                                                           value="${item.quantity}" min="1" max="9999">
+                                                    <div class="input-group input-group-sm">
+                                                        <input type="number" name="quantity[]"
+                                                               class="form-control rounded-start-3 text-center"
+                                                               value="${item.quantity}" min="1" max="9999">
+                                                        <span class="input-group-text unit-suffix rounded-end-3">${item.medicineUnit}</span>
+                                                    </div>
                                                 </td>
                                                 <td>
                                                     <input type="text" name="dosage[]"
@@ -213,18 +218,23 @@
                                                     <option value="">— Chọn thuốc —</option>
                                                     <c:forEach var="med" items="${medicines}">
                                                         <option value="${med.id}"
-                                                                data-cat="${med.category}"
+                                                                data-cat="${med.categoryName}"
+                                                                data-unit="${med.unit}"
+                                                                data-stock="${med.stockQuantity}"
                                                                 data-desc="${med.description}">
-                                                            ${med.name}<c:if test="${not empty med.category}"> [${med.category}]</c:if>
+                                                            ${med.name}<c:if test="${not empty med.categoryName}"> [${med.categoryName}]</c:if>
                                                         </option>
                                                     </c:forEach>
                                                 </select>
                                                 <div class="med-desc-hint text-muted small mt-1" style="font-size:.75rem;"></div>
                                             </td>
                                             <td>
-                                                <input type="number" name="quantity[]"
-                                                       class="form-control form-control-sm rounded-3 text-center"
-                                                       value="1" min="1" max="9999">
+                                                <div class="input-group input-group-sm">
+                                                    <input type="number" name="quantity[]"
+                                                           class="form-control rounded-start-3 text-center"
+                                                           value="1" min="1" max="9999">
+                                                    <span class="input-group-text unit-suffix rounded-end-3">—</span>
+                                                </div>
                                             </td>
                                             <td>
                                                 <input type="text" name="dosage[]"
@@ -279,18 +289,23 @@
                 <option value="">— Chọn thuốc —</option>
                 <c:forEach var="med" items="${medicines}">
                     <option value="${med.id}"
-                            data-cat="${med.category}"
+                            data-cat="${med.categoryName}"
+                            data-unit="${med.unit}"
+                            data-stock="${med.stockQuantity}"
                             data-desc="${med.description}">
-                        ${med.name}<c:if test="${not empty med.category}"> [${med.category}]</c:if>
+                        ${med.name}<c:if test="${not empty med.categoryName}"> [${med.categoryName}]</c:if>
                     </option>
                 </c:forEach>
             </select>
             <div class="med-desc-hint text-muted small mt-1" style="font-size:.75rem;"></div>
         </td>
         <td>
-            <input type="number" name="quantity[]"
-                   class="form-control form-control-sm rounded-3 text-center"
-                   value="1" min="1" max="9999">
+            <div class="input-group input-group-sm">
+                <input type="number" name="quantity[]"
+                       class="form-control rounded-start-3 text-center"
+                       value="1" min="1" max="9999">
+                <span class="input-group-text unit-suffix rounded-end-3">—</span>
+            </div>
         </td>
         <td>
             <input type="text" name="dosage[]"
@@ -320,17 +335,50 @@
     }
     updateCount();
 
-    // ── Hiện description khi chọn thuốc ─────────────────────────────────────
+    // ── Hiện đơn vị tính + mô tả + cảnh báo tồn kho khi chọn thuốc ───────────
     function bindDescHint(sel) {
-        sel.addEventListener('change', () => {
+        const row = sel.closest('tr');
+
+        function refresh() {
             const opt  = sel.options[sel.selectedIndex];
-            const hint = sel.closest('td').querySelector('.med-desc-hint');
-            if (!hint) return;
-            const desc = opt ? opt.dataset.desc : '';
-            hint.textContent = desc || '';
-        });
-        // Trigger ngay để hiện mô tả cho dòng đã có sẵn
-        sel.dispatchEvent(new Event('change'));
+            const hint = row.querySelector('.med-desc-hint');
+            const unitEl = row.querySelector('.unit-suffix');
+            const qtyEl  = row.querySelector('input[name="quantity[]"]');
+
+            const desc  = opt ? (opt.dataset.desc || '') : '';
+            const unit  = opt ? (opt.dataset.unit || '') : '';
+            const stock = opt ? parseInt(opt.dataset.stock) : NaN;
+
+            if (unitEl) unitEl.textContent = unit || '—';
+            if (hint) hint.textContent = desc;
+
+            checkStock();
+        }
+
+        function checkStock() {
+            const opt   = sel.options[sel.selectedIndex];
+            const hint  = row.querySelector('.med-desc-hint');
+            const qtyEl = row.querySelector('input[name="quantity[]"]');
+            if (!opt || !opt.value || !hint) return;
+
+            const stock = parseInt(opt.dataset.stock);
+            const qty   = parseInt(qtyEl.value);
+            const desc  = opt.dataset.desc || '';
+
+            if (!isNaN(stock) && !isNaN(qty) && qty > stock) {
+                hint.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i>' +
+                    'Kho chỉ còn ' + stock + ' — số lượng kê vượt tồn kho.</span>';
+            } else {
+                hint.textContent = desc;
+            }
+        }
+
+        sel.addEventListener('change', refresh);
+        const qtyInput = row.querySelector('input[name="quantity[]"]');
+        if (qtyInput) qtyInput.addEventListener('input', checkStock);
+
+        // Trigger ngay để hiện thông tin cho dòng đã có sẵn (không ghi đè lựa chọn cũ)
+        refresh();
     }
 
     // Bind cho tất cả dropdown đã có

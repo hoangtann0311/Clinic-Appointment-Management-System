@@ -142,6 +142,12 @@
                                 <span>Danh Sách Bệnh Nhân</span>
                             </a>
                         </li>
+                        <li>
+                            <a href="${pageContext.request.contextPath}/doctor/schedules">
+                                <i class="bi bi-calendar2-check"></i>
+                                <span>Lịch Làm Việc</span>
+                            </a>
+                        </li>
                     </c:when>
                     <c:when test="${sessionScope.user.roleId == 6}">
                         <li class="admin-sidebar-section">Chức Năng Siêu Âm</li>

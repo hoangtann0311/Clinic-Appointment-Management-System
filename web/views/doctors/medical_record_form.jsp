@@ -31,6 +31,11 @@
 .info-item { display:flex; flex-direction:column; margin-bottom:.75rem; }
 .info-item .label { font-size:.7rem; text-transform:uppercase; color:#adb5bd; font-weight:600; letter-spacing:.05em; }
 .info-item .value { font-size:.95rem; font-weight:500; color:#212529; }
+
+/* ── Bảng kê thuốc (tab Chẩn đoán & Kế hoạch) ─────────────────── */
+.rx-table th { font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; color:#6c757d; }
+.rx-table td { vertical-align:middle; }
+.med-select  { min-width:220px; }
 </style>
 
 <%-- ══════════════════════════════════════════════════════
@@ -227,8 +232,24 @@
           </div>
           <c:if test="${record.pregnancyId != null}">
             <div class="info-item">
-              <span class="label">Mã thai kỳ</span>
-              <span class="value">#${record.pregnancyId}</span>
+              <span class="label">Thai kỳ</span>
+              <span class="value">
+                <a href="${pageContext.request.contextPath}/doctor/pregnancy?id=${record.pregnancyId}"
+                   class="text-decoration-none">
+                  <i class="bi bi-heart-pulse-fill text-danger me-1"></i>Xem theo dõi thai kỳ
+                </a>
+              </span>
+            </div>
+          </c:if>
+          <c:if test="${record.pregnancyId == null and not empty apptId}">
+            <div class="info-item">
+              <span class="label">Thai kỳ</span>
+              <span class="value">
+                <a href="${pageContext.request.contextPath}/doctor/pregnancy?apptId=${apptId}"
+                   class="text-decoration-none text-muted small">
+                  <i class="bi bi-plus-circle me-1"></i>Bắt đầu theo dõi thai kỳ
+                </a>
+              </span>
             </div>
           </c:if>
           <c:if test="${record.id > 0}">
@@ -502,6 +523,125 @@
                           placeholder="Thuốc, chỉ định xét nghiệm, chỉ định siêu âm, lời khuyên cho mẹ…">${record.treatmentPlan}</textarea>
               </div>
 
+              <%-- ═══ Kê đơn thuốc ngay tại đây (cùng lưu với hồ sơ) ═══ --%>
+              <div class="mb-4">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <label class="form-label fw-medium mb-0">
+                    <i class="bi bi-capsule me-1 text-primary"></i>Kê đơn thuốc
+                  </label>
+                  <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill" id="rxRowCount">
+                    0 loại thuốc
+                  </span>
+                </div>
+                <p class="text-muted small mb-2">Có thể bỏ trống nếu chưa cần kê thuốc — bạn vẫn lưu hồ sơ được bình thường.</p>
+
+                <div class="table-responsive mb-2">
+                  <table class="table rx-table align-middle mb-0" id="rxMedicineTable">
+                    <thead class="table-light">
+                      <tr>
+                        <th style="min-width:240px;">Tên thuốc</th>
+                        <th style="width:110px;">Số lượng</th>
+                        <th style="min-width:200px;">Liều dùng / Hướng dẫn</th>
+                        <th style="width:44px;"></th>
+                      </tr>
+                    </thead>
+                    <tbody id="rxMedicineRows">
+                      <c:choose>
+                        <c:when test="${not empty prescription and not empty prescription.items}">
+                          <c:forEach var="item" items="${prescription.items}">
+                            <tr class="rx-medicine-row">
+                              <td>
+                                <select name="medicineId[]"
+                                        class="form-select form-select-sm rounded-3 rx-med-dropdown">
+                                  <option value="">— Chọn thuốc —</option>
+                                  <c:forEach var="med" items="${medicines}">
+                                    <option value="${med.id}"
+                                            data-unit="${med.unit}"
+                                            data-stock="${med.stockQuantity}"
+                                            data-desc="${med.description}"
+                                            <c:if test="${med.id == item.medicineId}">selected</c:if>>
+                                      ${med.name}<c:if test="${not empty med.categoryName}"> [${med.categoryName}]</c:if>
+                                    </option>
+                                  </c:forEach>
+                                </select>
+                                <div class="rx-med-desc-hint text-muted small mt-1" style="font-size:.75rem;"></div>
+                              </td>
+                              <td>
+                                <div class="input-group input-group-sm">
+                                  <input type="number" name="quantity[]"
+                                         class="form-control rounded-start-3 text-center"
+                                         value="${item.quantity}" min="1" max="9999">
+                                  <span class="input-group-text rx-unit-suffix rounded-end-3">${item.medicineUnit}</span>
+                                </div>
+                              </td>
+                              <td>
+                                <input type="text" name="dosage[]"
+                                       class="form-control form-control-sm rounded-3"
+                                       value="${item.dosage}"
+                                       placeholder="VD: 2 viên/ngày, sáng-tối">
+                              </td>
+                              <td class="text-center">
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-danger rounded-circle rx-remove-row"
+                                        style="width:30px;height:30px;padding:0;">
+                                  <i class="bi bi-x"></i>
+                                </button>
+                              </td>
+                            </tr>
+                          </c:forEach>
+                        </c:when>
+                        <c:otherwise>
+                          <%-- Không có dòng mặc định: bác sĩ bấm "Thêm thuốc" nếu cần kê đơn --%>
+                        </c:otherwise>
+                      </c:choose>
+                    </tbody>
+                  </table>
+                </div>
+
+                <button type="button" id="rxAddRowBtn" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                  <i class="bi bi-plus-lg me-1"></i>Thêm thuốc
+                </button>
+              </div>
+
+              <template id="rxRowTemplate">
+                <tr class="rx-medicine-row">
+                  <td>
+                    <select name="medicineId[]" class="form-select form-select-sm rounded-3 rx-med-dropdown">
+                      <option value="">— Chọn thuốc —</option>
+                      <c:forEach var="med" items="${medicines}">
+                        <option value="${med.id}"
+                                data-unit="${med.unit}"
+                                data-stock="${med.stockQuantity}"
+                                data-desc="${med.description}">
+                          ${med.name}<c:if test="${not empty med.categoryName}"> [${med.categoryName}]</c:if>
+                        </option>
+                      </c:forEach>
+                    </select>
+                    <div class="rx-med-desc-hint text-muted small mt-1" style="font-size:.75rem;"></div>
+                  </td>
+                  <td>
+                    <div class="input-group input-group-sm">
+                      <input type="number" name="quantity[]"
+                             class="form-control rounded-start-3 text-center"
+                             value="1" min="1" max="9999">
+                      <span class="input-group-text rx-unit-suffix rounded-end-3">—</span>
+                    </div>
+                  </td>
+                  <td>
+                    <input type="text" name="dosage[]"
+                           class="form-control form-control-sm rounded-3"
+                           placeholder="VD: 2 viên/ngày, sáng-tối">
+                  </td>
+                  <td class="text-center">
+                    <button type="button"
+                            class="btn btn-sm btn-outline-danger rounded-circle rx-remove-row"
+                            style="width:30px;height:30px;padding:0;">
+                      <i class="bi bi-x"></i>
+                    </button>
+                  </td>
+                </tr>
+              </template>
+
               <div class="row g-3">
                 <div class="col-sm-6">
                   <label class="form-label fw-medium"><i class="bi bi-calendar-plus me-1"></i>Ngày tái khám</label>
@@ -537,17 +677,17 @@
           </div><%-- card-body --%>
         </div><%-- card --%>
 
-            <%-- Điều hướng sang đơn thuốc --%>
+            <%-- Xem chi tiết / in đơn thuốc đầy đủ (đơn đã được kê ngay trong form ở trên) --%>
             <c:if test="${record.id > 0}">
                 <div class="card rounded-4 border-0 shadow-sm mt-3">
                     <div class="card-body p-3 d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="fw-medium">Bước tiếp theo</span>
-                            <span class="text-muted small ms-2">Kê đơn thuốc cho bệnh nhân này</span>
+                            <span class="fw-medium">Đơn thuốc</span>
+                            <span class="text-muted small ms-2">Xem chi tiết đầy đủ hoặc in đơn cho bệnh nhân</span>
                         </div>
                         <a href="${pageContext.request.contextPath}/doctor/prescriptions?recordId=${record.id}"
                            class="btn btn-outline-primary btn-sm rounded-pill px-3">
-                            <i class="bi bi-prescription2 me-1"></i>Kê đơn thuốc
+                            <i class="bi bi-prescription2 me-1"></i>Xem đơn thuốc
                         </a>
                     </div>
                 </div>
@@ -685,10 +825,107 @@
       }
     }
 
+    // 7. Đơn thuốc kèm theo (tab4) — tùy chọn, chỉ validate các dòng đã chọn thuốc
+    if (!firstError) {
+      const rxSelects = document.querySelectorAll('select[name="medicineId[]"]');
+      const seenMed = new Set();
+      rxSelects.forEach(sel => {
+        if (firstError) return;
+        if (!sel.value) return;
+        const row = sel.closest('tr');
+        const qtyEl = row.querySelector('input[name="quantity[]"]');
+        const q = parseInt(qtyEl.value);
+        if (!qtyEl.value || isNaN(q) || q < 1 || q > 9999) {
+          qtyEl.classList.add('is-invalid');
+          document.querySelector('[data-tab="tab4"]').click();
+          qtyEl.focus();
+          firstError = 'rxQuantity';
+          return;
+        } else {
+          qtyEl.classList.remove('is-invalid');
+        }
+        if (seenMed.has(sel.value)) {
+          sel.classList.add('is-invalid');
+          document.querySelector('[data-tab="tab4"]').click();
+          firstError = 'rxDuplicate';
+          return;
+        }
+        seenMed.add(sel.value);
+        sel.classList.remove('is-invalid');
+      });
+    }
+
     if (firstError) return;
 
     document.getElementById('obsForm').submit();
   }
+
+  // ── Bảng kê đơn thuốc (tab Chẩn đoán & Kế hoạch) ─────────────────────────
+  (function () {
+    const tbody  = document.getElementById('rxMedicineRows');
+    const addBtn = document.getElementById('rxAddRowBtn');
+    const tpl    = document.getElementById('rxRowTemplate');
+    if (!tbody || !addBtn || !tpl) return;
+
+    function updateCount() {
+      const n = tbody.querySelectorAll('.rx-medicine-row').length;
+      document.getElementById('rxRowCount').textContent = n + ' loại thuốc';
+    }
+    updateCount();
+
+    function bindDescHint(sel) {
+      const row = sel.closest('tr');
+
+      function refresh() {
+        const opt    = sel.options[sel.selectedIndex];
+        const hint   = row.querySelector('.rx-med-desc-hint');
+        const unitEl = row.querySelector('.rx-unit-suffix');
+        const desc   = opt ? (opt.dataset.desc || '') : '';
+        const unit   = opt ? (opt.dataset.unit || '') : '';
+        if (unitEl) unitEl.textContent = unit || '—';
+        if (hint) hint.textContent = desc;
+        checkStock();
+      }
+
+      function checkStock() {
+        const opt   = sel.options[sel.selectedIndex];
+        const hint  = row.querySelector('.rx-med-desc-hint');
+        const qtyEl = row.querySelector('input[name="quantity[]"]');
+        if (!opt || !opt.value || !hint) return;
+        const stock = parseInt(opt.dataset.stock);
+        const qty   = parseInt(qtyEl.value);
+        const desc  = opt.dataset.desc || '';
+        if (!isNaN(stock) && !isNaN(qty) && qty > stock) {
+          hint.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i>' +
+            'Kho chỉ còn ' + stock + ' — số lượng kê vượt tồn kho.</span>';
+        } else {
+          hint.textContent = desc;
+        }
+      }
+
+      sel.addEventListener('change', refresh);
+      const qtyInput = row.querySelector('input[name="quantity[]"]');
+      if (qtyInput) qtyInput.addEventListener('input', checkStock);
+      refresh();
+    }
+
+    tbody.querySelectorAll('.rx-med-dropdown').forEach(bindDescHint);
+
+    addBtn.addEventListener('click', () => {
+      const clone = tpl.content.cloneNode(true);
+      tbody.appendChild(clone);
+      const newSel = tbody.lastElementChild.querySelector('.rx-med-dropdown');
+      if (newSel) bindDescHint(newSel);
+      updateCount();
+    });
+
+    tbody.addEventListener('click', (e) => {
+      const btn = e.target.closest('.rx-remove-row');
+      if (!btn) return;
+      btn.closest('tr').remove();
+      updateCount();
+    });
+  })();
   </script>
 
 </c:if>

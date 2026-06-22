@@ -412,4 +412,160 @@ public class DoctorScheduleDAO {
         if (ps != null) { try { ps.close(); } catch (SQLException e) { } }
         DatabaseConfig.closeConnection(conn);
     }
+    // ─────────────────────────────────────────────────────────────────
+// CÁC METHOD BỔ SUNG — thêm vào cuối class DoctorScheduleDAO.java
+// Dán VÀO TRƯỚC dòng "// ── Private helpers ──"
+// ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Tạo mới lịch làm việc (bác sĩ đăng ký, trạng thái PENDING).
+     *
+     * @return true nếu INSERT thành công
+     */
+    public boolean insert(DoctorSchedule schedule) {
+        String sql = "INSERT INTO doctor_schedules "
+                   + "(doctor_id, work_date, start_time, end_time, max_slots, "
+                   + " status, notes, created_by, created_at, updated_at, is_approved) "
+                   + "VALUES (?, ?, ?, ?, ?, 'PENDING', ?, ?, GETDATE(), GETDATE(), 0)";
+
+        Connection conn = null;
+        PreparedStatement ps = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setInt(1, schedule.getDoctorId());
+            ps.setDate(2, schedule.getWorkDate());
+            ps.setTime(3, schedule.getStartTime());
+            ps.setTime(4, schedule.getEndTime());
+            ps.setInt(5, schedule.getMaxSlots());
+            ps.setString(6, schedule.getNotes());
+            if (schedule.getCreatedBy() != null) {
+                ps.setInt(7, schedule.getCreatedBy());
+            } else {
+                ps.setNull(7, java.sql.Types.INTEGER);
+            }
+            int rows = ps.executeUpdate();
+            return rows > 0;
+        } catch (SQLException e) {
+            System.err.println("[DoctorScheduleDAO] insert ERROR: " + e.getMessage());
+            return false;
+        } finally {
+            closeResources(conn, ps, null);
+        }
+    }
+
+    /**
+     * Hủy lịch trực — chuyển status → CANCELLED.
+     * Chỉ được hủy lịch đang PENDING.
+     *
+     * @param scheduleId ID lịch trực
+     * @return true nếu UPDATE thành công
+     */
+    public boolean cancel(int scheduleId) {
+        String sql = "UPDATE doctor_schedules "
+                   + "SET status = 'CANCELLED', is_approved = 0, updated_at = GETDATE() "
+                   + "WHERE id = ? AND status = 'PENDING'";
+
+        Connection conn = null;
+        PreparedStatement ps = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setInt(1, scheduleId);
+            int rows = ps.executeUpdate();
+            return rows > 0;
+        } catch (SQLException e) {
+            System.err.println("[DoctorScheduleDAO] cancel ERROR: " + e.getMessage());
+            return false;
+        } finally {
+            closeResources(conn, ps, null);
+        }
+    }
+
+    /**
+     * Kiểm tra xem bác sĩ đã có lịch PENDING hoặc APPROVED trùng ngày + khung giờ chưa.
+     * Dùng khi bác sĩ đăng ký lịch mới để tránh tạo trùng.
+     *
+     * @param doctorId  ID bác sĩ
+     * @param workDate  ngày làm việc
+     * @param startTime giờ bắt đầu
+     * @param endTime   giờ kết thúc
+     * @param excludeId ID cần loại trừ (khi sửa), null nếu tạo mới
+     * @return true nếu có xung đột
+     */
+    public boolean hasConflictForDoctor(int doctorId, Date workDate,
+                                         Time startTime, Time endTime,
+                                         Integer excludeId) {
+        StringBuilder sql = new StringBuilder(
+                "SELECT COUNT(*) AS total FROM doctor_schedules "
+              + "WHERE doctor_id = ? "
+              + "AND work_date = ? "
+              + "AND status IN ('PENDING', 'APPROVED') "
+              + "AND start_time < ? AND end_time > ? ");
+
+        if (excludeId != null) {
+            sql.append("AND id <> ? ");
+        }
+
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql.toString());
+            ps.setInt(1, doctorId);
+            ps.setDate(2, workDate);
+            ps.setTime(3, endTime);   // start_time < new_end
+            ps.setTime(4, startTime); // end_time   > new_start
+            if (excludeId != null) {
+                ps.setInt(5, excludeId);
+            }
+            rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt("total") > 0;
+            }
+        } catch (SQLException e) {
+            System.err.println("[DoctorScheduleDAO] hasConflictForDoctor ERROR: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return false;
+    }
+
+    /**
+     * Đếm số bệnh nhân đã đặt lịch hẹn trong một slot cụ thể.
+     * Dùng để hiển thị "đã đặt / tối đa" trên giao diện.
+     *
+     * @param doctorId  ID bác sĩ
+     * @param workDate  ngày làm việc
+     * @param startTime giờ bắt đầu slot
+     * @return số appointment đã được confirm/pending trong slot đó
+     */
+    public int countBookedAppointments(int doctorId, Date workDate, Time startTime) {
+        String sql = "SELECT COUNT(*) AS total FROM appointments "
+                   + "WHERE doctor_id = ? "
+                   + "AND appointment_date = ? "
+                   + "AND time_slot = ? "
+                   + "AND status NOT IN ('cancelled', 'CANCELLED')";
+
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setInt(1, doctorId);
+            ps.setDate(2, workDate);
+            ps.setTime(3, startTime);
+            rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt("total");
+            }
+        } catch (SQLException e) {
+            System.err.println("[DoctorScheduleDAO] countBookedAppointments ERROR: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return 0;
+    }
 }
