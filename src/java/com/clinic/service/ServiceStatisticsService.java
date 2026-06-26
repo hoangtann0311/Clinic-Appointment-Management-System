@@ -24,7 +24,7 @@ public class ServiceStatisticsService {
     }
 
     // ═══════════════════════════════════════════════════════════
-    // KPI TỔNG QUAN
+    // KPI TỔNG QUAN — HÔM NAY (mặc định)
     // ═══════════════════════════════════════════════════════════
 
     /** Tổng số lượt sử dụng dịch vụ hôm nay. */
@@ -131,6 +131,111 @@ public class ServiceStatisticsService {
             ServiceStatDetail top = statsDAO.getTopServiceToday();
             return top != null ? top.getUsageToday() : 0;
         } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // KPI — LỌC THEO KHOẢNG NGÀY (TỪ NGÀY → ĐẾN NGÀY)
+    // ═══════════════════════════════════════════════════════════
+
+    /** Tổng số lượt sử dụng dịch vụ trong khoảng ngày. */
+    public int getTotalUsage(java.time.LocalDate from, java.time.LocalDate to) {
+        if (from == null || to == null) return getTotalUsageToday();
+        try {
+            return statsDAO.getTotalUsageByDateRange(from, to);
+        } catch (Exception e) {
+            System.err.println("[ServiceStatisticsService] getTotalUsage(range) ERROR: " + e.getMessage());
+            return 0;
+        }
+    }
+
+    /** Tổng doanh thu dịch vụ trong khoảng ngày (VND). */
+    public double getTotalRevenue(java.time.LocalDate from, java.time.LocalDate to) {
+        if (from == null || to == null) return getTotalRevenueToday();
+        try {
+            return statsDAO.getTotalRevenueByDateRange(from, to);
+        } catch (Exception e) {
+            System.err.println("[ServiceStatisticsService] getTotalRevenue(range) ERROR: " + e.getMessage());
+            return 0.0;
+        }
+    }
+
+    /** Tổng doanh thu dịch vụ trong khoảng ngày — định dạng VNĐ. */
+    public String getTotalRevenueFormatted(java.time.LocalDate from, java.time.LocalDate to) {
+        return formatCurrency(getTotalRevenue(from, to));
+    }
+
+    /** Số dịch vụ được sử dụng trong khoảng ngày. */
+    public int getServicesUsed(java.time.LocalDate from, java.time.LocalDate to) {
+        if (from == null || to == null) return getServicesUsedToday();
+        try {
+            return statsDAO.countServicesUsedInDateRange(from, to);
+        } catch (Exception e) {
+            System.err.println("[ServiceStatisticsService] getServicesUsed(range) ERROR: " + e.getMessage());
+            return 0;
+        }
+    }
+
+    /** Dịch vụ được sử dụng nhiều nhất trong khoảng ngày (tên). */
+    public String getTopServiceName(java.time.LocalDate from, java.time.LocalDate to) {
+        if (from == null || to == null) return getTopServiceName();
+        try {
+            ServiceStatDetail top = statsDAO.getTopServiceByDateRange(from, to);
+            return top != null ? top.getServiceName() : "Chưa có dữ liệu";
+        } catch (Exception e) {
+            return "Chưa có dữ liệu";
+        }
+    }
+
+    /** Số lượt sử dụng của dịch vụ top 1 trong khoảng ngày. */
+    public int getTopServiceUsage(java.time.LocalDate from, java.time.LocalDate to) {
+        if (from == null || to == null) return getTopServiceUsage();
+        try {
+            ServiceStatDetail top = statsDAO.getTopServiceByDateRange(from, to);
+            return top != null ? top.getUsageToday() : 0;
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    /** Top N dịch vụ có lượt sử dụng cao nhất trong khoảng ngày. */
+    public List<ServiceStatDetail> getTopServicesByUsage(int limit, java.time.LocalDate from, java.time.LocalDate to) {
+        if (from == null || to == null) return getTopServicesByUsage(limit);
+        try {
+            return statsDAO.getTopServicesByUsageDateRange(limit, from, to);
+        } catch (Exception e) {
+            System.err.println("[ServiceStatisticsService] getTopServicesByUsage(range) ERROR: " + e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /** Tốc độ tăng trưởng lượt sử dụng (%): khoảng ngày so với khoảng trước đó. */
+    public double getUsageGrowthRate(java.time.LocalDate from, java.time.LocalDate to) {
+        if (from == null || to == null) return getUsageGrowthRate();
+        try {
+            int current = statsDAO.getTotalUsageByDateRange(from, to);
+            int previous = statsDAO.getTotalUsagePreviousPeriod(from, to);
+            if (previous == 0 && current == 0) return 0;
+            if (previous == 0) return 100.0;
+            return ((double)(current - previous) / previous) * 100.0;
+        } catch (Exception e) {
+            System.err.println("[ServiceStatisticsService] getUsageGrowthRate(range) ERROR: " + e.getMessage());
+            return 0;
+        }
+    }
+
+    /** Tốc độ tăng trưởng doanh thu (%): khoảng ngày so với khoảng trước đó. */
+    public double getRevenueGrowthRate(java.time.LocalDate from, java.time.LocalDate to) {
+        if (from == null || to == null) return getRevenueGrowthRate();
+        try {
+            double current = statsDAO.getTotalRevenueByDateRange(from, to);
+            double previous = statsDAO.getTotalRevenuePreviousPeriod(from, to);
+            if (previous == 0 && current == 0) return 0;
+            if (previous == 0) return 100.0;
+            return ((current - previous) / previous) * 100.0;
+        } catch (Exception e) {
+            System.err.println("[ServiceStatisticsService] getRevenueGrowthRate(range) ERROR: " + e.getMessage());
             return 0;
         }
     }

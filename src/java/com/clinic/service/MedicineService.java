@@ -50,7 +50,7 @@ public class MedicineService {
 
     @Deprecated
     public int getTotalMedicines(String search, Boolean activeFilter) {
-        return getTotalMedicines(search, activeFilter, null);
+        return getTotalMedicines(search, activeFilter, (Integer) null);
     }
 
     /** Tổng số thuốc (có filter category) */
@@ -59,6 +59,20 @@ public class MedicineService {
             return medicineDAO.countAllWithFilter(search, activeFilter, categoryId);
         } catch (Exception e) {
             System.err.println("[MedicineService] getTotalMedicines ERROR: " + e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Tổng số thuốc tồn tại đến ngày maxDate.
+     * Dùng cho dashboard khi lọc theo khoảng ngày.
+     * @param maxDate null → đếm tất cả (không lọc ngày)
+     */
+    public int getTotalMedicines(String search, Boolean activeFilter, java.time.LocalDate maxDate) {
+        try {
+            return medicineDAO.countAllOnOrBefore(search, activeFilter, maxDate);
+        } catch (Exception e) {
+            System.err.println("[MedicineService] getTotalMedicines (date) ERROR: " + e.getMessage());
             return 0;
         }
     }

@@ -446,19 +446,22 @@ public class UserDAO {
      * JOIN roles để lấy role_name.
      * Tự động fallback nếu cột migration (created_at, is_verified, auth_provider) chưa tồn tại.
      */
+    /**
+     * @param roleIds danh sách role_id cần lọc (NULL = tất cả role, rỗng = không lọc)
+     */
     public java.util.List<User> findAll(int offset, int pageSize,
-                                         String search, Integer roleFilter, String statusFilter,
+                                         String search, java.util.List<Integer> roleIds, String statusFilter,
                                          boolean includeDeleted) {
         // Thử query đầy đủ trước, nếu lỗi cột thì fallback
         try {
-            return findAllInternal(offset, pageSize, search, roleFilter, statusFilter, true, includeDeleted);
+            return findAllInternal(offset, pageSize, search, roleIds, statusFilter, true, includeDeleted);
         } catch (SQLException e) {
             String msg = e.getMessage() != null ? e.getMessage() : "";
             if (msg.contains("Invalid column name") || msg.contains("invalid column") ||
                 msg.contains("tên cột không hợp lệ") || msg.contains("colonne non valide")) {
                 System.err.println("[UserDAO] Falling back to base columns query: " + msg);
                 try {
-                    return findAllInternal(offset, pageSize, search, roleFilter, statusFilter, false, includeDeleted);
+                    return findAllInternal(offset, pageSize, search, roleIds, statusFilter, false, includeDeleted);
                 } catch (SQLException e2) {
                     System.err.println("[UserDAO] findAll fallback also failed: " + e2.getMessage());
                     throw new RuntimeException("Lỗi database khi lấy danh sách users", e2);
@@ -473,7 +476,7 @@ public class UserDAO {
      * Internal: thực thi query với hoặc không có cột migration.
      */
     private java.util.List<User> findAllInternal(int offset, int pageSize,
-                                                  String search, Integer roleFilter,
+                                                  String search, java.util.List<Integer> roleIds,
                                                   String statusFilter, boolean fullColumns,
                                                   boolean includeDeleted)
             throws SQLException {
@@ -502,8 +505,13 @@ public class UserDAO {
         if (search != null && !search.trim().isEmpty()) {
             sql.append("AND (u.full_name LIKE ? OR " + WHERE_U_EMAIL_LIKE + " OR " + WHERE_U_PHONE_LIKE + ") ");
         }
-        if (roleFilter != null && roleFilter > 0) {
-            sql.append("AND u.role_id = ? ");
+        if (roleIds != null && !roleIds.isEmpty()) {
+            sql.append("AND u.role_id IN (");
+            for (int i = 0; i < roleIds.size(); i++) {
+                if (i > 0) sql.append(", ");
+                sql.append("?");
+            }
+            sql.append(") ");
         }
         if (statusFilter != null && !statusFilter.trim().isEmpty()) {
             sql.append("AND u.status = ? ");
@@ -524,8 +532,10 @@ public class UserDAO {
                 ps.setString(idx++, like);
                 ps.setString(idx++, like);
             }
-            if (roleFilter != null && roleFilter > 0) {
-                ps.setInt(idx++, roleFilter);
+            if (roleIds != null && !roleIds.isEmpty()) {
+                for (Integer roleId : roleIds) {
+                    ps.setInt(idx++, roleId);
+                }
             }
             if (statusFilter != null && !statusFilter.trim().isEmpty()) {
                 ps.setString(idx++, statusFilter.trim());
@@ -545,7 +555,7 @@ public class UserDAO {
     /**
      * Đếm tổng số user (có filter) — dùng cho phân trang.
      */
-    public int countAll(String search, Integer roleFilter, String statusFilter, boolean includeDeleted) {
+    public int countAll(String search, java.util.List<Integer> roleIds, String statusFilter, boolean includeDeleted) {
         // Mặc định đếm user chưa xoá, includeDeleted=true → đếm user đã xoá
         String whereClause = includeDeleted ? "is_deleted = 1" : "is_deleted = 0";
         StringBuilder sql = new StringBuilder("SELECT COUNT(*) AS total FROM users WHERE " + whereClause + " ");
@@ -553,8 +563,13 @@ public class UserDAO {
         if (search != null && !search.trim().isEmpty()) {
             sql.append("AND (full_name LIKE ? OR " + WHERE_EMAIL_LIKE + " OR " + WHERE_PHONE_LIKE + ") ");
         }
-        if (roleFilter != null && roleFilter > 0) {
-            sql.append("AND role_id = ? ");
+        if (roleIds != null && !roleIds.isEmpty()) {
+            sql.append("AND role_id IN (");
+            for (int i = 0; i < roleIds.size(); i++) {
+                if (i > 0) sql.append(", ");
+                sql.append("?");
+            }
+            sql.append(") ");
         }
         if (statusFilter != null && !statusFilter.trim().isEmpty()) {
             sql.append("AND status = ? ");
@@ -573,8 +588,10 @@ public class UserDAO {
                 ps.setString(idx++, like);
                 ps.setString(idx++, like);
             }
-            if (roleFilter != null && roleFilter > 0) {
-                ps.setInt(idx++, roleFilter);
+            if (roleIds != null && !roleIds.isEmpty()) {
+                for (Integer roleId : roleIds) {
+                    ps.setInt(idx++, roleId);
+                }
             }
             if (statusFilter != null && !statusFilter.trim().isEmpty()) {
                 ps.setString(idx++, statusFilter.trim());

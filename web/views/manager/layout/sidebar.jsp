@@ -63,6 +63,13 @@
                 <span>Duyệt Lịch Trực</span>
             </a>
         </li>
+        <li>
+            <a href="${pageContext.request.contextPath}/manager/time-slots/"
+               class="${fn:contains(requestURI, '/manager/time-slots') ? 'active' : ''}">
+                <i class="bi bi-clock-fill"></i>
+                <span>Khung Giờ Khám</span>
+            </a>
+        </li>
 
         <!-- BAO CAO -->
         <li class="admin-sidebar-section">Báo Cáo &amp; Thống Kê</li>

@@ -20,13 +20,13 @@ public class UserService {
         this.userDAO = new UserDAO();
     }
 
-    /** Lấy danh sách user có phân trang + filter */
+    /** Lấy danh sách user có phân trang + filter (roleIds = NULL → tất cả role) */
     public List<User> getUsers(int page, int pageSize,
-                               String search, Integer roleFilter, String statusFilter,
+                               String search, java.util.List<Integer> roleIds, String statusFilter,
                                boolean includeDeleted) {
         int offset = (page - 1) * pageSize;
         try {
-            return userDAO.findAll(offset, pageSize, search, roleFilter, statusFilter, includeDeleted);
+            return userDAO.findAll(offset, pageSize, search, roleIds, statusFilter, includeDeleted);
         } catch (Exception e) {
             System.err.println("[UserService] getUsers ERROR: " + e.getMessage());
             e.printStackTrace(System.err);
@@ -35,9 +35,9 @@ public class UserService {
     }
 
     /** Tổng số user (để tính số trang) */
-    public int getTotalUsers(String search, Integer roleFilter, String statusFilter, boolean includeDeleted) {
+    public int getTotalUsers(String search, java.util.List<Integer> roleIds, String statusFilter, boolean includeDeleted) {
         try {
-            return userDAO.countAll(search, roleFilter, statusFilter, includeDeleted);
+            return userDAO.countAll(search, roleIds, statusFilter, includeDeleted);
         } catch (Exception e) {
             System.err.println("[UserService] getTotalUsers ERROR: " + e.getMessage());
             e.printStackTrace(System.err);

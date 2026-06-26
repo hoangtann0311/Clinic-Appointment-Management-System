@@ -26,10 +26,12 @@ public class DoctorScheduleService {
 
     private final DoctorScheduleDAO scheduleDAO;
     private final DoctorDAO doctorDAO;
+    private final TimeSlotService timeSlotService;
 
     public DoctorScheduleService() {
         this.scheduleDAO = new DoctorScheduleDAO();
         this.doctorDAO = new DoctorDAO();
+        this.timeSlotService = new TimeSlotService();
     }
 
     /**
@@ -127,8 +129,35 @@ public class DoctorScheduleService {
         boolean result = scheduleDAO.approve(scheduleId, approvedBy);
         if (!result) {
             errors.put("general", "Duyệt lịch trực thất bại. Có thể lịch đã được xử lý bởi người khác.");
+            return false;
         }
-        return result;
+
+        // 5. Tự động sinh khung giờ khám 20 phút
+        //    Sau khi duyệt thành công, sinh time slots cho lịch trực này
+        //    Lỗi sinh slot không rollback việc duyệt — Manager có thể sinh lại thủ công
+        try {
+            int slotsGenerated = timeSlotService.generateSlotsForSchedule(schedule, errors);
+            if (slotsGenerated > 0) {
+                System.out.println("[DoctorScheduleService] approveSchedule INFO: "
+                        + "Đã sinh " + slotsGenerated + " khung giờ khám cho lịch trực #" + scheduleId);
+            } else if (slotsGenerated == 0) {
+                System.out.println("[DoctorScheduleService] approveSchedule INFO: "
+                        + "Lịch trực #" + scheduleId + " — không sinh slot "
+                        + "(đã tồn tại hoặc thời gian < 20 phút).");
+            } else {
+                System.err.println("[DoctorScheduleService] approveSchedule WARNING: "
+                        + "Lịch trực #" + scheduleId + " đã duyệt nhưng sinh slot thất bại. "
+                        + "Manager có thể sinh lại thủ công.");
+            }
+        } catch (Exception e) {
+            // Không làm fail quá trình duyệt — chỉ log lỗi
+            System.err.println("[DoctorScheduleService] approveSchedule WARNING: "
+                    + "Lỗi khi sinh slot cho lịch trực #" + scheduleId
+                    + ": " + e.getMessage());
+            e.printStackTrace(System.err);
+        }
+
+        return true;
     }
 
     /**

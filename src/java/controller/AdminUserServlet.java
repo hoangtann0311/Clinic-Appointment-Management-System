@@ -83,28 +83,21 @@ public class AdminUserServlet extends HttpServlet {
         String statusFilter = req.getParameter("status");
         boolean includeDeleted = "true".equals(req.getParameter("includeDeleted"));
 
-        // ── Xử lý roleGroup → inject roleFilter mặc định ──
-        if (roleFilter == null && roleGroup != null) {
-            if ("patients".equals(roleGroup)) {
-                roleFilter = PATIENT_ROLE_ID;
-            }
+        // ── Xác định danh sách role_id để lọc trong DB ──
+        // roleFilter (tham số select đơn) có độ ưu tiên cao nhất
+        // Nếu không có roleFilter thì dùng roleGroup
+        java.util.List<Integer> roleIds = null;
+        if (roleFilter != null) {
+            roleIds = java.util.Collections.singletonList(roleFilter);
+        } else if ("staff".equals(roleGroup)) {
+            roleIds = new ArrayList<>(STAFF_ROLE_IDS);
+        } else if ("patients".equals(roleGroup)) {
+            roleIds = java.util.Collections.singletonList(PATIENT_ROLE_ID);
         }
+        // roleGroup=all hoặc không có → roleIds=null → lấy tất cả role
 
-        // ── Lấy dữ liệu từ service ──
-        List<User> allUsers = userService.getUsers(page, PAGE_SIZE, search, roleFilter, statusFilter, includeDeleted);
-
-        // ── Lọc theo roleGroup nếu cần ──
-        List<User> users;
-        if ("staff".equals(roleGroup) && roleFilter == null) {
-            users = new ArrayList<>();
-            for (User u : allUsers) {
-                if (STAFF_ROLE_IDS.contains(u.getRoleId())) {
-                    users.add(u);
-                }
-            }
-        } else {
-            users = allUsers;
-        }
+        // ── Lấy dữ liệu từ service (đã lọc role trong DB) ──
+        List<User> users = userService.getUsers(page, PAGE_SIZE, search, roleIds, statusFilter, includeDeleted);
 
         // ── Stats: luôn đếm user CHƯA xoá, không phụ thuộc checkbox ──
         Map<Integer, Integer> statsByRole = computeRoleStats(search, statusFilter, false);
@@ -117,17 +110,8 @@ public class AdminUserServlet extends HttpServlet {
         int countPatient = statsByRole.getOrDefault(5, 0);
         int countAdmin   = statsByRole.getOrDefault(1, 0);
 
-        // Tổng user hiển thị trong bảng hiện tại
-        // Khi includeDeleted=true, stats luôn là 0 (vì chỉ đếm user chưa xoá)
-        // nên dùng getTotalUsers với includeDeleted để lấy đúng số
-        int totalForPaging;
-        if (includeDeleted || (!"staff".equals(roleGroup) && (roleFilter == null || roleFilter != PATIENT_ROLE_ID))) {
-            totalForPaging = userService.getTotalUsers(search, roleFilter, statusFilter, includeDeleted);
-        } else if ("staff".equals(roleGroup) && roleFilter == null) {
-            totalForPaging = countDoctor + countManager + countStaff + countSono;
-        } else {
-            totalForPaging = countPatient;
-        }
+        // Tổng user hiển thị trong bảng hiện tại — query với roleIds đã xác định
+        int totalForPaging = userService.getTotalUsers(search, roleIds, statusFilter, includeDeleted);
         int totalPages = Math.max(1, (int) Math.ceil((double) totalForPaging / PAGE_SIZE));
 
         // ── Set attributes cho JSP ──

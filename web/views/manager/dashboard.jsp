@@ -192,6 +192,86 @@
             background: var(--pink-50); border-color: var(--pink-500);
             color: var(--pink-600);
         }
+
+        /* ── Inline Date Filter in Page Header ── */
+        .header-date-filter {
+            display: flex; align-items: center; gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .header-date-filter .date-input-group {
+            display: flex; align-items: center; gap: 0.3rem;
+            background: var(--c-surface);
+            border: 1.5px solid var(--c-outline);
+            border-radius: var(--r-pill);
+            padding: 0.3rem 0.3rem 0.3rem 0.75rem;
+            transition: all var(--t-smooth);
+            box-shadow: var(--shadow-xs);
+        }
+        .header-date-filter .date-input-group:focus-within {
+            border-color: var(--pink-400);
+            box-shadow: 0 0 0 3px rgba(233,30,140,0.08);
+        }
+        .header-date-filter .date-input-group .date-label {
+            font-size: 0.65rem; font-weight: 700; color: var(--c-muted);
+            text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap;
+        }
+        .header-date-filter .date-input-group input[type="date"] {
+            border: none; background: transparent; font-size: 0.78rem;
+            font-weight: 600; color: var(--c-on-surface);
+            padding: 0.2rem 0.3rem; outline: none; font-family: var(--font-body);
+            width: 122px; cursor: pointer;
+        }
+        .header-date-filter .date-input-group input[type="date"]::-webkit-calendar-picker-indicator {
+            cursor: pointer; filter: invert(25%) sepia(60%) saturate(1500%) hue-rotate(305deg) brightness(90%) contrast(95%);
+            font-size: 0.9rem;
+        }
+        .header-date-filter .date-separator {
+            font-size: 0.7rem; font-weight: 700; color: var(--c-muted);
+        }
+        .btn-header-date {
+            display: inline-flex; align-items: center; gap: 0.3rem;
+            padding: 0.4rem 0.9rem; border-radius: var(--r-pill);
+            font-size: 0.75rem; font-weight: 700; cursor: pointer;
+            transition: all var(--t-fast); white-space: nowrap;
+            border: none; text-decoration: none; line-height: 1.4;
+        }
+        .btn-header-apply {
+            background: linear-gradient(135deg, var(--pink-500), var(--pink-600));
+            color: #fff; box-shadow: 0 2px 6px rgba(233,30,140,0.2);
+        }
+        .btn-header-apply:hover { box-shadow: 0 4px 12px rgba(233,30,140,0.35); transform: translateY(-1px); color: #fff; }
+        .btn-header-today {
+            background: var(--c-surface); color: var(--c-primary);
+            border: 1.5px solid var(--pink-200);
+        }
+        .btn-header-today:hover { background: var(--pink-50); border-color: var(--pink-400); }
+        .header-date-badge {
+            display: inline-flex; align-items: center; gap: 0.3rem;
+            padding: 0.25rem 0.7rem; border-radius: var(--r-pill);
+            font-size: 0.65rem; font-weight: 700; white-space: nowrap;
+            letter-spacing: 0.02em;
+        }
+        .header-date-badge.live {
+            background: #e8f5e9; color: #2e7d32;
+            animation: pulse-live 2.5s infinite;
+        }
+        .header-date-badge.history {
+            background: #fff3e0; color: #e65100;
+        }
+        @keyframes pulse-live {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(46,125,50,0.3); }
+            50% { box-shadow: 0 0 0 6px rgba(46,125,50,0); }
+        }
+        @media (max-width: 1199.98px) {
+            .header-date-filter { margin-top: 0.5rem; }
+            .header-date-filter .date-input-group input[type="date"] { width: 110px; font-size: 0.73rem; }
+        }
+        @media (max-width: 767.98px) {
+            .header-date-filter { flex-direction: column; align-items: stretch; width: 100%; }
+            .header-date-filter .date-input-group { justify-content: space-between; }
+            .header-date-filter .date-input-group input[type="date"] { flex: 1; }
+            .header-date-filter .date-separator { display: none; }
+        }
     </style>
 </head>
 <body class="admin-body">
@@ -231,21 +311,53 @@
 <%-- MAIN CONTENT --%>
 <main class="admin-main" id="adminMain">
 
-    <%-- Page Header --%>
+    <%-- Page Header — tích hợp Date Filter bên cạnh subtitle ── --%>
     <div class="admin-page-header">
-        <div>
+        <div class="admin-page-header-left" style="flex:1; min-width:0;">
             <h1 class="admin-page-title">
                 <i class="bi bi-clipboard-data me-2" style="color:var(--pink-500);"></i>Dashboard Quản Lý
             </h1>
-            <div class="admin-page-subtitle">
-                <i class="bi bi-calendar3"></i>
-                ${not empty todayDisplay ? todayDisplay : 'Hôm nay'}
-                <span class="mx-2">&middot;</span>
-                <i class="bi bi-building"></i>
-                Tổng quan kinh doanh phòng khám
+            <div style="display:flex; align-items:center; flex-wrap:wrap; gap:0.75rem;">
+                <div class="admin-page-subtitle" style="margin-bottom:0;">
+                    <i class="bi bi-calendar3"></i>
+                    ${not empty todayDisplay ? todayDisplay : 'Hôm nay'}
+                    <span class="mx-2">&middot;</span>
+                    <i class="bi bi-building"></i>
+                    Tổng quan kinh doanh phòng khám
+                </div>
+                <%-- Inline Date Filter — nằm ngay bên cạnh subtitle --%>
+                <form method="get" action="${pageContext.request.contextPath}/manager/dashboard" class="header-date-filter">
+                    <div class="date-input-group">
+                        <span class="date-label">Từ</span>
+                        <input type="date" name="dateFrom" id="dateFrom"
+                               value="${dateFrom}" max="${today}" title="Từ ngày">
+                    </div>
+                    <span class="date-separator"><i class="bi bi-arrow-right"></i></span>
+                    <div class="date-input-group">
+                        <span class="date-label">Đến</span>
+                        <input type="date" name="dateTo" id="dateTo"
+                               value="${dateTo}" max="${today}" title="Đến ngày">
+                    </div>
+                    <button type="submit" class="btn-header-date btn-header-apply" title="Xem dữ liệu trong khoảng">
+                        <i class="bi bi-check2"></i> Xem
+                    </button>
+                    <a href="${pageContext.request.contextPath}/manager/dashboard" class="btn-header-date btn-header-today" title="Về thời gian thực">
+                        <i class="bi bi-calendar-check"></i> Hôm nay
+                    </a>
+                    <span class="header-date-badge ${isCustomRange ? 'history' : 'live'}">
+                        <c:choose>
+                            <c:when test="${isCustomRange}">
+                                <i class="bi bi-clock-history"></i> ${dateRangeLabel}
+                            </c:when>
+                            <c:otherwise>
+                                <i class="bi bi-broadcast"></i> Trực tiếp
+                            </c:otherwise>
+                        </c:choose>
+                    </span>
+                </form>
             </div>
         </div>
-        <button class="btn-refresh" onclick="location.reload()">
+        <button class="btn-refresh" onclick="location.reload()" title="Làm mới dữ liệu">
             <i class="bi bi-arrow-clockwise"></i>
             Làm mới
         </button>
@@ -317,31 +429,45 @@
             </div>
         </div>
 
-        <%-- KPI Thống kê: Lượt sử dụng hôm nay --%>
+        <%-- KPI Thống kê: Lượt sử dụng — theo khoảng ngày --%>
         <div class="col-xl-2 col-lg-4 col-md-6">
             <div class="card kpi-card kpi-stat-usage fade-in-up" style="--kpi-accent:#3b82f6;">
                 <div class="card-body" style="border-top:3px solid #3b82f6 !important;">
                     <div class="kpi-icon" style="background:#dbeafe;color:#2563eb;"><i class="bi bi-people-fill"></i></div>
                     <div class="kpi-content">
                         <div class="kpi-value">${not empty totalUsageToday ? totalUsageToday : 0}</div>
-                        <div class="kpi-label">Lượt SD Hôm Nay</div>
+                        <div class="kpi-label">
+                            <c:choose>
+                                <c:when test="${isCustomRange}">Lượt SD (Khoảng)</c:when>
+                                <c:otherwise>Lượt SD Hôm Nay</c:otherwise>
+                            </c:choose>
+                        </div>
                         <div class="kpi-sub"><i class="bi bi-calendar-check"></i> Dịch vụ</div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <%-- KPI Thống kê: Doanh thu hôm nay + so sánh hôm qua --%>
+        <%-- KPI Thống kê: Doanh thu — theo khoảng ngày + so sánh khoảng trước --%>
         <div class="col-xl-2 col-lg-4 col-md-6">
             <div class="card kpi-card kpi-stat-revenue fade-in-up" style="--kpi-accent:#10b981;">
                 <div class="card-body" style="border-top:3px solid #10b981 !important;">
                     <div class="kpi-icon" style="background:#d1fae5;color:#059669;"><i class="bi bi-cash-stack"></i></div>
                     <div class="kpi-content">
                         <div class="kpi-value" style="font-size:1.05rem;">${not empty totalRevenueTodayFormatted ? totalRevenueTodayFormatted : '0'}</div>
-                        <div class="kpi-label">Doanh Thu Hôm Nay</div>
+                        <div class="kpi-label">
+                            <c:choose>
+                                <c:when test="${isCustomRange}">Doanh Thu (Khoảng)</c:when>
+                                <c:otherwise>Doanh Thu Hôm Nay</c:otherwise>
+                            </c:choose>
+                        </div>
                         <div class="revenue-compare">
                             <span class="rev-yesterday">
-                                <i class="bi bi-clock-history me-1"></i>H.qua ${not empty revenueYesterdayFormatted ? revenueYesterdayFormatted : '0'}
+                                <i class="bi bi-clock-history me-1"></i>
+                                <c:choose>
+                                    <c:when test="${isCustomRange}">Kỳ trước ${not empty revenueYesterdayFormatted ? revenueYesterdayFormatted : '0'}</c:when>
+                                    <c:otherwise>H.qua ${not empty revenueYesterdayFormatted ? revenueYesterdayFormatted : '0'}</c:otherwise>
+                                </c:choose>
                             </span>
                             <c:choose>
                                 <c:when test="${revenueGrowthRate > 0}">
@@ -362,16 +488,19 @@
     </div>
 
     <%-- ============================================================
-         LIVE WIDGETS — Dữ liệu thực tế hôm nay, có giá trị hành động
+         LIVE WIDGETS — Dữ liệu theo khoảng ngày đã chọn
          ============================================================ --%>
     <div class="row g-3 mb-4">
-        <%-- WIDGET 1: Top Dịch Vụ Được Đặt Nhiều Hôm Nay --%>
+        <%-- WIDGET 1: Top Dịch Vụ Được Đặt Nhiều — theo khoảng ngày --%>
         <div class="col-xl-6">
             <div class="admin-card live-widget h-100">
                 <div class="card-header">
                     <h5>
                         <i class="bi bi-fire me-2" style="color:#e91e63;"></i>
-                        Dịch Vụ Được Đặt Nhiều Hôm Nay
+                        <c:choose>
+                            <c:when test="${isCustomRange}">Dịch Vụ Được Đặt Nhiều (${dateRangeLabel})</c:when>
+                            <c:otherwise>Dịch Vụ Được Đặt Nhiều Hôm Nay</c:otherwise>
+                        </c:choose>
                     </h5>
                     <a href="${pageContext.request.contextPath}/manager/statistics/" class="btn-sm-outline-pink">
                         Thống kê <i class="bi bi-arrow-right"></i>
@@ -598,9 +727,21 @@
                 <div class="card-header admin-card-header-link">
                     <h5>
                         <i class="bi bi-clock-history"></i>
-                        Hoạt Động Gần Đây
+                        <c:choose>
+                            <c:when test="${isCustomRange}">Hoạt Động (${dateRangeLabel})</c:when>
+                            <c:otherwise>Hoạt Động Gần Đây</c:otherwise>
+                        </c:choose>
                     </h5>
-                    <span class="badge-status badge-status-active" style="font-size:0.7rem;">Trực tiếp</span>
+                    <span class="date-range-badge ${isCustomRange ? 'history' : 'live'}">
+                        <c:choose>
+                            <c:when test="${isCustomRange}">
+                                <i class="bi bi-clock-history me-1"></i>Lịch sử
+                            </c:when>
+                            <c:otherwise>
+                                <i class="bi bi-broadcast me-1"></i>Trực tiếp
+                            </c:otherwise>
+                        </c:choose>
+                    </span>
                 </div>
                 <div class="card-body p-3">
                     <ul class="activity-feed">
@@ -609,11 +750,15 @@
                                 <span class="activity-dot create"></span>
                                 <div class="activity-body">
                                     <div class="act-title">
-                                        <strong>${topServiceName}</strong> — dịch vụ được sử dụng nhiều nhất hôm nay
+                                        <strong>${topServiceName}</strong> — dịch vụ được sử dụng nhiều nhất
+                                        <c:choose>
+                                            <c:when test="${isCustomRange}">trong khoảng</c:when>
+                                            <c:otherwise>hôm nay</c:otherwise>
+                                        </c:choose>
                                     </div>
                                     <div class="act-meta">
-                                        <span><i class="bi bi-bar-chart-fill me-1"></i>${topServiceUsage} lượt hôm nay</span>
-                                        <span><i class="bi bi-clock me-1"></i>Top 1</span>
+                                        <span><i class="bi bi-bar-chart-fill me-1"></i>${topServiceUsage} lượt</span>
+                                        <span><i class="bi bi-trophy-fill me-1"></i>Top 1</span>
                                     </div>
                                 </div>
                             </li>
@@ -622,11 +767,15 @@
                             <span class="activity-dot update"></span>
                             <div class="activity-body">
                                 <div class="act-title">
-                                    <strong>${not empty totalUsageToday ? totalUsageToday : 0} lượt</strong> sử dụng dịch vụ được ghi nhận hôm nay
+                                    <strong>${not empty totalUsageToday ? totalUsageToday : 0} lượt</strong> sử dụng dịch vụ được ghi nhận
+                                    <c:choose>
+                                        <c:when test="${isCustomRange}">trong khoảng</c:when>
+                                        <c:otherwise>hôm nay</c:otherwise>
+                                    </c:choose>
                                 </div>
                                 <div class="act-meta">
                                     <span><i class="bi bi-people me-1"></i>${not empty servicesUsedToday ? servicesUsedToday : 0} loại dịch vụ</span>
-                                    <span><i class="bi bi-clock me-1"></i>Hôm nay</span>
+                                    <span><i class="bi bi-calendar-range me-1"></i>${dateRangeLabel}</span>
                                 </div>
                             </div>
                         </li>
@@ -636,19 +785,36 @@
                                 <div class="act-title">
                                     <c:choose>
                                         <c:when test="${usageGrowthRate > 0}">
-                                            <span style="color:#059669;">Tăng <strong>${usageGrowthFormatted}</strong></span> lượt sử dụng so với hôm qua
+                                            <span style="color:#059669;">Tăng <strong>${usageGrowthFormatted}</strong></span> lượt sử dụng so với
+                                            <c:choose>
+                                                <c:when test="${isCustomRange}">kỳ trước</c:when>
+                                                <c:otherwise>hôm qua</c:otherwise>
+                                            </c:choose>
                                         </c:when>
                                         <c:when test="${usageGrowthRate < 0}">
-                                            <span style="color:#dc2626;">Giảm <strong>${usageGrowthFormatted}</strong></span> lượt sử dụng so với hôm qua
+                                            <span style="color:#dc2626;">Giảm <strong>${usageGrowthFormatted}</strong></span> lượt sử dụng so với
+                                            <c:choose>
+                                                <c:when test="${isCustomRange}">kỳ trước</c:when>
+                                                <c:otherwise>hôm qua</c:otherwise>
+                                            </c:choose>
                                         </c:when>
                                         <c:otherwise>
-                                            Lượt sử dụng <strong>không đổi</strong> so với hôm qua
+                                            Lượt sử dụng <strong>không đổi</strong> so với
+                                            <c:choose>
+                                                <c:when test="${isCustomRange}">kỳ trước</c:when>
+                                                <c:otherwise>hôm qua</c:otherwise>
+                                            </c:choose>
                                         </c:otherwise>
                                     </c:choose>
                                 </div>
                                 <div class="act-meta">
                                     <span><i class="bi bi-graph-up-arrow me-1"></i>Tăng trưởng</span>
-                                    <span><i class="bi bi-clock me-1"></i>24h qua</span>
+                                    <span><i class="bi bi-clock me-1"></i>
+                                        <c:choose>
+                                            <c:when test="${isCustomRange}">Cùng kỳ</c:when>
+                                            <c:otherwise>24h qua</c:otherwise>
+                                        </c:choose>
+                                    </span>
                                 </div>
                             </div>
                         </li>

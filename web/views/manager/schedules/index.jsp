@@ -567,7 +567,17 @@
                                                     </button>
                                                 </div>
                                             </c:if>
-                                            <c:if test="${sched.status.name() ne 'PENDING'}">
+                                            <c:if test="${sched.status.name() eq 'APPROVED'}">
+                                                <div class="d-flex gap-1">
+                                                    <a href="${pageContext.request.contextPath}/manager/time-slots/?scheduleId=${sched.id}"
+                                                       class="btn btn-sm btn-outline-primary"
+                                                       title="Xem khung giờ khám đã sinh" style="font-size:0.78rem;">
+                                                        <i class="bi bi-clock-fill"></i> Slot
+                                                    </a>
+                                                    <span class="text-muted" style="font-size:0.78rem;">Đã duyệt</span>
+                                                </div>
+                                            </c:if>
+                                            <c:if test="${sched.status.name() eq 'REJECTED' or sched.status.name() eq 'CANCELLED'}">
                                                 <span class="text-muted" style="font-size:0.78rem;">Đã xử lý</span>
                                             </c:if>
                                         </td>
