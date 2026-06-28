@@ -620,5 +620,32 @@ public class ServiceDAO {
         if (ps != null) { try { ps.close(); } catch (SQLException e) { } }
         DatabaseConfig.closeConnection(conn);
     }
-}
 
+    /**
+     * Lấy danh sách dịch vụ active theo category_id.
+     * Dùng để load danh sách xét nghiệm (categoryId=3) cho bác sĩ chỉ định.
+     */
+    public List<Service> findByCategoryId(int categoryId) {
+        String sql =
+            "SELECT s.id, s.service_code, s.service_name, s.description, s.price, " +
+            "       s.duration_mins, s.requires_fasting, s.requires_full_bladder, " +
+            "       s.required_room_type, s.allowed_specialties, s.category_id, s.is_active " +
+            "FROM services s " +
+            "WHERE s.category_id = ? AND s.is_active = 1 " +
+            "ORDER BY s.service_name";
+        List<Service> list = new ArrayList<>();
+        Connection conn = null; PreparedStatement ps = null; ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setInt(1, categoryId);
+            rs = ps.executeQuery();
+            while (rs.next()) list.add(mapRow(rs, false));
+        } catch (SQLException e) {
+            System.err.println("Lỗi findByCategoryId: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return list;
+    }
+}

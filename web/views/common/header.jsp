@@ -143,6 +143,12 @@
                             </a>
                         </li>
                         <li>
+                            <a href="${pageContext.request.contextPath}/doctor/profile">
+                                <i class="bi bi-person-circle"></i>
+                                <span>Hồ Sơ Của Tôi</span>
+                            </a>
+                        </li>
+                        <li>
                             <a href="${pageContext.request.contextPath}/doctor/schedules">
                                 <i class="bi bi-calendar2-check"></i>
                                 <span>Lịch Làm Việc</span>

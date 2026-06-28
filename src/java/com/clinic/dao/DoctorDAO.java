@@ -100,21 +100,51 @@ public class DoctorDAO {
      * Tìm bác sĩ theo user_id (liên kết với bảng users).
      */
     public Doctor findByUserId(int userId) {
-        String sql = "SELECT d.id, d.user_id, d.full_name, d.specialization, d.phone_number "
-                   + "FROM doctors d WHERE d.user_id = ?";
+        String sql =
+            "SELECT d.id, d.user_id, d.full_name, d.specialization, d.phone_number, " +
+            "       d.degree, d.experience_years, d.bio, d.avatar_url, u.email " +
+            "FROM doctors d " +
+            "JOIN users u ON u.id = d.user_id " +
+            "WHERE d.user_id = ?";
 
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, userId);
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return mapRow(rs);
-                }
+                if (rs.next()) return mapRow(rs);
             }
         } catch (SQLException e) {
             System.err.println("[DoctorDAO] findByUserId ERROR: " + e.getMessage());
         }
         return null;
+    }
+
+    /**
+     * Bác sĩ tự cập nhật hồ sơ cá nhân.
+     * Chỉ cho phép sửa: full_name, specialization, phone_number, degree, experience_years, bio, avatar_url.
+     * Email/username/password không được sửa ở đây.
+     */
+    public boolean updateProfile(Doctor d) {
+        String sql =
+            "UPDATE doctors SET full_name=?, specialization=?, phone_number=?, " +
+            "  degree=?, experience_years=?, bio=?, avatar_url=? " +
+            "WHERE id=?";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, d.getFullName());
+            ps.setString(2, d.getSpecialization());
+            ps.setString(3, d.getPhoneNumber());
+            ps.setString(4, d.getDegree());
+            if (d.getExperienceYears() >= 0) ps.setInt(5, d.getExperienceYears());
+            else ps.setNull(5, java.sql.Types.INTEGER);
+            ps.setString(6, d.getBio());
+            ps.setString(7, d.getAvatarUrl());
+            ps.setInt(8, d.getId());
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("[DoctorDAO] updateProfile ERROR: " + e.getMessage());
+        }
+        return false;
     }
 
     /**
@@ -127,6 +157,12 @@ public class DoctorDAO {
         d.setFullName(rs.getString("full_name"));
         d.setSpecialization(rs.getString("specialization"));
         d.setPhoneNumber(rs.getString("phone_number"));
+        // Đọc các cột mới (nếu không tồn tại thì bỏ qua)
+        try { d.setDegree(rs.getString("degree")); }         catch (SQLException ignored) {}
+        try { d.setExperienceYears(rs.getInt("experience_years")); } catch (SQLException ignored) {}
+        try { d.setBio(rs.getString("bio")); }               catch (SQLException ignored) {}
+        try { d.setAvatarUrl(rs.getString("avatar_url")); }  catch (SQLException ignored) {}
+        try { d.setEmail(rs.getString("email")); }           catch (SQLException ignored) {}
         return d;
     }
 

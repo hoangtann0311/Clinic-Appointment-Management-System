@@ -118,8 +118,68 @@
     </div>
 </div>
 
+<%-- ── Tab chuyển chế độ xem ────────────────────────────────────────────────── --%>
+<div class="d-flex gap-2 mb-3">
+    <button id="btnViewList" type="button"
+            class="btn btn-primary btn-sm rounded-pill px-4 active-view"
+            onclick="switchView('list')">
+        <i class="bi bi-list-ul me-1"></i>Danh sách
+    </button>
+    <button id="btnViewCal" type="button"
+            class="btn btn-outline-primary btn-sm rounded-pill px-4"
+            onclick="switchView('cal')">
+        <i class="bi bi-calendar3 me-1"></i>Lịch tháng
+    </button>
+</div>
+
+<%-- ── Calendar view ─────────────────────────────────────────────────────────── --%>
+<div id="calendarView" class="card border-0 rounded-4 mb-4 d-none">
+    <div class="card-body p-4">
+
+        <%-- Điều hướng tháng --%>
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3"
+                    onclick="calPrev()">
+                <i class="bi bi-chevron-left"></i>
+            </button>
+            <h6 class="fw-bold mb-0" id="calTitle"></h6>
+            <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3"
+                    onclick="calNext()">
+                <i class="bi bi-chevron-right"></i>
+            </button>
+        </div>
+
+        <%-- Chú thích --%>
+        <div class="d-flex gap-3 mb-3 flex-wrap small">
+            <span><span class="badge bg-warning text-dark">●</span> Chờ duyệt</span>
+            <span><span class="badge bg-success">●</span> Đã duyệt</span>
+            <span><span class="badge bg-danger">●</span> Từ chối</span>
+            <span><span class="badge bg-secondary">●</span> Đã hủy</span>
+        </div>
+
+        <%-- Lưới lịch --%>
+        <div class="table-responsive">
+            <table class="table table-bordered mb-0 text-center" id="calTable"
+                   style="table-layout:fixed;">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:14.28%">CN</th>
+                        <th style="width:14.28%">Hai</th>
+                        <th style="width:14.28%">Ba</th>
+                        <th style="width:14.28%">Tư</th>
+                        <th style="width:14.28%">Năm</th>
+                        <th style="width:14.28%">Sáu</th>
+                        <th style="width:14.28%">Bảy</th>
+                    </tr>
+                </thead>
+                <tbody id="calBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
 <%-- ── Bảng danh sách lịch ──────────────────────────────────────────────────── --%>
-<div class="card border-0 rounded-4">
+<div id="listView" class="card border-0 rounded-4">
     <div class="card-body p-0">
         <div class="d-flex align-items-center justify-content-between px-4 pt-3 pb-2">
             <h6 class="fw-semibold mb-0">
@@ -302,6 +362,8 @@
             </div>
         </c:if>
     </div>
+</div>
+<%-- ── Kết thúc listView ── --%>
 </div>
 
 <%-- ══════════════════════════════════════════════════════════════════════════
@@ -559,6 +621,153 @@
         new bootstrap.Modal(document.getElementById('createModal')).show();
     });
     </c:if>
+
+    // ── Calendar view ─────────────────────────────────────────────────────────
+    // Thu thập dữ liệu từ server (render phía JSP, không cần thêm API)
+    const scheduleData = [
+        <c:forEach var="s" items="${allSchedules}" varStatus="st">
+        {
+            date:   "${s.workDate}",
+            start:  "${s.startTime}",
+            end:    "${s.endTime}",
+            status: "${s.status}",
+            slots:  ${s.maxSlots},
+            notes:  "${s.notes != null ? s.notes : ''}"
+        }<c:if test="${!st.last}">,</c:if>
+        </c:forEach>
+    ];
+
+    // Nhóm lịch theo ngày (key: "yyyy-MM-dd")
+    const byDate = {};
+    scheduleData.forEach(function(s) {
+        var d = s.date ? s.date.substring(0, 10) : '';
+        if (!d) return;
+        if (!byDate[d]) byDate[d] = [];
+        byDate[d].push(s);
+    });
+
+    var calYear, calMonth;
+    (function initCal() {
+        var now = new Date();
+        calYear  = now.getFullYear();
+        calMonth = now.getMonth(); // 0-based
+    })();
+
+    function statusColor(st) {
+        if (st === 'APPROVED')  return '#198754';
+        if (st === 'PENDING')   return '#ffc107';
+        if (st === 'REJECTED')  return '#dc3545';
+        if (st === 'CANCELLED') return '#6c757d';
+        return '#6c757d';
+    }
+    function statusBg(st) {
+        if (st === 'APPROVED')  return '#d1edda';
+        if (st === 'PENDING')   return '#fff3cd';
+        if (st === 'REJECTED')  return '#f8d7da';
+        if (st === 'CANCELLED') return '#e2e3e5';
+        return '#e2e3e5';
+    }
+    function statusLabel(st) {
+        if (st === 'APPROVED')  return 'Đã duyệt';
+        if (st === 'PENDING')   return 'Chờ duyệt';
+        if (st === 'REJECTED')  return 'Từ chối';
+        if (st === 'CANCELLED') return 'Đã hủy';
+        return st;
+    }
+
+    function renderCalendar() {
+        var months = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6',
+                      'Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
+        document.getElementById('calTitle').textContent =
+            months[calMonth] + ' ' + calYear;
+
+        var firstDay = new Date(calYear, calMonth, 1).getDay(); // 0=CN
+        var daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+        var today = new Date();
+        today.setHours(0,0,0,0);
+
+        var html = '';
+        var day  = 1;
+        var row  = 0;
+
+        while (day <= daysInMonth) {
+            html += '<tr>';
+            for (var col = 0; col < 7; col++) {
+                if ((row === 0 && col < firstDay) || day > daysInMonth) {
+                    html += '<td style="background:#fafafa;height:90px;"></td>';
+                } else {
+                    var dateStr = calYear + '-' +
+                        String(calMonth + 1).padStart(2,'0') + '-' +
+                        String(day).padStart(2,'0');
+                    var cellDate = new Date(calYear, calMonth, day);
+                    var isToday  = cellDate.getTime() === today.getTime();
+                    var events   = byDate[dateStr] || [];
+
+                    var cellStyle = isToday
+                        ? 'background:#fff0f8;height:90px;vertical-align:top;'
+                        : 'height:90px;vertical-align:top;';
+
+                    html += '<td style="' + cellStyle + '" class="p-1">';
+                    html += '<div class="fw-bold small mb-1" style="' +
+                        (isToday ? 'color:#e91e8c;' : 'color:#555;') + '">' +
+                        day + '</div>';
+
+                    events.forEach(function(ev) {
+                        var bg    = statusBg(ev.status);
+                        var color = statusColor(ev.status);
+                        html += '<div title="' + ev.start + '-' + ev.end +
+                            ' | ' + statusLabel(ev.status) +
+                            (ev.notes ? ' | ' + ev.notes : '') + '"' +
+                            ' style="background:' + bg + ';border-left:3px solid ' + color +
+                            ';border-radius:3px;padding:1px 4px;margin-bottom:2px;' +
+                            'font-size:.68rem;line-height:1.3;cursor:default;overflow:hidden;' +
+                            'white-space:nowrap;text-overflow:ellipsis;color:#333;">' +
+                            '<span style="color:' + color + ';font-weight:600;">' +
+                            ev.start.substring(0,5) + '-' + ev.end.substring(0,5) +
+                            '</span>' +
+                            '</div>';
+                    });
+
+                    html += '</td>';
+                    day++;
+                }
+            }
+            html += '</tr>';
+            row++;
+        }
+
+        document.getElementById('calBody').innerHTML = html;
+    }
+
+    function calPrev() {
+        calMonth--;
+        if (calMonth < 0) { calMonth = 11; calYear--; }
+        renderCalendar();
+    }
+    function calNext() {
+        calMonth++;
+        if (calMonth > 11) { calMonth = 0; calYear++; }
+        renderCalendar();
+    }
+
+    function switchView(view) {
+        var listEl  = document.getElementById('listView');
+        var calEl   = document.getElementById('calendarView');
+        var btnList = document.getElementById('btnViewList');
+        var btnCal  = document.getElementById('btnViewCal');
+        if (view === 'cal') {
+            listEl.classList.add('d-none');
+            calEl.classList.remove('d-none');
+            btnList.className = 'btn btn-outline-primary btn-sm rounded-pill px-4';
+            btnCal.className  = 'btn btn-primary btn-sm rounded-pill px-4';
+            renderCalendar();
+        } else {
+            calEl.classList.add('d-none');
+            listEl.classList.remove('d-none');
+            btnList.className = 'btn btn-primary btn-sm rounded-pill px-4';
+            btnCal.className  = 'btn btn-outline-primary btn-sm rounded-pill px-4';
+        }
+    }
 </script>
 
 <%@ include file="../common/footer.jsp" %>

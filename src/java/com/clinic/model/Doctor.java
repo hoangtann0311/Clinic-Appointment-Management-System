@@ -21,7 +21,9 @@ public class Doctor implements Serializable {
     private String degree;
     private int experienceYears;
     private double price;
-    private String avatar;
+    private String avatar;      // legacy alias
+    private String avatarUrl;   // cột thật trong DB
+    private String bio;
 
     public Doctor() {
     }
@@ -135,13 +137,14 @@ public class Doctor implements Serializable {
         this.price = price;
     }
 
-    public String getAvatar() {
-        return avatar;
-    }
+    public String getAvatar() { return avatarUrl != null ? avatarUrl : avatar; }
+    public void setAvatar(String avatar) { this.avatar = avatar; }
 
-    public void setAvatar(String avatar) {
-        this.avatar = avatar;
-    }
+    public String getAvatarUrl() { return avatarUrl; }
+    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
+
+    public String getBio() { return bio; }
+    public void setBio(String bio) { this.bio = bio; }
 
     @Override
     public String toString() {

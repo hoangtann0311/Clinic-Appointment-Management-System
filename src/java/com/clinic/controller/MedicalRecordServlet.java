@@ -4,6 +4,8 @@ import com.clinic.config.DatabaseConfig;
 import com.clinic.dao.AppointmentDAO;
 import com.clinic.dao.MedicalRecordDAO;
 import com.clinic.dao.PrescriptionDAO;
+import com.clinic.dao.ServiceDAO;
+import com.clinic.dao.TestOrderDAO;
 import com.clinic.model.MedicalRecord;
 import com.clinic.model.Prescription;
 import com.clinic.model.PrescriptionItem;
@@ -35,6 +37,8 @@ public class MedicalRecordServlet extends HttpServlet {
 
     private final MedicalRecordDAO dao = new MedicalRecordDAO();
     private final PrescriptionDAO prescriptionDAO = new PrescriptionDAO();
+    private final TestOrderDAO testOrderDAO = new TestOrderDAO();
+    private final ServiceDAO serviceDAO = new ServiceDAO();
 
     // ── GET ─────────────────────────────────────────────────────────────────
 
@@ -73,6 +77,11 @@ public class MedicalRecordServlet extends HttpServlet {
             req.setAttribute("mode",         "form");
             req.setAttribute("prescription", prescription);
             req.setAttribute("medicines",    prescriptionDAO.getAllMedicines());
+            req.setAttribute("labServices",        serviceDAO.findByCategoryId(3));
+            req.setAttribute("ultrasoundServices", serviceDAO.findByCategoryId(2));
+            if (record.getId() > 0) {
+                req.setAttribute("testOrders", testOrderDAO.getByMedicalRecordId(record.getId()));
+            }
             req.getRequestDispatcher("/views/doctors/medical_record_form.jsp").forward(req, resp);
 
         } else {
@@ -274,20 +283,28 @@ public class MedicalRecordServlet extends HttpServlet {
             }
         }
 
-        // ── Lưu ─────────────────────────────────────────────────────────────
+        // ── Đọc action: draft = chỉ định XN rồi chờ, final = lưu chính thức ──
+        String submitAction = req.getParameter("submitAction");
+        boolean isDraft = "draft".equals(submitAction);
+
+        // ── Lưu hồ sơ ───────────────────────────────────────────────────────
         boolean success;
         int finalRecordId;
         if (recordIdStr != null && !recordIdStr.isBlank()) {
             finalRecordId = Integer.parseInt(recordIdStr);
             mr.setId(finalRecordId);
+            mr.setStatus(isDraft ? "draft" : "final");
             success = dao.update(mr);
         } else {
+            mr.setStatus(isDraft ? "draft" : "final");
             finalRecordId = dao.create(mr);
             success = finalRecordId > 0;
-            if (success) new AppointmentDAO().updateStatus(apptId, doctorId, "completed");
+            if (success && !isDraft) {
+                new AppointmentDAO().updateStatus(apptId, doctorId, "completed");
+            }
         }
 
-        // ── Lưu đơn thuốc kèm theo (nếu có khai báo thuốc trong form) ─────────
+        // ── Lưu đơn thuốc kèm theo ──────────────────────────────────────────
         if (success && !prescriptionItems.isEmpty()) {
             Prescription existing = prescriptionDAO.getByMedicalRecordId(finalRecordId);
             if (existing != null) {
@@ -302,10 +319,28 @@ public class MedicalRecordServlet extends HttpServlet {
             }
         }
 
+        // ── Tạo chỉ định xét nghiệm ─────────────────────────────────────────
         if (success) {
-            resp.sendRedirect(req.getContextPath() + "/doctor/medical-records?apptId=" + apptId + "&saved=1");
-        } else {
+            String[] labSids = req.getParameterValues("labServiceIds");
+            if (labSids != null && labSids.length > 0) {
+                java.util.List<Integer> labIds = new java.util.ArrayList<>();
+                for (String s : labSids) {
+                    try { labIds.add(Integer.parseInt(s)); } catch (NumberFormatException ignored) {}
+                }
+                if (!labIds.isEmpty()) testOrderDAO.createBatch(finalRecordId, doctorId, labIds);
+            }
+        }
+
+        if (!success) {
             errorOnPost(req, resp, apptId, user.getFullName(), "Lưu hồ sơ thất bại. Vui lòng thử lại.");
+            return;
+        }
+
+        if (isDraft) {
+            // Chuyển sang trang xét nghiệm để chờ kết quả KTV
+            resp.sendRedirect(req.getContextPath() + "/doctor/lab-orders?recordId=" + finalRecordId + "&fromDraft=1");
+        } else {
+            resp.sendRedirect(req.getContextPath() + "/doctor/medical-records?apptId=" + apptId + "&saved=1");
         }
     }
 
@@ -344,10 +379,12 @@ public class MedicalRecordServlet extends HttpServlet {
         req.setAttribute("record",       record);
         req.setAttribute("apptId",       apptId);
         req.setAttribute("doctorName",   doctorName);
-        req.setAttribute("mode",         "form");
-        req.setAttribute("prescription", prescription);
-        req.setAttribute("medicines",    prescriptionDAO.getAllMedicines());
-        req.setAttribute("errorMessage", msg);
+        req.setAttribute("mode",              "form");
+        req.setAttribute("prescription",      prescription);
+        req.setAttribute("medicines",         prescriptionDAO.getAllMedicines());
+        req.setAttribute("labServices",        serviceDAO.findByCategoryId(3));
+        req.setAttribute("ultrasoundServices", serviceDAO.findByCategoryId(2));
+        req.setAttribute("errorMessage",      msg);
         req.getRequestDispatcher("/views/doctors/medical_record_form.jsp").forward(req, resp);
     }
 

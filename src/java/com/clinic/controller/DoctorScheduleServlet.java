@@ -86,6 +86,10 @@ public class DoctorScheduleServlet extends HttpServlet {
         int total      = scheduleDAO.countAll(statusFilter, doctor.getId(), dateFrom, dateTo);
         int totalPages = (int) Math.ceil((double) total / PAGE_SIZE);
 
+        // Toàn bộ lịch (không phân trang) để render calendar view
+        List<DoctorSchedule> allSchedules = scheduleDAO.findAll(
+                0, Integer.MAX_VALUE, null, doctor.getId(), null, null);
+
         // KPI counts cho bác sĩ này
         int pendingCount  = countByDoctorAndStatus(doctor.getId(), ScheduleStatus.PENDING);
         int approvedCount = countByDoctorAndStatus(doctor.getId(), ScheduleStatus.APPROVED);
@@ -96,6 +100,7 @@ public class DoctorScheduleServlet extends HttpServlet {
 
         req.setAttribute("doctor",        doctor);
         req.setAttribute("schedules",     schedules);
+        req.setAttribute("allSchedules",  allSchedules);
         req.setAttribute("currentPage",   page);
         req.setAttribute("totalPages",    totalPages);
         req.setAttribute("totalSchedules",total);
