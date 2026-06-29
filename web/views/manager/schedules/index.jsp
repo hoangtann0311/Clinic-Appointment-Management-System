@@ -239,6 +239,7 @@
         .kmi-pending  { background: linear-gradient(135deg, #f57c00, #e65100); }
         .kmi-approved { background: linear-gradient(135deg, #2e7d32, #1b5e20); }
         .kmi-rejected { background: linear-gradient(135deg, #c62828, #b71c1c); }
+        .kmi-cancelled { background: linear-gradient(135deg, #546e7a, #37474f); }
         .kmi-total    { background: linear-gradient(135deg, #6366f1, #4f46e5); }
         .kpi-mini-body { flex: 1; min-width: 0; }
         .kpi-mini-value { font-family: var(--font-display); font-size: 1.3rem; font-weight: 900; color: var(--c-on-surface); line-height: 1.1; }
@@ -371,6 +372,13 @@
             <div class="kpi-mini-body">
                 <div class="kpi-mini-value">${rejectedCount}</div>
                 <div class="kpi-mini-label">Đã Từ Chối</div>
+            </div>
+        </div>
+        <div class="kpi-mini" onclick="window.location.href='?status=CANCELLED'" style="cursor:pointer;">
+            <div class="kpi-mini-icon kmi-cancelled"><i class="bi bi-slash-circle-fill"></i></div>
+            <div class="kpi-mini-body">
+                <div class="kpi-mini-value">${cancelledCount}</div>
+                <div class="kpi-mini-label">Đã Hủy</div>
             </div>
         </div>
         <div class="kpi-mini">
@@ -574,7 +582,12 @@
                                                        title="Xem khung giờ khám đã sinh" style="font-size:0.78rem;">
                                                         <i class="bi bi-clock-fill"></i> Slot
                                                     </a>
-                                                    <span class="text-muted" style="font-size:0.78rem;">Đã duyệt</span>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                                            title="Hủy lịch trực"
+                                                            style="font-size:0.78rem;"
+                                                            onclick="openCancelModal('${sched.id}', '${fn:escapeXml(sched.doctorName)}', '${sched.shiftLabel}')">
+                                                        <i class="bi bi-x-circle"></i> Hủy
+                                                    </button>
                                                 </div>
                                             </c:if>
                                             <c:if test="${sched.status.name() eq 'REJECTED' or sched.status.name() eq 'CANCELLED'}">
@@ -694,6 +707,154 @@
         </div>
     </div>
 </div>
+
+<%-- ============================================================
+     MODAL: XÁC NHẬN HỦY LỊCH TRỰC (CANCEL)
+     ============================================================ --%>
+<div class="modal fade" id="cancelModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background:#eceff1 !important; border-bottom: 1px solid #b0bec5 !important;">
+                <h5 class="modal-title" style="color:#37474f;">
+                    <i class="bi bi-slash-circle-fill me-2" style="color:#546e7a;"></i>Hủy Lịch Trực
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="${pageContext.request.contextPath}/manager/schedules/">
+                <input type="hidden" name="action" value="cancel">
+                <input type="hidden" name="id" id="cancelScheduleId">
+                <div class="modal-body">
+                    <div class="detail-card mb-3">
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <div class="detail-label">Bác sĩ</div>
+                                <div class="detail-value" id="cancelDoctorName">&mdash;</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="detail-label">Ca trực</div>
+                                <div class="detail-value" id="cancelShiftLabel">&mdash;</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-warning d-flex align-items-center" style="font-size:0.85rem;border-radius:var(--r-sm);">
+                        <i class="bi bi-exclamation-triangle-fill me-2 flex-shrink-0" style="font-size:1.2rem;"></i>
+                        <div>
+                            <strong>Lưu ý:</strong> Nếu lịch trực đã có bệnh nhân đặt, bạn sẽ không thể hủy trực tiếp.
+                            Hệ thống sẽ yêu cầu bạn xử lý chuyển bác sĩ hoặc đổi lịch cho bệnh nhân trước.
+                        </div>
+                    </div>
+
+                    <label class="form-label fw-semibold">
+                        Lý do hủy <span class="text-danger">*</span>
+                    </label>
+                    <textarea name="cancellationReason" id="cancellationReason"
+                              class="form-control" rows="3" maxlength="500"
+                              placeholder="Nhập lý do hủy lịch trực (tối thiểu 10 ký tự)..."
+                              required></textarea>
+                    <div class="form-text">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Lý do hủy sẽ được lưu vào hệ thống để đối chiếu sau này.
+                    </div>
+                    <div id="cancelError" class="text-danger mt-2" style="font-size:0.82rem;display:none;"></div>
+
+                    <c:if test="${not empty errors.cancellationReason}">
+                        <div class="text-danger mt-2" style="font-size:0.82rem;">
+                            <i class="bi bi-exclamation-circle me-1"></i>${errors.cancellationReason}
+                        </div>
+                    </c:if>
+                    <c:if test="${not empty errors.general}">
+                        <div class="text-danger mt-2" style="font-size:0.82rem;">
+                            <i class="bi bi-exclamation-circle me-1"></i>${errors.general}
+                        </div>
+                    </c:if>
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid var(--c-outline-variant) !important;">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Đóng
+                    </button>
+                    <button type="submit" class="btn btn-outline-danger" style="font-weight:700;">
+                        <i class="bi bi-slash-circle me-1"></i>Xác Nhận Hủy
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<%-- ============================================================
+     MODAL: CẢNH BÁO CÓ BOOKED SLOTS KHI HỦY
+     ============================================================ --%>
+<c:if test="${showCancelWarning}">
+<div class="modal fade" id="cancelWarningModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background:#fff3e0 !important; border-bottom: 1px solid #ffcc80 !important;">
+                <h5 class="modal-title" style="color:#e65100;">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    Không Thể Hủy Lịch Trực — Có Bệnh Nhân Đã Đặt
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger" style="font-size:0.9rem;border-radius:var(--r-sm);">
+                    <i class="bi bi-shield-exclamation me-2"></i>
+                    <strong>${hasBookedSlotsError}</strong>
+                </div>
+
+                <c:if test="${not empty bookedSlots}">
+                    <h6 style="font-weight:700;margin-bottom:0.75rem;">
+                        <i class="bi bi-people-fill me-2"></i>
+                        Danh sách ${bookedSlotCount} bệnh nhân cần xử lý:
+                    </h6>
+                    <div class="admin-table-wrapper" style="max-height:300px;overflow-y:auto;">
+                        <table class="admin-table" style="font-size:0.82rem;">
+                            <thead>
+                                <tr>
+                                    <th>Slot ID</th>
+                                    <th>Khung Giờ</th>
+                                    <th>Bệnh Nhân</th>
+                                    <th>Ngày Đặt</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <c:forEach var="bs" items="${bookedSlots}">
+                                    <tr>
+                                        <td>#${bs.id}</td>
+                                        <td style="font-weight:600;">${bs.timeLabel}</td>
+                                        <td>${not empty bs.bookedByName ? fn:escapeXml(bs.bookedByName) : '#' += bs.bookedBy}</td>
+                                        <td style="font-size:0.78rem;color:var(--c-muted);">
+                                            <fmt:formatDate value="${bs.bookedAt}" pattern="dd/MM/yyyy HH:mm"/>
+                                        </td>
+                                    </tr>
+                                </c:forEach>
+                            </tbody>
+                        </table>
+                    </div>
+                </c:if>
+
+                <div class="mt-3 p-3" style="background:#f5f5f5;border-radius:var(--r-sm);font-size:0.85rem;">
+                    <strong><i class="bi bi-lightbulb-fill me-1" style="color:#f9a825;"></i>Hướng dẫn:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>Chuyển từng bệnh nhân sang bác sĩ khác có lịch trực cùng ngày</li>
+                        <li>Hoặc đổi lịch hẹn của bệnh nhân sang ngày khác</li>
+                        <li>Sau khi xử lý xong tất cả bệnh nhân, quay lại đây để hủy lịch trực</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid var(--c-outline-variant) !important;">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Đóng
+                </button>
+                <a href="${pageContext.request.contextPath}/manager/time-slots/?scheduleId=${cancelSchedule.id}"
+                   class="btn btn-primary-pink">
+                    <i class="bi bi-arrow-right-circle me-1"></i>Đi Đến Quản Lý Slots
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+</c:if>
 
 <%-- ============================================================
      MODAL: CHI TIẾT LỊCH TRỰC
@@ -856,11 +1017,53 @@ function openRejectModal(id, doctorName, shiftLabel) {
     }
 })();
 
+// ── Open cancel modal ──
+function openCancelModal(id, doctorName, shiftLabel) {
+    document.getElementById('cancelScheduleId').value = id;
+    document.getElementById('cancelDoctorName').innerHTML = '<i class="bi bi-person-badge me-1"></i>' + doctorName;
+    document.getElementById('cancelShiftLabel').textContent = shiftLabel;
+    document.getElementById('cancellationReason').value = '';
+    document.getElementById('cancelError').style.display = 'none';
+    new bootstrap.Modal(document.getElementById('cancelModal')).show();
+}
+
+// ── Client-side validate cancel reason ──
+(function() {
+    var cancelForm = document.querySelector('#cancelModal form');
+    if (cancelForm) {
+        cancelForm.addEventListener('submit', function(e) {
+            var reason = document.getElementById('cancellationReason').value.trim();
+            var errorEl = document.getElementById('cancelError');
+            if (reason.length < 10) {
+                e.preventDefault();
+                errorEl.style.display = 'block';
+                errorEl.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>Lý do hủy phải có ít nhất 10 ký tự.';
+                return false;
+            }
+        });
+    }
+})();
+
 <%-- Hiển thị modal từ chối nếu có lỗi validate trước đó --%>
 <c:if test="${showRejectModal}">
     document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('rejectScheduleId').value = '${rejectScheduleId}';
         new bootstrap.Modal(document.getElementById('rejectModal')).show();
+    });
+</c:if>
+
+<%-- Hiển thị modal hủy nếu có lỗi validate trước đó --%>
+<c:if test="${showCancelModal}">
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('cancelScheduleId').value = '${cancelScheduleId}';
+        new bootstrap.Modal(document.getElementById('cancelModal')).show();
+    });
+</c:if>
+
+<%-- Hiển thị modal cảnh báo booked slots --%>
+<c:if test="${showCancelWarning}">
+    document.addEventListener('DOMContentLoaded', function() {
+        new bootstrap.Modal(document.getElementById('cancelWarningModal')).show();
     });
 </c:if>
 

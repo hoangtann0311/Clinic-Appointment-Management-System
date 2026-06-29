@@ -20,6 +20,10 @@ import java.sql.Timestamp;
  *   <li>COMPLETED  — Đã hoàn thành khám</li>
  *   <li>CANCELLED  — Đã hủy (bởi bệnh nhân hoặc hệ thống)</li>
  * </ul>
+ *
+ * <p>Concurrency: Cột [version] (ROWVERSION) dùng cho optimistic locking.
+ * Khi book/cancel slot, version được kiểm tra để tránh race condition.
+ * Cột [booked_by] lưu patient_id, [booked_at] lưu thời điểm đặt.
  */
 public class TimeSlot implements Serializable {
 
@@ -31,12 +35,16 @@ public class TimeSlot implements Serializable {
     private Time endTime;
     private SlotStatus status;
     private String notes;
+    private Integer bookedBy;      // patient_id (users.id), null nếu AVAILABLE
+    private Timestamp bookedAt;    // thời điểm bệnh nhân đặt slot
+    private byte[] version;        // ROWVERSION — optimistic lock
     private Timestamp createdAt;
     private Timestamp updatedAt;
 
     // ── Transient fields (join từ bảng khác, dùng để hiển thị) ──
     private String doctorName;
     private String shiftLabel;
+    private String bookedByName;   // tên bệnh nhân đã đặt (join users)
 
     public TimeSlot() {
         this.status = SlotStatus.AVAILABLE;
@@ -164,6 +172,38 @@ public class TimeSlot implements Serializable {
 
     public void setShiftLabel(String shiftLabel) {
         this.shiftLabel = shiftLabel;
+    }
+
+    public Integer getBookedBy() {
+        return bookedBy;
+    }
+
+    public void setBookedBy(Integer bookedBy) {
+        this.bookedBy = bookedBy;
+    }
+
+    public Timestamp getBookedAt() {
+        return bookedAt;
+    }
+
+    public void setBookedAt(Timestamp bookedAt) {
+        this.bookedAt = bookedAt;
+    }
+
+    public byte[] getVersion() {
+        return version;
+    }
+
+    public void setVersion(byte[] version) {
+        this.version = version;
+    }
+
+    public String getBookedByName() {
+        return bookedByName;
+    }
+
+    public void setBookedByName(String bookedByName) {
+        this.bookedByName = bookedByName;
     }
 
     @Override

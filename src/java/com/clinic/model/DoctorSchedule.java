@@ -17,6 +17,11 @@ import java.sql.Timestamp;
  *   <li>REJECTED  — Bị từ chối, kèm rejection_reason</li>
  *   <li>CANCELLED  — Đã bị hủy bỏ</li>
  * </ul>
+ *
+ * <p>Concurrency: Cột [version] (ROWVERSION) dùng cho optimistic locking
+ * khi duyệt/hủy/sửa lịch trực. Ngăn 2 Manager cùng duyệt 1 lịch.
+ * Cột [cancelled_by], [cancelled_at], [cancellation_reason] lưu
+ * thông tin hủy lịch.
  */
 public class DoctorSchedule implements Serializable {
 
@@ -35,13 +40,19 @@ public class DoctorSchedule implements Serializable {
     private Timestamp updatedAt;
     private boolean isApproved; // tương thích ngược với schema cũ (BIT)
     private String notes;
+    private byte[] version;               // ROWVERSION — optimistic lock
+    private Integer cancelledBy;          // user_id người hủy
+    private Timestamp cancelledAt;        // thời điểm hủy
+    private String cancellationReason;    // lý do hủy
 
     // ── Transient fields (join từ bảng khác, dùng để hiển thị) ──
     private String doctorName;
     private String doctorSpecialization;
     private String approvedByName;
     private String createdByName;
+    private String cancelledByName;       // tên người hủy
     private String shiftLabel;
+    private int bookedSlotCount;          // số slot đã BOOKED (dùng kiểm tra trước khi hủy)
 
     public DoctorSchedule() {
         this.status = ScheduleStatus.PENDING;
@@ -234,6 +245,54 @@ public class DoctorSchedule implements Serializable {
 
     public void setCreatedByName(String createdByName) {
         this.createdByName = createdByName;
+    }
+
+    public byte[] getVersion() {
+        return version;
+    }
+
+    public void setVersion(byte[] version) {
+        this.version = version;
+    }
+
+    public Integer getCancelledBy() {
+        return cancelledBy;
+    }
+
+    public void setCancelledBy(Integer cancelledBy) {
+        this.cancelledBy = cancelledBy;
+    }
+
+    public Timestamp getCancelledAt() {
+        return cancelledAt;
+    }
+
+    public void setCancelledAt(Timestamp cancelledAt) {
+        this.cancelledAt = cancelledAt;
+    }
+
+    public String getCancellationReason() {
+        return cancellationReason;
+    }
+
+    public void setCancellationReason(String cancellationReason) {
+        this.cancellationReason = cancellationReason;
+    }
+
+    public String getCancelledByName() {
+        return cancelledByName;
+    }
+
+    public void setCancelledByName(String cancelledByName) {
+        this.cancelledByName = cancelledByName;
+    }
+
+    public int getBookedSlotCount() {
+        return bookedSlotCount;
+    }
+
+    public void setBookedSlotCount(int bookedSlotCount) {
+        this.bookedSlotCount = bookedSlotCount;
     }
 
     public void setShiftLabel(String shiftLabel) {

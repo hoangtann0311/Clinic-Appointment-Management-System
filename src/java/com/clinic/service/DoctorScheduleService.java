@@ -2,8 +2,11 @@ package com.clinic.service;
 
 import com.clinic.dao.DoctorDAO;
 import com.clinic.dao.DoctorScheduleDAO;
+import com.clinic.dao.DoctorScheduleDAO.ApproveResult;
+import com.clinic.dao.DoctorScheduleDAO.CancelScheduleResult;
 import com.clinic.model.Doctor;
 import com.clinic.model.DoctorSchedule;
+import com.clinic.model.TimeSlot;
 import com.clinic.model.enums.ScheduleStatus;
 
 import java.sql.Date;
@@ -18,8 +21,18 @@ import java.util.Map;
  * <p>Nghiệp vụ chính:
  * <ul>
  *   <li>Lấy danh sách lịch trực (có phân trang + filter)</li>
- *   <li>Duyệt lịch trực (APPROVE) — kiểm tra trùng lịch, giới hạn slot</li>
- *   <li>Từ chối lịch trực (REJECT) — yêu cầu nhập lý do</li>
+ *   <li>Duyệt lịch trực (APPROVE) — optimistic locking, ngăn 2 Manager duyệt đồng thời</li>
+ *   <li>Từ chối lịch trực (REJECT)</li>
+ *   <li>Hủy lịch trực (CANCEL) — kiểm tra booked slots, xử lý chuyển bệnh nhân</li>
+ *   <li>Kiểm tra sửa lịch trực — không cho sửa nếu đã có slot BOOKED</li>
+ * </ul>
+ *
+ * <p><strong>Edge cases handled:</strong>
+ * <ul>
+ *   <li>2 Manager cùng duyệt 1 lịch → optimistic lock, chỉ 1 thành công</li>
+ *   <li>Bác sĩ hủy lịch sau khi có patient đặt → không hủy trực tiếp, phải chuyển patient</li>
+ *   <li>Lịch trực bị sửa sau khi đã sinh slot → cần đồng bộ, không cho sửa nếu có BOOKED</li>
+ *   <li>Session hết hạn khi đang duyệt → Controller kiểm tra, yêu cầu login lại</li>
  * </ul>
  */
 public class DoctorScheduleService {
@@ -34,9 +47,10 @@ public class DoctorScheduleService {
         this.timeSlotService = new TimeSlotService();
     }
 
-    /**
-     * Lấy danh sách lịch trực có phân trang + filter.
-     */
+    // ──────────────────────────────────────────────
+    //  Truy vấn
+    // ──────────────────────────────────────────────
+
     public List<DoctorSchedule> getSchedules(int page, int pageSize,
                                               String status, Integer doctorId,
                                               Date dateFrom, Date dateTo) {
@@ -49,9 +63,6 @@ public class DoctorScheduleService {
         }
     }
 
-    /**
-     * Tổng số lịch trực (để tính số trang).
-     */
     public int getTotalSchedules(String status, Integer doctorId,
                                   Date dateFrom, Date dateTo) {
         try {
@@ -62,21 +73,47 @@ public class DoctorScheduleService {
         }
     }
 
-    /**
-     * Lấy chi tiết một lịch trực theo id.
-     */
     public DoctorSchedule getScheduleById(int id) {
         return scheduleDAO.findById(id);
     }
 
+    public int countByStatus(ScheduleStatus status) {
+        try {
+            return scheduleDAO.countByStatus(status);
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    public List<Doctor> getAllDoctors() {
+        try {
+            return doctorDAO.findAll();
+        } catch (Exception e) {
+            System.err.println("[DoctorScheduleService] getAllDoctors ERROR: " + e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    // ──────────────────────────────────────────────
+    //  Duyệt lịch trực — optimistic locking
+    // ──────────────────────────────────────────────
+
     /**
-     * Duyệt lịch trực — kiểm tra nghiệp vụ trước khi duyệt.
+     * Duyệt lịch trực với optimistic locking.
      *
-     * <p>Các bước kiểm tra:
+     * <p>Cơ chế chống double-approve:
+     * <ul>
+     *   <li>DAO dùng {@code WHERE status = 'PENDING'} — chỉ UPDATE nếu chưa bị đổi</li>
+     *   <li>Nếu 2 Manager cùng duyệt, người thứ 2 nhận lỗi "already processed"</li>
+     *   <li>Sinh time slots trong CÙNG transaction với duyệt — đảm bảo nguyên tử</li>
+     * </ul>
+     *
+     * <p>Quy trình:
      * <ol>
-     *   <li>Lịch trực phải tồn tại và ở trạng thái PENDING</li>
-     *   <li>Bác sĩ không có lịch APPROVED trùng ngày + khung giờ</li>
-     *   <li>Số bác sĩ trong ca chưa vượt max_slots của ca đó</li>
+     *   <li>Validate: lịch trực tồn tại & PENDING</li>
+     *   <li>Kiểm tra trùng lịch APPROVED của cùng bác sĩ</li>
+     *   <li>Kiểm tra giới hạn max_slots của ca</li>
+     *   <li>Atomic approve + sinh slots (transaction)</li>
      * </ol>
      *
      * @param scheduleId ID lịch trực
@@ -93,7 +130,8 @@ public class DoctorScheduleService {
             return false;
         }
         if (schedule.getStatus() != ScheduleStatus.PENDING) {
-            errors.put("general", "Chỉ có thể duyệt lịch trực đang ở trạng thái Chờ duyệt.");
+            errors.put("general", "Chỉ có thể duyệt lịch trực đang ở trạng thái Chờ duyệt. "
+                    + "Trạng thái hiện tại: " + schedule.getStatus().getLabel());
             return false;
         }
 
@@ -106,7 +144,9 @@ public class DoctorScheduleService {
             null
         );
         if (conflict) {
-            errors.put("conflict", "Bác sĩ đã có lịch trực được duyệt trong cùng ngày và khung giờ này.");
+            errors.put("conflict",
+                    "Bác sĩ " + schedule.getDoctorName()
+                    + " đã có lịch trực được duyệt trong cùng ngày và khung giờ này.");
             return false;
         }
 
@@ -125,49 +165,41 @@ public class DoctorScheduleService {
             }
         }
 
-        // 4. Thực hiện duyệt
-        boolean result = scheduleDAO.approve(scheduleId, approvedBy);
-        if (!result) {
-            errors.put("general", "Duyệt lịch trực thất bại. Có thể lịch đã được xử lý bởi người khác.");
-            return false;
+        // 4. Thực hiện atomic approve (approve + sinh slots trong 1 transaction)
+        ApproveResult result = scheduleDAO.approveAtomic(scheduleId, approvedBy);
+
+        if (result.isSuccess()) {
+            System.out.println("[DoctorScheduleService] approveSchedule SUCCESS: scheduleId="
+                    + scheduleId + ", approvedBy=" + approvedBy
+                    + ", slotsGenerated=" + result.getSlotsGenerated());
+            return true;
         }
 
-        // 5. Tự động sinh khung giờ khám 20 phút
-        //    Sau khi duyệt thành công, sinh time slots cho lịch trực này
-        //    Lỗi sinh slot không rollback việc duyệt — Manager có thể sinh lại thủ công
-        try {
-            int slotsGenerated = timeSlotService.generateSlotsForSchedule(schedule, errors);
-            if (slotsGenerated > 0) {
-                System.out.println("[DoctorScheduleService] approveSchedule INFO: "
-                        + "Đã sinh " + slotsGenerated + " khung giờ khám cho lịch trực #" + scheduleId);
-            } else if (slotsGenerated == 0) {
-                System.out.println("[DoctorScheduleService] approveSchedule INFO: "
-                        + "Lịch trực #" + scheduleId + " — không sinh slot "
-                        + "(đã tồn tại hoặc thời gian < 20 phút).");
-            } else {
-                System.err.println("[DoctorScheduleService] approveSchedule WARNING: "
-                        + "Lịch trực #" + scheduleId + " đã duyệt nhưng sinh slot thất bại. "
-                        + "Manager có thể sinh lại thủ công.");
-            }
-        } catch (Exception e) {
-            // Không làm fail quá trình duyệt — chỉ log lỗi
-            System.err.println("[DoctorScheduleService] approveSchedule WARNING: "
-                    + "Lỗi khi sinh slot cho lịch trực #" + scheduleId
-                    + ": " + e.getMessage());
-            e.printStackTrace(System.err);
+        // 5. Xử lý các loại lỗi từ atomic approve
+        switch (result.getErrorCode()) {
+            case "ALREADY_PROCESSED":
+                errors.put("general", result.getErrorMessage());
+                break;
+            case "NOT_FOUND":
+                errors.put("general", result.getErrorMessage());
+                break;
+            case "SYSTEM_ERROR":
+                errors.put("general", result.getErrorMessage());
+                break;
+            default:
+                errors.put("general", "Duyệt lịch trực thất bại. Vui lòng thử lại.");
+                break;
         }
 
-        return true;
+        return false;
     }
+
+    // ──────────────────────────────────────────────
+    //  Từ chối lịch trực
+    // ──────────────────────────────────────────────
 
     /**
      * Từ chối lịch trực — yêu cầu nhập lý do.
-     *
-     * @param scheduleId      ID lịch trực
-     * @param rejectedBy      user_id của Admin/Manager
-     * @param rejectionReason lý do từ chối
-     * @param errors          map để chứa lỗi validate
-     * @return true nếu từ chối thành công
      */
     public boolean rejectSchedule(int scheduleId, int rejectedBy,
                                    String rejectionReason, Map<String, String> errors) {
@@ -201,38 +233,165 @@ public class DoctorScheduleService {
         return result;
     }
 
+    // ──────────────────────────────────────────────
+    //  Hủy lịch trực — xử lý edge cases
+    // ──────────────────────────────────────────────
+
     /**
-     * Đếm số lịch trực theo trạng thái (dùng cho thống kê KPI).
+     * Hủy lịch trực với kiểm tra booked slots.
+     *
+     * <p><strong>Luồng nghiệp vụ:</strong>
+     * <ol>
+     *   <li>Kiểm tra lịch trực tồn tại và có thể hủy</li>
+     *   <li>Đếm số slot đã BOOKED của lịch trực này</li>
+     *   <li>Nếu có BOOKED slots → không cho hủy trực tiếp, yêu cầu xử lý chuyển
+     *       bệnh nhân sang bác sĩ khác hoặc đổi lịch trước</li>
+     *   <li>Nếu không có BOOKED slots → hủy bình thường</li>
+     * </ol>
+     *
+     * @param scheduleId  ID lịch trực
+     * @param cancelledBy user_id người hủy
+     * @param reason      lý do hủy
+     * @param errors      map chứa lỗi nghiệp vụ
+     * @return CancelResult chứa kết quả (thành công / cần xử lý booked slots)
      */
-    public int countByStatus(ScheduleStatus status) {
-        try {
-            return scheduleDAO.countByStatus(status);
-        } catch (Exception e) {
-            return 0;
+    public ScheduleCancelResult cancelSchedule(int scheduleId, int cancelledBy,
+                                                String reason, Map<String, String> errors) {
+        // 1. Validate
+        if (reason == null || reason.trim().length() < 10) {
+            errors.put("cancellationReason", "Vui lòng nhập lý do hủy (tối thiểu 10 ký tự).");
+            return ScheduleCancelResult.validationFailed();
         }
+
+        // 2. Kiểm tra tồn tại & trạng thái
+        DoctorSchedule schedule = scheduleDAO.findById(scheduleId);
+        if (schedule == null) {
+            errors.put("general", "Lịch trực không tồn tại.");
+            return ScheduleCancelResult.validationFailed();
+        }
+
+        ScheduleStatus currentStatus = schedule.getStatus();
+        if (currentStatus == ScheduleStatus.CANCELLED) {
+            errors.put("general", "Lịch trực này đã bị hủy trước đó.");
+            return ScheduleCancelResult.validationFailed();
+        }
+
+        // 3. Kiểm tra booked slots — ĐÂY LÀ BƯỚC QUAN TRỌNG
+        int bookedSlots = timeSlotService.countBookedSlots(scheduleId);
+
+        if (bookedSlots > 0) {
+            // Có bệnh nhân đã đặt lịch → không cho hủy trực tiếp
+            List<TimeSlot> bookedSlotList = timeSlotService.getBookedSlotsBySchedule(scheduleId);
+
+            errors.put("hasBookedSlots",
+                    "Lịch trực #" + scheduleId + " của bác sĩ " + schedule.getDoctorName()
+                    + " hiện có " + bookedSlots + " bệnh nhân đã đặt lịch. "
+                    + "Bạn không thể hủy trực tiếp. Vui lòng xử lý chuyển bác sĩ hoặc "
+                    + "đổi lịch cho từng bệnh nhân trước.");
+
+            return ScheduleCancelResult.hasBookedSlots(scheduleId, bookedSlots, bookedSlotList);
+        }
+
+        // 4. Không có booked slots → thực hiện hủy atomic
+        CancelScheduleResult result = scheduleDAO.cancelAtomic(
+                scheduleId, cancelledBy, reason.trim(), 0);
+
+        if (result.isSuccess()) {
+            // Xóa các time slots (vì không có booked nên xóa an toàn)
+            timeSlotService.deleteSlotsBySchedule(scheduleId, new java.util.HashMap<>());
+
+            System.out.println("[DoctorScheduleService] cancelSchedule SUCCESS: scheduleId="
+                    + scheduleId + ", cancelledBy=" + cancelledBy);
+            return ScheduleCancelResult.success(scheduleId);
+        }
+
+        // Lỗi từ DAO
+        errors.put("general", result.getErrorMessage());
+        return ScheduleCancelResult.validationFailed();
     }
 
     /**
-     * Lấy danh sách tất cả bác sĩ (dùng cho dropdown filter).
+     * Hủy lịch trực sau khi đã xử lý xong tất cả booked slots (chuyển bệnh nhân).
+     * Đây là bước 2 sau khi Manager đã chuyển hết bệnh nhân sang bác sĩ khác.
      */
-    public List<Doctor> getAllDoctors() {
-        try {
-            return doctorDAO.findAll();
-        } catch (Exception e) {
-            System.err.println("[DoctorScheduleService] getAllDoctors ERROR: " + e.getMessage());
-            return new ArrayList<>();
+    public ScheduleCancelResult cancelScheduleAfterReassignment(int scheduleId, int cancelledBy,
+                                                                  String reason,
+                                                                  Map<String, String> errors) {
+        // Kiểm tra lại lần cuối: còn booked slots nào không?
+        int bookedSlots = timeSlotService.countBookedSlots(scheduleId);
+        if (bookedSlots > 0) {
+            errors.put("hasBookedSlots",
+                    "Vẫn còn " + bookedSlots + " bệnh nhân chưa được chuyển lịch. "
+                    + "Vui lòng xử lý tất cả trước khi hủy.");
+            return ScheduleCancelResult.hasBookedSlots(scheduleId, bookedSlots,
+                    timeSlotService.getBookedSlotsBySchedule(scheduleId));
         }
+
+        CancelScheduleResult result = scheduleDAO.cancelAtomic(
+                scheduleId, cancelledBy, reason.trim(), 0);
+
+        if (result.isSuccess()) {
+            timeSlotService.deleteSlotsBySchedule(scheduleId, new java.util.HashMap<>());
+            return ScheduleCancelResult.success(scheduleId);
+        }
+
+        errors.put("general", result.getErrorMessage());
+        return ScheduleCancelResult.validationFailed();
     }
 
+    // ──────────────────────────────────────────────
+    //  Kiểm tra sửa lịch trực
+    // ──────────────────────────────────────────────
+
     /**
-     * Validate tổng quan trước khi hiển thị form duyệt:
-     * Kiểm tra các vấn đề tiềm năng và trả về danh sách cảnh báo.
+     * Kiểm tra xem có thể sửa lịch trực không.
+     *
+     * <p>Quy tắc: Nếu lịch trực đã APPROVED và có slot BOOKED,
+     * KHÔNG cho phép sửa trực tiếp. Phải xử lý chuyển bệnh nhân trước.
+     *
+     * @return true nếu có thể sửa, false nếu bị chặn
+     */
+    public boolean canModifySchedule(int scheduleId, Map<String, String> errors) {
+        DoctorSchedule schedule = scheduleDAO.findById(scheduleId);
+        if (schedule == null) {
+            errors.put("general", "Lịch trực không tồn tại.");
+            return false;
+        }
+
+        // PENDING thì luôn sửa được
+        if (schedule.getStatus() == ScheduleStatus.PENDING) {
+            return true;
+        }
+
+        // APPROVED thì kiểm tra booked slots
+        if (schedule.getStatus() == ScheduleStatus.APPROVED) {
+            int bookedSlots = timeSlotService.countBookedSlots(scheduleId);
+            if (bookedSlots > 0) {
+                errors.put("hasBookedSlots",
+                        "Lịch trực này có " + bookedSlots + " bệnh nhân đã đặt lịch. "
+                        + "Không thể sửa lịch trực. Vui lòng xử lý chuyển bệnh nhân trước.");
+                return false;
+            }
+            return true;
+        }
+
+        // Các trạng thái khác không sửa được
+        errors.put("general", "Không thể sửa lịch trực ở trạng thái "
+                + schedule.getStatus().getLabel() + ".");
+        return false;
+    }
+
+    // ──────────────────────────────────────────────
+    //  Validate / Warnings
+    // ──────────────────────────────────────────────
+
+    /**
+     * Validate tổng quan trước khi hiển thị form duyệt.
      */
     public List<String> validateScheduleWarnings(DoctorSchedule schedule) {
         List<String> warnings = new ArrayList<>();
         if (schedule == null) return warnings;
 
-        // Kiểm tra trùng lịch
         boolean conflict = scheduleDAO.hasApprovedConflict(
             schedule.getDoctorId(),
             schedule.getWorkDate(),
@@ -244,7 +403,6 @@ public class DoctorScheduleService {
             warnings.add("Cảnh báo: Bác sĩ đã có lịch trực được duyệt trùng ngày và khung giờ này.");
         }
 
-        // Kiểm tra slot
         int maxSlots = schedule.getMaxSlots();
         if (maxSlots > 0) {
             int currentCount = scheduleDAO.countApprovedInSameShift(
@@ -258,5 +416,50 @@ public class DoctorScheduleService {
         }
 
         return warnings;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  INNER CLASS: ScheduleCancelResult
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Kết quả của thao tác hủy lịch trực.
+     * Bao gồm thông tin về booked slots cần xử lý.
+     */
+    public static class ScheduleCancelResult {
+        private final boolean success;
+        private final boolean needsReassignment; // Cần chuyển bệnh nhân trước khi hủy
+        private final int scheduleId;
+        private final int bookedSlotCount;
+        private final List<TimeSlot> bookedSlots; // Danh sách slot cần xử lý
+
+        private ScheduleCancelResult(boolean success, boolean needsReassignment,
+                                      int scheduleId, int bookedSlotCount,
+                                      List<TimeSlot> bookedSlots) {
+            this.success = success;
+            this.needsReassignment = needsReassignment;
+            this.scheduleId = scheduleId;
+            this.bookedSlotCount = bookedSlotCount;
+            this.bookedSlots = bookedSlots;
+        }
+
+        public static ScheduleCancelResult success(int scheduleId) {
+            return new ScheduleCancelResult(true, false, scheduleId, 0, null);
+        }
+
+        public static ScheduleCancelResult hasBookedSlots(int scheduleId, int count,
+                                                           List<TimeSlot> slots) {
+            return new ScheduleCancelResult(false, true, scheduleId, count, slots);
+        }
+
+        public static ScheduleCancelResult validationFailed() {
+            return new ScheduleCancelResult(false, false, 0, 0, null);
+        }
+
+        public boolean isSuccess() { return success; }
+        public boolean needsReassignment() { return needsReassignment; }
+        public int getScheduleId() { return scheduleId; }
+        public int getBookedSlotCount() { return bookedSlotCount; }
+        public List<TimeSlot> getBookedSlots() { return bookedSlots; }
     }
 }

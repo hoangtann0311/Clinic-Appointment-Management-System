@@ -43,6 +43,22 @@
             font-size: 0.78rem;
         }
 
+        .booked-patient-info {
+            font-size: 0.68rem; color: var(--c-muted);
+            margin-top: 0.25rem; font-weight: 500;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+
+        .warning-banner {
+            background: #fff3e0; border: 2px solid #ff9800;
+            border-radius: var(--r-md); padding: 1rem 1.25rem;
+            margin-bottom: 1.25rem; display: flex; align-items: flex-start; gap: 0.75rem;
+        }
+        .warning-banner i { color: #e65100; font-size: 1.5rem; flex-shrink: 0; }
+        .warning-banner-body { flex: 1; }
+        .warning-banner-title { font-weight: 800; color: #e65100; margin-bottom: 0.25rem; }
+        .warning-banner-text { font-size: 0.85rem; color: #bf360c; }
+
         .schedule-info-card {
             background: linear-gradient(135deg, var(--pink-50), #fce4ec);
             border: 1px solid var(--pink-200);
@@ -313,6 +329,13 @@
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     </c:if>
+    <c:if test="${not empty warning}">
+        <div class="alert alert-warning alert-dismissible fade show d-flex align-items-center" role="alert" style="border-radius:var(--r-md);">
+            <i class="bi bi-exclamation-circle-fill me-2 fs-5"></i>
+            <div>${fn:escapeXml(warning)}</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </c:if>
 
     <%-- ============================================================
          OVERVIEW MODE: Danh sách lịch trực đã duyệt + trạng thái slot
@@ -467,28 +490,63 @@
     </div>
 
     <%-- ============================================================
+         BOOKED SLOTS WARNING BANNER
+         ============================================================ --%>
+    <c:if test="${bookedCount > 0}">
+        <div class="warning-banner">
+            <i class="bi bi-shield-exclamation"></i>
+            <div class="warning-banner-body">
+                <div class="warning-banner-title">
+                    <i class="bi bi-people-fill me-1"></i>Cảnh báo: Có ${bookedCount} bệnh nhân đã đặt lịch
+                </div>
+                <div class="warning-banner-text">
+                    Không thể xóa hoặc sinh lại khung giờ khi đang có bệnh nhân đã đặt.
+                    Vui lòng xử lý các lịch hẹn này trước khi thực hiện thao tác.
+                </div>
+            </div>
+        </div>
+    </c:if>
+
+    <%-- ============================================================
          ACTION BUTTONS
          ============================================================ --%>
     <div class="d-flex flex-wrap gap-2 mb-3">
         <c:choose>
             <c:when test="${hasSlots}">
-                <%-- Đã có slots → cho phép xóa và sinh lại --%>
-                <form method="post" action="${pageContext.request.contextPath}/manager/time-slots/"
-                      onsubmit="return confirm('Xác nhận XÓA TẤT CẢ khung giờ khám của lịch trực này và sinh lại?\n\nHành động này không thể hoàn tác.')">
-                    <input type="hidden" name="action" value="regenerate">
-                    <input type="hidden" name="scheduleId" value="${schedule.id}">
-                    <button type="submit" class="btn btn-primary-pink">
-                        <i class="bi bi-arrow-repeat me-1"></i>Sinh Lại Slots
+                <c:if test="${bookedCount == 0}">
+                    <%-- Không có booked slots → cho phép xóa và sinh lại --%>
+                    <form method="post" action="${pageContext.request.contextPath}/manager/time-slots/"
+                          onsubmit="return confirm('Xác nhận XÓA TẤT CẢ khung giờ khám của lịch trực này và sinh lại?\n\nHành động này không thể hoàn tác.')">
+                        <input type="hidden" name="action" value="regenerate">
+                        <input type="hidden" name="scheduleId" value="${schedule.id}">
+                        <button type="submit" class="btn btn-primary-pink">
+                            <i class="bi bi-arrow-repeat me-1"></i>Sinh Lại Slots
+                        </button>
+                    </form>
+                    <form method="post" action="${pageContext.request.contextPath}/manager/time-slots/"
+                          onsubmit="return confirm('Xác nhận XÓA TẤT CẢ khung giờ khám của lịch trực #${schedule.id}?\n\nHành động này không thể hoàn tác.')">
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="scheduleId" value="${schedule.id}">
+                        <button type="submit" class="btn btn-outline-danger">
+                            <i class="bi bi-trash me-1"></i>Xóa Slots
+                        </button>
+                    </form>
+                </c:if>
+                <c:if test="${bookedCount > 0}">
+                    <%-- Có booked slots → nút bị vô hiệu hóa + thông báo --%>
+                    <button type="button" class="btn btn-outline-secondary" disabled
+                            title="Không thể sinh lại khi có bệnh nhân đã đặt">
+                        <i class="bi bi-arrow-repeat me-1"></i>Sinh Lại (bị khóa)
                     </button>
-                </form>
-                <form method="post" action="${pageContext.request.contextPath}/manager/time-slots/"
-                      onsubmit="return confirm('Xác nhận XÓA TẤT CẢ khung giờ khám của lịch trực #${schedule.id}?\n\nCác khung giờ đã được đặt (BOOKED) cũng sẽ bị xóa. Hành động này không thể hoàn tác.')">
-                    <input type="hidden" name="action" value="delete">
-                    <input type="hidden" name="scheduleId" value="${schedule.id}">
-                    <button type="submit" class="btn btn-outline-danger">
-                        <i class="bi bi-trash me-1"></i>Xóa Slots
+                    <button type="button" class="btn btn-outline-secondary" disabled
+                            title="Không thể xóa khi có bệnh nhân đã đặt">
+                        <i class="bi bi-trash me-1"></i>Xóa (bị khóa)
                     </button>
-                </form>
+                    <span class="text-muted align-self-center" style="font-size:0.8rem;">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Cần xử lý ${bookedCount} bệnh nhân đã đặt trước
+                    </span>
+                </c:if>
             </c:when>
             <c:otherwise>
                 <%-- Chưa có slots → cho phép sinh mới --%>
@@ -528,6 +586,11 @@
                                     </c:when>
                                     <c:when test="${slot.status.name() eq 'BOOKED'}">
                                         <span class="badge-slot-booked"><i class="bi bi-person-check-fill me-1"></i>Đã đặt</span>
+                                        <c:if test="${not empty slot.bookedByName}">
+                                            <div class="booked-patient-info" title="${fn:escapeXml(slot.bookedByName)}">
+                                                <i class="bi bi-person-circle me-1"></i>${fn:escapeXml(slot.bookedByName)}
+                                            </div>
+                                        </c:if>
                                     </c:when>
                                     <c:when test="${slot.status.name() eq 'COMPLETED'}">
                                         <span class="badge-slot-completed"><i class="bi bi-check2-all me-1"></i>Hoàn thành</span>
@@ -557,6 +620,7 @@
                                     <th>Giờ Bắt Đầu</th>
                                     <th>Giờ Kết Thúc</th>
                                     <th>Trạng Thái</th>
+                                    <th>Bệnh Nhân</th>
                                     <th>Ngày Tạo</th>
                                 </tr>
                             </thead>
@@ -589,6 +653,17 @@
                                                 <c:when test="${slot.status.name() eq 'CANCELLED'}">
                                                     <span class="badge-slot-cancelled"><i class="bi bi-x-circle-fill me-1"></i>Đã hủy</span>
                                                 </c:when>
+                                            </c:choose>
+                                        </td>
+                                        <td style="font-size:0.8rem;">
+                                            <c:choose>
+                                                <c:when test="${not empty slot.bookedByName}">
+                                                    <i class="bi bi-person-circle me-1" style="color:var(--pink-500);"></i>
+                                                    ${fn:escapeXml(slot.bookedByName)}
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <span class="text-muted">&mdash;</span>
+                                                </c:otherwise>
                                             </c:choose>
                                         </td>
                                         <td style="font-size:0.8rem;color:var(--c-muted);">
