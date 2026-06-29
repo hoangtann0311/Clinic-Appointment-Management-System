@@ -116,7 +116,7 @@ public class UserDAO {
         String sql = "SELECT id, full_name, " + DECRYPT_EMAIL + ", username, password_hash, "
                    + DECRYPT_PHONE + ", role_id, status, "
                    + "verification_token, is_verified, google_id, auth_provider, is_deleted "
-                   + "FROM users WHERE " + WHERE_EMAIL_EQUAL;
+                   + "FROM users WHERE " + WHERE_EMAIL_EQUAL + " AND is_deleted = 0";
 
         Connection conn = null;
         PreparedStatement ps = null;
@@ -147,8 +147,8 @@ public class UserDAO {
      */
     public int insert(User user) {
         String sql = "INSERT INTO users (full_name, email, username, password_hash, phone, role_id, status, "
-                   + "verification_token, is_verified, google_id, auth_provider) "
-                   + "VALUES (?, " + ENCRYPT_EMAIL_PARAM + ", ?, ?, " + ENCRYPT_PHONE_PARAM + ", ?, ?, ?, ?, ?, ?)";
+                   + "verification_token, is_verified, google_id, auth_provider, is_deleted) "
+                   + "VALUES (?, " + ENCRYPT_EMAIL_PARAM + ", ?, ?, " + ENCRYPT_PHONE_PARAM + ", ?, ?, ?, ?, ?, ?, 0)";
 
         Connection conn = null;
         PreparedStatement ps = null;

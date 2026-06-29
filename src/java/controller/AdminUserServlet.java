@@ -207,20 +207,18 @@ public class AdminUserServlet extends HttpServlet {
                 case "create": {
                     String fullName = req.getParameter("fullName");
                     String email = req.getParameter("email");
-                    String username = req.getParameter("username");
                     String password = req.getParameter("password");
                     String phone = req.getParameter("phone");
                     int roleId = parseInt(req.getParameter("roleId"), 5);
                     String status = req.getParameter("status");
 
                     Map<String, String> errors = new HashMap<>();
-                    if (userService.createUser(fullName, email, username, password, phone, roleId, status, errors)) {
+                    if (userService.createUser(fullName, email, password, phone, roleId, status, errors)) {
                         logAudit(req, "CREATE_USER", "Tạo người dùng: " + fullName + " (role=" + roleId + ")");
                         resp.sendRedirect(redirectUrl + "?success=created" + querySuffix);
                     } else {
                         req.setAttribute("formFullName", fullName);
                         req.setAttribute("formEmail", email);
-                        req.setAttribute("formUsername", username);
                         req.setAttribute("formPhone", phone);
                         req.setAttribute("formRoleId", roleId);
                         req.setAttribute("formStatus", status);

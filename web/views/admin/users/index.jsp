@@ -735,21 +735,6 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">
-                                <i class="bi bi-at me-1" style="color:var(--pink-500);"></i>Tên đăng nhập <span class="text-danger">*</span>
-                            </label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
-                                <input type="text" name="username" class="form-control ${not empty errors['username'] ? 'is-invalid' : ''}"
-                                       required minlength="4" maxlength="50" pattern="^[a-zA-Z0-9_]+$"
-                                       placeholder="Ít nhất 4 ký tự" value="${fn:escapeXml(formUsername)}">
-                            </div>
-                            <small class="text-muted" style="font-size:0.7rem;">Chỉ chữ cái, số và dấu gạch dưới</small>
-                            <c:if test="${not empty errors['username']}">
-                                <div class="invalid-feedback">${errors['username']}</div>
-                            </c:if>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">
                                 <i class="bi bi-lock-fill me-1" style="color:var(--pink-500);"></i>Mật khẩu <span class="text-danger">*</span>
                             </label>
                             <div class="input-group">

@@ -60,8 +60,13 @@ public class UserService {
         return userDAO.softDelete(userId);
     }
 
-    /** Tạo user mới (admin side) */
-    public boolean createUser(String fullName, String email, String username,
+    /**
+     * Tạo user mới (admin side).
+     * Username được tự động sinh từ phần trước @ của email,
+     * nhất quán với luồng đăng ký public (AuthService.register).
+     * Nếu username trùng, thêm hậu tố số (VD: ten.ten → ten.ten1).
+     */
+    public boolean createUser(String fullName, String email,
                               String password, String phone, int roleId, String status,
                               Map<String, String> errors) {
         // Validate cơ bản
@@ -73,20 +78,8 @@ public class UserService {
             errors.put("fullName", "Họ tên phải có ít nhất 2 ký tự.");
             return false;
         }
-        if (email == null || !email.matches("^[\\w.-]+@[\\w.-]+\\.\\w{2,}$")) {
+        if (email == null || !email.matches("^[-A-Za-z0-9+_.]+@[-A-Za-z0-9.]+\\.[A-Za-z]{2,}$")) {
             errors.put("email", "Email không hợp lệ.");
-            return false;
-        }
-        if (username == null || username.trim().isEmpty()) {
-            errors.put("username", "Vui lòng nhập tên đăng nhập.");
-            return false;
-        }
-        if (username.trim().length() < 4) {
-            errors.put("username", "Tên đăng nhập phải có ít nhất 4 ký tự.");
-            return false;
-        }
-        if (!username.trim().matches("^[a-zA-Z0-9_]+$")) {
-            errors.put("username", "Tên đăng nhập chỉ được chứa chữ cái, số và dấu gạch dưới.");
             return false;
         }
         if (password == null || password.length() < 6) {
@@ -98,21 +91,34 @@ public class UserService {
             errors.put("phone", "Số điện thoại không hợp lệ (10 chữ số, bắt đầu 03|05|07|08|09).");
             return false;
         }
+
+        String trimmedEmail = email.trim().toLowerCase();
+
         // Kiểm tra email trùng
-        if (userDAO.findByEmail(email.trim().toLowerCase()) != null) {
+        if (userDAO.findByEmail(trimmedEmail) != null) {
             errors.put("email", "Email đã tồn tại.");
             return false;
         }
-        // Kiểm tra username trùng
-        if (userDAO.findByUsername(username.trim().toLowerCase()) != null) {
-            errors.put("username", "Tên đăng nhập đã tồn tại.");
-            return false;
+
+        // Tự động sinh username từ email (phần trước @) — nhất quán với AuthService
+        String baseUsername = trimmedEmail.substring(0, trimmedEmail.indexOf('@'));
+        // Dọn dẹu username: chỉ giữ chữ cái, số, gạch dưới, dấu chấm
+        baseUsername = baseUsername.replaceAll("[^a-zA-Z0-9_.]", "");
+        // Đảm bảo username có ít nhất 4 ký tự
+        while (baseUsername.length() < 4) {
+            baseUsername += "0";
+        }
+        String generatedUsername = baseUsername;
+        int suffix = 1;
+        while (userDAO.findByUsername(generatedUsername.toLowerCase()) != null) {
+            generatedUsername = baseUsername + suffix;
+            suffix++;
         }
 
         User u = new User();
         u.setFullName(fullName.trim());
-        u.setEmail(email.trim().toLowerCase());
-        u.setUsername(username.trim().toLowerCase());
+        u.setEmail(trimmedEmail);
+        u.setUsername(generatedUsername.toLowerCase());
         u.setPasswordHash(com.clinic.utils.BCryptUtil.hashPassword(password));
         u.setPhone(phone != null ? phone.trim() : "");
         u.setRoleId(roleId);
@@ -155,7 +161,7 @@ public class UserService {
             errors.put("email", "Vui lòng nhập email.");
             return false;
         }
-        if (!newEmail.matches("^[\\w.-]+@[\\w.-]+\\.\\w{2,}$")) {
+        if (!newEmail.matches("^[-A-Za-z0-9+_.]+@[-A-Za-z0-9.]+\\.[A-Za-z]{2,}$")) {
             errors.put("email", "Email không hợp lệ.");
             return false;
         }

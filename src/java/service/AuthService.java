@@ -76,6 +76,16 @@ public class AuthService {
         // Bước 4: Hash mật khẩu với BCrypt
         String passwordHash = BCryptUtil.hashPassword(password);
 
+        // Bước 4.5: Tạo username từ email (phần trước @)
+        // Nếu username đã tồn tại, thêm hậu tố số (VD: ten.ten → ten.ten1)
+        String baseUsername = email.substring(0, email.indexOf('@'));
+        String generatedUsername = baseUsername;
+        int suffix = 1;
+        while (userDAO.findByUsername(generatedUsername.toLowerCase()) != null) {
+            generatedUsername = baseUsername + suffix;
+            suffix++;
+        }
+
         // Bước 5: Tạo verification token (UUID ngẫu nhiên)
         String verificationToken = UUID.randomUUID().toString();
 
@@ -83,6 +93,7 @@ public class AuthService {
         User newUser = new User();
         newUser.setFullName(fullName);
         newUser.setEmail(email);
+        newUser.setUsername(generatedUsername);  // Username tự động từ email
         newUser.setPasswordHash(passwordHash);
         newUser.setPhone(phone);
         newUser.setRoleId(ROLE_PATIENT);
