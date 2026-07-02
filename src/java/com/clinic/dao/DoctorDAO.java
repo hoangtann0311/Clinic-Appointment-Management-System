@@ -91,8 +91,49 @@ public class DoctorDAO {
     }
 
     /**
-     * Ánh xạ ResultSet → Doctor.
+     * Thêm bác sĩ mới vào bảng doctors.
+     * Được gọi tự động khi tạo user có role_id = 2 (Bác Sĩ).
+     *
+     * @param doctor đối tượng Doctor cần thêm (không có id)
+     * @return id của bác sĩ vừa tạo, -1 nếu thất bại
      */
+    public int insert(Doctor doctor) {
+        String sql = "INSERT INTO doctors (user_id, full_name, specialization, phone_number) "
+                   + "VALUES (?, ?, ?, ?)";
+
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+            ps.setInt(1, doctor.getUserId());
+            ps.setString(2, doctor.getFullName());
+            ps.setString(3, doctor.getSpecialization());
+            ps.setString(4, doctor.getPhoneNumber());
+
+            int affectedRows = ps.executeUpdate();
+            if (affectedRows == 0) {
+                throw new RuntimeException("Thêm bác sĩ thất bại - không có dòng nào được tạo");
+            }
+
+            rs = ps.getGeneratedKeys();
+            if (rs.next()) {
+                int generatedId = rs.getInt(1);
+                System.out.println("[DoctorDAO] insert SUCCESS: id=" + generatedId
+                        + ", userId=" + doctor.getUserId() + ", fullName=" + doctor.getFullName());
+                return generatedId;
+            }
+            return -1;
+        } catch (SQLException e) {
+            System.err.println("[DoctorDAO] insert ERROR: " + e.getMessage());
+            e.printStackTrace(System.err);
+            return -1;
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+    }
     private Doctor mapRow(ResultSet rs) throws SQLException {
         Doctor d = new Doctor();
         d.setId(rs.getInt("id"));

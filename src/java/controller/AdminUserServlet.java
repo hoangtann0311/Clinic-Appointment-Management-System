@@ -1,6 +1,8 @@
 package controller;
 
+import com.clinic.model.Role;
 import com.clinic.model.User;
+import com.clinic.service.RoleService;
 import com.clinic.service.UserService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -17,7 +19,7 @@ import java.util.*;
  * Tích hợp toàn bộ tính năng:
  *   - Danh sách user (phân trang + tìm kiếm + lọc role/status)
  *   - Tab filter nhanh: Tất cả | Nhân sự | Bệnh nhân
- *   - Stat cards (Tổng, Doctor, Manager, Staff, Sonographer)
+ *   - Stat cards (Tổng, Doctor, Manager, Staff, Sonographer, Lab Technician)
  *   - CRUD: Tạo / Sửa / Xoá mềm / Khôi phục
  *   - Khoá / Mở khoá tài khoản (toggle Active ↔ Locked)
  *   - Reset mật khẩu (admin side)
@@ -31,34 +33,79 @@ public class AdminUserServlet extends HttpServlet {
 
     private static final int PAGE_SIZE = 10;
 
-    /** Tất cả role */
-    public static final Map<Integer, String> ROLE_MAP = new LinkedHashMap<>();
+    /** Fallback cứng — dùng khi DB chưa sẵn sàng. Đồng bộ với seed data roles. */
+    private static final Map<Integer, String> FALLBACK_ROLE_MAP = new LinkedHashMap<>();
     static {
-        ROLE_MAP.put(1, "Quản Trị Viên");
-        ROLE_MAP.put(2, "Bác Sĩ");
-        ROLE_MAP.put(3, "Quản Lý");
-        ROLE_MAP.put(4, "Nhân Viên");
-        ROLE_MAP.put(5, "Bệnh Nhân");
-        ROLE_MAP.put(6, "KTV Siêu Âm");
+        FALLBACK_ROLE_MAP.put(1, "Quản Trị Viên");
+        FALLBACK_ROLE_MAP.put(2, "Bác Sĩ");
+        FALLBACK_ROLE_MAP.put(3, "Quản Lý");
+        FALLBACK_ROLE_MAP.put(4, "Nhân Viên");
+        FALLBACK_ROLE_MAP.put(5, "Bệnh Nhân");
+        FALLBACK_ROLE_MAP.put(6, "KTV Siêu Âm");
+        FALLBACK_ROLE_MAP.put(7, "KTV Xét Nghiệm");
     }
 
-    /** Role nhân sự (Doctor, Manager, Staff, Sonographer) */
-    public static final Map<Integer, String> STAFF_ROLE_MAP = new LinkedHashMap<>();
-    static {
-        STAFF_ROLE_MAP.put(2, "Bác Sĩ");
-        STAFF_ROLE_MAP.put(3, "Quản Lý");
-        STAFF_ROLE_MAP.put(4, "Nhân Viên");
-        STAFF_ROLE_MAP.put(6, "KTV Siêu Âm");
-    }
-
-    private static final Set<Integer> STAFF_ROLE_IDS = Set.of(2, 3, 4, 6);
+    /** Role ID của Admin và Patient — không tính vào nhân sự. */
+    private static final int ADMIN_ROLE_ID   = 1;
     private static final int PATIENT_ROLE_ID = 5;
 
+    // ── Instance state ──
     private UserService userService;
+    private RoleService roleService;
+
+    /** Role map nạp từ DB lúc init. Key = role_id (Integer), Value = role_name (String). */
+    private Map<Integer, String> roleMap;
+    /** Chỉ các role nhân sự (không phải Admin / Patient). */
+    private Map<Integer, String> staffRoleMap;
+    /** Set role ID cho filter nhanh "Nhân sự". */
+    private Set<Integer> staffRoleIds;
 
     @Override
     public void init() throws ServletException {
         userService = new UserService();
+        roleService = new RoleService();
+        refreshRoleMaps();
+    }
+
+    /**
+     * Nạp danh sách vai trò từ database.
+     * Nếu DB lỗi → fallback về danh sách cứng.
+     */
+    private void refreshRoleMaps() {
+        roleMap = new LinkedHashMap<>();
+        staffRoleMap = new LinkedHashMap<>();
+        Set<Integer> staffIds = new LinkedHashSet<>();
+
+        try {
+            List<Role> roles = roleService.getAllRoles();
+            if (roles != null && !roles.isEmpty()) {
+                for (Role r : roles) {
+                    roleMap.put(r.getId(), r.getRoleName());
+                    // Tất cả role trừ Admin và Patient đều là nhân sự
+                    if (r.getId() != ADMIN_ROLE_ID && r.getId() != PATIENT_ROLE_ID) {
+                        staffRoleMap.put(r.getId(), r.getRoleName());
+                        staffIds.add(r.getId());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[AdminUserServlet] Không thể nạp roles từ DB, dùng fallback: " + e.getMessage());
+        }
+
+        // Fallback nếu roleMap rỗng (DB lỗi hoặc chưa có dữ liệu)
+        if (roleMap.isEmpty()) {
+            roleMap.putAll(FALLBACK_ROLE_MAP);
+            for (Map.Entry<Integer, String> e : FALLBACK_ROLE_MAP.entrySet()) {
+                if (e.getKey() != ADMIN_ROLE_ID && e.getKey() != PATIENT_ROLE_ID) {
+                    staffRoleMap.put(e.getKey(), e.getValue());
+                    staffIds.add(e.getKey());
+                }
+            }
+        }
+
+        this.staffRoleIds = Collections.unmodifiableSet(staffIds);
+        System.out.println("[AdminUserServlet] Đã nạp " + roleMap.size() + " roles ("
+                + staffRoleIds.size() + " nhân sự).");
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -90,7 +137,7 @@ public class AdminUserServlet extends HttpServlet {
         if (roleFilter != null) {
             roleIds = java.util.Collections.singletonList(roleFilter);
         } else if ("staff".equals(roleGroup)) {
-            roleIds = new ArrayList<>(STAFF_ROLE_IDS);
+            roleIds = new ArrayList<>(staffRoleIds);
         } else if ("patients".equals(roleGroup)) {
             roleIds = java.util.Collections.singletonList(PATIENT_ROLE_ID);
         }
@@ -124,8 +171,8 @@ public class AdminUserServlet extends HttpServlet {
         req.setAttribute("roleFilter", roleFilter);
         req.setAttribute("statusFilter", statusFilter);
         req.setAttribute("roleGroup", roleGroup);
-        req.setAttribute("roleMap", ROLE_MAP);
-        req.setAttribute("staffRoleMap", STAFF_ROLE_MAP);
+        req.setAttribute("roleMap", roleMap);
+        req.setAttribute("staffRoleMap", staffRoleMap);
         req.setAttribute("includeDeleted", includeDeleted);
 
         // Stats
@@ -229,26 +276,37 @@ public class AdminUserServlet extends HttpServlet {
                     return;
                 }
 
-                // ── Sửa người dùng ──
+                // ── Sửa người dùng (phân quyền + thông tin liên hệ) ──
                 case "edit": {
                     int userId = parseInt(req.getParameter("userId"), -1);
-                    String fullName = req.getParameter("fullName");
-                    String email = req.getParameter("email");
-                    String username = req.getParameter("username");
-                    String phone = req.getParameter("phone");
                     int roleId = parseInt(req.getParameter("roleId"), 5);
                     String status = req.getParameter("status");
+                    String email = req.getParameter("email");
+                    String phone = req.getParameter("phone");
+
+                    // Guard: admin không được tự đổi role của chính mình
+                    User actor = (User) req.getSession().getAttribute("user");
+                    if (actor != null && actor.getId() == userId) {
+                        resp.sendRedirect(redirectUrl + "?error="
+                            + java.net.URLEncoder.encode("Bạn không thể tự sửa quyền của chính mình.", "UTF-8")
+                            + querySuffix);
+                        return;
+                    }
 
                     Map<String, String> errors = new HashMap<>();
-                    if (userService.updateUser(userId, fullName, username, email, phone, roleId, status, errors)) {
-                        logAudit(req, "EDIT_USER", "Sửa người dùng #" + userId + ": " + fullName);
+                    if (userService.updateUserRoleAndStatus(userId, roleId, status, email, phone, errors)) {
+                        User target = userService.getUserById(userId);
+                        String targetName = target != null ? target.getFullName() : ("#" + userId);
+                        logAudit(req, "EDIT_USER", "Sửa người dùng #" + userId + ": " + targetName
+                                + " (role=" + roleId + ", status=" + status + ")");
                         resp.sendRedirect(redirectUrl + "?success=updated" + querySuffix);
                     } else {
+                        // Load lại user info để hiển thị readonly fields khi validation fail
+                        User target = userService.getUserById(userId);
                         req.setAttribute("editUserId", userId);
-                        req.setAttribute("formEditFullName", fullName);
-                        req.setAttribute("formEditEmail", email);
-                        req.setAttribute("formEditUsername", username);
-                        req.setAttribute("formEditPhone", phone);
+                        req.setAttribute("formEditFullName", target != null ? target.getFullName() : "");
+                        req.setAttribute("formEditEmail", email != null ? email : (target != null ? target.getEmail() : ""));
+                        req.setAttribute("formEditPhone", phone != null ? phone : (target != null ? target.getPhone() : ""));
                         req.setAttribute("formEditRoleId", roleId);
                         req.setAttribute("formEditStatus", status);
                         req.setAttribute("editErrors", errors);

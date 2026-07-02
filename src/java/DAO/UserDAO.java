@@ -452,23 +452,36 @@ public class UserDAO {
     public java.util.List<User> findAll(int offset, int pageSize,
                                          String search, java.util.List<Integer> roleIds, String statusFilter,
                                          boolean includeDeleted) {
-        // Thử query đầy đủ trước, nếu lỗi cột thì fallback
-        try {
-            return findAllInternal(offset, pageSize, search, roleIds, statusFilter, true, includeDeleted);
-        } catch (SQLException e) {
-            String msg = e.getMessage() != null ? e.getMessage() : "";
-            if (msg.contains("Invalid column name") || msg.contains("invalid column") ||
-                msg.contains("tên cột không hợp lệ") || msg.contains("colonne non valide")) {
-                System.err.println("[UserDAO] Falling back to base columns query: " + msg);
-                try {
-                    return findAllInternal(offset, pageSize, search, roleIds, statusFilter, false, includeDeleted);
-                } catch (SQLException e2) {
-                    System.err.println("[UserDAO] findAll fallback also failed: " + e2.getMessage());
-                    throw new RuntimeException("Lỗi database khi lấy danh sách users", e2);
+        // Lần đầu: thử fullColumns=true (gồm created_at, is_verified, auth_provider).
+        // Nếu cột chưa được migration → cache false và dùng base columns từ các lần sau.
+        // Nếu thành công → cache true.
+        if (hasCreatedAtColumn == null) {
+            try {
+                java.util.List<User> result = findAllInternal(offset, pageSize, search,
+                        roleIds, statusFilter, true, includeDeleted);
+                hasCreatedAtColumn = true;
+                return result;
+            } catch (SQLException e) {
+                String msg = e.getMessage() != null ? e.getMessage() : "";
+                if (msg.contains("Invalid column name") || msg.contains("invalid column")
+                    || msg.contains("tên cột không hợp lệ") || msg.contains("colonne non valide")) {
+                    System.err.println("[UserDAO] Cột created_at/is_verified/auth_provider"
+                            + " chưa tồn tại — cache fallback.");
+                    hasCreatedAtColumn = false;
+                } else {
+                    System.err.println("[UserDAO] findAll error: " + e.getMessage());
+                    throw new RuntimeException("Lỗi database khi lấy danh sách users", e);
                 }
             }
-            System.err.println("[UserDAO] findAll error: " + e.getMessage());
-            throw new RuntimeException("Lỗi database khi lấy danh sách users", e);
+        }
+
+        // Dùng trạng thái đã cache
+        boolean fullCol = (hasCreatedAtColumn != null && hasCreatedAtColumn);
+        try {
+            return findAllInternal(offset, pageSize, search, roleIds, statusFilter, fullCol, includeDeleted);
+        } catch (SQLException e2) {
+            System.err.println("[UserDAO] findAll error: " + e2.getMessage());
+            throw new RuntimeException("Lỗi database khi lấy danh sách users", e2);
         }
     }
 
@@ -621,6 +634,59 @@ public class UserDAO {
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("Lỗi updateStatus: " + e.getMessage());
+            return false;
+        } finally {
+            closeResources(conn, ps, null);
+        }
+    }
+
+    /**
+     * Cập nhật role, status, email, phone của user (admin edit — phân quyền + thông tin liên hệ).
+     * fullName không được phép sửa từ admin panel.
+     * Dùng trong luồng chỉnh sửa người dùng từ admin/users/.
+     */
+    public boolean updateRoleStatusAndContact(int userId, int roleId, String status,
+                                               String email, String phone) {
+        String sql = "UPDATE users SET role_id = ?, status = ?, email = " + ENCRYPT_EMAIL_PARAM
+                   + ", phone = " + ENCRYPT_PHONE_PARAM
+                   + ", updated_at = GETDATE() WHERE id = ?";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setInt(1, roleId);
+            ps.setString(2, status);
+            ps.setString(3, email);
+            ps.setString(4, phone);
+            ps.setInt(5, userId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            String msg = e.getMessage() != null ? e.getMessage() : "";
+            if (msg.contains("Invalid column name") || msg.contains("invalid column")
+                || msg.contains("tên cột không hợp lệ") || msg.contains("colonne non valide")) {
+                System.err.println("[UserDAO] updateRoleStatusAndContact falling back (no updated_at column)");
+                String fallbackSql = "UPDATE users SET role_id = ?, status = ?, email = " + ENCRYPT_EMAIL_PARAM
+                                   + ", phone = " + ENCRYPT_PHONE_PARAM
+                                   + " WHERE id = ?";
+                try {
+                    Connection conn2 = DatabaseConfig.getConnection();
+                    PreparedStatement ps2 = conn2.prepareStatement(fallbackSql);
+                    ps2.setInt(1, roleId);
+                    ps2.setString(2, status);
+                    ps2.setString(3, email);
+                    ps2.setString(4, phone);
+                    ps2.setInt(5, userId);
+                    boolean result = ps2.executeUpdate() > 0;
+                    ps2.close();
+                    conn2.close();
+                    return result;
+                } catch (SQLException e2) {
+                    System.err.println("[UserDAO] updateRoleStatusAndContact fallback also failed: " + e2.getMessage());
+                    return false;
+                }
+            }
+            System.err.println("Lỗi updateRoleStatusAndContact: " + e.getMessage());
             return false;
         } finally {
             closeResources(conn, ps, null);

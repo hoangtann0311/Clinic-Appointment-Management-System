@@ -1,5 +1,6 @@
 package com.clinic.service;
 
+import com.clinic.config.DatabaseConfig;
 import com.clinic.dao.UserDAO;
 import com.clinic.model.User;
 import com.clinic.model.enums.UserStatus;
@@ -7,6 +8,9 @@ import com.clinic.utils.BCryptUtil;
 import com.clinic.utils.EmailUtil;
 import com.clinic.utils.ValidationUtil;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.Map;
 import java.util.UUID;
 
@@ -96,15 +100,24 @@ public class AuthService {
         newUser.setUsername(generatedUsername);  // Username tự động từ email
         newUser.setPasswordHash(passwordHash);
         newUser.setPhone(phone);
-        newUser.setRoleId(ROLE_PATIENT);
+        newUser.setRoleId(ROLE_PATIENT);         // Luôn là Patient khi tự đăng ký
         newUser.setStatus(UserStatus.PENDING_VERIFICATION.getValue());
         newUser.setVerificationToken(verificationToken);
         newUser.setVerified(false);
         newUser.setAuthProvider("local");  // Đăng ký thường = local, không phải Google OAuth
 
+        System.out.println("[AuthService] register: fullName=" + fullName
+                + ", email=" + email + ", roleId=" + ROLE_PATIENT);
+
         // Bước 7: Insert vào database
         int generatedId = userDAO.insert(newUser);
         newUser.setId(generatedId);
+
+        System.out.println("[AuthService] register SUCCESS: id=" + generatedId
+                + ", username=" + generatedUsername + ", roleId=" + ROLE_PATIENT);
+
+        // ── Tự động tạo record trong bảng patients ──
+        insertPatientRecord(generatedId, fullName, phone);
 
         // Bước 8: Gửi email xác thực (trong thread riêng, không chặn response)
         // Nếu email chưa được cấu hình, link sẽ được in ra console (dev mode)
@@ -230,5 +243,37 @@ public class AuthService {
         }
 
         return null;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // PATIENT TABLE AUTO-INSERT
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Tự động tạo record trong bảng patients sau khi đăng ký thành công.
+     * Không làm fail registration nếu insert này gặp lỗi.
+     */
+    private void insertPatientRecord(int userId, String fullName, String phone) {
+        String sql = "INSERT INTO patients (user_id, full_name, phone_number) VALUES (?, ?, ?)";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setInt(1, userId);
+            ps.setString(2, fullName);
+            ps.setString(3, phone);
+            int rows = ps.executeUpdate();
+            if (rows > 0) {
+                System.out.println("[AuthService] Đã tạo patient record: userId=" + userId);
+            } else {
+                System.err.println("[AuthService] CẢNH BÁO: Không tạo được patient record cho userId=" + userId);
+            }
+        } catch (SQLException e) {
+            System.err.println("[AuthService] Lỗi insert patient: " + e.getMessage());
+        } finally {
+            if (ps != null) { try { ps.close(); } catch (SQLException e) { } }
+            DatabaseConfig.closeConnection(conn);
+        }
     }
 }

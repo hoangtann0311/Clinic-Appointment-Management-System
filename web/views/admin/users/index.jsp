@@ -379,6 +379,8 @@
                     <option value="Locked" ${statusFilter eq 'Locked' ? 'selected' : ''}>Đã khoá</option>
                     <option value="Pending Verification" ${statusFilter eq 'Pending Verification' ? 'selected' : ''}>Chờ xác thực</option>
                 </select>
+                <%-- Ẩn chức năng Thùng rác --%>
+                <%--
                 <div class="form-check form-switch d-flex align-items-center gap-1 ms-2">
                     <input class="form-check-input" type="checkbox" name="includeDeleted" value="true"
                            id="chkIncludeDeleted" ${includeDeleted ? 'checked' : ''}
@@ -392,6 +394,7 @@
                         <i class="bi bi-exclamation-triangle-fill me-1"></i>Đang xem ${totalUsers} tài khoản đã xoá
                     </span>
                 </c:if>
+                --%>
                 <button type="submit" class="btn btn-primary-pink">
                     <i class="bi bi-funnel-fill me-1"></i>Lọc
                 </button>
@@ -417,7 +420,6 @@
                         <tr>
                             <th>#ID</th>
                             <th>Người Dùng</th>
-                            <th>Tên Đăng Nhập</th>
                             <th>Email</th>
                             <th>Điện Thoại</th>
                             <th>Vai Trò</th>
@@ -448,11 +450,6 @@
                                                     </c:if>
                                                 </div>
                                             </div>
-                                        </td>
-                                        <td style="font-size:0.82rem;font-weight:500;">
-                                            <code style="background:var(--pink-50);color:var(--c-primary-dark);padding:2px 8px;border-radius:4px;font-size:0.78rem;">
-                                                ${not empty u.username ? fn:escapeXml(u.username) : '—'}
-                                            </code>
                                         </td>
                                         <td style="font-size:0.82rem;">
                                             <i class="bi bi-envelope-fill me-1" style="color:var(--c-muted);font-size:0.7rem;"></i>
@@ -533,102 +530,52 @@
                                         </td>
                                         <td>
                                             <div class="btn-action-group">
+                                                <%-- Edit --%>
+                                                <button class="btn btn-sm btn-outline-secondary btn-action"
+                                                        onclick="openEditModal('${u.id}','${fn:escapeXml(u.fullName)}','${fn:escapeXml(u.email)}','${fn:escapeXml(u.phone)}','${u.roleId}','${fn:escapeXml(u.status)}')"
+                                                        title="Chỉnh sửa" data-bs-toggle="tooltip">
+                                                    <i class="bi bi-pencil-square"></i>
+                                                </button>
+                                                <%-- Reset Password --%>
+                                                <button class="btn btn-sm btn-outline-info btn-action"
+                                                        onclick="openResetPwdModal('${u.id}','${fn:escapeXml(u.fullName)}')"
+                                                        title="Đặt lại mật khẩu" data-bs-toggle="tooltip">
+                                                    <i class="bi bi-key-fill"></i>
+                                                </button>
+                                                <%-- Toggle Lock/Unlock --%>
                                                 <c:choose>
-                                                    <%-- ── USER ĐÃ XOÁ: nút Khôi phục + Xoá vĩnh viễn ── --%>
-                                                    <c:when test="${u.deleted}">
-                                                        <%-- Khôi phục --%>
+                                                    <c:when test="${u.status eq 'Locked'}">
                                                         <form method="post" action="${pageContext.request.contextPath}/admin/users/" style="display:inline;">
-                                                            <input type="hidden" name="action" value="restore">
+                                                            <input type="hidden" name="action" value="toggleStatus">
                                                             <input type="hidden" name="userId" value="${u.id}">
+                                                            <input type="hidden" name="newStatus" value="Active">
                                                             <c:if test="${not empty roleGroup}"><input type="hidden" name="roleGroup" value="${roleGroup}"></c:if>
                                                             <c:if test="${not empty roleFilter}"><input type="hidden" name="role" value="${roleFilter}"></c:if>
                                                             <c:if test="${not empty statusFilter}"><input type="hidden" name="status" value="${statusFilter}"></c:if>
                                                             <c:if test="${not empty search}"><input type="hidden" name="search" value="${fn:escapeXml(search)}"></c:if>
-                                                            <c:if test="${includeDeleted}"><input type="hidden" name="includeDeleted" value="true"></c:if>
                                                             <button type="submit" class="btn btn-sm btn-outline-success btn-action"
-                                                                    title="Khôi phục tài khoản" data-bs-toggle="tooltip"
-                                                                    onclick="return confirm('Khôi phục tài khoản của ${fn:escapeXml(u.fullName)}?\nTài khoản sẽ được kích hoạt trở lại và hiển thị trong danh sách chính.')">
-                                                                <i class="bi bi-arrow-repeat me-1"></i>Khôi phục
-                                                            </button>
-                                                        </form>
-                                                        <%-- Xoá vĩnh viễn --%>
-                                                        <form method="post" action="${pageContext.request.contextPath}/admin/users/" style="display:inline;">
-                                                            <input type="hidden" name="action" value="hardDelete">
-                                                            <input type="hidden" name="userId" value="${u.id}">
-                                                            <c:if test="${not empty roleGroup}"><input type="hidden" name="roleGroup" value="${roleGroup}"></c:if>
-                                                            <c:if test="${not empty roleFilter}"><input type="hidden" name="role" value="${roleFilter}"></c:if>
-                                                            <c:if test="${not empty statusFilter}"><input type="hidden" name="status" value="${statusFilter}"></c:if>
-                                                            <c:if test="${not empty search}"><input type="hidden" name="search" value="${fn:escapeXml(search)}"></c:if>
-                                                            <c:if test="${includeDeleted}"><input type="hidden" name="includeDeleted" value="true"></c:if>
-                                                            <button type="submit" class="btn btn-sm btn-outline-danger btn-action"
-                                                                    title="Xoá vĩnh viễn — không thể hoàn tác" data-bs-toggle="tooltip"
-                                                                    onclick="return confirm('⚠️ XOÁ VĨNH VIỄN: ${fn:escapeXml(u.fullName)} (#${u.id})\n\n❌ Hành động này KHÔNG THỂ HOÀN TÁC!\n❌ Toàn bộ dữ liệu sẽ bị xoá khỏi database.\n❌ Lịch hẹn, bệnh án, hoá đơn liên quan có thể bị ảnh hưởng.\n\nBạn có CHẮC CHẮN muốn tiếp tục?')">
-                                                                <i class="bi bi-eraser-fill me-1"></i>Xoá vĩnh viễn
+                                                                    title="Mở khoá" onclick="return confirm('Mở khoá tài khoản của ${fn:escapeXml(u.fullName)}?')">
+                                                                <i class="bi bi-unlock-fill"></i>
                                                             </button>
                                                         </form>
                                                     </c:when>
-                                                    <%-- ── USER BÌNH THƯỜNG: đầy đủ thao tác ── --%>
                                                     <c:otherwise>
-                                                        <%-- Edit --%>
-                                                        <button class="btn btn-sm btn-outline-secondary btn-action"
-                                                                onclick="openEditModal('${u.id}','${fn:escapeXml(u.fullName)}','${fn:escapeXml(u.email)}','${fn:escapeXml(u.username)}','${fn:escapeXml(u.phone)}','${u.roleId}','${fn:escapeXml(u.status)}','${fn:escapeXml(u.authProvider)}')"
-                                                                title="Chỉnh sửa" data-bs-toggle="tooltip">
-                                                            <i class="bi bi-pencil-square"></i>
-                                                        </button>
-                                                        <%-- Reset Password --%>
-                                                        <button class="btn btn-sm btn-outline-info btn-action"
-                                                                onclick="openResetPwdModal('${u.id}','${fn:escapeXml(u.fullName)}')"
-                                                                title="Đặt lại mật khẩu" data-bs-toggle="tooltip">
-                                                            <i class="bi bi-key-fill"></i>
-                                                        </button>
-                                                        <%-- Toggle Lock/Unlock --%>
-                                                        <c:choose>
-                                                            <c:when test="${u.status eq 'Locked'}">
-                                                                <form method="post" action="${pageContext.request.contextPath}/admin/users/" style="display:inline;">
-                                                                    <input type="hidden" name="action" value="toggleStatus">
-                                                                    <input type="hidden" name="userId" value="${u.id}">
-                                                                    <input type="hidden" name="newStatus" value="Active">
-                                                                    <c:if test="${not empty roleGroup}"><input type="hidden" name="roleGroup" value="${roleGroup}"></c:if>
-                                                                    <c:if test="${not empty roleFilter}"><input type="hidden" name="role" value="${roleFilter}"></c:if>
-                                                                    <c:if test="${not empty statusFilter}"><input type="hidden" name="status" value="${statusFilter}"></c:if>
-                                                                    <c:if test="${not empty search}"><input type="hidden" name="search" value="${fn:escapeXml(search)}"></c:if>
-                                                                    <button type="submit" class="btn btn-sm btn-outline-success btn-action"
-                                                                            title="Mở khoá" onclick="return confirm('Mở khoá tài khoản của ${fn:escapeXml(u.fullName)}?')">
-                                                                        <i class="bi bi-unlock-fill"></i>
-                                                                    </button>
-                                                                </form>
-                                                            </c:when>
-                                                            <c:otherwise>
-                                                                <form method="post" action="${pageContext.request.contextPath}/admin/users/" style="display:inline;">
-                                                                    <input type="hidden" name="action" value="toggleStatus">
-                                                                    <input type="hidden" name="userId" value="${u.id}">
-                                                                    <input type="hidden" name="newStatus" value="Locked">
-                                                                    <c:if test="${not empty roleGroup}"><input type="hidden" name="roleGroup" value="${roleGroup}"></c:if>
-                                                                    <c:if test="${not empty roleFilter}"><input type="hidden" name="role" value="${roleFilter}"></c:if>
-                                                                    <c:if test="${not empty statusFilter}"><input type="hidden" name="status" value="${statusFilter}"></c:if>
-                                                                    <c:if test="${not empty search}"><input type="hidden" name="search" value="${fn:escapeXml(search)}"></c:if>
-                                                                    <button type="submit" class="btn btn-sm btn-outline-warning btn-action"
-                                                                            title="Khoá tài khoản" onclick="return confirm('Khoá tài khoản của ${fn:escapeXml(u.fullName)}?\nNgười này sẽ không thể đăng nhập vào hệ thống.')">
-                                                                        <i class="bi bi-lock-fill"></i>
-                                                                    </button>
-                                                                </form>
-                                                            </c:otherwise>
-                                                        </c:choose>
-                                                        <%-- Soft Delete --%>
                                                         <form method="post" action="${pageContext.request.contextPath}/admin/users/" style="display:inline;">
-                                                            <input type="hidden" name="action" value="delete">
+                                                            <input type="hidden" name="action" value="toggleStatus">
                                                             <input type="hidden" name="userId" value="${u.id}">
+                                                            <input type="hidden" name="newStatus" value="Locked">
                                                             <c:if test="${not empty roleGroup}"><input type="hidden" name="roleGroup" value="${roleGroup}"></c:if>
                                                             <c:if test="${not empty roleFilter}"><input type="hidden" name="role" value="${roleFilter}"></c:if>
                                                             <c:if test="${not empty statusFilter}"><input type="hidden" name="status" value="${statusFilter}"></c:if>
                                                             <c:if test="${not empty search}"><input type="hidden" name="search" value="${fn:escapeXml(search)}"></c:if>
-                                                            <button type="submit" class="btn btn-sm btn-outline-danger btn-action"
-                                                                    title="Xoá tài khoản" onclick="return confirm('Xoá tài khoản #${u.id} — ${fn:escapeXml(u.fullName)}?\n\n⚠️ Tài khoản sẽ bị đánh dấu xoá và chuyển sang trạng thái Ngừng.\nDữ liệu liên quan (lịch hẹn, bệnh án...) vẫn được giữ nguyên.')">
-                                                                <i class="bi bi-person-x-fill"></i>
+                                                            <button type="submit" class="btn btn-sm btn-outline-warning btn-action"
+                                                                    title="Khoá tài khoản" onclick="return confirm('Khoá tài khoản của ${fn:escapeXml(u.fullName)}?\nNgười này sẽ không thể đăng nhập vào hệ thống.')">
+                                                                <i class="bi bi-lock-fill"></i>
                                                             </button>
                                                         </form>
                                                     </c:otherwise>
                                                 </c:choose>
+                                                <%-- Soft Delete + Restore + Hard Delete: đã ẩn --%>
                                             </div>
                                         </td>
                                     </tr>
@@ -636,7 +583,7 @@
                             </c:when>
                             <c:otherwise>
                                 <tr>
-                                    <td colspan="9" class="p-0">
+                                    <td colspan="8" class="p-0">
                                         <div class="admin-empty-state">
                                             <i class="bi bi-inbox"></i>
                                             <h6>Không tìm thấy người dùng</h6>
@@ -821,56 +768,61 @@
                         </div>
                     </c:if>
                     <div class="row g-3">
+                        <%-- Họ tên: readonly (không được sửa) --%>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Họ tên <span class="text-danger">*</span></label>
-                            <input type="text" name="fullName" id="editFullName" class="form-control ${not empty editErrors['fullName'] ? 'is-invalid' : ''}"
-                                   required maxlength="100" value="${fn:escapeXml(formEditFullName)}">
-                            <c:if test="${not empty editErrors['fullName']}">
-                                <div class="invalid-feedback">${editErrors['fullName']}</div>
-                            </c:if>
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-lock-fill me-1" style="font-size:0.65rem;color:var(--c-muted);"></i>Họ tên
+                            </label>
+                            <input type="text" id="editFullName" class="form-control"
+                                   readonly tabindex="-1"
+                                   value="${fn:escapeXml(formEditFullName)}"
+                                   style="background:#f5f5f5;color:#666;cursor:not-allowed;">
+                        </div>
+                        <%-- Email + SĐT: đã khoá lại sau khi sửa xong --%>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-lock-fill me-1" style="font-size:0.65rem;color:var(--c-muted);"></i>Email
+                            </label>
+                            <input type="text" id="editEmail" class="form-control"
+                                   readonly tabindex="-1"
+                                   value="${fn:escapeXml(formEditEmail)}"
+                                   style="background:#f5f5f5;color:#666;cursor:not-allowed;">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Email <span class="text-danger">*</span></label>
-                            <input type="email" name="email" id="editEmail" class="form-control ${not empty editErrors['email'] ? 'is-invalid' : ''}"
-                                   required maxlength="100" value="${fn:escapeXml(formEditEmail)}">
-                            <small id="editEmailGoogleNote" class="form-text text-warning d-none" style="font-size:0.72rem;">
-                                <i class="bi bi-google"></i> Tài khoản Google — thay đổi email có thể ảnh hưởng đến đăng nhập.
-                            </small>
-                            <c:if test="${not empty editErrors['email']}">
-                                <div class="invalid-feedback">${editErrors['email']}</div>
-                            </c:if>
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-lock-fill me-1" style="font-size:0.65rem;color:var(--c-muted);"></i>Số điện thoại
+                            </label>
+                            <input type="text" id="editPhone" class="form-control"
+                                   readonly tabindex="-1"
+                                   value="${fn:escapeXml(formEditPhone)}"
+                                   style="background:#f5f5f5;color:#666;cursor:not-allowed;">
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Tên đăng nhập <span class="text-danger">*</span></label>
-                            <input type="text" name="username" id="editUsername" class="form-control ${not empty editErrors['username'] ? 'is-invalid' : ''}"
-                                   required minlength="4" maxlength="50" pattern="[a-zA-Z0-9_]+"
-                                   placeholder="Ít nhất 4 ký tự, chỉ chữ/số/_"
-                                   value="${fn:escapeXml(formEditUsername)}">
-                            <c:if test="${not empty editErrors['username']}">
-                                <div class="invalid-feedback">${editErrors['username']}</div>
-                            </c:if>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Số điện thoại</label>
-                            <input type="text" name="phone" id="editPhone" class="form-control"
-                                   maxlength="20" placeholder="VD: 0912345678"
-                                   value="${fn:escapeXml(formEditPhone)}">
-                        </div>
+                        <%-- Phân quyền: cho phép chỉnh sửa --%>
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold">Vai trò</label>
-                            <select name="roleId" id="editRoleId" class="form-select">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-unlock-fill me-1" style="font-size:0.65rem;color:var(--pink-500);"></i>Vai trò
+                            </label>
+                            <select name="roleId" id="editRoleId" class="form-select ${not empty editErrors['roleId'] ? 'is-invalid' : ''}">
                                 <c:forEach var="entry" items="${roleMap}">
                                     <option value="${entry.key}" ${not empty formEditRoleId ? (entry.key == formEditRoleId ? 'selected' : '') : ''}>${entry.value}</option>
                                 </c:forEach>
                             </select>
+                            <c:if test="${not empty editErrors['roleId']}">
+                                <div class="invalid-feedback">${editErrors['roleId']}</div>
+                            </c:if>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold">Trạng thái</label>
-                            <select name="status" id="editStatus" class="form-select">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-unlock-fill me-1" style="font-size:0.65rem;color:var(--pink-500);"></i>Trạng thái
+                            </label>
+                            <select name="status" id="editStatus" class="form-select ${not empty editErrors['status'] ? 'is-invalid' : ''}">
                                 <option value="Active" ${formEditStatus eq 'Active' ? 'selected' : ''}>Hoạt động</option>
                                 <option value="Inactive" ${formEditStatus eq 'Inactive' ? 'selected' : ''}>Ngừng hoạt động</option>
                                 <option value="Locked" ${formEditStatus eq 'Locked' ? 'selected' : ''}>Đã khoá</option>
                             </select>
+                            <c:if test="${not empty editErrors['status']}">
+                                <div class="invalid-feedback">${editErrors['status']}</div>
+                            </c:if>
                         </div>
                     </div>
                 </div>
@@ -963,24 +915,13 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
 })();
 
 // ── Edit modal helper ──
-function openEditModal(id, fullName, email, username, phone, roleId, status, authProvider) {
+function openEditModal(id, fullName, email, phone, roleId, status) {
     document.getElementById('editUserId').value = id;
     document.getElementById('editFullName').value = fullName || '';
     document.getElementById('editEmail').value = email || '';
-    document.getElementById('editUsername').value = username || '';
     document.getElementById('editPhone').value = phone || '';
     document.getElementById('editRoleId').value = roleId;
     document.getElementById('editStatus').value = status;
-
-    // Hiển thị/ẩn cảnh báo Google nếu user đăng nhập qua Google
-    var googleNote = document.getElementById('editEmailGoogleNote');
-    if (googleNote) {
-        if (authProvider === 'google') {
-            googleNote.classList.remove('d-none');
-        } else {
-            googleNote.classList.add('d-none');
-        }
-    }
 
     new bootstrap.Modal(document.getElementById('editUserModal')).show();
 }
