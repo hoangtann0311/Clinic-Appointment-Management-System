@@ -82,7 +82,7 @@ public class UserDAO {
     public User findByUsername(String username) {
         String sql = "SELECT id, full_name, " + DECRYPT_EMAIL + ", username, password_hash, "
                    + DECRYPT_PHONE + ", role_id, status, "
-                   + "verification_token, is_verified, google_id, auth_provider, is_deleted "
+                   + "verification_token, is_verified, google_id, auth_provider, is_deleted, created_at "
                    + "FROM users WHERE username = ? AND is_deleted = 0";
 
         Connection conn = null;
@@ -115,7 +115,7 @@ public class UserDAO {
     public User findByEmail(String email) {
         String sql = "SELECT id, full_name, " + DECRYPT_EMAIL + ", username, password_hash, "
                    + DECRYPT_PHONE + ", role_id, status, "
-                   + "verification_token, is_verified, google_id, auth_provider, is_deleted "
+                   + "verification_token, is_verified, google_id, auth_provider, is_deleted, created_at "
                    + "FROM users WHERE " + WHERE_EMAIL_EQUAL + " AND is_deleted = 0";
 
         Connection conn = null;
@@ -147,8 +147,9 @@ public class UserDAO {
      */
     public int insert(User user) {
         String sql = "INSERT INTO users (full_name, email, username, password_hash, phone, role_id, status, "
-                   + "verification_token, is_verified, google_id, auth_provider, is_deleted) "
-                   + "VALUES (?, " + ENCRYPT_EMAIL_PARAM + ", ?, ?, " + ENCRYPT_PHONE_PARAM + ", ?, ?, ?, ?, ?, ?, 0)";
+                   + "verification_token, is_verified, google_id, auth_provider, is_deleted, created_at) "
+                   + "VALUES (?, " + ENCRYPT_EMAIL_PARAM + ", ?, ?, " + ENCRYPT_PHONE_PARAM
+                   + ", ?, ?, ?, ?, ?, ?, 0, GETDATE())";
 
         Connection conn = null;
         PreparedStatement ps = null;
@@ -210,13 +211,7 @@ public class UserDAO {
         } catch (SQLException e) {
             user.setUsername(null);
         }
-        // Đọc created_at (có thể null nếu migration chưa chạy)
-        try {
-            user.setCreatedAt(rs.getTimestamp("created_at"));
-        } catch (SQLException e) {
-            // Cột created_at chưa tồn tại — bỏ qua
-            user.setCreatedAt(null);
-        }
+        user.setCreatedAt(rs.getTimestamp("created_at"));
         return user;
     }
 
@@ -228,7 +223,7 @@ public class UserDAO {
     public User findByVerificationToken(String token) {
         String sql = "SELECT id, full_name, username, " + DECRYPT_EMAIL + ", password_hash, "
                    + DECRYPT_PHONE + ", role_id, status, "
-                   + "verification_token, is_verified, google_id, auth_provider "
+                   + "verification_token, is_verified, google_id, auth_provider, is_deleted, created_at "
                    + "FROM users WHERE verification_token = ? AND is_deleted = 0";
 
         Connection conn = null;
@@ -289,7 +284,7 @@ public class UserDAO {
     public User findByPhone(String phone) {
         String sql = "SELECT id, full_name, username, " + DECRYPT_EMAIL + ", password_hash, "
                    + DECRYPT_PHONE + ", role_id, status, "
-                   + "verification_token, is_verified, google_id, auth_provider "
+                   + "verification_token, is_verified, google_id, auth_provider, is_deleted, created_at "
                    + "FROM users WHERE " + WHERE_PHONE_EQUAL + " AND is_deleted = 0";
 
         Connection conn = null;
@@ -322,7 +317,7 @@ public class UserDAO {
     public User findById(int userId) {
         String sql = "SELECT id, full_name, username, " + DECRYPT_EMAIL + ", password_hash, "
                    + DECRYPT_PHONE + ", role_id, status, "
-                   + "verification_token, is_verified, google_id, auth_provider "
+                   + "verification_token, is_verified, google_id, auth_provider, is_deleted, created_at "
                    + "FROM users WHERE id = ? AND is_deleted = 0";
 
         Connection conn = null;
@@ -383,7 +378,7 @@ public class UserDAO {
     public User findByGoogleId(String googleId) {
         String sql = "SELECT id, full_name, username, " + DECRYPT_EMAIL + ", password_hash, "
                    + DECRYPT_PHONE + ", role_id, status, "
-                   + "verification_token, is_verified, google_id, auth_provider "
+                   + "verification_token, is_verified, google_id, auth_provider, is_deleted, created_at "
                    + "FROM users WHERE google_id = ? AND is_deleted = 0";
 
         Connection conn = null;
@@ -875,7 +870,7 @@ public class UserDAO {
         u.setRoleId(rs.getInt("role_id"));
         u.setStatus(rs.getString("status"));
         if (fullColumns) {
-            try { u.setCreatedAt(rs.getTimestamp("created_at")); } catch (SQLException e) { u.setCreatedAt(null); }
+            u.setCreatedAt(rs.getTimestamp("created_at"));
             try { u.setVerified(rs.getBoolean("is_verified")); } catch (SQLException e) { u.setVerified(false); }
             try { u.setAuthProvider(rs.getString("auth_provider")); } catch (SQLException e) { u.setAuthProvider("local"); }
         }
