@@ -4,6 +4,7 @@ import com.clinic.model.User;
 import com.clinic.service.GoogleAuthException;
 import com.clinic.service.GoogleAuthService;
 import com.clinic.service.GoogleUserInfo;
+import com.clinic.utils.AuditUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -66,10 +67,9 @@ public class GoogleLoginServlet extends HttpServlet {
             session.setAttribute("user", user);
             session.setAttribute("roleId", user.getRoleId());
 
-            // Ghi log
-            System.out.println(">>> Google login success: " + user.getEmail()
-                    + " (roleId=" + user.getRoleId() + ", id=" + user.getId()
-                    + ", authProvider=" + user.getAuthProvider() + ")");
+            // Ghi audit log
+            AuditUtil.log(null, "Đăng nhập Google: " + user.getEmail(), "users",
+                    null, "roleId=" + user.getRoleId(), request.getRemoteAddr());
 
             // Bước 4: Xác định URL redirect
             String dashboardPath = getDashboardPath(user.getRoleId());

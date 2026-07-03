@@ -2,6 +2,7 @@ package controller;
 
 import com.clinic.model.User;
 import com.clinic.service.AuthService;
+import com.clinic.utils.AuditUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -51,7 +52,9 @@ public class RegisterServlet extends HttpServlet {
         User newUser = authService.register(fullName, email, password, confirmPassword, phone, terms, errors);
 
         if (newUser != null) {
-            // Đăng ký thành công → thông báo kiểm tra email xác thực
+            // Đăng ký thành công → ghi audit log + thông báo kiểm tra email xác thực
+            AuditUtil.log(null, "Đăng ký tài khoản: " + email, "users",
+                    null, "fullName=" + fullName + ", phone=" + phone, request.getRemoteAddr());
             request.getSession().setAttribute("successMessage",
                     "Đăng ký tài khoản thành công! "
                     + "Vui lòng kiểm tra email (" + email + ") "

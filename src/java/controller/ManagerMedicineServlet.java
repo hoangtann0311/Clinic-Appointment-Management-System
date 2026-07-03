@@ -5,6 +5,7 @@ import com.clinic.model.MedicineCategory;
 import com.clinic.model.MedicinePriceHistory;
 import com.clinic.model.User;
 import com.clinic.service.MedicineService;
+import com.clinic.utils.AuditUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -119,6 +120,8 @@ public class ManagerMedicineServlet extends HttpServlet {
                     Map<String, String> errors = new HashMap<>();
                     if (medicineService.createMedicine(medicineCode, name, description,
                             dosage, unit, price, stockQuantity, errors, changedBy, categoryId)) {
+                        AuditUtil.log(changedBy, "Tạo mới thuốc: " + name, "medicines",
+                                null, "price=" + price, null);
                         resp.sendRedirect(redirectUrl + "?success=created");
                     } else {
                         req.setAttribute("errors", errors);
@@ -145,6 +148,8 @@ public class ManagerMedicineServlet extends HttpServlet {
                     Map<String, String> errors = new HashMap<>();
                     if (medicineService.updateMedicine(id, medicineCode, name, description,
                             dosage, unit, price, stockQuantity, isActive, errors, changedBy, changeReason, categoryId)) {
+                        AuditUtil.log(changedBy, "Cập nhật thuốc: " + name, "medicines",
+                                null, "price=" + price + ", active=" + isActive, null);
                         resp.sendRedirect(redirectUrl + "?success=updated");
                     } else {
                         req.setAttribute("errors", errors);
@@ -163,7 +168,7 @@ public class ManagerMedicineServlet extends HttpServlet {
                         resp.sendRedirect(redirectUrl + "?error=Thuốc+không+tồn+tại");
                         return;
                     }
-                    if (medicineService.toggleMedicineStatus(id)) {
+                    if (medicineService.toggleMedicineStatus(id, changedBy)) {
                         String msg = med.isActive() ? "deactivated" : "activated";
                         resp.sendRedirect(redirectUrl + "?success=" + msg);
                     } else {

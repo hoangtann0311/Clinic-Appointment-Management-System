@@ -2,6 +2,7 @@ package controller;
 
 import com.clinic.model.Medicine;
 import com.clinic.service.MedicineService;
+import com.clinic.utils.AuditUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -82,6 +83,8 @@ public class AdminMedicineServlet extends HttpServlet {
                     Map<String, String> errors = new HashMap<>();
                     if (medicineService.createMedicine(medicineCode, name, description,
                             dosage, unit, price, stockQuantity, errors)) {
+                        AuditUtil.log(req, "Tạo mới thuốc: " + name, "medicines",
+                                null, "price=" + price);
                         resp.sendRedirect(redirectUrl + "?success=created");
                     } else {
                         req.setAttribute("errors", errors);
@@ -106,6 +109,8 @@ public class AdminMedicineServlet extends HttpServlet {
                     Map<String, String> errors = new HashMap<>();
                     if (medicineService.updateMedicine(id, medicineCode, name, description,
                             dosage, unit, price, stockQuantity, isActive, errors)) {
+                        AuditUtil.log(req, "Cập nhật thuốc: " + name, "medicines",
+                                null, "price=" + price + ", active=" + isActive);
                         resp.sendRedirect(redirectUrl + "?success=updated");
                     } else {
                         resp.sendRedirect(redirectUrl + "?error=" + java.net.URLEncoder.encode(

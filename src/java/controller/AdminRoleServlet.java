@@ -3,6 +3,7 @@ package controller;
 import com.clinic.model.Permission;
 import com.clinic.model.Role;
 import com.clinic.service.RoleService;
+import com.clinic.utils.AuditUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -96,6 +97,10 @@ public class AdminRoleServlet extends HttpServlet {
 
                 boolean ok = roleService.updateRolePermissions(roleId, permissionIds);
                 if (ok) {
+                    Role r = roleService.getRoleById(roleId);
+                    String roleName = r != null ? r.getRoleName() : ("#" + roleId);
+                    AuditUtil.log(req, "Cập nhật phân quyền cho vai trò: " + roleName, "roles",
+                            null, "permissions_count=" + permissionIds.size());
                     resp.sendRedirect(redirectBase + "?success=updated&tab=" + roleId);
                 } else {
                     resp.sendRedirect(redirectBase + "?error=Cập+nhật+phân+quyền+thất+bại&tab=" + roleId);
@@ -107,6 +112,10 @@ public class AdminRoleServlet extends HttpServlet {
                 int roleId = parseInt(req.getParameter("roleId"), -1);
                 String description = req.getParameter("description");
                 if (roleId > 0 && roleService.updateRoleDescription(roleId, description)) {
+                    Role r = roleService.getRoleById(roleId);
+                    String roleName = r != null ? r.getRoleName() : ("#" + roleId);
+                    AuditUtil.log(req, "Cập nhật mô tả vai trò: " + roleName, "roles",
+                            null, description);
                     resp.sendRedirect(redirectBase + "?success=updated&tab=" + roleId);
                 } else {
                     resp.sendRedirect(redirectBase + "?error=Cập+nhật+mô+tả+thất+bại&tab=" + roleId);

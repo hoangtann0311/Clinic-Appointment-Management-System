@@ -7,6 +7,7 @@ import com.clinic.model.User;
 import com.clinic.model.enums.ScheduleStatus;
 import com.clinic.service.DoctorScheduleService;
 import com.clinic.service.DoctorScheduleService.ScheduleCancelResult;
+import com.clinic.utils.AuditUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -182,6 +183,15 @@ public class ManagerScheduleServlet extends HttpServlet {
                 scheduleId, currentUser.getId(), errors);
 
         if (success) {
+            // Ghi audit log
+            DoctorSchedule schedule = scheduleService.getScheduleById(scheduleId);
+            String doctorInfo = schedule != null
+                    ? (schedule.getDoctorName() + " - " + schedule.getWorkDate())
+                    : "ID " + scheduleId;
+            AuditUtil.log(currentUser.getId(),
+                    "Duyệt lịch trực: " + doctorInfo,
+                    "doctor_schedules", null, "APPROVED", null);
+
             resp.sendRedirect(redirectUrl + "?success=approved&id=" + scheduleId);
         } else {
             String errorMsg = errors.getOrDefault("general",
@@ -211,6 +221,17 @@ public class ManagerScheduleServlet extends HttpServlet {
                 scheduleId, currentUser.getId(), rejectionReason, errors);
 
         if (success) {
+            // Ghi audit log
+            DoctorSchedule schedule = scheduleService.getScheduleById(scheduleId);
+            String doctorInfo = schedule != null
+                    ? (schedule.getDoctorName() + " - " + schedule.getWorkDate())
+                    : "ID " + scheduleId;
+            String reasonNote = (rejectionReason != null && !rejectionReason.trim().isEmpty())
+                    ? ": " + rejectionReason.trim() : "";
+            AuditUtil.log(currentUser.getId(),
+                    "Từ chối lịch trực: " + doctorInfo + reasonNote,
+                    "doctor_schedules", null, "REJECTED", null);
+
             resp.sendRedirect(redirectUrl + "?success=rejected&id=" + scheduleId);
         } else {
             // Nếu lỗi validate, hiển thị lại trang với modal reject
@@ -240,6 +261,17 @@ public class ManagerScheduleServlet extends HttpServlet {
                 scheduleId, currentUser.getId(), reason, errors);
 
         if (result.isSuccess()) {
+            // Ghi audit log
+            DoctorSchedule sched = scheduleService.getScheduleById(scheduleId);
+            String doctorInfo = sched != null
+                    ? (sched.getDoctorName() + " - " + sched.getWorkDate())
+                    : "ID " + scheduleId;
+            String reasonNote = (reason != null && !reason.trim().isEmpty())
+                    ? ": " + reason.trim() : "";
+            AuditUtil.log(currentUser.getId(),
+                    "Hủy lịch trực: " + doctorInfo + reasonNote,
+                    "doctor_schedules", null, "CANCELLED", null);
+
             resp.sendRedirect(redirectUrl + "?success=cancelled&id=" + scheduleId);
         } else if (result.needsReassignment()) {
             // Có booked slots → hiển thị trang xác nhận với danh sách bệnh nhân
@@ -278,6 +310,17 @@ public class ManagerScheduleServlet extends HttpServlet {
                 scheduleId, currentUser.getId(), reason, errors);
 
         if (result.isSuccess()) {
+            // Ghi audit log
+            DoctorSchedule sched = scheduleService.getScheduleById(scheduleId);
+            String doctorInfo = sched != null
+                    ? (sched.getDoctorName() + " - " + sched.getWorkDate())
+                    : "ID " + scheduleId;
+            String reasonNote = (reason != null && !reason.trim().isEmpty())
+                    ? ": " + reason.trim() : "";
+            AuditUtil.log(currentUser.getId(),
+                    "Hủy lịch trực (cưỡng chế): " + doctorInfo + reasonNote,
+                    "doctor_schedules", null, "CANCELLED", null);
+
             resp.sendRedirect(redirectUrl + "?success=cancelled&id=" + scheduleId);
         } else if (result.needsReassignment()) {
             resp.sendRedirect(redirectUrl

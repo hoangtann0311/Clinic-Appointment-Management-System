@@ -5,6 +5,7 @@ import com.clinic.model.Service;
 import com.clinic.model.ServiceCategory;
 import com.clinic.model.User;
 import com.clinic.service.ServiceService;
+import com.clinic.utils.AuditUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -125,6 +126,8 @@ public class ManagerServiceServlet extends HttpServlet {
                     if (serviceService.createService(serviceCode, serviceName, description,
                             price, durationMins, requiresFasting, requiresFullBladder,
                             requiredRoomType, allowedSpecialties, categoryId, errors, changedBy)) {
+                        AuditUtil.log(changedBy, "Tạo mới dịch vụ: " + serviceName, "services",
+                                null, "price=" + price, null);
                         resp.sendRedirect(redirectUrl + "?success=created");
                     } else {
                         req.setAttribute("errors", errors);
@@ -155,6 +158,8 @@ public class ManagerServiceServlet extends HttpServlet {
                             price, durationMins, requiresFasting, requiresFullBladder,
                             requiredRoomType, allowedSpecialties, categoryId, isActive, errors,
                             changedBy, changeReason)) {
+                        AuditUtil.log(changedBy, "Cập nhật dịch vụ: " + serviceName, "services",
+                                null, "price=" + price + ", active=" + isActive, null);
                         resp.sendRedirect(redirectUrl + "?success=updated");
                     } else {
                         req.setAttribute("errors", errors);
@@ -175,6 +180,8 @@ public class ManagerServiceServlet extends HttpServlet {
                     }
                     if (serviceService.toggleServiceStatus(id)) {
                         String msg = svc.isActive() ? "deactivated" : "activated";
+                        String actionLabel = svc.isActive() ? "Vô hiệu hóa dịch vụ: " : "Kích hoạt dịch vụ: ";
+                        AuditUtil.log(changedBy, actionLabel + svc.getServiceName(), "services", null, null, null);
                         resp.sendRedirect(redirectUrl + "?success=" + msg);
                     } else {
                         resp.sendRedirect(redirectUrl + "?error=Thay+đổi+trạng+thái+thất+bại");

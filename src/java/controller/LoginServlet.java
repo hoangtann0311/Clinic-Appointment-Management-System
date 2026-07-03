@@ -3,6 +3,7 @@ package controller;
 import com.clinic.model.User;
 import com.clinic.service.AuthService;
 import com.clinic.service.RoleService;
+import com.clinic.utils.AuditUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -59,6 +60,10 @@ public class LoginServlet extends HttpServlet {
             request.setAttribute("emailValue", email);
             request.setAttribute("errors", errors);
 
+            // Ghi log đăng nhập thất bại
+            AuditUtil.log(null, "Đăng nhập thất bại: " + (email != null ? email : "không rõ"),
+                    "users", null, null, request.getRemoteAddr());
+
             // Lấy thông báo lỗi tổng quát hoặc lỗi theo trường
             String loginError = errors.get("login");
             if (loginError != null) {
@@ -88,9 +93,9 @@ public class LoginServlet extends HttpServlet {
             session.setAttribute("userPermissions", java.util.Collections.emptySet());
         }
 
-        // Ghi log đăng nhập (sẽ implement AuditUtil sau)
-        System.out.println(">>> User logged in: " + user.getEmail()
-                + " (roleId=" + user.getRoleId() + ", id=" + user.getId() + ")");
+        // Ghi log đăng nhập thành công
+        AuditUtil.log(request, "Đăng nhập thành công", "users",
+                null, "roleId=" + user.getRoleId());
 
         // Chuyển hướng đến dashboard theo role
         String dashboardPath = getDashboardPath(user.getRoleId());

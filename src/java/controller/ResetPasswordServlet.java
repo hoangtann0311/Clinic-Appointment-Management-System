@@ -2,6 +2,7 @@ package controller;
 
 import com.clinic.model.User;
 import com.clinic.service.PasswordService;
+import com.clinic.utils.AuditUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -80,7 +81,9 @@ public class ResetPasswordServlet extends HttpServlet {
             return;
         }
 
-        // Đặt lại mật khẩu thành công
+        // Đặt lại mật khẩu thành công — ghi audit log
+        AuditUtil.log(user.getId(), "Đặt lại mật khẩu thành công", "users",
+                null, null, request.getRemoteAddr());
         request.getSession().setAttribute("successMessage",
                 "Đặt lại mật khẩu thành công! Vui lòng đăng nhập với mật khẩu mới.");
         response.sendRedirect(request.getContextPath() + "/login");

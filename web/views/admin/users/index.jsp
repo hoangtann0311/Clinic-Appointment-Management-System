@@ -778,24 +778,32 @@
                                    value="${fn:escapeXml(formEditFullName)}"
                                    style="background:#f5f5f5;color:#666;cursor:not-allowed;">
                         </div>
-                        <%-- Email + SĐT: đã khoá lại sau khi sửa xong --%>
+                        <%-- Email — readonly, nhưng vẫn submit để server validate (cần name attribute) --%>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">
                                 <i class="bi bi-lock-fill me-1" style="font-size:0.65rem;color:var(--c-muted);"></i>Email
                             </label>
-                            <input type="text" id="editEmail" class="form-control"
+                            <input type="text" name="email" id="editEmail"
+                                   class="form-control ${not empty editErrors['email'] ? 'is-invalid' : ''}"
                                    readonly tabindex="-1"
                                    value="${fn:escapeXml(formEditEmail)}"
                                    style="background:#f5f5f5;color:#666;cursor:not-allowed;">
+                            <c:if test="${not empty editErrors['email']}">
+                                <div class="invalid-feedback">${editErrors['email']}</div>
+                            </c:if>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">
                                 <i class="bi bi-lock-fill me-1" style="font-size:0.65rem;color:var(--c-muted);"></i>Số điện thoại
                             </label>
-                            <input type="text" id="editPhone" class="form-control"
+                            <input type="text" name="phone" id="editPhone"
+                                   class="form-control ${not empty editErrors['phone'] ? 'is-invalid' : ''}"
                                    readonly tabindex="-1"
                                    value="${fn:escapeXml(formEditPhone)}"
                                    style="background:#f5f5f5;color:#666;cursor:not-allowed;">
+                            <c:if test="${not empty editErrors['phone']}">
+                                <div class="invalid-feedback">${editErrors['phone']}</div>
+                            </c:if>
                         </div>
                         <%-- Phân quyền: cho phép chỉnh sửa --%>
                         <div class="col-md-3">

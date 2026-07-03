@@ -5,6 +5,7 @@ import com.clinic.model.TimeSlot;
 import com.clinic.model.User;
 import com.clinic.service.DoctorScheduleService;
 import com.clinic.service.TimeSlotService;
+import com.clinic.utils.AuditUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -230,6 +231,11 @@ public class ManagerTimeSlotServlet extends HttpServlet {
         int count = timeSlotService.generateSlotsForSchedule(schedule, errors);
 
         if (count > 0) {
+            User actor = getCurrentUser(req);
+            AuditUtil.log(actor != null ? actor.getId() : null,
+                    "Sinh " + count + " slot cho lịch trực #" + scheduleId
+                    + " (" + schedule.getDoctorName() + " - " + schedule.getWorkDate() + ")",
+                    "time_slots", null, "count=" + count, null);
             resp.sendRedirect(redirectUrl + "&success=generated&count=" + count);
         } else if (count == 0) {
             resp.sendRedirect(redirectUrl
@@ -261,6 +267,10 @@ public class ManagerTimeSlotServlet extends HttpServlet {
         boolean deleted = timeSlotService.deleteSlotsBySchedule(scheduleId, errors);
 
         if (deleted) {
+            User actor = getCurrentUser(req);
+            AuditUtil.log(actor != null ? actor.getId() : null,
+                    "Xóa toàn bộ slot của lịch trực #" + scheduleId,
+                    "time_slots", null, null, null);
             resp.sendRedirect(redirectUrl + "&success=deleted");
         } else if (errors.containsKey("hasBookedSlots")) {
             resp.sendRedirect(redirectUrl

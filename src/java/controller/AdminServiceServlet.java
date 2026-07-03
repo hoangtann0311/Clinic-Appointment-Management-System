@@ -2,6 +2,7 @@ package controller;
 
 import com.clinic.model.Service;
 import com.clinic.service.ServiceService;
+import com.clinic.utils.AuditUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -86,6 +87,8 @@ public class AdminServiceServlet extends HttpServlet {
                     if (serviceService.createService(serviceCode, serviceName, description,
                             price, durationMins, requiresFasting, requiresFullBladder,
                             requiredRoomType, allowedSpecialties, categoryId, errors)) {
+                        AuditUtil.log(req, "Tạo mới dịch vụ: " + serviceName, "services",
+                                null, "price=" + price);
                         resp.sendRedirect(redirectUrl + "?success=created");
                     } else {
                         req.setAttribute("errors", errors);
@@ -114,6 +117,8 @@ public class AdminServiceServlet extends HttpServlet {
                     if (serviceService.updateService(id, serviceCode, serviceName, description,
                             price, durationMins, requiresFasting, requiresFullBladder,
                             requiredRoomType, allowedSpecialties, categoryId, isActive, errors)) {
+                        AuditUtil.log(req, "Cập nhật dịch vụ: " + serviceName, "services",
+                                null, "price=" + price + ", active=" + isActive);
                         resp.sendRedirect(redirectUrl + "?success=updated");
                     } else {
                         resp.sendRedirect(redirectUrl + "?error=" + java.net.URLEncoder.encode(
@@ -125,6 +130,7 @@ public class AdminServiceServlet extends HttpServlet {
                 case "deactivate": {
                     int id = parseInt(req.getParameter("id"), -1);
                     if (serviceService.deactivateService(id)) {
+                        AuditUtil.log(req, "Vô hiệu hóa dịch vụ #" + id, "services", null, null);
                         resp.sendRedirect(redirectUrl + "?success=deactivated");
                     } else {
                         resp.sendRedirect(redirectUrl + "?error=Vô+hiệu+hóa+thất+bại");

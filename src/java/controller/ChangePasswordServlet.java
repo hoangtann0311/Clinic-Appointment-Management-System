@@ -2,6 +2,7 @@ package controller;
 
 import com.clinic.model.User;
 import com.clinic.service.PasswordService;
+import com.clinic.utils.AuditUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -76,7 +77,8 @@ public class ChangePasswordServlet extends HttpServlet {
             return;
         }
 
-        // Đổi mật khẩu thành công
+        // Đổi mật khẩu thành công — ghi audit log
+        AuditUtil.log(request, "Đổi mật khẩu", "users", null, null);
         session.setAttribute("successMessage",
                 "Đổi mật khẩu thành công! Vui lòng sử dụng mật khẩu mới cho lần đăng nhập sau.");
         response.sendRedirect(request.getContextPath() + "/home");

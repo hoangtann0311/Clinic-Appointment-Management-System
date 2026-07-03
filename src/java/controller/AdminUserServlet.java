@@ -431,15 +431,8 @@ public class AdminUserServlet extends HttpServlet {
     // Audit Log
     // ═══════════════════════════════════════════════════════════
     private void logAudit(HttpServletRequest req, String action, String detail) {
-        try {
-            User actor = (User) req.getSession().getAttribute("user");
-            String actorName = actor != null ? actor.getFullName() : "System";
-            int actorId = actor != null ? actor.getId() : 0;
-            System.out.println("[AUDIT] " + action + " | Actor: " + actorName + " (ID=" + actorId + ") | " + detail + " | IP: " + req.getRemoteAddr());
-            // TODO: Tích hợp AuditUtil khi module audit hoàn thiện
-        } catch (Exception e) {
-            System.err.println("[AUDIT] Lỗi ghi log: " + e.getMessage());
-        }
+        // Ghi audit log sử dụng AuditUtil tập trung
+        com.clinic.utils.AuditUtil.log(req, detail, "users", null, null);
     }
 
     // ═══════════════════════════════════════════════════════════
