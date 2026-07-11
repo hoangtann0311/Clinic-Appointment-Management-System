@@ -5,6 +5,7 @@ import com.clinic.model.MedicineCategory;
 import com.clinic.model.MedicinePriceHistory;
 import com.clinic.model.User;
 import com.clinic.service.MedicineService;
+import com.clinic.utils.AuditUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -40,6 +41,12 @@ public class ManagerMedicineServlet extends HttpServlet {
             throws ServletException, IOException {
 
         String action = req.getParameter("action");
+
+        // Xem chi tiết thuốc
+        if ("detail".equals(action)) {
+            handleDetail(req, resp);
+            return;
+        }
 
         // Xem lịch sử giá thuốc toàn hệ thống
         if ("price-history".equals(action)) {
@@ -113,6 +120,8 @@ public class ManagerMedicineServlet extends HttpServlet {
                     Map<String, String> errors = new HashMap<>();
                     if (medicineService.createMedicine(medicineCode, name, description,
                             dosage, unit, price, stockQuantity, errors, changedBy, categoryId)) {
+                        AuditUtil.log(changedBy, "Tạo mới thuốc: " + name, "medicines",
+                                null, "price=" + price, null);
                         resp.sendRedirect(redirectUrl + "?success=created");
                     } else {
                         req.setAttribute("errors", errors);
@@ -139,6 +148,8 @@ public class ManagerMedicineServlet extends HttpServlet {
                     Map<String, String> errors = new HashMap<>();
                     if (medicineService.updateMedicine(id, medicineCode, name, description,
                             dosage, unit, price, stockQuantity, isActive, errors, changedBy, changeReason, categoryId)) {
+                        AuditUtil.log(changedBy, "Cập nhật thuốc: " + name, "medicines",
+                                null, "price=" + price + ", active=" + isActive, null);
                         resp.sendRedirect(redirectUrl + "?success=updated");
                     } else {
                         req.setAttribute("errors", errors);
@@ -157,7 +168,7 @@ public class ManagerMedicineServlet extends HttpServlet {
                         resp.sendRedirect(redirectUrl + "?error=Thuốc+không+tồn+tại");
                         return;
                     }
-                    if (medicineService.toggleMedicineStatus(id)) {
+                    if (medicineService.toggleMedicineStatus(id, changedBy)) {
                         String msg = med.isActive() ? "deactivated" : "activated";
                         resp.sendRedirect(redirectUrl + "?success=" + msg);
                     } else {
@@ -184,6 +195,32 @@ public class ManagerMedicineServlet extends HttpServlet {
             e.printStackTrace(System.err);
             resp.sendRedirect(redirectUrl + "?error=Lỗi+hệ+thống:+vui+lòng+thử+lại");
         }
+    }
+
+    /** Xử lý xem chi tiết thuốc */
+    private void handleDetail(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+        int id = parseInt(req.getParameter("id"), -1);
+        if (id < 1) {
+            resp.sendRedirect(req.getContextPath() + "/manager/medicines/?error=Không+tìm+thấy+thuốc");
+            return;
+        }
+
+        Medicine medicine = medicineService.getMedicineById(id);
+        if (medicine == null) {
+            resp.sendRedirect(req.getContextPath() + "/manager/medicines/?error=Không+tìm+thấy+thuốc");
+            return;
+        }
+
+        List<MedicinePriceHistory> priceHistory = medicineService.getPriceHistory(id);
+
+        req.setAttribute("detailMedicine", medicine);
+        req.setAttribute("priceHistory", priceHistory);
+
+        // Load danh mục cho hiển thị
+        req.setAttribute("categories", medicineService.getCategories());
+
+        req.getRequestDispatcher("/views/manager/medicines/detail.jsp").forward(req, resp);
     }
 
     /** Xử lý xem toàn bộ lịch sử giá thuốc */

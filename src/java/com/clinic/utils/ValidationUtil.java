@@ -9,7 +9,17 @@ import java.util.Map;
  */
 public class ValidationUtil {
 
-    private static final String EMAIL_REGEX = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$";
+    /**
+     * Regex email chuẩn RFC 5322 (đơn giản hóa).
+     * Hỗ trợ: chữ cái, số, dấu cộng (+), gạch dưới (_), dấu chấm (.), dấu gạch ngang (-)
+     * trong phần local. Domain hỗ trợ chữ cái, số, dấu chấm, dấu gạch ngang.
+     * TLD yêu cầu ít nhất 2 ký tự chữ cái.
+     *
+     * LƯU Ý: Dấu gạch ngang (-) được đặt ở đầu mỗi character class để tránh
+     * ambiguity với range operator (A-Z, a-z, 0-9) trên mọi regex engine.
+     * Điều này đảm bảo email có dấu chấm (.) như "ten.ten@gmail.com" luôn khớp.
+     */
+    private static final String EMAIL_REGEX = "^[-A-Za-z0-9+_.]+@[-A-Za-z0-9.]+\\.[A-Za-z]{2,}$";
 
     /**
      * Số điện thoại Việt Nam: bắt đầu 03|05|07|08|09 và chính xác 10 chữ số.

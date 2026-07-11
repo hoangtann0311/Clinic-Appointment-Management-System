@@ -94,6 +94,137 @@ public class ServiceStatisticsDAO {
     }
 
     // ═══════════════════════════════════════════════════════════
+    // KPI — LỌC THEO KHOẢNG NGÀY (TỪ NGÀY → ĐẾN NGÀY)
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Tổng số lượt sử dụng dịch vụ trong khoảng ngày [from, to].
+     */
+    public int getTotalUsageByDateRange(LocalDate from, LocalDate to) {
+        String sql = "SELECT COUNT(*) AS total FROM appointments "
+                   + "WHERE service_id IS NOT NULL "
+                   + "AND appointment_date >= ? AND appointment_date <= ?";
+        return executeCountWithDates(sql, from, to);
+    }
+
+    /**
+     * Tổng doanh thu dịch vụ trong khoảng ngày [from, to] (VND).
+     */
+    public double getTotalRevenueByDateRange(LocalDate from, LocalDate to) {
+        String sql = "SELECT ISNULL(SUM(ii.subtotal), 0) AS total "
+                   + "FROM invoice_items ii "
+                   + "INNER JOIN invoices i ON ii.invoice_id = i.id "
+                   + "INNER JOIN appointments a ON i.appointment_id = a.id "
+                   + "WHERE ii.item_type = 'service' "
+                   + "AND i.status = 'paid' "
+                   + "AND a.appointment_date >= ? AND a.appointment_date <= ?";
+        return executeSumWithDates(sql, from, to);
+    }
+
+    /**
+     * Số dịch vụ khác nhau được sử dụng trong khoảng ngày [from, to].
+     */
+    public int countServicesUsedInDateRange(LocalDate from, LocalDate to) {
+        String sql = "SELECT COUNT(DISTINCT service_id) AS total FROM appointments "
+                   + "WHERE service_id IS NOT NULL "
+                   + "AND appointment_date >= ? AND appointment_date <= ?";
+        return executeCountWithDates(sql, from, to);
+    }
+
+    /**
+     * Dịch vụ được sử dụng nhiều nhất trong khoảng ngày.
+     */
+    public ServiceStatDetail getTopServiceByDateRange(LocalDate from, LocalDate to) {
+        List<ServiceStatDetail> list = getTopServicesByUsageDateRange(1, from, to);
+        return list.isEmpty() ? null : list.get(0);
+    }
+
+    /**
+     * Top N dịch vụ có lượt sử dụng cao nhất trong khoảng ngày [from, to].
+     */
+    public List<ServiceStatDetail> getTopServicesByUsageDateRange(int limit, LocalDate from, LocalDate to) {
+        String sql =
+            "SELECT TOP (?) "
+            + "  s.id AS service_id, "
+            + "  s.service_code, "
+            + "  s.service_name, "
+            + "  ISNULL(s.price, 0) AS price, "
+            + "  ISNULL(sc.category_name, N'Chưa phân nhóm') AS category_name, "
+            + "  sc.icon AS category_icon, "
+            + "  ISNULL(usage_stats.cnt, 0) AS usage_today, "
+            + "  0 AS usage_yesterday, "
+            + "  ISNULL(usage_stats.rev, 0) AS revenue_today, "
+            + "  0 AS revenue_yesterday, "
+            + "  ISNULL((SELECT COUNT(*) FROM appointments a2 WHERE a2.service_id = s.id), 0) AS total_usage "
+            + "FROM services s "
+            + "LEFT JOIN service_categories sc ON sc.id = s.category_id "
+            + "LEFT JOIN ("
+            + "  SELECT a.service_id, COUNT(*) AS cnt, ISNULL(SUM(ii.subtotal), 0) AS rev "
+            + "  FROM appointments a "
+            + "  LEFT JOIN invoices i ON i.appointment_id = a.id AND i.status = 'paid' "
+            + "  LEFT JOIN invoice_items ii ON ii.invoice_id = i.id AND ii.item_type = 'service' AND ii.item_id = a.service_id "
+            + "  WHERE a.appointment_date >= ? AND a.appointment_date <= ? "
+            + "  GROUP BY a.service_id "
+            + ") usage_stats ON usage_stats.service_id = s.id "
+            + "WHERE s.is_active = 1 "
+            + "ORDER BY usage_today DESC";
+
+        List<ServiceStatDetail> list = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setInt(1, limit);
+            ps.setDate(2, java.sql.Date.valueOf(from));
+            ps.setDate(3, java.sql.Date.valueOf(to));
+            rs = ps.executeQuery();
+            while (rs.next()) {
+                ServiceStatDetail d = new ServiceStatDetail();
+                d.serviceId = rs.getInt("service_id");
+                d.serviceCode = rs.getString("service_code");
+                d.serviceName = rs.getString("service_name");
+                d.price = rs.getDouble("price");
+                d.categoryName = rs.getString("category_name");
+                try { d.categoryIcon = rs.getString("category_icon"); } catch (SQLException e) { d.categoryIcon = null; }
+                d.usageToday = rs.getInt("usage_today");
+                d.usageYesterday = 0;
+                d.revenueToday = rs.getDouble("revenue_today");
+                d.revenueYesterday = 0;
+                d.totalUsage = rs.getInt("total_usage");
+                list.add(d);
+            }
+        } catch (SQLException e) {
+            System.err.println("[ServiceStatisticsDAO] getTopServicesByUsageDateRange ERROR: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return list;
+    }
+
+    /**
+     * Tổng lượt sử dụng trong khoảng trước đó (cùng độ dài, dùng cho so sánh tăng trưởng).
+     * Ví dụ: from=2026-06-15, to=2026-06-22 (8 ngày) → prevFrom=2026-06-07, prevTo=2026-06-14
+     */
+    public int getTotalUsagePreviousPeriod(LocalDate from, LocalDate to) {
+        long days = to.toEpochDay() - from.toEpochDay() + 1;
+        LocalDate prevTo = from.minusDays(1);
+        LocalDate prevFrom = prevTo.minusDays(days - 1);
+        return getTotalUsageByDateRange(prevFrom, prevTo);
+    }
+
+    /**
+     * Tổng doanh thu trong khoảng trước đó (cùng độ dài, dùng cho so sánh tăng trưởng).
+     */
+    public double getTotalRevenuePreviousPeriod(LocalDate from, LocalDate to) {
+        long days = to.toEpochDay() - from.toEpochDay() + 1;
+        LocalDate prevTo = from.minusDays(1);
+        LocalDate prevFrom = prevTo.minusDays(days - 1);
+        return getTotalRevenueByDateRange(prevFrom, prevTo);
+    }
+
+    // ═══════════════════════════════════════════════════════════
     // CHI TIẾT THEO TỪNG DỊCH VỤ — BẢNG THỐNG KÊ
     // ═══════════════════════════════════════════════════════════
 
@@ -659,6 +790,44 @@ public class ServiceStatisticsDAO {
             closeResources(conn, ps, rs);
         }
         return list;
+    }
+
+    private int executeCountWithDates(String sql, LocalDate from, LocalDate to) {
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setDate(1, java.sql.Date.valueOf(from));
+            ps.setDate(2, java.sql.Date.valueOf(to));
+            rs = ps.executeQuery();
+            if (rs.next()) return rs.getInt("total");
+        } catch (SQLException e) {
+            System.err.println("[ServiceStatisticsDAO] executeCountWithDates ERROR: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return 0;
+    }
+
+    private double executeSumWithDates(String sql, LocalDate from, LocalDate to) {
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setDate(1, java.sql.Date.valueOf(from));
+            ps.setDate(2, java.sql.Date.valueOf(to));
+            rs = ps.executeQuery();
+            if (rs.next()) return rs.getDouble("total");
+        } catch (SQLException e) {
+            System.err.println("[ServiceStatisticsDAO] executeSumWithDates ERROR: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return 0.0;
     }
 
     // ═══════════════════════════════════════════════════════════

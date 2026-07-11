@@ -138,7 +138,7 @@
                                 <tr>
                                     <td style="font-size:0.78rem;color:var(--c-muted);">#${h.id}</td>
                                     <td>
-                                        <a href="${pageContext.request.contextPath}/manager/medicines/" class="med-link">
+                                        <a href="${pageContext.request.contextPath}/manager/medicines/?action=detail&id=${h.medicineId}" class="med-link">
                                             <c:if test="${not empty h.medicineCode}">
                                                 <span style="font-size:0.7rem;color:var(--c-muted);">${fn:escapeXml(h.medicineCode)}</span><br>
                                             </c:if>

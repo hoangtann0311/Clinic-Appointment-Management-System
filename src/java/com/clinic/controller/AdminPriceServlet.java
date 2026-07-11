@@ -392,14 +392,7 @@ public class AdminPriceServlet extends HttpServlet {
 
     /** Ghi log thao tác sửa biểu giá */
     private void logAudit(HttpServletRequest req, String action, String detail) {
-        try {
-            User actor = (User) req.getSession().getAttribute("user");
-            String actorName = actor != null ? actor.getFullName() : "System";
-            System.out.println("[AUDIT-PRICING] " + action + " | By: " + actorName + " | " + detail);
-            // TODO: Tích hợp AuditUtil khi module audit hoàn thiện
-        } catch (Exception e) {
-            System.err.println("Lỗi ghi audit log: " + e.getMessage());
-        }
+        com.clinic.utils.AuditUtil.log(req, detail, "services", null, null);
     }
 
     private int parseInt(String s, int defaultVal) {

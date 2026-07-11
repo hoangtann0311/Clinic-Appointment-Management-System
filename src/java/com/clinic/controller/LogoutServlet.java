@@ -1,5 +1,7 @@
 package com.clinic.controller;
 
+import com.clinic.model.User;
+import com.clinic.utils.AuditUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -35,15 +37,15 @@ public class LogoutServlet extends HttpServlet {
         boolean wasAdmin = false;
 
         if (session != null) {
-            // Lấy thông tin user trước khi hủy session
-            Object user = session.getAttribute("user");
-            String email = (user instanceof com.clinic.model.User)
-                    ? ((com.clinic.model.User) user).getEmail() : "unknown";
-            wasAdmin = (user instanceof com.clinic.model.User)
-                    && ((com.clinic.model.User) user).getRoleId() == 1;
+            // Lấy thông tin user trước khi hủy session để ghi audit log
+            Object userObj = session.getAttribute("user");
+            User user = (userObj instanceof User) ? (User) userObj : null;
+            wasAdmin = (user != null) && user.getRoleId() == 1;
+
+            // Ghi audit log ĐĂNG XUẤT trước khi hủy session
+            AuditUtil.log(request, "Đăng xuất", "users", null, null);
 
             session.invalidate();
-            System.out.println(">>> User logged out: " + email);
         }
 
         // Chuyển về trang login phù hợp: Admin → /admin/login, còn lại → /login

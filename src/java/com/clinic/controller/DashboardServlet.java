@@ -99,6 +99,138 @@ public class DashboardServlet extends HttpServlet {
                 request.getRequestDispatcher("/views/home/dashboard.jsp").forward(request, response);
                 break;
         }
+<<<<<<< HEAD:src/java/com/clinic/controller/DashboardServlet.java
+=======
+
+        request.getRequestDispatcher(targetJsp).forward(request, response);
+    }
+
+    /**
+     * Load dữ liệu thống kê cho Manager Dashboard.
+     * Manager tập trung vào quản lý dịch vụ, thuốc, biểu giá và thống kê dịch vụ.
+     * Hỗ trợ lọc theo khoảng ngày (dateFrom → dateTo).
+     */
+    private void loadManagerDashboardData(HttpServletRequest request) {
+        com.clinic.service.MedicineService medicineService = new com.clinic.service.MedicineService();
+        com.clinic.service.ServiceService serviceService = new com.clinic.service.ServiceService();
+        com.clinic.service.ServiceStatisticsService statsService = new com.clinic.service.ServiceStatisticsService();
+
+        // ── Đọc tham số lọc khoảng ngày ──
+        String dateFromStr = request.getParameter("dateFrom");
+        String dateToStr = request.getParameter("dateTo");
+        LocalDate dateFrom = null;
+        LocalDate dateTo = null;
+        LocalDate today = LocalDate.now();
+
+        try {
+            if (dateFromStr != null && !dateFromStr.trim().isEmpty()) {
+                dateFrom = LocalDate.parse(dateFromStr);
+            }
+        } catch (Exception e) {
+            dateFrom = null;
+        }
+        try {
+            if (dateToStr != null && !dateToStr.trim().isEmpty()) {
+                dateTo = LocalDate.parse(dateToStr);
+            }
+        } catch (Exception e) {
+            dateTo = null;
+        }
+
+        // Nếu không có tham số, mặc định là hôm nay
+        boolean isCustomRange = (dateFrom != null || dateTo != null);
+        if (!isCustomRange) {
+            dateFrom = today;
+            dateTo = today;
+        } else {
+            // Nếu chỉ có 1 trong 2, mặc định cái còn lại = hôm nay
+            if (dateFrom == null) dateFrom = today;
+            if (dateTo == null) dateTo = today;
+        }
+
+        // ── Truyền ngày cho JSP ──
+        request.setAttribute("dateFrom", dateFrom);
+        request.setAttribute("dateTo", dateTo);
+        request.setAttribute("isCustomRange", isCustomRange);
+        request.setAttribute("today", today);
+
+        // Tổng số dịch vụ và thuốc — lọc theo ngày tạo nếu có date filter
+        LocalDate countMaxDate = isCustomRange ? dateTo : null;
+        request.setAttribute("totalServices", serviceService.getTotalServices(null, null, countMaxDate));
+        request.setAttribute("totalMedicines", medicineService.getTotalMedicines(null, null, countMaxDate));
+
+        // Số dịch vụ và thuốc đang active — lọc theo ngày tạo nếu có date filter
+        request.setAttribute("activeServicesCount", serviceService.getTotalServices(null, true, countMaxDate));
+        request.setAttribute("activeMedicinesCount", medicineService.getTotalMedicines(null, true, countMaxDate));
+
+        // ─── Widget "Top Dịch Vụ" — 5 dịch vụ có lượt sử dụng cao nhất trong khoảng ngày ───
+        request.setAttribute("topServicesToday", statsService.getTopServicesByUsage(5, dateFrom, dateTo));
+
+        // ─── Widget "Cảnh Báo Tồn Kho" — thuốc sắp hết (stock ≤ 10) ───
+        request.setAttribute("lowStockMedicines", medicineService.getLowStockMedicines(10, 5));
+
+        // ─── Doanh thu khoảng trước cho KPI card so sánh ───
+        double revenuePrevious;
+        double revenueGrowthRate;
+        if (isCustomRange) {
+            revenuePrevious = statsService.getTotalRevenue(
+                    statsDAO_prevFrom(dateFrom, dateTo),
+                    statsDAO_prevTo(dateFrom, dateTo));
+            revenueGrowthRate = statsService.getRevenueGrowthRate(dateFrom, dateTo);
+        } else {
+            revenuePrevious = statsService.getTotalRevenueYesterday();
+            revenueGrowthRate = statsService.getRevenueGrowthRate();
+        }
+        request.setAttribute("revenueYesterdayFormatted",
+                com.clinic.service.ServiceStatisticsService.formatCurrency(revenuePrevious));
+        request.setAttribute("revenueGrowthRate", revenueGrowthRate);
+        request.setAttribute("revenueGrowthFormatted",
+                com.clinic.service.ServiceStatisticsService.formatGrowthPercent(revenueGrowthRate));
+
+        // ─── Thống kê dịch vụ (Service Statistics KPI) — theo khoảng ngày ───
+        int totalUsage = statsService.getTotalUsage(dateFrom, dateTo);
+        double totalRevenue = statsService.getTotalRevenue(dateFrom, dateTo);
+        double usageGrowthRate = statsService.getUsageGrowthRate(dateFrom, dateTo);
+        String topServiceName = statsService.getTopServiceName(dateFrom, dateTo);
+        int topServiceUsage = statsService.getTopServiceUsage(dateFrom, dateTo);
+        int servicesUsed = statsService.getServicesUsed(dateFrom, dateTo);
+
+        request.setAttribute("totalUsageToday", totalUsage);
+        request.setAttribute("totalRevenueTodayFormatted",
+                com.clinic.service.ServiceStatisticsService.formatCurrency(totalRevenue));
+        request.setAttribute("usageGrowthRate", usageGrowthRate);
+        request.setAttribute("usageGrowthFormatted",
+                com.clinic.service.ServiceStatisticsService.formatGrowthPercent(usageGrowthRate));
+        request.setAttribute("topServiceName", topServiceName);
+        request.setAttribute("topServiceUsage", topServiceUsage);
+        request.setAttribute("servicesUsedToday", servicesUsed);
+
+        // ─── Dữ liệu cho hiển thị khoảng ngày ───
+        DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        request.setAttribute("dateFromFormatted", dateFrom.format(dateFmt));
+        request.setAttribute("dateToFormatted", dateTo.format(dateFmt));
+
+        // Label cho khoảng ngày
+        if (!isCustomRange || (dateFrom.equals(today) && dateTo.equals(today))) {
+            request.setAttribute("dateRangeLabel", "Hôm nay");
+        } else if (dateFrom.equals(dateTo)) {
+            request.setAttribute("dateRangeLabel", "Ngày " + dateFrom.format(dateFmt));
+        } else {
+            request.setAttribute("dateRangeLabel",
+                    dateFrom.format(dateFmt) + " → " + dateTo.format(dateFmt));
+        }
+    }
+
+    /** Tính ngày bắt đầu của khoảng trước đó (so sánh tăng trưởng). */
+    private LocalDate statsDAO_prevFrom(LocalDate from, LocalDate to) {
+        long days = to.toEpochDay() - from.toEpochDay() + 1;
+        return from.minusDays(days);
+    }
+
+    /** Tính ngày kết thúc của khoảng trước đó (so sánh tăng trưởng). */
+    private LocalDate statsDAO_prevTo(LocalDate from, LocalDate to) {
+        return from.minusDays(1);
+>>>>>>> origin/hieupt:src/java/controller/DashboardServlet.java
     }
 
     /**

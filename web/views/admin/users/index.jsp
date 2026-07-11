@@ -39,19 +39,18 @@
             --shadow-xs: 0 1px 3px rgba(194,24,91,0.07);
             --shadow-sm: 0 2px 8px rgba(194,24,91,0.10);
             --shadow-md: 0 4px 20px rgba(194,24,91,0.13);
-            --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-pill: 999px;
-            --t-fast: 0.15s ease;
+            --shadow-lg: 0 8px 32px rgba(194,24,91,0.16);
+            --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 20px; --r-pill: 999px;
+            --t-fast: 0.15s ease; --t-smooth: 0.25s cubic-bezier(0.4,0,0.2,1);
             --font-display: 'Nunito', sans-serif;
             --font-body: 'Inter', sans-serif;
-            /* Ghi đè biến Bootstrap để toàn bộ component (modal, card, ...) dùng chung font */
-            --bs-body-font-family: var(--font-body);
         }
         *, *::before, *::after { box-sizing: border-box; }
         body, .btn, .form-control, .form-select, .form-label, .table, .badge, .card, .modal { font-family: var(--font-body); }
         h1,h2,h3,h4,h5,h6 { font-family: var(--font-display); }
         body.admin-body { font-family: var(--font-body); background: var(--c-bg); color: var(--c-on-bg); margin: 0; padding: 0; line-height: 1.6; -webkit-font-smoothing: antialiased; }
 
-        /* ── TOP BAR (giống dashboard) ── */
+        /* ── TOP BAR ── */
         .admin-topbar { position: fixed; top: 0; left: 0; right: 0; height: var(--topbar-h); background: var(--c-surface); border-bottom: 2px solid var(--pink-200); display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; z-index: 1030; box-shadow: var(--shadow-xs); }
         .admin-topbar-left { display: flex; align-items: center; gap: 0.875rem; }
         .admin-topbar-brand { font-family: var(--font-display); font-weight: 900; font-size: 1.3rem; color: var(--c-primary); text-decoration: none; display: flex; align-items: center; gap: 0.5rem; letter-spacing: -0.03em; }
@@ -69,9 +68,34 @@
 
         /* ── MAIN ── */
         .admin-main { margin-left: var(--sidebar-w); margin-top: var(--topbar-h); padding: 2rem 2.25rem; min-height: calc(100vh - var(--topbar-h)); }
-        .admin-page-header { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; }
+        .admin-page-header { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem; }
         .admin-page-title { font-family: var(--font-display); font-size: 1.85rem; font-weight: 900; color: var(--c-on-bg); margin: 0 0 0.25rem; letter-spacing: -0.04em; }
-        .admin-page-subtitle { font-size: 0.85rem; color: var(--c-muted); display: flex; align-items: center; gap: 0.4rem; }
+        .admin-page-subtitle { font-size: 0.85rem; color: var(--c-muted); display: flex; align-items: center; gap: 0.5rem; }
+
+        /* ── STATS CARDS ── */
+        .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+        .stat-card { background: var(--c-surface); border: 1px solid var(--c-outline-variant); border-radius: var(--r-lg); padding: 1.25rem; display: flex; align-items: center; gap: 1rem; box-shadow: var(--shadow-xs); transition: all var(--t-smooth); cursor: default; position: relative; overflow: hidden; }
+        .stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); border-color: var(--pink-200); }
+        .stat-card::after { content: ''; position: absolute; top: -20px; right: -20px; width: 80px; height: 80px; border-radius: 50%; opacity: 0.06; transition: all var(--t-smooth); }
+        .stat-card:hover::after { transform: scale(1.2); opacity: 0.10; }
+        .stat-card-icon { width: 52px; height: 52px; border-radius: var(--r-md); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; flex-shrink: 0; color: #fff; }
+        .sc-icon-total { background: linear-gradient(135deg, var(--pink-500), var(--pink-600)); }
+        .sc-icon-doctor { background: linear-gradient(135deg, #6366f1, #4f46e5); }
+        .sc-icon-manager { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .sc-icon-staff { background: linear-gradient(135deg, #10b981, #059669); }
+        .sc-icon-sono { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+        .stat-card-body { flex: 1; min-width: 0; }
+        .stat-card-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--c-muted); margin-bottom: 0.25rem; }
+        .stat-card-value { font-family: var(--font-display); font-size: 1.7rem; font-weight: 900; color: var(--c-on-bg); line-height: 1; }
+        .stat-card-sub { font-size: 0.72rem; color: var(--c-muted); margin-top: 0.2rem; }
+
+        /* ── QUICK FILTER TABS ── */
+        .quick-tabs { display: flex; gap: 0.375rem; margin-bottom: 1rem; flex-wrap: wrap; }
+        .quick-tab { padding: 0.5rem 1.25rem; border-radius: var(--r-pill); font-size: 0.82rem; font-weight: 700; text-decoration: none; border: 2px solid var(--c-outline); color: var(--c-on-surface-var); background: var(--c-surface); transition: all var(--t-fast); display: flex; align-items: center; gap: 0.4rem; cursor: pointer; }
+        .quick-tab:hover { border-color: var(--pink-300); color: var(--c-primary); background: var(--pink-50); }
+        .quick-tab.active { background: linear-gradient(135deg, var(--pink-500), var(--pink-600)); color: #fff; border-color: transparent; box-shadow: 0 2px 8px rgba(233,30,140,0.25); }
+        .quick-tab .tab-count { font-size: 0.7rem; font-weight: 800; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: var(--r-pill); }
+        .quick-tab.active .tab-count { background: rgba(255,255,255,0.3); }
 
         /* ── Cards & Tables ── */
         .admin-card { background: var(--c-surface) !important; border: 1px solid var(--c-outline-variant) !important; border-radius: var(--r-lg) !important; box-shadow: var(--shadow-xs) !important; overflow: hidden; }
@@ -86,19 +110,29 @@
         .admin-table tbody td { padding: 0.75rem 1rem; color: var(--c-on-surface); vertical-align: middle; }
 
         /* ── Badges ── */
-        .badge-role-tag { display: inline-block; padding: 2px 10px; border-radius: var(--r-pill); font-size: 0.7rem; font-weight: 700; background: var(--pink-100); color: var(--pink-700); border: 1px solid var(--pink-200); }
-        .badge-status { display: inline-block; padding: 3px 10px; border-radius: var(--r-pill); font-size: 0.72rem; font-weight: 700; }
+        .badge-role-tag { display: inline-flex; align-items: center; gap: 0.3rem; padding: 3px 12px; border-radius: var(--r-pill); font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
+        .badge-role-admin { background: #fdf2f8; color: #b91c6a; border: 1px solid #f9a8d4; }
+        .badge-role-doctor { background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; }
+        .badge-role-manager { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+        .badge-role-staff { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+        .badge-role-patient { background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; }
+        .badge-role-sonographer { background: #ecfeff; color: #0e7490; border: 1px solid #a5f3fc; }
+        .badge-status { display: inline-flex; align-items: center; gap: 0.3rem; padding: 3px 10px; border-radius: var(--r-pill); font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
         .badge-status-active { background: var(--status-active-bg); color: var(--status-active-fg); }
         .badge-status-inactive { background: var(--status-inactive-bg); color: var(--status-inactive-fg); }
         .badge-status-locked { background: var(--status-locked-bg); color: var(--status-locked-fg); }
         .badge-status-pending { background: var(--status-pending-bg); color: var(--status-pending-fg); }
         .badge-status-pending-verification { background: var(--status-pending-bg); color: var(--status-pending-fg); }
+        .badge-status-deleted { background: #fce4ec; color: #b71c1c; border: 1px solid #ef9a9a; }
+        .tr-deleted { background: #fff5f5 !important; opacity: 0.85; }
+        .tr-deleted:hover { background: #ffebee !important; }
 
         /* ── Buttons ── */
         .btn-primary-pink { background: linear-gradient(135deg, var(--pink-500), var(--pink-600)); color: #fff; border: none; font-weight: 700; border-radius: var(--r-sm); padding: 0.55rem 1.2rem; transition: all var(--t-fast); }
         .btn-primary-pink:hover { background: linear-gradient(135deg, var(--pink-600), var(--pink-700)); color: #fff; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(233,30,140,0.3); }
         .btn-sm-outline { font-size: 0.75rem; font-weight: 600; padding: 4px 10px; border-radius: var(--r-sm); }
         .btn-action { display: inline-flex; align-items: center; gap: 0.25rem; }
+        .btn-action-group { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
 
         /* ── Filter Bar ── */
         .filter-bar { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
@@ -117,17 +151,35 @@
         .admin-sidebar-backdrop.show { display: block; }
 
         /* ── Empty State ── */
-        .admin-empty-state { text-align: center; padding: 2.5rem 1rem; color: var(--c-muted); }
-        .admin-empty-state i { font-size: 2.5rem; color: var(--pink-200); display: block; margin-bottom: 0.75rem; }
+        .admin-empty-state { text-align: center; padding: 3rem 1rem; color: var(--c-muted); }
+        .admin-empty-state i { font-size: 3rem; color: var(--pink-200); display: block; margin-bottom: 0.75rem; }
+        .admin-empty-state h6 { font-family: var(--font-display); font-weight: 700; color: var(--c-on-surface-var); margin-bottom: 0.25rem; }
+
+        /* ── Modal Enhancements ── */
+        .modal-content { border-radius: var(--r-lg) !important; border: 1px solid var(--c-outline-variant) !important; box-shadow: var(--shadow-lg) !important; }
+        .modal-header { background: linear-gradient(135deg, var(--pink-50), #fff0f8) !important; border-bottom: 1px solid var(--pink-200) !important; padding: 1.1rem 1.4rem !important; }
+        .modal-header .modal-title { font-family: var(--font-display); font-weight: 800; color: var(--c-primary-dark); font-size: 1.05rem; }
+        .modal-footer { border-top: 1px solid var(--c-outline-variant) !important; padding: 1rem 1.4rem !important; }
+        .modal-body { padding: 1.4rem !important; }
+        .form-label { font-size: 0.83rem; color: var(--c-on-surface-var); margin-bottom: 0.3rem; }
+        .form-label.fw-semibold { font-weight: 600; color: var(--c-on-surface); }
+        .input-group-text { background: var(--pink-50); border: 1px solid var(--c-outline); color: var(--c-primary); }
+
+        /* ── Toast / Alert ── */
+        .alert { border-radius: var(--r-md); border: none; font-size: 0.875rem; font-weight: 500; }
 
         /* ── Responsive ── */
         @media (max-width: 991.98px) {
             .admin-sidebar-toggle { display: inline-flex; }
             .admin-main { margin-left: 0; }
+            .stats-row { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
         }
         @media (max-width: 767.98px) {
             .admin-main { padding: 1rem; }
             .filter-bar .form-control, .filter-bar .form-select { width: 100%; min-width: auto; }
+            .admin-page-header { flex-direction: column; }
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+            .quick-tabs { overflow-x: auto; flex-wrap: nowrap; }
         }
     </style>
 </head>
@@ -164,12 +216,15 @@
 <%-- ── MAIN CONTENT ── --%>
 <main class="admin-main" id="adminMain">
 
+    <%-- ── PAGE HEADER ── --%>
     <div class="admin-page-header">
         <div class="admin-page-header-left">
-            <h1 class="admin-page-title">Quản Lý Người Dùng </h1>
+            <h1 class="admin-page-title">
+                <i class="bi bi-people-fill me-2" style="color:var(--pink-500);"></i>Quản Lý Người Dùng
+            </h1>
             <div class="admin-page-subtitle">
-                <i class="bi bi-people-fill"></i>
-                Tổng: <strong>${totalUsers}</strong> người dùng
+                <i class="bi bi-diagram-3-fill"></i>
+                Quản lý toàn bộ tài khoản trong hệ thống — quản trị viên, nhân sự &amp; bệnh nhân
             </div>
         </div>
         <button class="btn btn-primary-pink" data-bs-toggle="modal" data-bs-target="#addUserModal">
@@ -177,50 +232,140 @@
         </button>
     </div>
 
-    <%-- Alert messages --%>
+    <%-- ── STATISTICS CARDS ── --%>
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-card-icon sc-icon-total">
+                <i class="bi bi-people-fill"></i>
+            </div>
+            <div class="stat-card-body">
+                <div class="stat-card-label">Tổng Người Dùng</div>
+                <div class="stat-card-value">${countTotal}</div>
+                <div class="stat-card-sub">Toàn hệ thống</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-icon sc-icon-doctor">
+                <i class="bi bi-heart-pulse-fill"></i>
+            </div>
+            <div class="stat-card-body">
+                <div class="stat-card-label">Bác Sĩ</div>
+                <div class="stat-card-value">${countDoctor}</div>
+                <div class="stat-card-sub">Doctor</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-icon sc-icon-manager">
+                <i class="bi bi-briefcase-fill"></i>
+            </div>
+            <div class="stat-card-body">
+                <div class="stat-card-label">Quản Lý</div>
+                <div class="stat-card-value">${countManager}</div>
+                <div class="stat-card-sub">Manager</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-icon sc-icon-staff">
+                <i class="bi bi-person-workspace"></i>
+            </div>
+            <div class="stat-card-body">
+                <div class="stat-card-label">Nhân Viên</div>
+                <div class="stat-card-value">${countStaffOnly}</div>
+                <div class="stat-card-sub">Staff</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-icon sc-icon-sono">
+                <i class="bi bi-soundwave"></i>
+            </div>
+            <div class="stat-card-body">
+                <div class="stat-card-label">KTV Siêu Âm</div>
+                <div class="stat-card-value">${countSono}</div>
+                <div class="stat-card-sub">Sonographer</div>
+            </div>
+        </div>
+    </div>
+
+    <%-- ── ALERT MESSAGES ── --%>
     <c:if test="${not empty success}">
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="bi bi-check-circle-fill me-1"></i>
-            <c:choose>
-                <c:when test="${success eq 'created'}">Đã tạo người dùng thành công!</c:when>
-                <c:when test="${success eq 'updated'}">Đã cập nhật thành công!</c:when>
-                <c:when test="${success eq 'deleted'}">Đã xóa người dùng thành công!</c:when>
-            </c:choose>
+        <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert">
+            <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+            <div>
+                <c:choose>
+                    <c:when test="${success eq 'created'}"><strong>Thành công!</strong> Đã thêm người dùng mới vào hệ thống.</c:when>
+                    <c:when test="${success eq 'updated'}"><strong>Đã lưu!</strong> Thông tin người dùng đã được cập nhật.</c:when>
+                    <c:when test="${success eq 'deleted'}"><strong>Đã xoá!</strong> Người dùng đã được xoá khỏi hệ thống.</c:when>
+                    <c:when test="${success eq 'restored'}"><strong>Đã khôi phục!</strong> Người dùng đã được kích hoạt trở lại.</c:when>
+                    <c:when test="${success eq 'hardDeleted'}"><strong>Đã xoá vĩnh viễn!</strong> Người dùng đã bị xoá hoàn toàn khỏi hệ thống.</c:when>
+                </c:choose>
+            </div>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     </c:if>
     <c:if test="${not empty error}">
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-1"></i>${error}
+        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+            <div>${error}</div>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     </c:if>
-    <%-- Fallback: hiển thị lỗi validation từ map errors (phòng trường hợp modal không show được) --%>
+    <%-- Fallback: hiển thị lỗi validation từ map errors --%>
     <c:if test="${not empty errors and empty showAddModal}">
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-1"></i>
-            <strong>Lỗi khi tạo người dùng:</strong>
-            <c:if test="${not empty errors['general']}">${errors['general']}</c:if>
-            <c:if test="${empty errors['general']}">Vui lòng kiểm tra lại thông tin đã nhập.</c:if>
+        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+            <div>
+                <strong>Lỗi khi tạo người dùng:</strong>
+                <c:if test="${not empty errors['general']}">${errors['general']}</c:if>
+                <c:if test="${empty errors['general']}">Vui lòng kiểm tra lại thông tin đã nhập.</c:if>
+            </div>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     </c:if>
     <c:if test="${not empty editErrors and empty showEditModal}">
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-1"></i>
-            <strong>Lỗi khi cập nhật người dùng:</strong>
-            <c:if test="${not empty editErrors['general']}">${editErrors['general']}</c:if>
-            <c:if test="${empty editErrors['general']}">Vui lòng kiểm tra lại thông tin đã nhập.</c:if>
+        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+            <div>
+                <strong>Lỗi khi cập nhật người dùng:</strong>
+                <c:if test="${not empty editErrors['general']}">${editErrors['general']}</c:if>
+                <c:if test="${empty editErrors['general']}">Vui lòng kiểm tra lại thông tin đã nhập.</c:if>
+            </div>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     </c:if>
 
-    <%-- Filter + Search Bar --%>
+    <%-- ── QUICK FILTER TABS ── --%>
+    <c:url var="baseUsersUrl" value="/admin/users/">
+        <c:param name="search" value="${search}"/>
+        <c:param name="status" value="${statusFilter}"/>
+    </c:url>
+    <div class="quick-tabs">
+        <a href="${baseUsersUrl}&roleGroup=all" class="quick-tab ${empty roleGroup or roleGroup eq 'all' ? 'active' : ''}">
+            <i class="bi bi-grid-fill"></i> Tất Cả
+            <span class="tab-count">${countTotal}</span>
+        </a>
+        <a href="${baseUsersUrl}&roleGroup=staff" class="quick-tab ${roleGroup eq 'staff' ? 'active' : ''}">
+            <i class="bi bi-person-badge-fill"></i> Nhân Sự
+            <span class="tab-count">${countDoctor + countManager + countStaffOnly + countSono}</span>
+        </a>
+        <a href="${baseUsersUrl}&roleGroup=patients" class="quick-tab ${roleGroup eq 'patients' ? 'active' : ''}">
+            <i class="bi bi-person-fill"></i> Bệnh Nhân
+            <span class="tab-count">${countPatient}</span>
+        </a>
+    </div>
+
+    <%-- ── FILTER BAR ── --%>
     <div class="admin-card mb-3">
         <div class="card-body">
             <form method="get" action="${pageContext.request.contextPath}/admin/users/" class="filter-bar">
-                <input type="text" name="search" class="form-control" placeholder="Tìm tên, email, SĐT..."
-                       value="${not empty search ? search : ''}" style="min-width:220px;">
+                <%-- Giữ lại roleGroup khi filter --%>
+                <c:if test="${not empty roleGroup}">
+                    <input type="hidden" name="roleGroup" value="${roleGroup}">
+                </c:if>
+                <div class="input-group" style="max-width:280px;">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" name="search" class="form-control" placeholder="Tìm tên, email, SĐT..."
+                           value="${not empty search ? fn:escapeXml(search) : ''}">
+                </div>
                 <select name="role" class="form-select">
                     <option value="">Tất cả vai trò</option>
                     <c:forEach var="entry" items="${roleMap}">
@@ -229,93 +374,188 @@
                 </select>
                 <select name="status" class="form-select">
                     <option value="">Tất cả trạng thái</option>
-                    <option value="Active" ${statusFilter eq 'Active' ? 'selected' : ''}>Active</option>
-                    <option value="Inactive" ${statusFilter eq 'Inactive' ? 'selected' : ''}>Inactive</option>
-                    <option value="Pending Verification" ${statusFilter eq 'Pending Verification' ? 'selected' : ''}>Pending</option>
+                    <option value="Active" ${statusFilter eq 'Active' ? 'selected' : ''}>Đang hoạt động</option>
+                    <option value="Inactive" ${statusFilter eq 'Inactive' ? 'selected' : ''}>Ngừng hoạt động</option>
+                    <option value="Locked" ${statusFilter eq 'Locked' ? 'selected' : ''}>Đã khoá</option>
+                    <option value="Pending Verification" ${statusFilter eq 'Pending Verification' ? 'selected' : ''}>Chờ xác thực</option>
                 </select>
+                <%-- Ẩn chức năng Thùng rác --%>
+                <%--
+                <div class="form-check form-switch d-flex align-items-center gap-1 ms-2">
+                    <input class="form-check-input" type="checkbox" name="includeDeleted" value="true"
+                           id="chkIncludeDeleted" ${includeDeleted ? 'checked' : ''}
+                           onchange="this.form.submit()" style="cursor:pointer;">
+                    <label class="form-check-label" for="chkIncludeDeleted" style="cursor:pointer;font-size:0.82rem;font-weight:600;white-space:nowrap;">
+                        <i class="bi bi-trash3-fill me-1" style="color:#b71c1c;font-size:0.7rem;"></i>Thùng rác
+                    </label>
+                </div>
+                <c:if test="${includeDeleted}">
+                    <span class="badge bg-danger ms-1" style="font-size:0.7rem;">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>Đang xem ${totalUsers} tài khoản đã xoá
+                    </span>
+                </c:if>
+                --%>
                 <button type="submit" class="btn btn-primary-pink">
-                    <i class="bi bi-search me-1"></i>Lọc
+                    <i class="bi bi-funnel-fill me-1"></i>Lọc
                 </button>
                 <a href="${pageContext.request.contextPath}/admin/users/" class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-x-circle me-1"></i>Xóa lọc
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>Đặt lại
                 </a>
             </form>
         </div>
     </div>
 
-    <%-- Users Table --%>
+    <%-- ── USERS TABLE ── --%>
     <div class="admin-card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5><i class="bi bi-person-lines-fill me-2"></i>Danh Sách Người Dùng</h5>
+            <span class="badge bg-white text-dark border" style="font-size:0.8rem;">
+                <i class="bi bi-database me-1"></i>${not empty totalUsers ? totalUsers : '0'} bản ghi
+            </span>
+        </div>
         <div class="card-body p-0">
             <div class="admin-table-wrapper">
                 <table class="admin-table">
                     <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>Họ Tên</th>
-                            <th>Tên ĐN</th>
+                            <th>#ID</th>
+                            <th>Người Dùng</th>
                             <th>Email</th>
                             <th>Điện Thoại</th>
                             <th>Vai Trò</th>
                             <th>Trạng Thái</th>
                             <th>Ngày Tạo</th>
-                            <th style="width:160px;">Thao Tác</th>
+                            <th style="width:200px;">Thao Tác</th>
                         </tr>
                     </thead>
                     <tbody>
                         <c:choose>
                             <c:when test="${not empty users}">
-                                <c:forEach var="u" items="${users}" varStatus="loop">
-                                    <tr>
-                                        <td style="color:var(--c-muted);font-size:0.8rem;font-weight:600;">#${(currentPage - 1) * pageSize + loop.index + 1}</td>
-                                        <td style="font-weight:600;">
-                                            ${u.fullName}
-                                            <c:if test="${u.authProvider eq 'google'}">
-                                                <i class="bi bi-google text-muted ms-1" title="Google"></i>
-                                            </c:if>
-                                        </td>
-                                        <td style="font-size:0.82rem;font-weight:500;">${not empty u.username ? u.username : '—'}</td>
-                                        <td style="font-size:0.82rem;">${u.email}</td>
-                                        <td style="font-size:0.82rem;">${not empty u.phone ? fn:escapeXml(u.phone) : '—'}</td>
-                                        <td><span class="badge-role-tag">${not empty u.roleName ? u.roleName : roleMap[u.roleId]}</span></td>
+                                <c:forEach var="u" items="${users}">
+                                    <tr class="${u.deleted ? 'tr-deleted' : ''}">
+                                        <td style="color:var(--c-muted);font-size:0.8rem;font-weight:600;">#${u.id}</td>
                                         <td>
-                                            <c:set var="statusClass" value="${not empty u.status ? fn:toLowerCase(fn:replace(u.status, ' ', '-')) : 'inactive'}" />
-                                            <span class="badge-status badge-status-${statusClass}">
-                                                ${not empty u.status ? u.status : 'Inactive'}
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="admin-avatar-sm" style="width:36px;height:36px;font-size:0.8rem;">
+                                                    ${fn:substring(u.fullName, 0, 1)}
+                                                </div>
+                                                <div>
+                                                    <div style="font-weight:700;color:var(--c-on-surface);line-height:1.2;">
+                                                        ${fn:escapeXml(u.fullName)}
+                                                    </div>
+                                                    <c:if test="${u.authProvider eq 'google'}">
+                                                        <small style="font-size:0.68rem;color:var(--c-muted);">
+                                                            <i class="bi bi-google me-1"></i>Google
+                                                        </small>
+                                                    </c:if>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td style="font-size:0.82rem;">
+                                            <i class="bi bi-envelope-fill me-1" style="color:var(--c-muted);font-size:0.7rem;"></i>
+                                            ${fn:escapeXml(u.email)}
+                                        </td>
+                                        <td style="font-size:0.82rem;">
+                                            <c:choose>
+                                                <c:when test="${not empty u.phone}">
+                                                    <i class="bi bi-telephone-fill me-1" style="color:var(--c-muted);font-size:0.7rem;"></i>
+                                                    ${fn:escapeXml(u.phone)}
+                                                </c:when>
+                                                <c:otherwise><span class="text-muted">—</span></c:otherwise>
+                                            </c:choose>
+                                        </td>
+                                        <td>
+                                            <%-- Role badge với màu riêng cho từng role --%>
+                                            <c:set var="roleClass" value="badge-role-staff"/>
+                                            <c:set var="roleIcon" value="bi-person"/>
+                                            <c:choose>
+                                                <c:when test="${u.roleId eq 1}">
+                                                    <c:set var="roleClass" value="badge-role-admin"/>
+                                                    <c:set var="roleIcon" value="bi-shield-fill"/>
+                                                </c:when>
+                                                <c:when test="${u.roleId eq 2}">
+                                                    <c:set var="roleClass" value="badge-role-doctor"/>
+                                                    <c:set var="roleIcon" value="bi-heart-pulse-fill"/>
+                                                </c:when>
+                                                <c:when test="${u.roleId eq 3}">
+                                                    <c:set var="roleClass" value="badge-role-manager"/>
+                                                    <c:set var="roleIcon" value="bi-briefcase-fill"/>
+                                                </c:when>
+                                                <c:when test="${u.roleId eq 4}">
+                                                    <c:set var="roleClass" value="badge-role-staff"/>
+                                                    <c:set var="roleIcon" value="bi-person-workspace"/>
+                                                </c:when>
+                                                <c:when test="${u.roleId eq 5}">
+                                                    <c:set var="roleClass" value="badge-role-patient"/>
+                                                    <c:set var="roleIcon" value="bi-person-fill"/>
+                                                </c:when>
+                                                <c:when test="${u.roleId eq 6}">
+                                                    <c:set var="roleClass" value="badge-role-sonographer"/>
+                                                    <c:set var="roleIcon" value="bi-soundwave"/>
+                                                </c:when>
+                                            </c:choose>
+                                            <span class="badge-role-tag ${roleClass}">
+                                                <i class="bi ${roleIcon}"></i>
+                                                ${not empty u.roleName ? u.roleName : roleMap[u.roleId]}
                                             </span>
+                                        </td>
+                                        <td>
+                                            <c:choose>
+                                                <c:when test="${u.deleted}">
+                                                    <span class="badge-status badge-status-deleted">
+                                                        <i class="bi bi-trash3-fill me-1"></i>Đã xoá
+                                                    </span>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <c:set var="statusClass" value="${not empty u.status ? fn:toLowerCase(fn:replace(u.status, ' ', '-')) : 'inactive'}" />
+                                                    <span class="badge-status badge-status-${statusClass}">
+                                                        <c:choose>
+                                                            <c:when test="${u.status eq 'Active'}"><i class="bi bi-check-circle-fill me-1"></i>Hoạt động</c:when>
+                                                            <c:when test="${u.status eq 'Locked'}"><i class="bi bi-lock-fill me-1"></i>Đã khoá</c:when>
+                                                            <c:when test="${u.status eq 'Inactive'}"><i class="bi bi-slash-circle me-1"></i>Ngừng</c:when>
+                                                            <c:when test="${u.status eq 'Pending Verification'}"><i class="bi bi-hourglass-split me-1"></i>Chờ Xác Thực</c:when>
+                                                            <c:otherwise>${u.status}</c:otherwise>
+                                                        </c:choose>
+                                                    </span>
+                                                </c:otherwise>
+                                            </c:choose>
                                         </td>
                                         <td style="font-size:0.8rem;color:var(--c-muted);">
                                             <c:choose>
                                                 <c:when test="${not empty u.createdAt}">
-                                                    <fmt:formatDate value="${u.createdAt}" pattern="dd/MM/yyyy" />
+                                                    <fmt:formatDate value="${u.createdAt}" pattern="dd/MM/yyyy"/>
                                                 </c:when>
                                                 <c:otherwise>—</c:otherwise>
                                             </c:choose>
                                         </td>
                                         <td>
-                                            <div class="d-flex gap-1">
-                                                <%-- Edit button --%>
-                                                <button class="btn btn-sm btn-outline-secondary btn-action btn-edit-user"
-                                                        data-id="${u.id}"
-                                                        data-fullname="${fn:escapeXml(u.fullName)}"
-                                                        data-email="${fn:escapeXml(u.email)}"
-                                                        data-username="${fn:escapeXml(u.username)}"
-                                                        data-phone="${fn:escapeXml(u.phone)}"
-                                                        data-roleid="${u.roleId}"
-                                                        data-status="${fn:escapeXml(u.status)}"
-                                                        data-authprovider="${fn:escapeXml(u.authProvider)}"
-                                                        title="Sửa">
+                                            <div class="btn-action-group">
+                                                <%-- Edit --%>
+                                                <button class="btn btn-sm btn-outline-secondary btn-action"
+                                                        onclick="openEditModal('${u.id}','${fn:escapeXml(u.fullName)}','${fn:escapeXml(u.email)}','${fn:escapeXml(u.phone)}','${u.roleId}','${fn:escapeXml(u.status)}')"
+                                                        title="Chỉnh sửa" data-bs-toggle="tooltip">
                                                     <i class="bi bi-pencil-square"></i>
                                                 </button>
-                                                <%-- Toggle status --%>
+                                                <%-- Reset Password --%>
+                                                <button class="btn btn-sm btn-outline-info btn-action"
+                                                        onclick="openResetPwdModal('${u.id}','${fn:escapeXml(u.fullName)}')"
+                                                        title="Đặt lại mật khẩu" data-bs-toggle="tooltip">
+                                                    <i class="bi bi-key-fill"></i>
+                                                </button>
+                                                <%-- Toggle Lock/Unlock --%>
                                                 <c:choose>
-                                                    <c:when test="${u.status eq 'Active'}">
+                                                    <c:when test="${u.status eq 'Locked'}">
                                                         <form method="post" action="${pageContext.request.contextPath}/admin/users/" style="display:inline;">
                                                             <input type="hidden" name="action" value="toggleStatus">
                                                             <input type="hidden" name="userId" value="${u.id}">
-                                                            <input type="hidden" name="newStatus" value="Locked">
-                                                            <button type="submit" class="btn btn-sm btn-outline-warning btn-action"
-                                                                    title="Khóa" onclick="return confirm('Khóa người dùng #${u.id}?')">
-                                                                <i class="bi bi-lock-fill"></i>
+                                                            <input type="hidden" name="newStatus" value="Active">
+                                                            <c:if test="${not empty roleGroup}"><input type="hidden" name="roleGroup" value="${roleGroup}"></c:if>
+                                                            <c:if test="${not empty roleFilter}"><input type="hidden" name="role" value="${roleFilter}"></c:if>
+                                                            <c:if test="${not empty statusFilter}"><input type="hidden" name="status" value="${statusFilter}"></c:if>
+                                                            <c:if test="${not empty search}"><input type="hidden" name="search" value="${fn:escapeXml(search)}"></c:if>
+                                                            <button type="submit" class="btn btn-sm btn-outline-success btn-action"
+                                                                    title="Mở khoá" onclick="return confirm('Mở khoá tài khoản của ${fn:escapeXml(u.fullName)}?')">
+                                                                <i class="bi bi-unlock-fill"></i>
                                                             </button>
                                                         </form>
                                                     </c:when>
@@ -323,23 +563,19 @@
                                                         <form method="post" action="${pageContext.request.contextPath}/admin/users/" style="display:inline;">
                                                             <input type="hidden" name="action" value="toggleStatus">
                                                             <input type="hidden" name="userId" value="${u.id}">
-                                                            <input type="hidden" name="newStatus" value="Active">
-                                                            <button type="submit" class="btn btn-sm btn-outline-success btn-action"
-                                                                    title="Mở khóa" onclick="return confirm('Kích hoạt người dùng #${u.id}?')">
-                                                                <i class="bi bi-unlock-fill"></i>
+                                                            <input type="hidden" name="newStatus" value="Locked">
+                                                            <c:if test="${not empty roleGroup}"><input type="hidden" name="roleGroup" value="${roleGroup}"></c:if>
+                                                            <c:if test="${not empty roleFilter}"><input type="hidden" name="role" value="${roleFilter}"></c:if>
+                                                            <c:if test="${not empty statusFilter}"><input type="hidden" name="status" value="${statusFilter}"></c:if>
+                                                            <c:if test="${not empty search}"><input type="hidden" name="search" value="${fn:escapeXml(search)}"></c:if>
+                                                            <button type="submit" class="btn btn-sm btn-outline-warning btn-action"
+                                                                    title="Khoá tài khoản" onclick="return confirm('Khoá tài khoản của ${fn:escapeXml(u.fullName)}?\nNgười này sẽ không thể đăng nhập vào hệ thống.')">
+                                                                <i class="bi bi-lock-fill"></i>
                                                             </button>
                                                         </form>
                                                     </c:otherwise>
                                                 </c:choose>
-                                                <%-- Delete --%>
-                                                <form method="post" action="${pageContext.request.contextPath}/admin/users/" style="display:inline;">
-                                                    <input type="hidden" name="action" value="delete">
-                                                    <input type="hidden" name="userId" value="${u.id}">
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger btn-action"
-                                                            title="Xóa" onclick="return confirm('Vô hiệu hóa người dùng #${u.id} — ${fn:escapeXml(u.fullName)}?\nTài khoản sẽ bị khóa và không thể đăng nhập. Dữ liệu liên quan vẫn được giữ nguyên.')">
-                                                        <i class="bi bi-trash3-fill"></i>
-                                                    </button>
-                                                </form>
+                                                <%-- Soft Delete + Restore + Hard Delete: đã ẩn --%>
                                             </div>
                                         </td>
                                     </tr>
@@ -347,11 +583,11 @@
                             </c:when>
                             <c:otherwise>
                                 <tr>
-                                    <td colspan="9" class="p-0">
+                                    <td colspan="8" class="p-0">
                                         <div class="admin-empty-state">
                                             <i class="bi bi-inbox"></i>
                                             <h6>Không tìm thấy người dùng</h6>
-                                            <p>Chưa có dữ liệu hoặc không khớp với bộ lọc.</p>
+                                            <p style="font-size:0.85rem;">Chưa có dữ liệu hoặc không khớp với bộ lọc. Nhấn "Thêm Người Dùng" để tạo mới.</p>
                                         </div>
                                     </td>
                                 </tr>
@@ -363,17 +599,20 @@
         </div>
     </div>
 
-    <%-- Pagination --%>
+    <%-- ── PAGINATION ── --%>
     <c:if test="${totalPages > 1}">
         <div class="admin-pagination">
             <c:url var="baseUrl" value="/admin/users/">
+                <c:if test="${not empty roleGroup}"><c:param name="roleGroup" value="${roleGroup}"/></c:if>
                 <c:param name="search" value="${search}"/>
                 <c:param name="role" value="${roleFilter}"/>
                 <c:param name="status" value="${statusFilter}"/>
             </c:url>
 
             <c:if test="${currentPage > 1}">
-                <a href="${baseUrl}&page=${currentPage - 1}"><i class="bi bi-chevron-left"></i></a>
+                <a href="${baseUrl}&page=${currentPage - 1}" aria-label="Trang trước">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
             </c:if>
 
             <c:forEach begin="1" end="${totalPages}" var="p">
@@ -388,7 +627,9 @@
             </c:forEach>
 
             <c:if test="${currentPage < totalPages}">
-                <a href="${baseUrl}&page=${currentPage + 1}"><i class="bi bi-chevron-right"></i></a>
+                <a href="${baseUrl}&page=${currentPage + 1}" aria-label="Trang sau">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
             </c:if>
         </div>
     </c:if>
@@ -399,18 +640,19 @@
      MODAL: THÊM NGƯỜI DÙNG
      ============================================================ --%>
 <div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content" style="border-radius:var(--r-lg);border:1px solid var(--c-outline-variant);">
-            <div class="modal-header" style="background:var(--pink-50);border-bottom:1px solid var(--pink-200);">
-                <h5 class="modal-title" style="font-family:var(--font-display);font-weight:800;color:var(--c-primary-dark);">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addUserModalLabel">
                     <i class="bi bi-person-plus-fill me-2"></i>Thêm Người Dùng Mới
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="post" action="${pageContext.request.contextPath}/admin/users/" novalidate>
+            <form method="post" action="${pageContext.request.contextPath}/admin/users/" autocomplete="off" novalidate>
                 <input type="hidden" name="action" value="create">
+                <c:if test="${not empty roleGroup}"><input type="hidden" name="roleGroup" value="${roleGroup}"></c:if>
                 <div class="modal-body">
-                    <%-- Error summary cho lỗi chung (DB, hệ thống) --%>
+                    <%-- Error summary --%>
                     <c:if test="${not empty errors['general']}">
                         <div class="alert alert-danger py-2 mb-3 d-flex align-items-center gap-2">
                             <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
@@ -419,50 +661,55 @@
                     </c:if>
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Họ tên <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-person-fill me-1" style="color:var(--pink-500);"></i>Họ tên <span class="text-danger">*</span>
+                            </label>
                             <input type="text" name="fullName" class="form-control ${not empty errors['fullName'] ? 'is-invalid' : ''}"
-                                   required maxlength="100" value="${fn:escapeXml(formFullName)}">
+                                   required maxlength="100" placeholder="VD: Nguyễn Văn A" value="${fn:escapeXml(formFullName)}">
                             <c:if test="${not empty errors['fullName']}">
                                 <div class="invalid-feedback">${errors['fullName']}</div>
                             </c:if>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Email <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-envelope-fill me-1" style="color:var(--pink-500);"></i>Email <span class="text-danger">*</span>
+                            </label>
                             <input type="email" name="email" class="form-control ${not empty errors['email'] ? 'is-invalid' : ''}"
-                                   required maxlength="100" value="${fn:escapeXml(formEmail)}">
+                                   required maxlength="100" placeholder="VD: nvana@clinic.vn" value="${fn:escapeXml(formEmail)}">
                             <c:if test="${not empty errors['email']}">
                                 <div class="invalid-feedback">${errors['email']}</div>
                             </c:if>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Tên đăng nhập <span class="text-danger">*</span></label>
-                            <input type="text" name="username" class="form-control ${not empty errors['username'] ? 'is-invalid' : ''}"
-                                   required minlength="4" maxlength="50" pattern="[a-zA-Z0-9_]+"
-                                   placeholder="Ít nhất 4 ký tự, chỉ chữ/số/_"
-                                   title="Tên đăng nhập phải có ít nhất 4 ký tự, chỉ được chứa chữ cái (a-z), số (0-9) và dấu gạch dưới (_)"
-                                   value="${fn:escapeXml(formUsername)}">
-                            <c:if test="${not empty errors['username']}">
-                                <div class="invalid-feedback">${errors['username']}</div>
-                            </c:if>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Mật khẩu <span class="text-danger">*</span></label>
-                            <input type="password" name="password" class="form-control ${not empty errors['password'] ? 'is-invalid' : ''}"
-                                   required minlength="6" placeholder="Ít nhất 6 ký tự">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-lock-fill me-1" style="color:var(--pink-500);"></i>Mật khẩu <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-shield-lock-fill"></i></span>
+                                <input type="password" name="password" class="form-control ${not empty errors['password'] ? 'is-invalid' : ''}"
+                                       required minlength="6" placeholder="Ít nhất 6 ký tự" id="addPassword">
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('addPassword', this)" tabindex="-1">
+                                    <i class="bi bi-eye-fill"></i>
+                                </button>
+                            </div>
                             <c:if test="${not empty errors['password']}">
                                 <div class="invalid-feedback">${errors['password']}</div>
                             </c:if>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Số điện thoại</label>
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-telephone-fill me-1" style="color:var(--pink-500);"></i>Số điện thoại
+                            </label>
                             <input type="text" name="phone" class="form-control ${not empty errors['phone'] ? 'is-invalid' : ''}"
                                    maxlength="20" placeholder="VD: 0912345678" value="${fn:escapeXml(formPhone)}">
                             <c:if test="${not empty errors['phone']}">
                                 <div class="invalid-feedback">${errors['phone']}</div>
                             </c:if>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Vai trò</label>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-briefcase-fill me-1" style="color:var(--pink-500);"></i>Vai trò
+                            </label>
                             <select name="roleId" class="form-select ${not empty errors['roleId'] ? 'is-invalid' : ''}">
                                 <c:forEach var="entry" items="${roleMap}">
                                     <option value="${entry.key}" ${not empty formRoleId ? (entry.key == formRoleId ? 'selected' : '') : (entry.key == 5 ? 'selected' : '')}>${entry.value}</option>
@@ -472,18 +719,22 @@
                                 <div class="invalid-feedback">${errors['roleId']}</div>
                             </c:if>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Trạng thái</label>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-toggle-on me-1" style="color:var(--pink-500);"></i>Trạng thái
+                            </label>
                             <select name="status" class="form-select">
-                                <option value="Active" ${formStatus eq 'Active' ? 'selected' : ''}>Active</option>
-                                <option value="Inactive" ${formStatus eq 'Inactive' ? 'selected' : ''}>Inactive</option>
-                                <option value="Locked" ${formStatus eq 'Locked' ? 'selected' : ''}>Locked</option>
+                                <option value="Active" ${formStatus eq 'Active' ? 'selected' : ''}>Hoạt động</option>
+                                <option value="Inactive" ${formStatus eq 'Inactive' ? 'selected' : ''}>Ngừng hoạt động</option>
+                                <option value="Locked" ${formStatus eq 'Locked' ? 'selected' : ''}>Đã khoá</option>
                             </select>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer" style="border-top:1px solid var(--c-outline-variant);">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Huỷ
+                    </button>
                     <button type="submit" class="btn btn-primary-pink">
                         <i class="bi bi-check-lg me-1"></i>Tạo Người Dùng
                     </button>
@@ -497,19 +748,19 @@
      MODAL: SỬA NGƯỜI DÙNG
      ============================================================ --%>
 <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content" style="border-radius:var(--r-lg);border:1px solid var(--c-outline-variant);">
-            <div class="modal-header" style="background:var(--pink-50);border-bottom:1px solid var(--pink-200);">
-                <h5 class="modal-title" style="font-family:var(--font-display);font-weight:800;color:var(--c-primary-dark);">
-                    <i class="bi bi-pencil-square me-2"></i>Sửa Người Dùng
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editUserModalLabel">
+                    <i class="bi bi-pencil-square me-2"></i>Chỉnh Sửa Người Dùng
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form method="post" action="${pageContext.request.contextPath}/admin/users/" novalidate>
                 <input type="hidden" name="action" value="edit">
                 <input type="hidden" name="userId" id="editUserId" value="${editUserId}">
+                <c:if test="${not empty roleGroup}"><input type="hidden" name="roleGroup" value="${roleGroup}"></c:if>
                 <div class="modal-body">
-                    <%-- Error summary cho lỗi chung --%>
                     <c:if test="${not empty editErrors['general']}">
                         <div class="alert alert-danger py-2 mb-3 d-flex align-items-center gap-2">
                             <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
@@ -517,64 +768,131 @@
                         </div>
                     </c:if>
                     <div class="row g-3">
+                        <%-- Họ tên: readonly (không được sửa) --%>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Họ tên <span class="text-danger">*</span></label>
-                            <input type="text" name="fullName" id="editFullName" class="form-control ${not empty editErrors['fullName'] ? 'is-invalid' : ''}"
-                                   required maxlength="100" value="${fn:escapeXml(formEditFullName)}">
-                            <c:if test="${not empty editErrors['fullName']}">
-                                <div class="invalid-feedback">${editErrors['fullName']}</div>
-                            </c:if>
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-lock-fill me-1" style="font-size:0.65rem;color:var(--c-muted);"></i>Họ tên
+                            </label>
+                            <input type="text" id="editFullName" class="form-control"
+                                   readonly tabindex="-1"
+                                   value="${fn:escapeXml(formEditFullName)}"
+                                   style="background:#f5f5f5;color:#666;cursor:not-allowed;">
                         </div>
+                        <%-- Email — readonly, nhưng vẫn submit để server validate (cần name attribute) --%>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Email <span class="text-danger">*</span></label>
-                            <input type="email" name="email" id="editEmail" class="form-control ${not empty editErrors['email'] ? 'is-invalid' : ''}"
-                                   required maxlength="100" value="${fn:escapeXml(formEditEmail)}">
-                            <small id="editEmailGoogleNote" class="form-text text-warning d-none" style="font-size:0.72rem;">
-                                <i class="bi bi-google"></i> Tài khoản Google — thay đổi email có thể ảnh hưởng đến đăng nhập Google.
-                            </small>
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-lock-fill me-1" style="font-size:0.65rem;color:var(--c-muted);"></i>Email
+                            </label>
+                            <input type="text" name="email" id="editEmail"
+                                   class="form-control ${not empty editErrors['email'] ? 'is-invalid' : ''}"
+                                   readonly tabindex="-1"
+                                   value="${fn:escapeXml(formEditEmail)}"
+                                   style="background:#f5f5f5;color:#666;cursor:not-allowed;">
                             <c:if test="${not empty editErrors['email']}">
                                 <div class="invalid-feedback">${editErrors['email']}</div>
                             </c:if>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Tên đăng nhập <span class="text-danger">*</span></label>
-                            <input type="text" name="username" id="editUsername" class="form-control ${not empty editErrors['username'] ? 'is-invalid' : ''}"
-                                   required minlength="4" maxlength="50" pattern="[a-zA-Z0-9_]+"
-                                   placeholder="Ít nhất 4 ký tự, chỉ chữ/số/_"
-                                   title="Tên đăng nhập phải có ít nhất 4 ký tự, chỉ được chứa chữ cái (a-z), số (0-9) và dấu gạch dưới (_)"
-                                   value="${fn:escapeXml(formEditUsername)}">
-                            <c:if test="${not empty editErrors['username']}">
-                                <div class="invalid-feedback">${editErrors['username']}</div>
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-lock-fill me-1" style="font-size:0.65rem;color:var(--c-muted);"></i>Số điện thoại
+                            </label>
+                            <input type="text" name="phone" id="editPhone"
+                                   class="form-control ${not empty editErrors['phone'] ? 'is-invalid' : ''}"
+                                   readonly tabindex="-1"
+                                   value="${fn:escapeXml(formEditPhone)}"
+                                   style="background:#f5f5f5;color:#666;cursor:not-allowed;">
+                            <c:if test="${not empty editErrors['phone']}">
+                                <div class="invalid-feedback">${editErrors['phone']}</div>
                             </c:if>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Số điện thoại</label>
-                            <input type="text" name="phone" id="editPhone" class="form-control"
-                                   maxlength="20" placeholder="VD: 0912345678"
-                                   value="${fn:escapeXml(formEditPhone)}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Vai trò</label>
-                            <select name="roleId" id="editRoleId" class="form-select">
+                        <%-- Phân quyền: cho phép chỉnh sửa --%>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-unlock-fill me-1" style="font-size:0.65rem;color:var(--pink-500);"></i>Vai trò
+                            </label>
+                            <select name="roleId" id="editRoleId" class="form-select ${not empty editErrors['roleId'] ? 'is-invalid' : ''}">
                                 <c:forEach var="entry" items="${roleMap}">
                                     <option value="${entry.key}" ${not empty formEditRoleId ? (entry.key == formEditRoleId ? 'selected' : '') : ''}>${entry.value}</option>
                                 </c:forEach>
                             </select>
+                            <c:if test="${not empty editErrors['roleId']}">
+                                <div class="invalid-feedback">${editErrors['roleId']}</div>
+                            </c:if>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Trạng thái</label>
-                            <select name="status" id="editStatus" class="form-select">
-                                <option value="Active" ${formEditStatus eq 'Active' ? 'selected' : ''}>Active</option>
-                                <option value="Inactive" ${formEditStatus eq 'Inactive' ? 'selected' : ''}>Inactive</option>
-                                <option value="Locked" ${formEditStatus eq 'Locked' ? 'selected' : ''}>Locked</option>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-unlock-fill me-1" style="font-size:0.65rem;color:var(--pink-500);"></i>Trạng thái
+                            </label>
+                            <select name="status" id="editStatus" class="form-select ${not empty editErrors['status'] ? 'is-invalid' : ''}">
+                                <option value="Active" ${formEditStatus eq 'Active' ? 'selected' : ''}>Hoạt động</option>
+                                <option value="Inactive" ${formEditStatus eq 'Inactive' ? 'selected' : ''}>Ngừng hoạt động</option>
+                                <option value="Locked" ${formEditStatus eq 'Locked' ? 'selected' : ''}>Đã khoá</option>
                             </select>
+                            <c:if test="${not empty editErrors['status']}">
+                                <div class="invalid-feedback">${editErrors['status']}</div>
+                            </c:if>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer" style="border-top:1px solid var(--c-outline-variant);">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Huỷ
+                    </button>
                     <button type="submit" class="btn btn-primary-pink">
                         <i class="bi bi-check-lg me-1"></i>Lưu Thay Đổi
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<%-- ============================================================
+     MODAL: ĐẶT LẠI MẬT KHẨU
+     ============================================================ --%>
+<div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-labelledby="resetPwdModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="resetPwdModalLabel">
+                    <i class="bi bi-key-fill me-2"></i>Đặt Lại Mật Khẩu
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="${pageContext.request.contextPath}/admin/users/">
+                <input type="hidden" name="action" value="resetPassword">
+                <input type="hidden" name="userId" id="resetPwdUserId">
+                <c:if test="${not empty roleGroup}"><input type="hidden" name="roleGroup" value="${roleGroup}"></c:if>
+                <c:if test="${not empty roleFilter}"><input type="hidden" name="role" value="${roleFilter}"></c:if>
+                <c:if test="${not empty statusFilter}"><input type="hidden" name="status" value="${statusFilter}"></c:if>
+                <c:if test="${not empty search}"><input type="hidden" name="search" value="${fn:escapeXml(search)}"></c:if>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Người dùng</label>
+                        <input type="text" id="resetPwdName" class="form-control" readonly
+                               style="background:var(--pink-50);font-weight:600;">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold">Mật khẩu mới <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-shield-lock-fill"></i></span>
+                            <input type="password" name="newPassword" class="form-control" required minlength="6"
+                                   placeholder="Ít nhất 6 ký tự" id="newPasswordField">
+                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('newPasswordField', this)" tabindex="-1">
+                                <i class="bi bi-eye-fill"></i>
+                            </button>
+                        </div>
+                        <small class="text-muted" style="font-size:0.72rem;">
+                            <i class="bi bi-info-circle me-1"></i>Mật khẩu phải có ít nhất 6 ký tự.
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Huỷ
+                    </button>
+                    <button type="submit" class="btn btn-primary-pink" onclick="return confirm('Xác nhận đặt lại mật khẩu cho người dùng này?')">
+                        <i class="bi bi-check-lg me-1"></i>Đặt Lại Mật Khẩu
                     </button>
                 </div>
             </form>
@@ -588,12 +906,12 @@
         crossorigin="anonymous"></script>
 
 <script>
-<%-- Sidebar toggle --%>
+// ── Sidebar toggle ──
 var toggleBtn = document.getElementById('sidebarToggle');
 if (toggleBtn) toggleBtn.addEventListener('click', toggleSidebar);
 document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeSidebar(); });
 
-<%-- Active sidebar link --%>
+// ── Active sidebar link ──
 (function() {
     var links = document.querySelectorAll('.admin-sidebar-menu li a');
     for (var i = 0; i < links.length; i++) {
@@ -604,59 +922,60 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
     }
 })();
 
-<%-- Edit modal: dùng data-* attributes thay vì inline onclick để tránh lỗi escape ký tự đặc biệt --%>
-document.querySelectorAll('.btn-edit-user').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-        var ds = this.dataset;
-        document.getElementById('editUserId').value     = ds.id;
-        document.getElementById('editFullName').value   = ds.fullname;
-        document.getElementById('editEmail').value      = ds.email || '';
-        // Nếu username rỗng, tự động tạo từ email (phần trước dấu @)
-        var username = ds.username || '';
-        if (!username && ds.email) {
-            username = ds.email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
-        }
-        document.getElementById('editUsername').value   = username;
-        document.getElementById('editPhone').value      = ds.phone || '';
-        document.getElementById('editRoleId').value     = ds.roleid;
-        document.getElementById('editStatus').value     = ds.status;
+// ── Edit modal helper ──
+function openEditModal(id, fullName, email, phone, roleId, status) {
+    document.getElementById('editUserId').value = id;
+    document.getElementById('editFullName').value = fullName || '';
+    document.getElementById('editEmail').value = email || '';
+    document.getElementById('editPhone').value = phone || '';
+    document.getElementById('editRoleId').value = roleId;
+    document.getElementById('editStatus').value = status;
 
-        // Hiển thị/ẩn cảnh báo Google nếu user đăng nhập qua Google
-        var googleNote = document.getElementById('editEmailGoogleNote');
-        var emailInput = document.getElementById('editEmail');
-        if (ds.authprovider === 'google') {
-            if (googleNote) googleNote.classList.remove('d-none');
-            emailInput.setAttribute('title', 'Tài khoản Google — chỉ đổi email khi thực sự cần thiết');
-        } else {
-            if (googleNote) googleNote.classList.add('d-none');
-            emailInput.removeAttribute('title');
-        }
+    new bootstrap.Modal(document.getElementById('editUserModal')).show();
+}
 
-        new bootstrap.Modal(document.getElementById('editUserModal')).show();
+// ── Reset password modal helper ──
+function openResetPwdModal(id, fullName) {
+    document.getElementById('resetPwdUserId').value = id;
+    document.getElementById('resetPwdName').value = fullName;
+    // Reset password field
+    var pwdField = document.getElementById('newPasswordField');
+    if (pwdField) {
+        pwdField.value = '';
+        pwdField.type = 'password';
+    }
+    new bootstrap.Modal(document.getElementById('resetPasswordModal')).show();
+}
+
+// ── Toggle password visibility ──
+function togglePassword(fieldId, btn) {
+    var field = document.getElementById(fieldId);
+    var icon = btn.querySelector('i');
+    if (field.type === 'password') {
+        field.type = 'text';
+        icon.className = 'bi bi-eye-slash-fill';
+    } else {
+        field.type = 'password';
+        icon.className = 'bi bi-eye-fill';
+    }
+}
+
+// ── Initialize tooltips ──
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (el) {
+        return new bootstrap.Tooltip(el);
     });
+
+    // Auto-open add modal nếu validation fail
+    <c:if test="${showAddModal}">
+        new bootstrap.Modal(document.getElementById('addUserModal')).show();
+    </c:if>
+    // Auto-open edit modal nếu validation fail
+    <c:if test="${showEditModal}">
+        new bootstrap.Modal(document.getElementById('editUserModal')).show();
+    </c:if>
 });
-
-<%-- Auto-show add user modal khi có lỗi validation (form submit thất bại) --%>
-<c:if test="${showAddModal}">
-(function() {
-    var addModalEl = document.getElementById('addUserModal');
-    if (addModalEl) {
-        var addModal = new bootstrap.Modal(addModalEl);
-        addModal.show();
-    }
-})();
-</c:if>
-
-<%-- Auto-show edit user modal khi có lỗi validation --%>
-<c:if test="${showEditModal}">
-(function() {
-    var editModalEl = document.getElementById('editUserModal');
-    if (editModalEl) {
-        var editModal = new bootstrap.Modal(editModalEl);
-        editModal.show();
-    }
-})();
-</c:if>
 </script>
 </body>
 </html>

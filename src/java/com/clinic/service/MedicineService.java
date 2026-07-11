@@ -6,6 +6,7 @@ import com.clinic.dao.MedicinePriceHistoryDAO;
 import com.clinic.model.Medicine;
 import com.clinic.model.MedicineCategory;
 import com.clinic.model.MedicinePriceHistory;
+import com.clinic.utils.AuditUtil;
 
 import java.math.BigDecimal;
 import java.util.Collections;
@@ -50,7 +51,7 @@ public class MedicineService {
 
     @Deprecated
     public int getTotalMedicines(String search, Boolean activeFilter) {
-        return getTotalMedicines(search, activeFilter, null);
+        return getTotalMedicines(search, activeFilter, (Integer) null);
     }
 
     /** Tổng số thuốc (có filter category) */
@@ -59,6 +60,20 @@ public class MedicineService {
             return medicineDAO.countAllWithFilter(search, activeFilter, categoryId);
         } catch (Exception e) {
             System.err.println("[MedicineService] getTotalMedicines ERROR: " + e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Tổng số thuốc tồn tại đến ngày maxDate.
+     * Dùng cho dashboard khi lọc theo khoảng ngày.
+     * @param maxDate null → đếm tất cả (không lọc ngày)
+     */
+    public int getTotalMedicines(String search, Boolean activeFilter, java.time.LocalDate maxDate) {
+        try {
+            return medicineDAO.countAllOnOrBefore(search, activeFilter, maxDate);
+        } catch (Exception e) {
+            System.err.println("[MedicineService] getTotalMedicines (date) ERROR: " + e.getMessage());
             return 0;
         }
     }
@@ -126,6 +141,9 @@ public class MedicineService {
         try {
             int newId = medicineDAO.insert(med);
             priceHistoryDAO.insert(newId, null, price, "Khởi tạo thuốc mới", createdBy);
+            // Ghi audit log
+            AuditUtil.log(createdBy, "Tạo mới thuốc: " + name.trim(),
+                    "medicines", null, "id=" + newId + ", price=" + priceStr, null);
             return true;
         } catch (Exception e) {
             errors.put("general", "Lỗi khi tạo thuốc: " + e.getMessage());
@@ -202,6 +220,12 @@ public class MedicineService {
                     : "Cập nhật giá thuốc";
             priceHistoryDAO.insert(id, oldPrice, price, reason, changedBy);
         }
+        if (updated) {
+            // Ghi audit log
+            AuditUtil.log(changedBy, "Cập nhật thuốc: " + name.trim(),
+                    "medicines", "price=" + (oldPrice != null ? oldPrice.toString() : "—"),
+                    "price=" + priceStr + ", active=" + isActive, null);
+        }
         return updated;
     }
 
@@ -216,14 +240,29 @@ public class MedicineService {
     }
 
     /** Toggle trạng thái hoạt động */
-    public boolean toggleMedicineStatus(int id) {
+    public boolean toggleMedicineStatus(int id, Integer changedBy) {
         Medicine med = medicineDAO.findById(id);
         if (med == null) return false;
+        boolean result;
+        String action;
         if (med.isActive()) {
-            return medicineDAO.deactivate(id);
+            result = medicineDAO.deactivate(id);
+            action = "Vô hiệu hóa thuốc: " + med.getName();
         } else {
-            return medicineDAO.activate(id);
+            result = medicineDAO.activate(id);
+            action = "Kích hoạt thuốc: " + med.getName();
         }
+        if (result) {
+            AuditUtil.log(changedBy, action, "medicines",
+                    "active=" + med.isActive(), "active=" + !med.isActive(), null);
+        }
+        return result;
+    }
+
+    /** @deprecated dùng toggleMedicineStatus(id, changedBy) để có audit log */
+    @Deprecated
+    public boolean toggleMedicineStatus(int id) {
+        return toggleMedicineStatus(id, null);
     }
 
     /** Lấy tất cả thuốc đang hoạt động (dùng cho dropdown) */

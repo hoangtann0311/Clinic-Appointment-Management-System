@@ -19,60 +19,60 @@ GO
 -- Kiểm tra và chỉ INSERT nếu chưa tồn tại
 IF NOT EXISTS (SELECT 1 FROM users WHERE username = 'doctor.huong')
 BEGIN
-    INSERT INTO users (full_name, email, password_hash, phone, role_id, status, is_verified, auth_provider, username, is_deleted, updated_at)
+    INSERT INTO users (full_name, email, password_hash, phone, role_id, status, is_verified, auth_provider, username, is_deleted, created_at, updated_at)
     VALUES (N'Nguyễn Thị Mai Hương',
             0x02000000D0C1F2E3A4B5C6D7E8F9A0B1C2D3E4F5,
             N'$2a$12$Uk17F3P.WgUbMx7CqFF3Geh4gULlaNY3ODghLQ72vdwpBmhBTH3uS',
             0x02000000A1B2C3D4E5F60718293A4B5C6D7E8F90,
-            2, N'Active', 1, N'local', N'doctor.huong', 0, GETDATE());
+            2, N'Active', 1, N'local', N'doctor.huong', 0, GETDATE(), GETDATE());
     PRINT '>>> Đã tạo user: doctor.huong (BS. Nguyễn Thị Mai Hương)';
 END
 ELSE PRINT '>>> User doctor.huong đã tồn tại, bỏ qua...';
 
 IF NOT EXISTS (SELECT 1 FROM users WHERE username = 'doctor.hoang')
 BEGIN
-    INSERT INTO users (full_name, email, password_hash, phone, role_id, status, is_verified, auth_provider, username, is_deleted, updated_at)
+    INSERT INTO users (full_name, email, password_hash, phone, role_id, status, is_verified, auth_provider, username, is_deleted, created_at, updated_at)
     VALUES (N'Trần Văn Hoàng',
             0x02000000D0C1F2E3A4B5C6D7E8F9A0B1C2D3E4F6,
             N'$2a$12$Uk17F3P.WgUbMx7CqFF3Geh4gULlaNY3ODghLQ72vdwpBmhBTH3uS',
             0x02000000B2C3D4E5F60718293A4B5C6D7E8F9001,
-            2, N'Active', 1, N'local', N'doctor.hoang', 0, GETDATE());
+            2, N'Active', 1, N'local', N'doctor.hoang', 0, GETDATE(), GETDATE());
     PRINT '>>> Đã tạo user: doctor.hoang (BS. Trần Văn Hoàng)';
 END
 ELSE PRINT '>>> User doctor.hoang đã tồn tại, bỏ qua...';
 
 IF NOT EXISTS (SELECT 1 FROM users WHERE username = 'doctor.tam')
 BEGIN
-    INSERT INTO users (full_name, email, password_hash, phone, role_id, status, is_verified, auth_provider, username, is_deleted, updated_at)
+    INSERT INTO users (full_name, email, password_hash, phone, role_id, status, is_verified, auth_provider, username, is_deleted, created_at, updated_at)
     VALUES (N'Lê Thị Thanh Tâm',
             0x02000000D0C1F2E3A4B5C6D7E8F9A0B1C2D3E4F7,
             N'$2a$12$Uk17F3P.WgUbMx7CqFF3Geh4gULlaNY3ODghLQ72vdwpBmhBTH3uS',
             0x02000000C3D4E5F60718293A4B5C6D7E8F900102,
-            2, N'Active', 1, N'local', N'doctor.tam', 0, GETDATE());
+            2, N'Active', 1, N'local', N'doctor.tam', 0, GETDATE(), GETDATE());
     PRINT '>>> Đã tạo user: doctor.tam (BS. Lê Thị Thanh Tâm)';
 END
 ELSE PRINT '>>> User doctor.tam đã tồn tại, bỏ qua...';
 
 IF NOT EXISTS (SELECT 1 FROM users WHERE username = 'doctor.tuan')
 BEGIN
-    INSERT INTO users (full_name, email, password_hash, phone, role_id, status, is_verified, auth_provider, username, is_deleted, updated_at)
+    INSERT INTO users (full_name, email, password_hash, phone, role_id, status, is_verified, auth_provider, username, is_deleted, created_at, updated_at)
     VALUES (N'Phạm Minh Tuấn',
             0x02000000D0C1F2E3A4B5C6D7E8F9A0B1C2D3E4F8,
             N'$2a$12$Uk17F3P.WgUbMx7CqFF3Geh4gULlaNY3ODghLQ72vdwpBmhBTH3uS',
             0x02000000D4E5F60718293A4B5C6D7E8F90010203,
-            2, N'Active', 1, N'local', N'doctor.tuan', 0, GETDATE());
+            2, N'Active', 1, N'local', N'doctor.tuan', 0, GETDATE(), GETDATE());
     PRINT '>>> Đã tạo user: doctor.tuan (BS. Phạm Minh Tuấn)';
 END
 ELSE PRINT '>>> User doctor.tuan đã tồn tại, bỏ qua...';
 
 IF NOT EXISTS (SELECT 1 FROM users WHERE username = 'doctor.anhh')
 BEGIN
-    INSERT INTO users (full_name, email, password_hash, phone, role_id, status, is_verified, auth_provider, username, is_deleted, updated_at)
+    INSERT INTO users (full_name, email, password_hash, phone, role_id, status, is_verified, auth_provider, username, is_deleted, created_at, updated_at)
     VALUES (N'Võ Thị Kim Anh',
             0x02000000D0C1F2E3A4B5C6D7E8F9A0B1C2D3E4F9,
             N'$2a$12$Uk17F3P.WgUbMx7CqFF3Geh4gULlaNY3ODghLQ72vdwpBmhBTH3uS',
             0x02000000E5F60718293A4B5C6D7E8F9001020304,
-            2, N'Active', 1, N'local', N'doctor.anhh', 0, GETDATE());
+            2, N'Active', 1, N'local', N'doctor.anhh', 0, GETDATE(), GETDATE());
     PRINT '>>> Đã tạo user: doctor.anhh (BS. Võ Thị Kim Anh)';
 END
 ELSE PRINT '>>> User doctor.anhh đã tồn tại, bỏ qua...';

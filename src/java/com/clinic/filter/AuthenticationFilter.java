@@ -115,6 +115,11 @@ public class AuthenticationFilter implements Filter {
         Map.entry("/manager/services", "service.view"),
         Map.entry("/manager/medicines/", "medicine.view"),
         Map.entry("/manager/medicines", "medicine.view"),
+        // Manager — duyệt lịch trực & quản lý khung giờ khám
+        Map.entry("/manager/schedules/", "schedule.view"),
+        Map.entry("/manager/schedules", "schedule.view"),
+        Map.entry("/manager/time-slots/", "schedule.view"),
+        Map.entry("/manager/time-slots", "schedule.view"),
         // Manager — thống kê dịch vụ
         Map.entry("/manager/statistics/", "service.view"),
         Map.entry("/manager/statistics", "service.view")

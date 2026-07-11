@@ -2,6 +2,11 @@ package com.clinic.controller;
 
 import com.clinic.model.User;
 import com.clinic.service.AuthService;
+<<<<<<< HEAD:src/java/com/clinic/controller/LoginServlet.java
+=======
+import com.clinic.service.RoleService;
+import com.clinic.utils.AuditUtil;
+>>>>>>> origin/hieupt:src/java/controller/LoginServlet.java
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -57,6 +62,10 @@ public class LoginServlet extends HttpServlet {
             request.setAttribute("emailValue", email);
             request.setAttribute("errors", errors);
 
+            // Ghi log đăng nhập thất bại
+            AuditUtil.log(null, "Đăng nhập thất bại: " + (email != null ? email : "không rõ"),
+                    "users", null, null, request.getRemoteAddr());
+
             // Lấy thông báo lỗi tổng quát hoặc lỗi theo trường
             String loginError = errors.get("login");
             if (loginError != null) {
@@ -75,9 +84,26 @@ public class LoginServlet extends HttpServlet {
         // Lưu thêm roleId để tiện kiểm tra nhanh
         session.setAttribute("roleId", user.getRoleId());
 
+<<<<<<< HEAD:src/java/com/clinic/controller/LoginServlet.java
         // Ghi log đăng nhập (sẽ implement AuditUtil sau)
         System.out.println(">>> User logged in: " + user.getEmail()
                 + " (roleId=" + user.getRoleId() + ", id=" + user.getId() + ")");
+=======
+        // Nạp danh sách quyền (permission keys) vào session để Authorization Filter sử dụng
+        try {
+            RoleService roleService = new RoleService();
+            Set<String> userPermissions = roleService.getPermissionKeysByUserId(user.getId());
+            session.setAttribute("userPermissions", userPermissions);
+            System.out.println(">>> Loaded " + userPermissions.size() + " permissions for user " + user.getEmail());
+        } catch (Exception e) {
+            System.err.println(">>> Failed to load permissions for user " + user.getEmail() + ": " + e.getMessage());
+            session.setAttribute("userPermissions", java.util.Collections.emptySet());
+        }
+
+        // Ghi log đăng nhập thành công
+        AuditUtil.log(request, "Đăng nhập thành công", "users",
+                null, "roleId=" + user.getRoleId());
+>>>>>>> origin/hieupt:src/java/controller/LoginServlet.java
 
         // Chuyển hướng đến dashboard theo role
         String dashboardPath = getDashboardPath(user.getRoleId());

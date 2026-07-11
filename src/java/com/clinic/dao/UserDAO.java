@@ -82,7 +82,7 @@ public class UserDAO {
     public User findByUsername(String username) {
         String sql = "SELECT id, full_name, " + DECRYPT_EMAIL + ", username, password_hash, "
                    + DECRYPT_PHONE + ", role_id, status, "
-                   + "verification_token, is_verified, google_id, auth_provider, is_deleted "
+                   + "verification_token, is_verified, google_id, auth_provider, is_deleted, created_at "
                    + "FROM users WHERE username = ? AND is_deleted = 0";
 
         Connection conn = null;
@@ -115,8 +115,8 @@ public class UserDAO {
     public User findByEmail(String email) {
         String sql = "SELECT id, full_name, " + DECRYPT_EMAIL + ", username, password_hash, "
                    + DECRYPT_PHONE + ", role_id, status, "
-                   + "verification_token, is_verified, google_id, auth_provider, is_deleted "
-                   + "FROM users WHERE " + WHERE_EMAIL_EQUAL;
+                   + "verification_token, is_verified, google_id, auth_provider, is_deleted, created_at "
+                   + "FROM users WHERE " + WHERE_EMAIL_EQUAL + " AND is_deleted = 0";
 
         Connection conn = null;
         PreparedStatement ps = null;
@@ -147,8 +147,9 @@ public class UserDAO {
      */
     public int insert(User user) {
         String sql = "INSERT INTO users (full_name, email, username, password_hash, phone, role_id, status, "
-                   + "verification_token, is_verified, google_id, auth_provider) "
-                   + "VALUES (?, " + ENCRYPT_EMAIL_PARAM + ", ?, ?, " + ENCRYPT_PHONE_PARAM + ", ?, ?, ?, ?, ?, ?)";
+                   + "verification_token, is_verified, google_id, auth_provider, is_deleted, created_at) "
+                   + "VALUES (?, " + ENCRYPT_EMAIL_PARAM + ", ?, ?, " + ENCRYPT_PHONE_PARAM
+                   + ", ?, ?, ?, ?, ?, ?, 0, GETDATE())";
 
         Connection conn = null;
         PreparedStatement ps = null;
@@ -210,13 +211,7 @@ public class UserDAO {
         } catch (SQLException e) {
             user.setUsername(null);
         }
-        // Đọc created_at (có thể null nếu migration chưa chạy)
-        try {
-            user.setCreatedAt(rs.getTimestamp("created_at"));
-        } catch (SQLException e) {
-            // Cột created_at chưa tồn tại — bỏ qua
-            user.setCreatedAt(null);
-        }
+        user.setCreatedAt(rs.getTimestamp("created_at"));
         return user;
     }
 
@@ -228,7 +223,7 @@ public class UserDAO {
     public User findByVerificationToken(String token) {
         String sql = "SELECT id, full_name, username, " + DECRYPT_EMAIL + ", password_hash, "
                    + DECRYPT_PHONE + ", role_id, status, "
-                   + "verification_token, is_verified, google_id, auth_provider "
+                   + "verification_token, is_verified, google_id, auth_provider, is_deleted, created_at "
                    + "FROM users WHERE verification_token = ? AND is_deleted = 0";
 
         Connection conn = null;
@@ -289,7 +284,7 @@ public class UserDAO {
     public User findByPhone(String phone) {
         String sql = "SELECT id, full_name, username, " + DECRYPT_EMAIL + ", password_hash, "
                    + DECRYPT_PHONE + ", role_id, status, "
-                   + "verification_token, is_verified, google_id, auth_provider "
+                   + "verification_token, is_verified, google_id, auth_provider, is_deleted, created_at "
                    + "FROM users WHERE " + WHERE_PHONE_EQUAL + " AND is_deleted = 0";
 
         Connection conn = null;
@@ -322,7 +317,7 @@ public class UserDAO {
     public User findById(int userId) {
         String sql = "SELECT id, full_name, username, " + DECRYPT_EMAIL + ", password_hash, "
                    + DECRYPT_PHONE + ", role_id, status, "
-                   + "verification_token, is_verified, google_id, auth_provider "
+                   + "verification_token, is_verified, google_id, auth_provider, is_deleted, created_at "
                    + "FROM users WHERE id = ? AND is_deleted = 0";
 
         Connection conn = null;
@@ -383,7 +378,7 @@ public class UserDAO {
     public User findByGoogleId(String googleId) {
         String sql = "SELECT id, full_name, username, " + DECRYPT_EMAIL + ", password_hash, "
                    + DECRYPT_PHONE + ", role_id, status, "
-                   + "verification_token, is_verified, google_id, auth_provider "
+                   + "verification_token, is_verified, google_id, auth_provider, is_deleted, created_at "
                    + "FROM users WHERE google_id = ? AND is_deleted = 0";
 
         Connection conn = null;
@@ -446,25 +441,42 @@ public class UserDAO {
      * JOIN roles để lấy role_name.
      * Tự động fallback nếu cột migration (created_at, is_verified, auth_provider) chưa tồn tại.
      */
+    /**
+     * @param roleIds danh sách role_id cần lọc (NULL = tất cả role, rỗng = không lọc)
+     */
     public java.util.List<User> findAll(int offset, int pageSize,
-                                         String search, Integer roleFilter, String statusFilter) {
-        // Thử query đầy đủ trước, nếu lỗi cột thì fallback
-        try {
-            return findAllInternal(offset, pageSize, search, roleFilter, statusFilter, true);
-        } catch (SQLException e) {
-            String msg = e.getMessage() != null ? e.getMessage() : "";
-            if (msg.contains("Invalid column name") || msg.contains("invalid column") ||
-                msg.contains("tên cột không hợp lệ") || msg.contains("colonne non valide")) {
-                System.err.println("[UserDAO] Falling back to base columns query: " + msg);
-                try {
-                    return findAllInternal(offset, pageSize, search, roleFilter, statusFilter, false);
-                } catch (SQLException e2) {
-                    System.err.println("[UserDAO] findAll fallback also failed: " + e2.getMessage());
-                    throw new RuntimeException("Lỗi database khi lấy danh sách users", e2);
+                                         String search, java.util.List<Integer> roleIds, String statusFilter,
+                                         boolean includeDeleted) {
+        // Lần đầu: thử fullColumns=true (gồm created_at, is_verified, auth_provider).
+        // Nếu cột chưa được migration → cache false và dùng base columns từ các lần sau.
+        // Nếu thành công → cache true.
+        if (hasCreatedAtColumn == null) {
+            try {
+                java.util.List<User> result = findAllInternal(offset, pageSize, search,
+                        roleIds, statusFilter, true, includeDeleted);
+                hasCreatedAtColumn = true;
+                return result;
+            } catch (SQLException e) {
+                String msg = e.getMessage() != null ? e.getMessage() : "";
+                if (msg.contains("Invalid column name") || msg.contains("invalid column")
+                    || msg.contains("tên cột không hợp lệ") || msg.contains("colonne non valide")) {
+                    System.err.println("[UserDAO] Cột created_at/is_verified/auth_provider"
+                            + " chưa tồn tại — cache fallback.");
+                    hasCreatedAtColumn = false;
+                } else {
+                    System.err.println("[UserDAO] findAll error: " + e.getMessage());
+                    throw new RuntimeException("Lỗi database khi lấy danh sách users", e);
                 }
             }
-            System.err.println("[UserDAO] findAll error: " + e.getMessage());
-            throw new RuntimeException("Lỗi database khi lấy danh sách users", e);
+        }
+
+        // Dùng trạng thái đã cache
+        boolean fullCol = (hasCreatedAtColumn != null && hasCreatedAtColumn);
+        try {
+            return findAllInternal(offset, pageSize, search, roleIds, statusFilter, fullCol, includeDeleted);
+        } catch (SQLException e2) {
+            System.err.println("[UserDAO] findAll error: " + e2.getMessage());
+            throw new RuntimeException("Lỗi database khi lấy danh sách users", e2);
         }
     }
 
@@ -472,8 +484,9 @@ public class UserDAO {
      * Internal: thực thi query với hoặc không có cột migration.
      */
     private java.util.List<User> findAllInternal(int offset, int pageSize,
-                                                  String search, Integer roleFilter,
-                                                  String statusFilter, boolean fullColumns)
+                                                  String search, java.util.List<Integer> roleIds,
+                                                  String statusFilter, boolean fullColumns,
+                                                  boolean includeDeleted)
             throws SQLException {
         // Chọn cột: fullColumns=true dùng đủ cột, false dùng cột cơ bản (luôn tồn tại)
         String columns;
@@ -486,19 +499,32 @@ public class UserDAO {
                     + DECRYPT_PHONE_U + ", u.role_id, u.status, "
                     + "r.role_name";
         }
+        // Luôn select is_deleted để JSP biết user nào đã bị xoá mềm
+        columns += ", u.is_deleted";
+
+        // WHERE clause: mặc định chỉ hiện user chưa xoá (is_deleted=0),
+        // khi includeDeleted=true → chỉ hiện user đã xoá (is_deleted=1)
+        String whereClause = includeDeleted ? "u.is_deleted = 1" : "u.is_deleted = 0";
+
         StringBuilder sql = new StringBuilder("SELECT ").append(columns)
-            .append(" FROM users u LEFT JOIN roles r ON u.role_id = r.id WHERE u.is_deleted = 0 ");
+            .append(" FROM users u LEFT JOIN roles r ON u.role_id = r.id WHERE ")
+            .append(whereClause).append(" ");
 
         if (search != null && !search.trim().isEmpty()) {
             sql.append("AND (u.full_name LIKE ? OR " + WHERE_U_EMAIL_LIKE + " OR " + WHERE_U_PHONE_LIKE + ") ");
         }
-        if (roleFilter != null && roleFilter > 0) {
-            sql.append("AND u.role_id = ? ");
+        if (roleIds != null && !roleIds.isEmpty()) {
+            sql.append("AND u.role_id IN (");
+            for (int i = 0; i < roleIds.size(); i++) {
+                if (i > 0) sql.append(", ");
+                sql.append("?");
+            }
+            sql.append(") ");
         }
         if (statusFilter != null && !statusFilter.trim().isEmpty()) {
             sql.append("AND u.status = ? ");
         }
-        sql.append("ORDER BY u.id DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
+        sql.append("ORDER BY u.id ASC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
 
         java.util.List<User> users = new java.util.ArrayList<>();
         Connection conn = null;
@@ -514,8 +540,10 @@ public class UserDAO {
                 ps.setString(idx++, like);
                 ps.setString(idx++, like);
             }
-            if (roleFilter != null && roleFilter > 0) {
-                ps.setInt(idx++, roleFilter);
+            if (roleIds != null && !roleIds.isEmpty()) {
+                for (Integer roleId : roleIds) {
+                    ps.setInt(idx++, roleId);
+                }
             }
             if (statusFilter != null && !statusFilter.trim().isEmpty()) {
                 ps.setString(idx++, statusFilter.trim());
@@ -535,14 +563,21 @@ public class UserDAO {
     /**
      * Đếm tổng số user (có filter) — dùng cho phân trang.
      */
-    public int countAll(String search, Integer roleFilter, String statusFilter) {
-        StringBuilder sql = new StringBuilder("SELECT COUNT(*) AS total FROM users WHERE is_deleted = 0 ");
+    public int countAll(String search, java.util.List<Integer> roleIds, String statusFilter, boolean includeDeleted) {
+        // Mặc định đếm user chưa xoá, includeDeleted=true → đếm user đã xoá
+        String whereClause = includeDeleted ? "is_deleted = 1" : "is_deleted = 0";
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) AS total FROM users WHERE " + whereClause + " ");
 
         if (search != null && !search.trim().isEmpty()) {
             sql.append("AND (full_name LIKE ? OR " + WHERE_EMAIL_LIKE + " OR " + WHERE_PHONE_LIKE + ") ");
         }
-        if (roleFilter != null && roleFilter > 0) {
-            sql.append("AND role_id = ? ");
+        if (roleIds != null && !roleIds.isEmpty()) {
+            sql.append("AND role_id IN (");
+            for (int i = 0; i < roleIds.size(); i++) {
+                if (i > 0) sql.append(", ");
+                sql.append("?");
+            }
+            sql.append(") ");
         }
         if (statusFilter != null && !statusFilter.trim().isEmpty()) {
             sql.append("AND status = ? ");
@@ -561,8 +596,10 @@ public class UserDAO {
                 ps.setString(idx++, like);
                 ps.setString(idx++, like);
             }
-            if (roleFilter != null && roleFilter > 0) {
-                ps.setInt(idx++, roleFilter);
+            if (roleIds != null && !roleIds.isEmpty()) {
+                for (Integer roleId : roleIds) {
+                    ps.setInt(idx++, roleId);
+                }
             }
             if (statusFilter != null && !statusFilter.trim().isEmpty()) {
                 ps.setString(idx++, statusFilter.trim());
@@ -592,6 +629,59 @@ public class UserDAO {
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("Lỗi updateStatus: " + e.getMessage());
+            return false;
+        } finally {
+            closeResources(conn, ps, null);
+        }
+    }
+
+    /**
+     * Cập nhật role, status, email, phone của user (admin edit — phân quyền + thông tin liên hệ).
+     * fullName không được phép sửa từ admin panel.
+     * Dùng trong luồng chỉnh sửa người dùng từ admin/users/.
+     */
+    public boolean updateRoleStatusAndContact(int userId, int roleId, String status,
+                                               String email, String phone) {
+        String sql = "UPDATE users SET role_id = ?, status = ?, email = " + ENCRYPT_EMAIL_PARAM
+                   + ", phone = " + ENCRYPT_PHONE_PARAM
+                   + ", updated_at = GETDATE() WHERE id = ?";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setInt(1, roleId);
+            ps.setString(2, status);
+            ps.setString(3, email);
+            ps.setString(4, phone);
+            ps.setInt(5, userId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            String msg = e.getMessage() != null ? e.getMessage() : "";
+            if (msg.contains("Invalid column name") || msg.contains("invalid column")
+                || msg.contains("tên cột không hợp lệ") || msg.contains("colonne non valide")) {
+                System.err.println("[UserDAO] updateRoleStatusAndContact falling back (no updated_at column)");
+                String fallbackSql = "UPDATE users SET role_id = ?, status = ?, email = " + ENCRYPT_EMAIL_PARAM
+                                   + ", phone = " + ENCRYPT_PHONE_PARAM
+                                   + " WHERE id = ?";
+                try {
+                    Connection conn2 = DatabaseConfig.getConnection();
+                    PreparedStatement ps2 = conn2.prepareStatement(fallbackSql);
+                    ps2.setInt(1, roleId);
+                    ps2.setString(2, status);
+                    ps2.setString(3, email);
+                    ps2.setString(4, phone);
+                    ps2.setInt(5, userId);
+                    boolean result = ps2.executeUpdate() > 0;
+                    ps2.close();
+                    conn2.close();
+                    return result;
+                } catch (SQLException e2) {
+                    System.err.println("[UserDAO] updateRoleStatusAndContact fallback also failed: " + e2.getMessage());
+                    return false;
+                }
+            }
+            System.err.println("Lỗi updateRoleStatusAndContact: " + e.getMessage());
             return false;
         } finally {
             closeResources(conn, ps, null);
@@ -647,6 +737,45 @@ public class UserDAO {
     }
 
     private boolean softDeleteInternal(int userId, String sql) throws SQLException {
+        Connection conn = null;
+        PreparedStatement ps = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setInt(1, userId);
+            return ps.executeUpdate() > 0;
+        } finally {
+            closeResources(conn, ps, null);
+        }
+    }
+
+    /**
+     * Khôi phục user đã bị soft delete: đặt is_deleted = 0, status = 'Active'.
+     * Tự động fallback nếu cột updated_at chưa được migration.
+     */
+    public boolean restore(int userId) {
+        String sql = "UPDATE users SET is_deleted = 0, status = 'Active', updated_at = GETDATE() WHERE id = ?";
+        try {
+            return restoreInternal(userId, sql);
+        } catch (SQLException e) {
+            String msg = e.getMessage() != null ? e.getMessage() : "";
+            if (msg.contains("Invalid column name") || msg.contains("invalid column")
+                || msg.contains("tên cột không hợp lệ") || msg.contains("colonne non valide")) {
+                System.err.println("[UserDAO] restore falling back (no updated_at column): " + msg);
+                try {
+                    String fallbackSql = "UPDATE users SET is_deleted = 0, status = 'Active' WHERE id = ?";
+                    return restoreInternal(userId, fallbackSql);
+                } catch (SQLException e2) {
+                    System.err.println("[UserDAO] restore fallback also failed: " + e2.getMessage());
+                    return false;
+                }
+            }
+            System.err.println("Lỗi restore user: " + e.getMessage());
+            return false;
+        }
+    }
+
+    private boolean restoreInternal(int userId, String sql) throws SQLException {
         Connection conn = null;
         PreparedStatement ps = null;
         try {
@@ -741,11 +870,12 @@ public class UserDAO {
         u.setRoleId(rs.getInt("role_id"));
         u.setStatus(rs.getString("status"));
         if (fullColumns) {
-            try { u.setCreatedAt(rs.getTimestamp("created_at")); } catch (SQLException e) { u.setCreatedAt(null); }
+            u.setCreatedAt(rs.getTimestamp("created_at"));
             try { u.setVerified(rs.getBoolean("is_verified")); } catch (SQLException e) { u.setVerified(false); }
             try { u.setAuthProvider(rs.getString("auth_provider")); } catch (SQLException e) { u.setAuthProvider("local"); }
         }
         try { u.setRoleName(rs.getString("role_name")); } catch (SQLException e) { u.setRoleName("Unknown"); }
+        try { u.setDeleted(rs.getBoolean("is_deleted")); } catch (SQLException e) { u.setDeleted(false); }
         return u;
     }
 

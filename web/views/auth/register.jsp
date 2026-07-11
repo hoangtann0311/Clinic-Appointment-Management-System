@@ -725,7 +725,7 @@
 // ============================================================
 
 var VALIDATION = {
-    EMAIL_REGEX: /^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/,
+    EMAIL_REGEX: /^[-A-Za-z0-9+_.]+@[-A-Za-z0-9.]+\.[A-Za-z]{2,}$/,
     // SĐT Việt Nam: bắt đầu 03|05|07|08|09, chính xác 10 chữ số
     PHONE_REGEX: /^(0[3|5|7|8|9])[0-9]{8}$/,
     MIN_PASSWORD_LENGTH: 6,

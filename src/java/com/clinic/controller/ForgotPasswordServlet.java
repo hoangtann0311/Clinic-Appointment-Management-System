@@ -1,6 +1,7 @@
 package com.clinic.controller;
 
 import com.clinic.service.PasswordService;
+import com.clinic.utils.AuditUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -56,6 +57,9 @@ public class ForgotPasswordServlet extends HttpServlet {
         boolean success = passwordService.forgotPassword(email);
 
         if (success) {
+            // Ghi audit log
+            AuditUtil.log(null, "Yêu cầu đặt lại mật khẩu: " + email, "users",
+                    null, null, request.getRemoteAddr());
             // Luôn hiển thị thành công để không lộ thông tin
             request.getSession().setAttribute("successMessage",
                     "Nếu email của bạn đã được đăng ký trong hệ thống, "

@@ -181,6 +181,12 @@
             border: 1px solid #fecaca;
         }
 
+        .login-alert-warning {
+            background: #fffbeb;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+
         /* ========== Floating Label Input ========== */
         .floating-group {
             position: relative;
@@ -540,6 +546,13 @@
                 <div>${sessionScope.errorMessage}</div>
             </div>
             <c:remove var="errorMessage" scope="session" />
+        </c:if>
+        <c:if test="${not empty sessionScope.sessionExpiredMessage}">
+            <div class="login-alert login-alert-warning" role="alert">
+                <i class="bi bi-clock-history"></i>
+                <div>${sessionScope.sessionExpiredMessage}</div>
+            </div>
+            <c:remove var="sessionExpiredMessage" scope="session" />
         </c:if>
 
         <%-- ========== Login Form ========== --%>

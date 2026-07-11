@@ -41,7 +41,7 @@ public class ServiceService {
 
     @Deprecated
     public int getTotalServices(String search, Boolean activeFilter) {
-        return getTotalServices(search, activeFilter, null);
+        return getTotalServices(search, activeFilter, (Integer) null);
     }
 
     /** Lấy danh sách dịch vụ có phân trang + filter + thống kê */
@@ -64,6 +64,20 @@ public class ServiceService {
             return serviceDAO.countAllWithFilter(search, activeFilter, categoryId);
         } catch (Exception e) {
             System.err.println("[ServiceService] getTotalServices ERROR: " + e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Tổng số dịch vụ tồn tại đến ngày maxDate.
+     * Dùng cho dashboard khi lọc theo khoảng ngày.
+     * @param maxDate null → đếm tất cả (không lọc ngày)
+     */
+    public int getTotalServices(String search, Boolean activeFilter, java.time.LocalDate maxDate) {
+        try {
+            return serviceDAO.countAllOnOrBefore(search, activeFilter, maxDate);
+        } catch (Exception e) {
+            System.err.println("[ServiceService] getTotalServices (date) ERROR: " + e.getMessage());
             return 0;
         }
     }

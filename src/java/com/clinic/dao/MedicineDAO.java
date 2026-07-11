@@ -456,6 +456,56 @@ public class MedicineDAO {
     }
 
     /**
+     * Đếm số thuốc tồn tại đến ngày maxDate (created_at <= maxDate).
+     * Dùng cho dashboard khi lọc theo khoảng ngày: nếu manager chọn khoảng cũ,
+     * chỉ đếm những thuốc đã được tạo trước hoặc trong khoảng đó.
+     *
+     * @param search      từ khoá tìm kiếm (có thể null)
+     * @param activeFilter lọc theo trạng thái active (có thể null)
+     * @param maxDate     ngày giới hạn (có thể null → đếm tất cả)
+     */
+    public int countAllOnOrBefore(String search, Boolean activeFilter, java.time.LocalDate maxDate) {
+        if (maxDate == null) {
+            return countAllWithFilter(search, activeFilter, null);
+        }
+
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) AS total FROM medicines WHERE 1=1 ");
+
+        if (search != null && !search.trim().isEmpty()) {
+            sql.append("AND (name LIKE ? OR medicine_code LIKE ?) ");
+        }
+        if (activeFilter != null) {
+            sql.append("AND is_active = ? ");
+        }
+        sql.append("AND created_at <= ? ");
+
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql.toString());
+            int idx = 1;
+            if (search != null && !search.trim().isEmpty()) {
+                String like = "%" + search.trim() + "%";
+                ps.setString(idx++, like);
+                ps.setString(idx++, like);
+            }
+            if (activeFilter != null) {
+                ps.setBoolean(idx++, activeFilter);
+            }
+            ps.setTimestamp(idx++, java.sql.Timestamp.valueOf(maxDate.atTime(23, 59, 59)));
+            rs = ps.executeQuery();
+            if (rs.next()) return rs.getInt("total");
+        } catch (SQLException e) {
+            System.err.println("[MedicineDAO] countAllOnOrBefore ERROR: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return 0;
+    }
+
+    /**
      * Cập nhật số lượng tồn kho (khi nhập/xuất thuốc).
      */
     public boolean updateStock(int id, int newQuantity) {

@@ -236,6 +236,10 @@
                                     </td>
                                     <td>
                                         <div class="d-flex gap-1">
+                                            <a href="${pageContext.request.contextPath}/manager/medicines/?action=detail&id=${med.id}"
+                                               class="action-btn" title="Xem chi tiết">
+                                                <i class="bi bi-eye-fill"></i>
+                                            </a>
                                             <button class="action-btn" onclick="openEditModal('${med.id}','${fn:escapeXml(med.medicineCode)}','${fn:escapeXml(med.name)}','${fn:escapeXml(med.description)}','${fn:escapeXml(med.dosage)}','${fn:escapeXml(med.unit)}','${med.price}','${med.stockQuantity}','${med.active}','${med.categoryId}')" title="Sửa">
                                                 <i class="bi bi-pencil-square"></i>
                                             </button>
