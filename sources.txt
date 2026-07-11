@@ -25,6 +25,7 @@ C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\ManagerPricingServlet.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\ManagerScheduleServlet.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\ManagerServiceServlet.java
+C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\ManagerStatisticsServlet.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\MedicalRecordServlet.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\PatientMedicalRecordServlet.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\PrescriptionServlet.java
@@ -55,6 +56,7 @@ C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\dao\RoleDA
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\dao\RolePermissionDAO.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\dao\ServiceCategoryDAO.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\dao\ServiceDAO.java
+C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\dao\ServiceStatisticsDAO.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\dao\UltrasoundOrderDAO.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\dao\UserDAO.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\filter\AuthenticationFilter.java
@@ -90,6 +92,7 @@ C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\service\Me
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\service\PasswordService.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\service\RoleService.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\service\ServiceService.java
+C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\service\ServiceStatisticsService.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\service\StaffReceptionService.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\service\UltrasoundOrderService.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\service\UserService.java

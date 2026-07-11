@@ -1,4 +1,4 @@
-package controller;
+package com.clinic.controller;
 
 import com.clinic.dao.ServiceStatisticsDAO.CategoryRevenueStat;
 import com.clinic.dao.ServiceStatisticsDAO.ServiceStatDetail;

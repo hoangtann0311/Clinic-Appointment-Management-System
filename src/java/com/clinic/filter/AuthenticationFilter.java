@@ -155,27 +155,53 @@ public class AuthenticationFilter implements Filter {
         User user = (User) session.getAttribute("user");
         int roleId = user.getRoleId();
 
+        // ── Lớp 1: Kiểm tra tiền tố đường dẫn theo vai trò (Role-based prefix protection) ──
+        if (path.startsWith("/admin/reception")) {
+            if (roleId != 1 && roleId != 4) {
+                denyAccess(httpRequest, httpResponse, "Bạn không có quyền truy cập khu vực Tiếp đón (Staff).");
+                return;
+            }
+        } else if (path.startsWith("/admin/")) {
+            if (roleId != 1) {
+                denyAccess(httpRequest, httpResponse, "Chỉ Quản trị viên mới có quyền truy cập khu vực này.");
+                return;
+            }
+        } else if (path.startsWith("/doctor/")) {
+            if (roleId != 1 && roleId != 2) {
+                denyAccess(httpRequest, httpResponse, "Chỉ Bác sĩ mới có quyền truy cập khu vực này.");
+                return;
+            }
+        } else if (path.startsWith("/manager/")) {
+            if (roleId != 1 && roleId != 3) {
+                denyAccess(httpRequest, httpResponse, "Chỉ Quản lý mới có quyền truy cập khu vực này.");
+                return;
+            }
+        } else if (path.startsWith("/staff/")) {
+            if (roleId != 1 && roleId != 4) {
+                denyAccess(httpRequest, httpResponse, "Chỉ Nhân viên mới có quyền truy cập khu vực này.");
+                return;
+            }
+        } else if (path.startsWith("/sonographer/")) {
+            if (roleId != 1 && roleId != 6) {
+                denyAccess(httpRequest, httpResponse, "Chỉ Kỹ thuật viên siêu âm mới có quyền truy cập khu vực này.");
+                return;
+            }
+        } else if (path.startsWith("/patient/")) {
+            if (roleId != 1 && roleId != 5) {
+                denyAccess(httpRequest, httpResponse, "Chỉ Bệnh nhân mới có quyền truy cập khu vực này.");
+                return;
+            }
+        }
+
         // Admin (roleId=1) được truy cập tất cả
         if (roleId == 1) {
             chain.doFilter(request, response);
             return;
         }
 
-        // Kiểm tra role có quyền truy cập path này không
-        String allowedPrefix = ROLE_PREFIXES.get(roleId);
-        if (allowedPrefix != null && path.startsWith(allowedPrefix)) {
-            chain.doFilter(request, response);
-            return;
-        }
-
-        // Path /home dành cho Patient (roleId=5)
-        if (roleId == 5 && (path.equals("/home") || path.startsWith("/patient/"))) {
-            chain.doFilter(request, response);
-            return;
-        }
-
         // ── Lớp 2: Kiểm tra quyền chi tiết (permission keys) ──
         // Lấy permission keys từ session (đã nạp khi login)
+        @SuppressWarnings("unchecked")
         Set<String> userPermissions = (Set<String>) session.getAttribute("userPermissions");
         if (userPermissions != null && !userPermissions.isEmpty()) {
             // Kiểm tra path có yêu cầu permission cụ thể không
@@ -186,26 +212,13 @@ public class AuthenticationFilter implements Filter {
                     return;
                 }
                 // Không có quyền: trả về 403
-                httpResponse.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                request.setAttribute("errorTitle", "Không Có Quyền Truy Cập");
-                request.setAttribute("errorDetail",
-                        "Bạn không có quyền \"" + requiredPermission + "\" cần thiết để truy cập trang này. "
-                        + "Vui lòng liên hệ quản trị viên.");
-                request.getRequestDispatcher("/views/errors/403.jsp").forward(request, response);
+                denyAccess(httpRequest, httpResponse, "Bạn không có quyền \"" + requiredPermission + "\" cần thiết để truy cập trang này.");
                 return;
             }
-            // Path không yêu cầu permission cụ thể → cho phép truy cập
-            chain.doFilter(request, response);
-            return;
         }
 
-        // Không có quyền: trả về 403
-        httpResponse.setStatus(HttpServletResponse.SC_FORBIDDEN);
-        request.setAttribute("errorTitle", "Truy Cập Bị Từ Chối");
-        request.setAttribute("errorDetail",
-                "Bạn không có quyền truy cập vào trang này. "
-                + "Vui lòng liên hệ quản trị viên nếu bạn cần quyền truy cập.");
-        request.getRequestDispatcher("/views/errors/403.jsp").forward(request, response);
+        // Cho phép đi tiếp nếu không bị chặn bởi prefix và không có permission key cụ thể bị thiếu
+        chain.doFilter(request, response);
     }
 
     /**
@@ -250,6 +263,14 @@ public class AuthenticationFilter implements Filter {
             }
         }
         return null;
+    }
+
+    private void denyAccess(HttpServletRequest request, HttpServletResponse response, String detail)
+            throws ServletException, IOException {
+        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+        request.setAttribute("errorTitle", "Truy Cập Bị Từ Chối");
+        request.setAttribute("errorDetail", detail);
+        request.getRequestDispatcher("/views/errors/403.jsp").forward(request, response);
     }
 
     @Override
