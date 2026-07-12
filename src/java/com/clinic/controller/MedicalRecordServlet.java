@@ -10,6 +10,7 @@ import com.clinic.model.MedicalRecord;
 import com.clinic.model.Prescription;
 import com.clinic.model.PrescriptionItem;
 import com.clinic.model.User;
+import com.clinic.utils.NotificationHelper;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -336,8 +337,36 @@ public class MedicalRecordServlet extends HttpServlet {
             return;
         }
 
+        // ── Loại 5: Thông báo dấu hiệu nguy cơ khi lưu final ─────────────────
+        if (!isDraft) {
+            try {
+                boolean hasRisk = Boolean.TRUE.equals(mr.getVaginalBleeding())
+                               || Boolean.TRUE.equals(mr.getUterineContractions())
+                               || (mr.getRiskFlagsJson() != null && !mr.getRiskFlagsJson().isBlank()
+                                   && !mr.getRiskFlagsJson().equals("[]"));
+                if (hasRisk) {
+                    // Lấy tên bệnh nhân từ appointment
+                    String[] apptInfo = NotificationHelper.getApptInfo(apptId);
+                    String patientName = apptInfo != null ? apptInfo[0] : "bệnh nhân";
+
+                    // Gom danh sách dấu hiệu
+                    java.util.List<String> flags = new java.util.ArrayList<>();
+                    if (Boolean.TRUE.equals(mr.getVaginalBleeding()))      flags.add("chảy máu âm đạo");
+                    if (Boolean.TRUE.equals(mr.getUterineContractions()))   flags.add("co thắt tử cung");
+                    if (mr.getRiskFlagsJson() != null
+                            && !mr.getRiskFlagsJson().isBlank()
+                            && !mr.getRiskFlagsJson().equals("[]")) {
+                        flags.add("dấu hiệu khác (xem hồ sơ)");
+                    }
+
+                    NotificationHelper.riskFlagAlert(
+                        user.getId(), finalRecordId, patientName,
+                        String.join(", ", flags));
+                }
+            } catch (Exception ignored) {}
+        }
+
         if (isDraft) {
-            // Chuyển sang trang xét nghiệm để chờ kết quả KTV
             resp.sendRedirect(req.getContextPath() + "/doctor/lab-orders?recordId=" + finalRecordId + "&fromDraft=1");
         } else {
             resp.sendRedirect(req.getContextPath() + "/doctor/medical-records?apptId=" + apptId + "&saved=1");

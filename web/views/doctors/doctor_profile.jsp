@@ -56,34 +56,8 @@
 
 <div class="row g-4">
 
-  <%-- ── Cột trái: thông tin tài khoản (chỉ đọc) ─────────────────────── --%>
-  <div class="col-lg-4">
-    <div class="card border-0 rounded-4 shadow-sm">
-      <div class="card-body p-4">
-        <h6 class="fw-bold mb-3">
-          <i class="bi bi-shield-lock me-1 text-muted"></i>Tài khoản
-        </h6>
-        <div class="mb-3">
-          <label class="form-label small text-muted">Email</label>
-          <p class="fw-medium mb-0">${not empty doctor.email ? doctor.email : '—'}</p>
-        </div>
-        <div class="mb-3">
-          <label class="form-label small text-muted">Mã bác sĩ</label>
-          <p class="fw-medium mb-0">#${doctor.id}</p>
-        </div>
-        <hr>
-        <p class="small text-muted mb-0">
-          <i class="bi bi-info-circle me-1"></i>
-          Email và tên đăng nhập chỉ Admin mới thay đổi được.
-          Để đổi mật khẩu, dùng chức năng
-          <a href="${pageContext.request.contextPath}/change-password">đổi mật khẩu</a>.
-        </p>
-      </div>
-    </div>
-  </div>
-
-  <%-- ── Cột phải: form cập nhật ───────────────────────────────────────── --%>
-  <div class="col-lg-8">
+  <%-- ── Form cập nhật hồ sơ ───────────────────────────────────────────── --%>
+  <div class="col-12">
     <div class="card border-0 rounded-4 shadow-sm">
       <div class="card-body p-4">
         <h6 class="fw-bold mb-4">

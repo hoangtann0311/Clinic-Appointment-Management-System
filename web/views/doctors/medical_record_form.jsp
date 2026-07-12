@@ -818,6 +818,19 @@
                         </a>
                     </div>
                 </div>
+
+                <div class="card rounded-4 border-0 shadow-sm mt-3">
+                    <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="fw-medium">Kết quả cận lâm sàng</span>
+                            <span class="text-muted small ms-2">Xem kết quả xét nghiệm & siêu âm (kèm AI)</span>
+                        </div>
+                        <a href="${pageContext.request.contextPath}/doctor/results?recordId=${record.id}"
+                           class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                            <i class="bi bi-clipboard2-pulse me-1"></i>Xem kết quả
+                        </a>
+                    </div>
+                </div>
             </c:if>
 
       </form>

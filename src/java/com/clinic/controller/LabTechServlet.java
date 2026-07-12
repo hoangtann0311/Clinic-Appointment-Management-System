@@ -4,6 +4,7 @@ import com.clinic.config.DatabaseConfig;
 import com.clinic.dao.TestOrderDAO;
 import com.clinic.model.TestOrder;
 import com.clinic.model.User;
+import com.clinic.utils.NotificationHelper;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -88,6 +89,19 @@ public class LabTechServlet extends HttpServlet {
         }
 
         testOrderDAO.saveResult(orderId, serviceId, labTechId, resultDetails.trim(), imageUrl);
+
+        // Loại 1: Thông báo cho bác sĩ khi có kết quả XN
+        try {
+            TestOrder order = testOrderDAO.getById(orderId);
+            if (order != null) {
+                int doctorUserId = NotificationHelper.getDoctorUserId(order.getDoctorId());
+                if (doctorUserId > 0) {
+                    NotificationHelper.labResultReady(doctorUserId,
+                        order.getServiceName(), order.getMedicalRecordId());
+                }
+            }
+        } catch (Exception ignored) {}
+
         resp.sendRedirect(req.getContextPath() + "/lab/orders?saved=1");
     }
 

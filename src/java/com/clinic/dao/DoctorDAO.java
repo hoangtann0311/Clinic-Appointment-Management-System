@@ -1,6 +1,7 @@
 package com.clinic.dao;
 
 import com.clinic.config.DatabaseConfig;
+
 import com.clinic.model.Doctor;
 
 import java.sql.Connection;
@@ -102,9 +103,8 @@ public class DoctorDAO {
     public Doctor findByUserId(int userId) {
         String sql =
             "SELECT d.id, d.user_id, d.full_name, d.specialization, d.phone_number, " +
-            "       d.degree, d.experience_years, d.bio, d.avatar_url, u.email " +
+            "       d.degree, d.experience_years, d.bio, d.avatar_url " +
             "FROM doctors d " +
-            "JOIN users u ON u.id = d.user_id " +
             "WHERE d.user_id = ?";
 
         try (Connection conn = DatabaseConfig.getConnection();

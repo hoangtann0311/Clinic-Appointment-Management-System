@@ -5,6 +5,7 @@ import com.clinic.model.DoctorSchedule;
 import com.clinic.model.User;
 import com.clinic.model.enums.ScheduleStatus;
 import com.clinic.service.DoctorScheduleService;
+import com.clinic.utils.NotificationHelper;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -134,6 +135,18 @@ public class ManagerScheduleServlet extends HttpServlet {
                         scheduleId, currentUser.getId(), errors);
 
                 if (success) {
+                    // Thông báo cho bác sĩ
+                    try {
+                        DoctorSchedule s = scheduleService.getScheduleById(scheduleId);
+                        if (s != null) {
+                            int docUserId = NotificationHelper.getDoctorUserId(s.getDoctorId());
+                            if (docUserId > 0) NotificationHelper.scheduleApproved(
+                                docUserId,
+                                s.getWorkDate() != null ? s.getWorkDate().toString() : "",
+                                s.getStartTime() != null ? s.getStartTime().toString() : "",
+                                s.getEndTime()   != null ? s.getEndTime().toString()   : "");
+                        }
+                    } catch (Exception ignored) {}
                     resp.sendRedirect(redirectUrl + "?success=approved&id=" + scheduleId);
                 } else {
                     String errorMsg = errors.getOrDefault("general",
@@ -156,6 +169,19 @@ public class ManagerScheduleServlet extends HttpServlet {
                         scheduleId, currentUser.getId(), rejectionReason, errors);
 
                 if (success) {
+                    // Thông báo cho bác sĩ
+                    try {
+                        DoctorSchedule s = scheduleService.getScheduleById(scheduleId);
+                        if (s != null) {
+                            int docUserId = NotificationHelper.getDoctorUserId(s.getDoctorId());
+                            if (docUserId > 0) NotificationHelper.scheduleRejected(
+                                docUserId,
+                                s.getWorkDate() != null ? s.getWorkDate().toString() : "",
+                                s.getStartTime() != null ? s.getStartTime().toString() : "",
+                                s.getEndTime()   != null ? s.getEndTime().toString()   : "",
+                                rejectionReason);
+                        }
+                    } catch (Exception ignored) {}
                     resp.sendRedirect(redirectUrl + "?success=rejected&id=" + scheduleId);
                 } else {
                     // Nếu lỗi validate (thiếu lý do), hiển thị lại trang với modal reject
@@ -198,4 +224,3 @@ public class ManagerScheduleServlet extends HttpServlet {
         }
     }
 }
-

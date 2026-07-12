@@ -1,6 +1,8 @@
 package com.clinic.controller;
 
+import com.clinic.model.Appointment;
 import com.clinic.service.StaffReceptionService;
+import com.clinic.utils.NotificationHelper;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -59,9 +61,22 @@ public class StaffBookingServlet extends HttpServlet {
         boolean isEmergency = "true".equals(isEmergencyParam);
 
         try {
-            staffReceptionService.createManualBooking(
+            Appointment appt = staffReceptionService.createManualBooking(
                     name, phone, dob, doctorId, serviceId, appDate, timeSlot, symptoms, lmp, isEmergency
             );
+
+            // Thông báo cho bác sĩ về lịch hẹn mới
+            try {
+                if (appt != null) {
+                    int docUserId = NotificationHelper.getDoctorUserId(appt.getDoctorId());
+                    if (docUserId > 0) {
+                        String patientName = appt.getPatientName() != null ? appt.getPatientName() : name;
+                        String slot = appt.getTimeSlot() != null ? appt.getTimeSlot() : timeSlot;
+                        NotificationHelper.newAppointment(docUserId, patientName,
+                                appDate, slot != null ? slot : "");
+                    }
+                }
+            } catch (Exception ignored) {}
 
             resp.sendRedirect(req.getContextPath() + "/admin/reception");
 
