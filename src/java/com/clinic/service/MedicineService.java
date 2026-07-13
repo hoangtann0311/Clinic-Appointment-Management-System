@@ -7,6 +7,7 @@ import com.clinic.model.Medicine;
 import com.clinic.model.MedicineCategory;
 import com.clinic.model.MedicinePriceHistory;
 import com.clinic.utils.AuditUtil;
+import com.clinic.utils.ValidationUtil;
 
 import java.math.BigDecimal;
 import java.util.Collections;
@@ -91,59 +92,73 @@ public class MedicineService {
         return createMedicine(medicineCode, name, description, dosage, unit, priceStr, stockQuantityStr, errors, null, null);
     }
 
-    /** Tạo thuốc mới — tự động ghi lịch sử giá ban đầu */
+    /** Tạo thuốc mới — validate toàn diện + tự động ghi lịch sử giá ban đầu */
     public boolean createMedicine(String medicineCode, String name, String description,
                                    String dosage, String unit, String priceStr,
                                    String stockQuantityStr, Map<String, String> errors,
                                    Integer createdBy, String categoryIdStr) {
-        if (medicineCode == null || medicineCode.trim().isEmpty()) {
-            errors.put("medicineCode", "Vui lòng nhập mã thuốc.");
+
+        // ── Validate từng trường bằng ValidationUtil ──
+        String codeError = ValidationUtil.validateMedicineCode(medicineCode);
+        if (codeError != null) { errors.put("medicineCode", codeError); }
+
+        String nameError = ValidationUtil.validateMedicineName(name);
+        if (nameError != null) { errors.put("name", nameError); }
+
+        String priceError = ValidationUtil.validateMedicinePrice(priceStr);
+        if (priceError != null) { errors.put("price", priceError); }
+
+        String stockError = ValidationUtil.validateStockQuantity(stockQuantityStr);
+        if (stockError != null) { errors.put("stockQuantity", stockError); }
+
+        String descError = ValidationUtil.validateMedicineDescription(description);
+        if (descError != null) { errors.put("description", descError); }
+
+        String dosageError = ValidationUtil.validateDosage(dosage);
+        if (dosageError != null) { errors.put("dosage", dosageError); }
+
+        String unitError = ValidationUtil.validateUnit(unit);
+        if (unitError != null) { errors.put("unit", unitError); }
+
+        String catError = ValidationUtil.validateCategoryId(categoryIdStr);
+        if (catError != null) { errors.put("categoryId", catError); }
+
+        // Nếu có bất kỳ lỗi validate nào → dừng ngay, không cần check trùng
+        if (!errors.isEmpty()) {
             return false;
         }
-        if (name == null || name.trim().isEmpty()) {
-            errors.put("name", "Vui lòng nhập tên thuốc.");
-            return false;
-        }
-        BigDecimal price;
-        try {
-            price = new BigDecimal(priceStr);
-            if (price.compareTo(new BigDecimal("1000")) < 0) {
-                errors.put("price", "Giá bán phải lớn hơn hoặc bằng 1.000 VNĐ.");
-                return false;
-            }
-        } catch (NumberFormatException e) {
-            errors.put("price", "Giá bán không hợp lệ.");
-            return false;
-        }
+
+        // ── Check trùng mã thuốc ──
         if (medicineDAO.findByCode(medicineCode.trim()) != null) {
-            errors.put("medicineCode", "Mã thuốc đã tồn tại.");
+            errors.put("medicineCode", "Mã thuốc \"" + medicineCode.trim() + "\" đã tồn tại trong hệ thống.");
             return false;
+        }
+
+        // ── Parse các giá trị đã validated ──
+        BigDecimal price = new BigDecimal(priceStr.trim());
+        int stockQuantity = 0;
+        if (stockQuantityStr != null && !stockQuantityStr.trim().isEmpty()) {
+            stockQuantity = Integer.parseInt(stockQuantityStr.trim());
         }
 
         Medicine med = new Medicine();
         med.setMedicineCode(medicineCode.trim());
         med.setName(name.trim());
-        med.setDescription(description != null ? description.trim() : null);
-        med.setDosage(dosage != null ? dosage.trim() : null);
-        med.setUnit(unit != null ? unit.trim() : null);
+        med.setDescription(description != null && !description.trim().isEmpty() ? description.trim() : null);
+        med.setDosage(dosage != null && !dosage.trim().isEmpty() ? dosage.trim() : null);
+        med.setUnit(unit != null && !unit.trim().isEmpty() ? unit.trim() : null);
         med.setPrice(price);
-        try {
-            med.setStockQuantity(Integer.parseInt(stockQuantityStr));
-        } catch (NumberFormatException e) {
-            med.setStockQuantity(0);
-        }
+        med.setStockQuantity(stockQuantity);
         med.setActive(true);
-        try {
-            med.setCategoryId(categoryIdStr != null && !categoryIdStr.isEmpty()
-                    ? Integer.parseInt(categoryIdStr) : null);
-        } catch (NumberFormatException e) { med.setCategoryId(null); }
+        med.setCategoryId(categoryIdStr != null && !categoryIdStr.trim().isEmpty()
+                ? Integer.parseInt(categoryIdStr.trim()) : null);
 
         try {
             int newId = medicineDAO.insert(med);
             priceHistoryDAO.insert(newId, null, price, "Khởi tạo thuốc mới", createdBy);
             // Ghi audit log
             AuditUtil.log(createdBy, "Tạo mới thuốc: " + name.trim(),
-                    "medicines", null, "id=" + newId + ", price=" + priceStr, null);
+                    "medicines", null, "id=" + newId + ", price=" + priceStr.trim(), null);
             return true;
         } catch (Exception e) {
             errors.put("general", "Lỗi khi tạo thuốc: " + e.getMessage());
@@ -160,7 +175,7 @@ public class MedicineService {
         return updateMedicine(id, medicineCode, name, description, dosage, unit, priceStr, stockQuantityStr, isActive, errors, null, null, null);
     }
 
-    /** Cập nhật thuốc — tự động ghi lịch sử nếu giá thay đổi */
+    /** Cập nhật thuốc — validate toàn diện + tự động ghi lịch sử nếu giá thay đổi */
     public boolean updateMedicine(int id, String medicineCode, String name,
                                    String description, String dosage, String unit,
                                    String priceStr, String stockQuantityStr,
@@ -171,47 +186,60 @@ public class MedicineService {
             errors.put("general", "Thuốc không tồn tại.");
             return false;
         }
-        if (medicineCode == null || medicineCode.trim().isEmpty()) {
-            errors.put("medicineCode", "Vui lòng nhập mã thuốc.");
+
+        // ── Validate từng trường ──
+        String codeError = ValidationUtil.validateMedicineCode(medicineCode);
+        if (codeError != null) { errors.put("medicineCode", codeError); }
+
+        String nameError = ValidationUtil.validateMedicineName(name);
+        if (nameError != null) { errors.put("name", nameError); }
+
+        String priceError = ValidationUtil.validateMedicinePrice(priceStr);
+        if (priceError != null) { errors.put("price", priceError); }
+
+        String stockError = ValidationUtil.validateStockQuantity(stockQuantityStr);
+        if (stockError != null) { errors.put("stockQuantity", stockError); }
+
+        String descError = ValidationUtil.validateMedicineDescription(description);
+        if (descError != null) { errors.put("description", descError); }
+
+        String dosageError = ValidationUtil.validateDosage(dosage);
+        if (dosageError != null) { errors.put("dosage", dosageError); }
+
+        String unitError = ValidationUtil.validateUnit(unit);
+        if (unitError != null) { errors.put("unit", unitError); }
+
+        String catError = ValidationUtil.validateCategoryId(categoryIdStr);
+        if (catError != null) { errors.put("categoryId", catError); }
+
+        if (!errors.isEmpty()) {
             return false;
         }
-        if (name == null || name.trim().isEmpty()) {
-            errors.put("name", "Vui lòng nhập tên thuốc.");
-            return false;
-        }
-        BigDecimal price;
-        try {
-            price = new BigDecimal(priceStr);
-            if (price.compareTo(new BigDecimal("1000")) < 0) {
-                errors.put("price", "Giá bán phải lớn hơn hoặc bằng 1.000 VNĐ.");
-                return false;
-            }
-        } catch (NumberFormatException e) {
-            errors.put("price", "Giá bán không hợp lệ.");
-            return false;
-        }
+
+        // ── Check trùng mã thuốc (ngoại trừ chính nó) ──
         Medicine existing = medicineDAO.findByCode(medicineCode.trim());
         if (existing != null && existing.getId() != id) {
-            errors.put("medicineCode", "Mã thuốc đã được sử dụng bởi thuốc khác.");
+            errors.put("medicineCode", "Mã thuốc \"" + medicineCode.trim() + "\" đã được sử dụng bởi thuốc khác.");
             return false;
         }
 
         BigDecimal oldPrice = med.getPrice();
+        BigDecimal price = new BigDecimal(priceStr.trim());
+        int stockQuantity = 0;
+        if (stockQuantityStr != null && !stockQuantityStr.trim().isEmpty()) {
+            stockQuantity = Integer.parseInt(stockQuantityStr.trim());
+        }
 
         med.setMedicineCode(medicineCode.trim());
         med.setName(name.trim());
-        med.setDescription(description != null ? description.trim() : null);
-        med.setDosage(dosage != null ? dosage.trim() : null);
-        med.setUnit(unit != null ? unit.trim() : null);
+        med.setDescription(description != null && !description.trim().isEmpty() ? description.trim() : null);
+        med.setDosage(dosage != null && !dosage.trim().isEmpty() ? dosage.trim() : null);
+        med.setUnit(unit != null && !unit.trim().isEmpty() ? unit.trim() : null);
         med.setPrice(price);
-        try {
-            med.setStockQuantity(Integer.parseInt(stockQuantityStr));
-        } catch (NumberFormatException e) { }
+        med.setStockQuantity(stockQuantity);
         med.setActive(isActive);
-        try {
-            med.setCategoryId(categoryIdStr != null && !categoryIdStr.isEmpty()
-                    ? Integer.parseInt(categoryIdStr) : null);
-        } catch (NumberFormatException e) { med.setCategoryId(null); }
+        med.setCategoryId(categoryIdStr != null && !categoryIdStr.trim().isEmpty()
+                ? Integer.parseInt(categoryIdStr.trim()) : null);
 
         boolean updated = medicineDAO.update(med);
         if (updated && oldPrice != null && oldPrice.compareTo(price) != 0) {
