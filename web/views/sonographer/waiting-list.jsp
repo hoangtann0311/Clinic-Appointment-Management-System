@@ -180,19 +180,19 @@
                                     </td>
                                     <td>
                                         <c:choose>
-                                            <c:when test="${order.status == 'Pending'}">
+                                            <c:when test="${fn:toLowerCase(order.status) == 'pending'}">
                                                 <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Chờ tiếp nhận</span>
                                             </c:when>
-                                            <c:when test="${order.status == 'InProgress'}">
+                                            <c:when test="${fn:toLowerCase(order.status) == 'inprogress'}">
                                                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Đang siêu âm</span>
                                             </c:when>
-                                            <c:when test="${order.status == 'Uploaded'}">
+                                            <c:when test="${fn:toLowerCase(order.status) == 'uploaded'}">
                                                 <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Đã tải ảnh</span>
                                             </c:when>
-                                            <c:when test="${order.status == 'Analyzing'}">
+                                            <c:when test="${fn:toLowerCase(order.status) == 'analyzing'}">
                                                 <span class="badge bg-info-subtle text-info border border-info-subtle">AI Phân tích</span>
                                             </c:when>
-                                            <c:when test="${order.status == 'Completed'}">
+                                            <c:when test="${fn:toLowerCase(order.status) == 'completed'}">
                                                 <span class="badge bg-success-subtle text-success border border-success-subtle">Hoàn thành</span>
                                             </c:when>
                                             <c:otherwise>
@@ -202,9 +202,9 @@
                                     </td>
                                     <td>
                                         <a href="${pageContext.request.contextPath}/sonographer/detail?orderId=${order.orderId}" 
-                                           class="btn btn-sm ${order.status == 'Pending' ? 'btn-success' : 'btn-outline-primary'} fw-bold">
+                                           class="btn btn-sm ${fn:toLowerCase(order.status) == 'pending' ? 'btn-success' : 'btn-outline-primary'} fw-bold">
                                             <c:choose>
-                                                <c:when test="${order.status == 'Pending'}">
+                                                <c:when test="${fn:toLowerCase(order.status) == 'pending'}">
                                                     <i class="bi bi-play-fill"></i> Tiến hành
                                                 </c:when>
                                                 <c:otherwise>

@@ -297,7 +297,7 @@
             </div>
             <div class="card-body">
                 <!-- 1. PENDING: Button to start ultrasound -->
-                <c:if test="${order.status == 'Pending' || order.status == 'Waiting' || order.status == 'Ordered'}">
+                <c:if test="${fn:toLowerCase(order.status) == 'pending' || fn:toLowerCase(order.status) == 'waiting' || fn:toLowerCase(order.status) == 'ordered'}">
                     <div class="text-center py-4">
                         <i class="bi bi-hospital fs-1 text-secondary mb-3 d-block"></i>
                         <p class="text-muted mb-4">Ca siêu âm đang ở trạng thái chờ tiếp nhận. Vui lòng nhấn nút bên dưới để chuyển sang trạng thái đang thực hiện.</p>
@@ -308,7 +308,7 @@
                 </c:if>
 
                 <!-- 2. IN PROGRESS / UPLOADED: Upload images form -->
-                <c:if test="${order.status == 'InProgress' || order.status == 'Uploaded'}">
+                <c:if test="${fn:toLowerCase(order.status) == 'inprogress' || fn:toLowerCase(order.status) == 'uploaded'}">
                     <div>
                         <h6 class="fw-bold text-dark mb-3"><i class="bi bi-upload text-rose"></i> Tải hình ảnh siêu âm lên hệ thống</h6>
                         
@@ -348,7 +348,7 @@
                         </form>
 
                         <!-- If Uploaded, allow sending to AI -->
-                        <c:if test="${order.status == 'Uploaded'}">
+                        <c:if test="${fn:toLowerCase(order.status) == 'uploaded'}">
                             <hr class="my-4">
                             <div class="text-center bg-info-subtle border border-info rounded p-3">
                                 <h6 class="fw-bold text-info-emphasis"><i class="bi bi-cpu"></i> Tích Hợp AI Engine Hỗ Trợ Chẩn Đoán</h6>
@@ -366,7 +366,7 @@
                 </c:if>
 
                 <!-- 3. ANALYZING: Loading spinner -->
-                <c:if test="${order.status == 'Analyzing'}">
+                <c:if test="${fn:toLowerCase(order.status) == 'analyzing'}">
                     <div class="text-center py-5" id="aiLoadingSection">
                         <div class="spinner-border text-info mb-3" style="width: 3rem; height: 3rem;" role="status">
                             <span class="visually-hidden">Loading...</span>
@@ -378,7 +378,7 @@
                 </c:if>
 
                 <!-- 4. COMPLETED: Display AI Results -->
-                <c:if test="${order.status == 'Completed'}">
+                <c:if test="${fn:toLowerCase(order.status) == 'completed'}">
                     <div>
                         <h6 class="fw-bold text-success mb-3"><i class="bi bi-check-circle-fill"></i> Kết quả siêu âm đã hoàn thành</h6>
                         
@@ -464,13 +464,13 @@
 <!-- Timeline progress script and image preview -->
 <script>
     // 1. Update timeline UI states based on order status
-    const status = "${order.status}";
-    const steps = ["Pending", "InProgress", "Uploaded", "Analyzing", "Completed"];
+    const status = "${order.status}".toLowerCase();
+    const steps = ["pending", "inprogress", "uploaded", "analyzing", "completed"];
     
     let activeIdx = steps.indexOf(status);
     if (activeIdx === -1) {
         // Fallbacks
-        if (status === "Waiting" || status === "Ordered") activeIdx = 0;
+        if (status === "waiting" || status === "ordered") activeIdx = 0;
     }
 
     const timelineProgress = document.getElementById("timelineProgress");

@@ -37,7 +37,6 @@ import java.util.Set;
 @WebFilter("/*")
 public class AuthenticationFilter implements Filter {
 
-    // Các public path không yêu cầu đăng nhập
     private static final Set<String> PUBLIC_PATHS = Set.of(
         "/login",
         "/admin/login",
@@ -48,7 +47,8 @@ public class AuthenticationFilter implements Filter {
         "/change-password",
         "/google-login",
         "/google-login-server",
-        "/logout"
+        "/logout",
+        "/mock-ai-engine"
     );
 
     // Các thư mục public (assets, views công khai)

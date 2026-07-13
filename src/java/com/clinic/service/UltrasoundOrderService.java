@@ -175,6 +175,9 @@ public class UltrasoundOrderService {
                     boolean detected = "true".equalsIgnoreCase(extractJsonField(responseBody, "detected"));
                     String confidenceStr = extractJsonField(responseBody, "confidence");
                     BigDecimal confidence = confidenceStr != null ? new BigDecimal(confidenceStr) : BigDecimal.ZERO;
+                    if (confidence.compareTo(BigDecimal.ONE) <= 0 && confidence.compareTo(BigDecimal.ZERO) > 0) {
+                        confidence = confidence.multiply(new BigDecimal("100"));
+                    }
                     String message = extractJsonField(responseBody, "message");
                     String resultImage = extractJsonField(responseBody, "resultImage");
                     String maskImage = extractJsonField(responseBody, "maskImage");

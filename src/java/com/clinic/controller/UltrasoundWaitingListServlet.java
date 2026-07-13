@@ -55,6 +55,9 @@ public class UltrasoundWaitingListServlet extends HttpServlet {
 
         String search = request.getParameter("search");
         String status = request.getParameter("status");
+        if (status == null) {
+            status = "Pending";
+        }
         String date = request.getParameter("date");
         String emergencyStr = request.getParameter("emergency");
         Boolean isEmergency = null;

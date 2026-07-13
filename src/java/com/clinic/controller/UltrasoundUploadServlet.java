@@ -66,11 +66,24 @@ public class UltrasoundUploadServlet extends HttpServlet {
 
         // Đường dẫn thư mục upload
         String relativeUploadDir = AppConfig.getUploadDirectory();
-        String uploadPath = getServletContext().getRealPath("") + File.separator + relativeUploadDir;
+        String realPath = getServletContext().getRealPath("");
+        String uploadPath = realPath + File.separator + relativeUploadDir;
         
         File uploadDirFile = new File(uploadPath);
         if (!uploadDirFile.exists()) {
             uploadDirFile.mkdirs();
+        }
+
+        // Đường dẫn thư mục nguồn (source) để tránh mất ảnh khi redeploy/rebuild
+        String sourceUploadPath = null;
+        if (realPath != null) {
+            if (realPath.contains("build" + File.separator + "web")) {
+                sourceUploadPath = realPath.replace("build" + File.separator + "web", "web") + File.separator + relativeUploadDir;
+            } else if (realPath.contains("build\\web")) {
+                sourceUploadPath = realPath.replace("build\\web", "web") + File.separator + relativeUploadDir;
+            } else if (realPath.contains("build/web")) {
+                sourceUploadPath = realPath.replace("build/web", "web") + File.separator + relativeUploadDir;
+            }
         }
 
         try {
@@ -123,6 +136,25 @@ public class UltrasoundUploadServlet extends HttpServlet {
 
                     // Lưu file lên disk
                     part.write(filePath);
+
+                    // Đồng thời lưu vào thư mục source để tránh bị xóa khi NetBeans tự động redeploy/rebuild
+                    if (sourceUploadPath != null) {
+                        try {
+                            File sourceDir = new File(sourceUploadPath);
+                            if (!sourceDir.exists()) {
+                                sourceDir.mkdirs();
+                            }
+                            String sourceFilePath = sourceUploadPath + File.separator + storedFileName;
+                            java.nio.file.Files.copy(
+                                java.nio.file.Paths.get(filePath),
+                                java.nio.file.Paths.get(sourceFilePath),
+                                java.nio.file.StandardCopyOption.REPLACE_EXISTING
+                            );
+                            System.out.println("[UltrasoundUploadServlet] Đã copy ảnh sang thư mục nguồn: " + sourceFilePath);
+                        } catch (Exception e) {
+                            System.err.println("[UltrasoundUploadServlet] Không thể copy ảnh sang thư mục nguồn: " + e.getMessage());
+                        }
+                    }
 
                     // Lưu metadata vào DB
                     UltrasoundImage img = new UltrasoundImage();
