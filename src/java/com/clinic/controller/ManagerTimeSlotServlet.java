@@ -1,4 +1,4 @@
-package controller;
+package com.clinic.controller;
 
 import com.clinic.model.DoctorSchedule;
 import com.clinic.model.TimeSlot;

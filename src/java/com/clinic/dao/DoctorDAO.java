@@ -200,4 +200,30 @@ public class DoctorDAO {
 
         return new Doctor(id, fullName, specialization, degree, experienceYears, price, avatar);
     }
+
+    /**
+     * Thêm mới bác sĩ.
+     */
+    public int insert(Doctor d) {
+        String sql = "INSERT INTO doctors (user_id, full_name, phone_number, specialization) VALUES (?, ?, ?, ?)";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
+            ps.setInt(1, d.getUserId());
+            ps.setString(2, d.getFullName());
+            ps.setString(3, d.getPhoneNumber());
+            ps.setString(4, d.getSpecialization());
+            
+            int rows = ps.executeUpdate();
+            if (rows > 0) {
+                try (ResultSet rs = ps.getGeneratedKeys()) {
+                    if (rs.next()) {
+                        return rs.getInt(1);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[DoctorDAO] insert ERROR: " + e.getMessage());
+        }
+        return -1;
+    }
 }

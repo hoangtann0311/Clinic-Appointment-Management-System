@@ -41,7 +41,7 @@ public class DoctorDashboardServlet extends HttpServlet {
         User user = (User) session.getAttribute("user");
         Integer doctorId = getDoctorId(user.getId());
         if (doctorId == null) {
-            req.setAttribute("errorMessage", "T�i kho?n ch?a ???c li�n k?t h? s? b�c s?.");
+            req.setAttribute("errorMessage", "Tài khoản chưa được liên kết hồ sơ bác sĩ.");
             req.getRequestDispatcher("/views/doctors/dashboard.jsp").forward(req, resp);
             return;
         }

@@ -6,6 +6,7 @@ import com.clinic.model.User;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 
@@ -80,10 +81,27 @@ public class UserDAO {
      * @return User nếu tìm thấy, null nếu không tìm thấy
      */
     public User findByUsername(String username) {
-        String sql = "SELECT id, full_name, " + DECRYPT_EMAIL + ", username, password_hash, "
-                   + DECRYPT_PHONE + ", role_id, status, "
-                   + "verification_token, is_verified, google_id, auth_provider, is_deleted, created_at "
-                   + "FROM users WHERE username = ? AND is_deleted = 0";
+        try {
+            return findByUsernameInternal(username, true);
+        } catch (Exception e) {
+            System.err.println("[UserDAO] findByUsername falling back to base columns due to error: " + e.getMessage());
+            return findByUsernameInternal(username, false);
+        }
+    }
+
+    private User findByUsernameInternal(String username, boolean fullColumns) {
+        String sql;
+        if (fullColumns) {
+            sql = "SELECT id, full_name, " + DECRYPT_EMAIL + ", username, password_hash, "
+                + DECRYPT_PHONE + ", role_id, status, "
+                + "verification_token, is_verified, google_id, auth_provider, is_deleted, created_at "
+                + "FROM users WHERE username = ? AND (is_deleted = 0 OR is_deleted IS NULL)";
+        } else {
+            // If username doesn't exist, this might still fail, but we try anyway.
+            sql = "SELECT id, full_name, " + DECRYPT_EMAIL + ", password_hash, "
+                + DECRYPT_PHONE + ", role_id, status "
+                + "FROM users WHERE username = ?";
+        }
 
         Connection conn = null;
         PreparedStatement ps = null;
@@ -113,10 +131,26 @@ public class UserDAO {
      * @return User nếu tìm thấy, null nếu không tìm thấy
      */
     public User findByEmail(String email) {
-        String sql = "SELECT id, full_name, " + DECRYPT_EMAIL + ", username, password_hash, "
-                   + DECRYPT_PHONE + ", role_id, status, "
-                   + "verification_token, is_verified, google_id, auth_provider, is_deleted, created_at "
-                   + "FROM users WHERE " + WHERE_EMAIL_EQUAL + " AND is_deleted = 0";
+        try {
+            return findByEmailInternal(email, true);
+        } catch (Exception e) {
+            System.err.println("[UserDAO] findByEmail falling back to base columns due to error: " + e.getMessage());
+            return findByEmailInternal(email, false);
+        }
+    }
+
+    private User findByEmailInternal(String email, boolean fullColumns) {
+        String sql;
+        if (fullColumns) {
+            sql = "SELECT id, full_name, " + DECRYPT_EMAIL + ", username, password_hash, "
+                + DECRYPT_PHONE + ", role_id, status, "
+                + "verification_token, is_verified, google_id, auth_provider, is_deleted, created_at "
+                + "FROM users WHERE " + WHERE_EMAIL_EQUAL + " AND (is_deleted = 0 OR is_deleted IS NULL)";
+        } else {
+            sql = "SELECT id, full_name, " + DECRYPT_EMAIL + ", password_hash, "
+                + DECRYPT_PHONE + ", role_id, status "
+                + "FROM users WHERE " + WHERE_EMAIL_EQUAL;
+        }
 
         Connection conn = null;
         PreparedStatement ps = null;
@@ -194,24 +228,30 @@ public class UserDAO {
      */
     private User mapRowToUser(ResultSet rs) throws SQLException {
         User user = new User();
-        user.setId(rs.getInt("id"));
-        user.setFullName(rs.getString("full_name"));
-        user.setEmail(rs.getString("email"));
-        user.setPasswordHash(rs.getString("password_hash"));
-        user.setPhone(rs.getString("phone"));
-        user.setRoleId(rs.getInt("role_id"));
-        user.setStatus(rs.getString("status"));
-        user.setVerificationToken(rs.getString("verification_token"));
-        user.setVerified(rs.getBoolean("is_verified"));
-        user.setGoogleId(rs.getString("google_id"));
-        user.setAuthProvider(rs.getString("auth_provider"));
-        // Đọc username (có thể null nếu migration chưa chạy)
-        try {
-            user.setUsername(rs.getString("username"));
-        } catch (SQLException e) {
-            user.setUsername(null);
+        ResultSetMetaData meta = rs.getMetaData();
+        int count = meta.getColumnCount();
+        java.util.Set<String> cols = new java.util.HashSet<>();
+        for (int i=1; i<=count; i++) cols.add(meta.getColumnLabel(i).toLowerCase());
+
+        if (cols.contains("id")) user.setId(rs.getInt("id"));
+        if (cols.contains("full_name")) user.setFullName(rs.getString("full_name"));
+        if (cols.contains("email")) user.setEmail(rs.getString("email"));
+        if (cols.contains("password_hash")) user.setPasswordHash(rs.getString("password_hash"));
+        if (cols.contains("phone")) user.setPhone(rs.getString("phone"));
+        if (cols.contains("role_id")) user.setRoleId(rs.getInt("role_id"));
+        if (cols.contains("status")) user.setStatus(rs.getString("status"));
+        if (cols.contains("verification_token")) user.setVerificationToken(rs.getString("verification_token"));
+        if (cols.contains("is_verified")) user.setVerified(rs.getBoolean("is_verified"));
+        if (cols.contains("google_id")) user.setGoogleId(rs.getString("google_id"));
+        if (cols.contains("auth_provider")) user.setAuthProvider(rs.getString("auth_provider"));
+        if (cols.contains("username")) user.setUsername(rs.getString("username"));
+        if (cols.contains("created_at")) user.setCreatedAt(rs.getTimestamp("created_at"));
+        
+        // Cột role_name từ câu JOIN
+        if (cols.contains("role_name")) {
+            user.setRoleName(rs.getString("role_name"));
         }
-        user.setCreatedAt(rs.getTimestamp("created_at"));
+
         return user;
     }
 

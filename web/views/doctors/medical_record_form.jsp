@@ -264,6 +264,32 @@
               </div>
             </c:if>
           </c:if>
+
+          <hr class="my-3">
+          <div class="d-grid gap-2 mt-2">
+            <form action="${pageContext.request.contextPath}/doctor/ultrasound-request/create" method="POST">
+                <input type="hidden" name="apptId" value="${apptId}">
+                <%
+                    int usServiceId = 1;
+                    try (java.sql.Connection c = com.clinic.config.DatabaseConfig.getConnection();
+                         java.sql.Statement s = c.createStatement();
+                         java.sql.ResultSet r = s.executeQuery("SELECT TOP 1 id FROM services WHERE LOWER(service_name) LIKE N'%siêu âm%' OR LOWER(service_name) LIKE N'%ultrasound%'")) {
+                        if (r.next()) {
+                            usServiceId = r.getInt(1);
+                        } else {
+                            s.executeUpdate("INSERT INTO services (service_code, service_name, price, is_active, is_deleted) VALUES ('SA01', N'Siêu âm tổng quát', 250000, 1, 0)");
+                            try (java.sql.ResultSet r2 = s.executeQuery("SELECT TOP 1 id FROM services WHERE service_code = 'SA01'")) {
+                                if (r2.next()) usServiceId = r2.getInt(1);
+                            }
+                        }
+                    } catch (Exception e) {}
+                %>
+                <input type="hidden" name="serviceId" value="<%= usServiceId %>">
+                <button type="submit" class="btn btn-outline-primary w-100 rounded-pill fw-bold" onclick="return confirm('Xác nhận tạo phiếu Chỉ định Siêu Âm & Gửi yêu cầu qua cho KTV?');">
+                    <i class="bi bi-file-earmark-medical me-1"></i> Tạo Chỉ định Siêu âm
+                </button>
+            </form>
+          </div>
         </div>
       </div>
     </div>

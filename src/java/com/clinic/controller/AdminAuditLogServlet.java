@@ -1,4 +1,4 @@
-package controller;
+package com.clinic.controller;
 
 import com.clinic.model.AuditLog;
 import com.clinic.service.AuditLogService;

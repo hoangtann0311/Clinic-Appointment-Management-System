@@ -135,7 +135,7 @@ public class DoctorScheduleServlet extends HttpServlet {
 
         Doctor doctor = doctorDAO.findByUserId(user.getId());
         if (doctor == null) {
-            resp.sendRedirect(req.getContextPath() + "/doctor/schedules?error=Tài+khoản+chưa+liên+kết+hồ+sơ+bác+sĩ");
+            resp.sendRedirect(req.getContextPath() + "/doctor/schedules?error=" + java.net.URLEncoder.encode("Tài khoản chưa liên kết hồ sơ bác sĩ", "UTF-8"));
             return;
         }
 
@@ -316,7 +316,7 @@ public class DoctorScheduleServlet extends HttpServlet {
 
         int scheduleId = parseInt(req.getParameter("id"), -1);
         if (scheduleId <= 0) {
-            resp.sendRedirect(redirectUrl + "?error=ID+lịch+không+hợp+lệ");
+            resp.sendRedirect(redirectUrl + "?error=" + java.net.URLEncoder.encode("ID lịch không hợp lệ", "UTF-8"));
             return;
         }
 

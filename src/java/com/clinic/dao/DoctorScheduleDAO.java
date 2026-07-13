@@ -568,4 +568,73 @@ public class DoctorScheduleDAO {
         }
         return 0;
     }
+
+    public static class ApproveResult {
+        private boolean success;
+        private int slotsGenerated;
+        private String errorCode;
+        private String errorMessage;
+
+        public ApproveResult(boolean success, int slotsGenerated, String errorCode, String errorMessage) {
+            this.success = success;
+            this.slotsGenerated = slotsGenerated;
+            this.errorCode = errorCode;
+            this.errorMessage = errorMessage;
+        }
+
+        public boolean isSuccess() { return success; }
+        public int getSlotsGenerated() { return slotsGenerated; }
+        public String getErrorCode() { return errorCode; }
+        public String getErrorMessage() { return errorMessage; }
+    }
+
+    public static class CancelScheduleResult {
+        private boolean success;
+        private String errorCode;
+        private String errorMessage;
+
+        public CancelScheduleResult(boolean success, String errorCode, String errorMessage) {
+            this.success = success;
+            this.errorCode = errorCode;
+            this.errorMessage = errorMessage;
+        }
+
+        public boolean isSuccess() { return success; }
+        public String getErrorCode() { return errorCode; }
+        public String getErrorMessage() { return errorMessage; }
+    }
+
+    public ApproveResult approveAtomic(int scheduleId, int approvedBy) {
+        String sql = "UPDATE doctor_schedules SET status = 'APPROVED', is_approved = 1, approved_by = ?, approved_at = GETDATE(), updated_at = GETDATE() WHERE id = ? AND status = 'PENDING'";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, approvedBy);
+            ps.setInt(2, scheduleId);
+            int rows = ps.executeUpdate();
+            if (rows > 0) {
+                return new ApproveResult(true, 0, null, null);
+            } else {
+                return new ApproveResult(false, 0, "ALREADY_PROCESSED", "Lịch trực đã được xử lý hoặc không tồn tại.");
+            }
+        } catch (SQLException e) {
+            return new ApproveResult(false, 0, "SYSTEM_ERROR", e.getMessage());
+        }
+    }
+
+    public CancelScheduleResult cancelAtomic(int scheduleId, int cancelledBy, String reason, int something) {
+        String sql = "UPDATE doctor_schedules SET status = 'CANCELLED', is_approved = 0, updated_at = GETDATE(), rejection_reason = ? WHERE id = ? AND status IN ('PENDING', 'APPROVED')";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, reason);
+            ps.setInt(2, scheduleId);
+            int rows = ps.executeUpdate();
+            if (rows > 0) {
+                return new CancelScheduleResult(true, null, null);
+            } else {
+                return new CancelScheduleResult(false, "NOT_FOUND", "Lịch trực không tồn tại hoặc đã bị hủy.");
+            }
+        } catch (SQLException e) {
+            return new CancelScheduleResult(false, "SYSTEM_ERROR", e.getMessage());
+        }
+    }
 }
