@@ -1,13 +1,13 @@
 package com.clinic.dao;
 
 import com.clinic.config.DatabaseConfig;
+
 import com.clinic.model.Doctor;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -101,16 +101,17 @@ public class DoctorDAO {
      * Tìm bác sĩ theo user_id (liên kết với bảng users).
      */
     public Doctor findByUserId(int userId) {
-        String sql = "SELECT d.id, d.user_id, d.full_name, d.specialization, d.phone_number "
-                   + "FROM doctors d WHERE d.user_id = ?";
+        String sql =
+            "SELECT d.id, d.user_id, d.full_name, d.specialization, d.phone_number, " +
+            "       d.degree, d.experience_years, d.bio, d.avatar_url " +
+            "FROM doctors d " +
+            "WHERE d.user_id = ?";
 
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, userId);
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return mapRow(rs);
-                }
+                if (rs.next()) return mapRow(rs);
             }
         } catch (SQLException e) {
             System.err.println("[DoctorDAO] findByUserId ERROR: " + e.getMessage());
@@ -119,49 +120,36 @@ public class DoctorDAO {
     }
 
     /**
-     * Thêm bác sĩ mới vào bảng doctors.
-     * Được gọi tự động khi tạo user có role_id = 2 (Bác Sĩ).
-     *
-     * @param doctor đối tượng Doctor cần thêm (không có id)
-     * @return id của bác sĩ vừa tạo, -1 nếu thất bại
+     * Bác sĩ tự cập nhật hồ sơ cá nhân.
+     * Chỉ cho phép sửa: full_name, specialization, phone_number, degree, experience_years, bio, avatar_url.
+     * Email/username/password không được sửa ở đây.
      */
-    public int insert(Doctor doctor) {
-        String sql = "INSERT INTO doctors (user_id, full_name, specialization, phone_number) "
-                   + "VALUES (?, ?, ?, ?)";
-
-        Connection conn = null;
-        PreparedStatement ps = null;
-        ResultSet rs = null;
-
-        try {
-            conn = DatabaseConfig.getConnection();
-            ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-            ps.setInt(1, doctor.getUserId());
-            ps.setString(2, doctor.getFullName());
-            ps.setString(3, doctor.getSpecialization());
-            ps.setString(4, doctor.getPhoneNumber());
-
-            int affectedRows = ps.executeUpdate();
-            if (affectedRows == 0) {
-                throw new RuntimeException("Thêm bác sĩ thất bại - không có dòng nào được tạo");
-            }
-
-            rs = ps.getGeneratedKeys();
-            if (rs.next()) {
-                int generatedId = rs.getInt(1);
-                System.out.println("[DoctorDAO] insert SUCCESS: id=" + generatedId
-                        + ", userId=" + doctor.getUserId() + ", fullName=" + doctor.getFullName());
-                return generatedId;
-            }
-            return -1;
+    public boolean updateProfile(Doctor d) {
+        String sql =
+            "UPDATE doctors SET full_name=?, specialization=?, phone_number=?, " +
+            "  degree=?, experience_years=?, bio=?, avatar_url=? " +
+            "WHERE id=?";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, d.getFullName());
+            ps.setString(2, d.getSpecialization());
+            ps.setString(3, d.getPhoneNumber());
+            ps.setString(4, d.getDegree());
+            if (d.getExperienceYears() >= 0) ps.setInt(5, d.getExperienceYears());
+            else ps.setNull(5, java.sql.Types.INTEGER);
+            ps.setString(6, d.getBio());
+            ps.setString(7, d.getAvatarUrl());
+            ps.setInt(8, d.getId());
+            return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            System.err.println("[DoctorDAO] insert ERROR: " + e.getMessage());
-            e.printStackTrace(System.err);
-            return -1;
-        } finally {
-            closeResources(conn, ps, rs);
+            System.err.println("[DoctorDAO] updateProfile ERROR: " + e.getMessage());
         }
+        return false;
     }
+
+    /**
+     * Ánh xạ ResultSet → Doctor (Bác sĩ / manager)
+     */
     private Doctor mapRow(ResultSet rs) throws SQLException {
         Doctor d = new Doctor();
         d.setId(rs.getInt("id"));
@@ -169,6 +157,12 @@ public class DoctorDAO {
         d.setFullName(rs.getString("full_name"));
         d.setSpecialization(rs.getString("specialization"));
         d.setPhoneNumber(rs.getString("phone_number"));
+        // Đọc các cột mới (nếu không tồn tại thì bỏ qua)
+        try { d.setDegree(rs.getString("degree")); }         catch (SQLException ignored) {}
+        try { d.setExperienceYears(rs.getInt("experience_years")); } catch (SQLException ignored) {}
+        try { d.setBio(rs.getString("bio")); }               catch (SQLException ignored) {}
+        try { d.setAvatarUrl(rs.getString("avatar_url")); }  catch (SQLException ignored) {}
+        try { d.setEmail(rs.getString("email")); }           catch (SQLException ignored) {}
         return d;
     }
 
@@ -205,23 +199,5 @@ public class DoctorDAO {
         }
 
         return new Doctor(id, fullName, specialization, degree, experienceYears, price, avatar);
-    }
-
-    private void closeResources(Connection conn, PreparedStatement ps, ResultSet rs) {
-        if (rs != null) {
-            try {
-                rs.close();
-            } catch (SQLException e) {
-                System.err.println("[DoctorDAO] close ResultSet error: " + e.getMessage());
-            }
-        }
-        if (ps != null) {
-            try {
-                ps.close();
-            } catch (SQLException e) {
-                System.err.println("[DoctorDAO] close PreparedStatement error: " + e.getMessage());
-            }
-        }
-        DatabaseConfig.closeConnection(conn);
     }
 }

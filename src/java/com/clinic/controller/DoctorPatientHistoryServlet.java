@@ -2,7 +2,9 @@ package com.clinic.controller;
 
 import com.clinic.config.DatabaseConfig;
 import com.clinic.dao.MedicalRecordDAO;
+import com.clinic.dao.PregnancyDAO;
 import com.clinic.model.MedicalRecord;
+import com.clinic.model.Pregnancy;
 import com.clinic.model.User;
 
 import jakarta.servlet.ServletException;
@@ -22,6 +24,7 @@ import java.util.List;
 public class DoctorPatientHistoryServlet extends HttpServlet {
 
     private final MedicalRecordDAO dao = new MedicalRecordDAO();
+    private final PregnancyDAO pregnancyDAO = new PregnancyDAO();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
@@ -62,9 +65,13 @@ public class DoctorPatientHistoryServlet extends HttpServlet {
         // Lịch sử tất cả hồ sơ bệnh án của bệnh nhân này (toàn hệ thống, không giới hạn bác sĩ)
         List<MedicalRecord> records = dao.getByPatientId(patientId);
 
+        // Danh sách thai kỳ của bệnh nhân (mới nhất trước)
+        List<Pregnancy> pregnancies = pregnancyDAO.getByPatientId(patientId);
+
         req.setAttribute("patientName",  patientName);
         req.setAttribute("patientId",    patientId);
         req.setAttribute("records",      records);
+        req.setAttribute("pregnancies",  pregnancies);
         req.setAttribute("doctorName",   user.getFullName());
 
         req.getRequestDispatcher("/views/doctors/patient_history.jsp").forward(req, resp);

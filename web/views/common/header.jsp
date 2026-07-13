@@ -86,6 +86,36 @@
                         <i class="bi bi-briefcase-fill me-1"></i>${sessionScope.user.roleId == 2 ? 'Bác Sĩ' : 'KTV Siêu Âm'}
                     </span>
                 </div>
+
+                <%-- Chuông thông báo — chỉ hiện cho bác sĩ --%>
+                <c:if test="${sessionScope.user.roleId == 2}">
+                <div class="position-relative me-2" id="notifBell" style="cursor:pointer;"
+                     onclick="toggleNotifDropdown(event)">
+                    <i class="bi bi-bell-fill" style="font-size:1.2rem;color:#e91e8c;"></i>
+                    <span id="notifBadge"
+                          class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                          style="font-size:.6rem;display:none;">0</span>
+                </div>
+
+                <%-- Dropdown thông báo --%>
+                <div id="notifDropdown"
+                     class="card border-0 shadow-lg rounded-4 d-none"
+                     style="position:fixed;top:56px;right:80px;width:360px;z-index:9999;max-height:480px;overflow:hidden;">
+                    <div class="card-header d-flex align-items-center justify-content-between py-2 px-3"
+                         style="background:#fff;">
+                        <span class="fw-bold small">Thông báo</span>
+                        <button class="btn btn-sm btn-link text-muted p-0 small"
+                                onclick="markAllRead(event)">Đánh dấu tất cả đã đọc</button>
+                    </div>
+                    <div id="notifList" style="overflow-y:auto;max-height:400px;">
+                        <div class="text-center py-4 text-muted small" id="notifEmpty">
+                            <i class="bi bi-bell-slash d-block fs-3 mb-2 opacity-25"></i>
+                            Chưa có thông báo
+                        </div>
+                    </div>
+                </div>
+                </c:if>
+
                 <a href="${pageContext.request.contextPath}/logout" class="admin-topbar-logout" title="Đăng xuất">
                     <i class="bi bi-box-arrow-right"></i>
                     <span class="d-none d-md-inline">Đăng xuất</span>
@@ -142,6 +172,18 @@
                                 <span>Danh Sách Bệnh Nhân</span>
                             </a>
                         </li>
+                        <li>
+                            <a href="${pageContext.request.contextPath}/doctor/profile">
+                                <i class="bi bi-person-circle"></i>
+                                <span>Hồ Sơ Của Tôi</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="${pageContext.request.contextPath}/doctor/schedules">
+                                <i class="bi bi-calendar2-check"></i>
+                                <span>Lịch Làm Việc</span>
+                            </a>
+                        </li>
                     </c:when>
                     <c:when test="${sessionScope.user.roleId == 6}">
                         <li class="admin-sidebar-section">Chức Năng Siêu Âm</li>
@@ -187,6 +229,122 @@
 
         <!-- Main Content Wrapper -->
         <main class="admin-main" id="adminMain">
+
+        <%-- JS thông báo (chỉ load cho bác sĩ) --%>
+        <c:if test="${sessionScope.user.roleId == 2}">
+        <style>
+          #notifBell {
+              padding: 4px 8px;
+              border-radius: 8px;
+              transition: background .2s;
+              display: flex !important;
+              align-items: center;
+              position: relative;
+          }
+          #notifBell:hover { background: rgba(233,30,140,.1); }
+          #notifDropdown .notif-item { padding: 10px 14px; border-bottom: 1px solid #f0f0f0;
+            cursor: pointer; transition: background .15s; }
+          #notifDropdown .notif-item:hover { background: #fafafa; }
+          #notifDropdown .notif-item.unread { background: #fff5fb; }
+          #notifDropdown .notif-item.unread:hover { background: #fce4f3; }
+          #notifDropdown .notif-dot { width:8px;height:8px;border-radius:50%;
+            background:#e91e8c;flex-shrink:0;margin-top:4px; }
+        </style>
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+          var CTX = '${pageContext.request.contextPath}';
+          var dropdown = document.getElementById('notifDropdown');
+          var badge    = document.getElementById('notifBadge');
+          var list     = document.getElementById('notifList');
+          var empty    = document.getElementById('notifEmpty');
+          var open     = false;
+
+          if (!dropdown || !badge) return; // guard nếu elements chưa có
+
+          // ── Polling đếm unread mỗi 30 giây ──────────────────────────────
+          function pollUnread() {
+            fetch(CTX + '/doctor/notifications?count=1')
+              .then(function(r){ return r.json(); })
+              .then(function(d){
+                if (d.unread > 0) {
+                  badge.textContent = d.unread > 99 ? '99+' : d.unread;
+                  badge.style.display = '';
+                } else {
+                  badge.style.display = 'none';
+                }
+              }).catch(function(){});
+          }
+          pollUnread();
+          setInterval(pollUnread, 30000);
+
+          // ── Load danh sách khi mở dropdown ───────────────────────────────
+          function loadNotifs() {
+            fetch(CTX + '/doctor/notifications')
+              .then(function(r){ return r.json(); })
+              .then(function(d){
+                badge.textContent = d.unread > 99 ? '99+' : d.unread;
+                badge.style.display = d.unread > 0 ? '' : 'none';
+
+                if (!d.items || d.items.length === 0) {
+                  list.innerHTML = '';
+                  empty.style.display = '';
+                  return;
+                }
+                empty.style.display = 'none';
+                var html = '';
+                d.items.forEach(function(n) {
+                  html += '<div class="notif-item d-flex gap-2 ' + (n.isRead ? '' : 'unread') + '"' +
+                    ' onclick="readNotif(' + n.id + ',this)">' +
+                    (!n.isRead ? '<div class="notif-dot mt-1 flex-shrink-0"></div>' :
+                      '<div style="width:8px;flex-shrink:0;"></div>') +
+                    '<div class="flex-grow-1">' +
+                      '<div class="fw-semibold small">' + escHtml(n.title) + '</div>' +
+                      '<div class="small text-muted" style="line-height:1.3;">' + escHtml(n.content) + '</div>' +
+                      '<div class="text-muted" style="font-size:.7rem;margin-top:2px;">' + n.timeAgo + '</div>' +
+                    '</div>' +
+                    '</div>';
+                });
+                list.innerHTML = html;
+              }).catch(function(){});
+          }
+
+          window.toggleNotifDropdown = function(e) {
+            e.stopPropagation();
+            open = !open;
+            dropdown.classList.toggle('d-none', !open);
+            if (open) loadNotifs();
+          };
+
+          window.readNotif = function(id, el) {
+            fetch(CTX + '/doctor/notifications?action=read&id=' + id, { method:'POST' })
+              .then(function(){ pollUnread(); });
+            el.classList.remove('unread');
+            var dot = el.querySelector('.notif-dot');
+            if (dot) dot.style.display = 'none';
+          };
+
+          window.markAllRead = function(e) {
+            e.stopPropagation();
+            fetch(CTX + '/doctor/notifications?action=readAll', { method:'POST' })
+              .then(function(){ loadNotifs(); });
+          };
+
+          // Đóng dropdown khi click ra ngoài
+          document.addEventListener('click', function(e) {
+            if (open && !dropdown.contains(e.target)) {
+              open = false;
+              dropdown.classList.add('d-none');
+            }
+          });
+
+          function escHtml(s) {
+            return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                          .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+          }
+        }); // end DOMContentLoaded
+        </script>
+        </c:if>
+
     </c:when>
     <c:otherwise>
         <body>

@@ -31,6 +31,11 @@
 .info-item { display:flex; flex-direction:column; margin-bottom:.75rem; }
 .info-item .label { font-size:.7rem; text-transform:uppercase; color:#adb5bd; font-weight:600; letter-spacing:.05em; }
 .info-item .value { font-size:.95rem; font-weight:500; color:#212529; }
+
+/* ── Bảng kê thuốc (tab Chẩn đoán & Kế hoạch) ─────────────────── */
+.rx-table th { font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; color:#6c757d; }
+.rx-table td { vertical-align:middle; }
+.med-select  { min-width:220px; }
 </style>
 
 <%-- ══════════════════════════════════════════════════════
@@ -227,8 +232,24 @@
           </div>
           <c:if test="${record.pregnancyId != null}">
             <div class="info-item">
-              <span class="label">Mã thai kỳ</span>
-              <span class="value">#${record.pregnancyId}</span>
+              <span class="label">Thai kỳ</span>
+              <span class="value">
+                <a href="${pageContext.request.contextPath}/doctor/pregnancy?id=${record.pregnancyId}"
+                   class="text-decoration-none">
+                  <i class="bi bi-heart-pulse-fill text-danger me-1"></i>Xem theo dõi thai kỳ
+                </a>
+              </span>
+            </div>
+          </c:if>
+          <c:if test="${record.pregnancyId == null and not empty apptId}">
+            <div class="info-item">
+              <span class="label">Thai kỳ</span>
+              <span class="value">
+                <a href="${pageContext.request.contextPath}/doctor/pregnancy?apptId=${apptId}"
+                   class="text-decoration-none text-muted small">
+                  <i class="bi bi-plus-circle me-1"></i>Bắt đầu theo dõi thai kỳ
+                </a>
+              </span>
             </div>
           </c:if>
           <c:if test="${record.id > 0}">
@@ -502,114 +523,124 @@
                           placeholder="Thuốc, chỉ định xét nghiệm, chỉ định siêu âm, lời khuyên cho mẹ…">${record.treatmentPlan}</textarea>
               </div>
 
-              <%-- ═══ PHÂN HỆ TÍCH HỢP SIÊU ÂM & CHẨN ĐOÁN AI ═══ --%>
-              <div class="card mb-4 border border-rose-200" style="border-color: #f43f5e !important;">
-                <div class="card-header py-3 text-rose-700 fw-bold d-flex align-items-center gap-2" style="background-color: #fff1f2; color: #be123c;">
-                  <i class="bi bi-robot"></i> Chỉ Định Siêu Âm & Trợ Lý AI
+              <%-- ═══ Kê đơn thuốc ngay tại đây (cùng lưu với hồ sơ) ═══ --%>
+              <div class="mb-4">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <label class="form-label fw-medium mb-0">
+                    <i class="bi bi-capsule me-1 text-primary"></i>Kê đơn thuốc
+                  </label>
+                  <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill" id="rxRowCount">
+                    0 loại thuốc
+                  </span>
                 </div>
-                <div class="card-body">
-                  <!-- Tạo chỉ định siêu âm mới -->
-                  <div class="row g-2 mb-4 align-items-end">
-                    <div class="col-md-8 text-start">
-                      <label class="form-label small text-muted fw-bold">CHỌN LOẠI DỊCH VỤ SIÊU ÂM CHỈ ĐỊNH</label>
-                      <select id="selectUltrasoundService" class="form-select border-rose">
-                        <c:forEach var="svc" items="${ultrasoundServices}">
-                          <option value="${svc.id}">${svc.serviceName} (${String.format('%,.0f', svc.price)}đ)</option>
-                        </c:forEach>
-                      </select>
-                    </div>
-                    <div class="col-md-4">
-                      <button type="button" class="btn btn-rose w-100 fw-bold text-white" style="background-color: #e11d48; border-color: #e11d48;" onclick="submitUltrasoundRequest()">
-                        <i class="bi bi-plus-circle-fill"></i> Tạo Chỉ Định Siêu Âm
-                      </button>
-                    </div>
-                  </div>
+                <p class="text-muted small mb-2">Có thể bỏ trống nếu chưa cần kê thuốc — bạn vẫn lưu hồ sơ được bình thường.</p>
 
-                  <!-- Lịch sử các chỉ định siêu âm và kết quả AI -->
-                  <div class="text-start">
-                    <label class="form-label small text-muted fw-bold mb-2">DANH SÁCH CHỈ ĐỊNH SIÊU ÂM CHO CA KHÁM NÀY</label>
-                    <c:choose>
-                      <c:when test="${empty testOrders}">
-                        <div class="text-center py-4 bg-light rounded border text-muted small">
-                          Chưa có chỉ định siêu âm nào được tạo cho ca khám này.
-                        </div>
-                      </c:when>
-                      <c:otherwise>
-                        <div class="table-responsive">
-                          <table class="table table-bordered table-sm align-middle small mb-0">
-                            <thead class="table-light">
-                              <tr>
-                                <th>Mã SA</th>
-                                <th>Dịch Vụ Siêu Âm</th>
-                                <th>Thời Gian Chỉ Định</th>
-                                <th>Trạng Tác</th>
-                                <th>Kết Quả Chẩn Đoán AI</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <c:forEach var="ord" items="${testOrders}">
-                                <tr>
-                                  <td><strong>SA-${ord.orderId}</strong></td>
-                                  <td><c:out value="${ord.serviceName}"/></td>
-                                  <td><c:out value="${fn:substring(ord.createdAt, 11, 16)} - ${fn:substring(ord.createdAt, 0, 10)}"/></td>
-                                  <td>
-                                    <c:choose>
-                                      <c:when test="${ord.status == 'Pending'}">
-                                        <span class="badge bg-secondary">Chờ siêu âm</span>
-                                      </c:when>
-                                      <c:when test="${ord.status == 'InProgress'}">
-                                        <span class="badge bg-primary">Đang siêu âm</span>
-                                      </c:when>
-                                      <c:when test="${ord.status == 'Uploaded'}">
-                                        <span class="badge bg-warning text-dark">Đã tải ảnh (Chờ AI)</span>
-                                      </c:when>
-                                      <c:when test="${ord.status == 'Analyzing'}">
-                                        <span class="badge bg-info text-dark">AI đang phân tích</span>
-                                      </c:when>
-                                      <c:when test="${ord.status == 'Completed'}">
-                                        <span class="badge bg-success">Đã hoàn thành</span>
-                                      </c:when>
-                                      <c:otherwise>
-                                        <span class="badge bg-light text-muted border">${ord.status}</span>
-                                      </c:otherwise>
-                                    </c:choose>
-                                  </td>
-                                  <td>
-                                    <c:choose>
-                                      <c:when test="${ord.status == 'Completed'}">
-                                        <c:set var="aiResult" value="${aiResultsMap[ord.orderId]}" />
-                                        <c:if test="${not empty aiResult}">
-                                          <div class="p-2 border rounded bg-light-subtle text-start">
-                                            <div class="d-flex align-items-center justify-content-between mb-1">
-                                              <span class="badge ${aiResult.detected ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success'} fw-bold" style="${aiResult.detected ? 'background-color:#fee2e2;color:#991b1b;' : 'background-color:#dcfce7;color:#166534;'}">
-                                                AI: ${aiResult.detected ? 'Có bất thường' : 'Bình thường'} (${aiResult.confidence}%)
-                                              </span>
-                                              <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none fw-bold" style="font-size: 11px; color:#be123c;" onclick="viewAiImage('${pageContext.request.contextPath}/${aiResult.resultImage}', '${fn:escapeXml(aiResult.message)}')">
-                                                <i class="bi bi-image"></i> Xem hình ảnh
-                                              </button>
-                                            </div>
-                                            <div class="text-muted" style="font-size: 11px; line-height: 1.3;"><c:out value="${aiResult.message}"/></div>
-                                          </div>
-                                        </c:if>
-                                        <c:if test="${empty aiResult}">
-                                          <span class="text-muted italic">Đang cập nhật...</span>
-                                        </c:if>
-                                      </c:when>
-                                      <c:otherwise>
-                                        <span class="text-muted italic">Chưa có kết quả siêu âm.</span>
-                                      </c:otherwise>
-                                    </c:choose>
-                                  </td>
-                                </tr>
-                              </c:forEach>
-                            </tbody>
-                          </table>
-                        </div>
-                      </c:otherwise>
-                    </c:choose>
-                  </div>
+                <div class="table-responsive mb-2">
+                  <table class="table rx-table align-middle mb-0" id="rxMedicineTable">
+                    <thead class="table-light">
+                      <tr>
+                        <th style="min-width:240px;">Tên thuốc</th>
+                        <th style="width:110px;">Số lượng</th>
+                        <th style="min-width:200px;">Liều dùng / Hướng dẫn</th>
+                        <th style="width:44px;"></th>
+                      </tr>
+                    </thead>
+                    <tbody id="rxMedicineRows">
+                      <c:choose>
+                        <c:when test="${not empty prescription and not empty prescription.items}">
+                          <c:forEach var="item" items="${prescription.items}">
+                            <tr class="rx-medicine-row">
+                              <td>
+                                <select name="medicineId[]"
+                                        class="form-select form-select-sm rounded-3 rx-med-dropdown">
+                                  <option value="">— Chọn thuốc —</option>
+                                  <c:forEach var="med" items="${medicines}">
+                                    <option value="${med.id}"
+                                            data-unit="${med.unit}"
+                                            data-stock="${med.stockQuantity}"
+                                            data-desc="${med.description}"
+                                            <c:if test="${med.id == item.medicineId}">selected</c:if>>
+                                      ${med.name}<c:if test="${not empty med.categoryName}"> [${med.categoryName}]</c:if>
+                                    </option>
+                                  </c:forEach>
+                                </select>
+                                <div class="rx-med-desc-hint text-muted small mt-1" style="font-size:.75rem;"></div>
+                              </td>
+                              <td>
+                                <div class="input-group input-group-sm">
+                                  <input type="number" name="quantity[]"
+                                         class="form-control rounded-start-3 text-center"
+                                         value="${item.quantity}" min="1" max="9999">
+                                  <span class="input-group-text rx-unit-suffix rounded-end-3">${item.medicineUnit}</span>
+                                </div>
+                              </td>
+                              <td>
+                                <input type="text" name="dosage[]"
+                                       class="form-control form-control-sm rounded-3"
+                                       value="${item.dosage}"
+                                       placeholder="VD: 2 viên/ngày, sáng-tối">
+                              </td>
+                              <td class="text-center">
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-danger rounded-circle rx-remove-row"
+                                        style="width:30px;height:30px;padding:0;">
+                                  <i class="bi bi-x"></i>
+                                </button>
+                              </td>
+                            </tr>
+                          </c:forEach>
+                        </c:when>
+                        <c:otherwise>
+                          <%-- Không có dòng mặc định: bác sĩ bấm "Thêm thuốc" nếu cần kê đơn --%>
+                        </c:otherwise>
+                      </c:choose>
+                    </tbody>
+                  </table>
                 </div>
+
+                <button type="button" id="rxAddRowBtn" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                  <i class="bi bi-plus-lg me-1"></i>Thêm thuốc
+                </button>
               </div>
+
+              <template id="rxRowTemplate">
+                <tr class="rx-medicine-row">
+                  <td>
+                    <select name="medicineId[]" class="form-select form-select-sm rounded-3 rx-med-dropdown">
+                      <option value="">— Chọn thuốc —</option>
+                      <c:forEach var="med" items="${medicines}">
+                        <option value="${med.id}"
+                                data-unit="${med.unit}"
+                                data-stock="${med.stockQuantity}"
+                                data-desc="${med.description}">
+                          ${med.name}<c:if test="${not empty med.categoryName}"> [${med.categoryName}]</c:if>
+                        </option>
+                      </c:forEach>
+                    </select>
+                    <div class="rx-med-desc-hint text-muted small mt-1" style="font-size:.75rem;"></div>
+                  </td>
+                  <td>
+                    <div class="input-group input-group-sm">
+                      <input type="number" name="quantity[]"
+                             class="form-control rounded-start-3 text-center"
+                             value="1" min="1" max="9999">
+                      <span class="input-group-text rx-unit-suffix rounded-end-3">—</span>
+                    </div>
+                  </td>
+                  <td>
+                    <input type="text" name="dosage[]"
+                           class="form-control form-control-sm rounded-3"
+                           placeholder="VD: 2 viên/ngày, sáng-tối">
+                  </td>
+                  <td class="text-center">
+                    <button type="button"
+                            class="btn btn-sm btn-outline-danger rounded-circle rx-remove-row"
+                            style="width:30px;height:30px;padding:0;">
+                      <i class="bi bi-x"></i>
+                    </button>
+                  </td>
+                </tr>
+              </template>
 
               <div class="row g-3">
                 <div class="col-sm-6">
@@ -627,14 +658,128 @@
 
             <%-- Nút lưu (luôn hiện) --%>
             <hr class="mt-4">
+
+            <%-- Banner trạng thái draft nếu hồ sơ đang ở chế độ chờ kết quả XN --%>
+            <c:if test="${record.id > 0 and record.status == 'draft'}">
+              <div class="alert alert-warning rounded-3 mb-3">
+                <i class="bi bi-hourglass-split me-2"></i>
+                <strong>Hồ sơ đang chờ kết quả xét nghiệm.</strong>
+                Sau khi KTV nhập kết quả, bấm <strong>"Lưu hồ sơ chính thức"</strong> để hoàn tất.
+                <a href="${pageContext.request.contextPath}/doctor/lab-orders?recordId=${record.id}"
+                   class="ms-2 btn btn-sm btn-warning rounded-pill">
+                  <i class="bi bi-droplet me-1"></i>Xem kết quả XN
+                </a>
+              </div>
+            </c:if>
+
+            <%-- Section chọn dịch vụ: Xét nghiệm + Siêu âm với tìm kiếm --%>
+            <c:if test="${not empty labServices or not empty ultrasoundServices}">
+              <div class="card border-0 rounded-3 mb-3" style="background:#fff8f8;">
+                <div class="card-body p-3">
+
+                  <%-- Header + tìm kiếm --%>
+                  <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                    <h6 class="fw-bold mb-0">
+                      <i class="bi bi-droplet me-1 text-danger"></i>Chỉ định kèm theo
+                    </h6>
+                    <input type="text" id="svcSearchInput" class="form-control form-control-sm rounded-pill"
+                           style="max-width:220px;" placeholder="🔍 Tìm dịch vụ…"
+                           oninput="filterServices(this.value)">
+                  </div>
+
+                  <%-- Tab Xét nghiệm / Siêu âm --%>
+                  <ul class="nav nav-pills nav-fill mb-3" id="svcTabs" role="tablist" style="gap:6px;">
+                    <li class="nav-item">
+                      <button class="nav-link active rounded-pill py-1 px-3 small fw-medium"
+                              id="tab-lab" onclick="switchTab('lab',this)" type="button">
+                        <i class="bi bi-droplet me-1"></i>Xét nghiệm
+                        <span class="badge bg-danger ms-1 rounded-pill" id="cnt-lab">0</span>
+                      </button>
+                    </li>
+                    <li class="nav-item">
+                      <button class="nav-link rounded-pill py-1 px-3 small fw-medium"
+                              id="tab-us" onclick="switchTab('us',this)" type="button">
+                        <i class="bi bi-soundwave me-1"></i>Siêu âm
+                        <span class="badge bg-danger ms-1 rounded-pill" id="cnt-us">0</span>
+                      </button>
+                    </li>
+                  </ul>
+
+                  <%-- Danh sách Xét nghiệm --%>
+                  <div id="panel-lab">
+                    <div class="row g-2" id="list-lab">
+                      <c:forEach var="svc" items="${labServices}">
+                        <div class="col-md-6 svc-item" data-name="${svc.serviceName}" data-panel="lab">
+                          <div class="form-check">
+                            <input class="form-check-input svc-check" type="checkbox"
+                                   name="labServiceIds" value="${svc.id}"
+                                   id="lab_${svc.id}" data-panel="lab"
+                                   onchange="updateTabCount('lab')">
+                            <label class="form-check-label small" for="lab_${svc.id}">
+                              <span class="fw-medium">${svc.serviceName}</span>
+                              <c:if test="${svc.requiresFasting}">
+                                <span class="badge bg-warning text-dark ms-1" style="font-size:.6rem;">Nhịn ăn</span>
+                              </c:if>
+                            </label>
+                          </div>
+                        </div>
+                      </c:forEach>
+                    </div>
+                    <p class="text-muted small mt-2 mb-0 d-none" id="no-lab">Không tìm thấy xét nghiệm phù hợp.</p>
+                  </div>
+
+                  <%-- Danh sách Siêu âm --%>
+                  <div id="panel-us" class="d-none">
+                    <div class="row g-2" id="list-us">
+                      <c:forEach var="svc" items="${ultrasoundServices}">
+                        <div class="col-md-6 svc-item" data-name="${svc.serviceName}" data-panel="us">
+                          <div class="form-check">
+                            <input class="form-check-input svc-check" type="checkbox"
+                                   name="labServiceIds" value="${svc.id}"
+                                   id="us_${svc.id}" data-panel="us"
+                                   onchange="updateTabCount('us')">
+                            <label class="form-check-label small" for="us_${svc.id}">
+                              <span class="fw-medium">${svc.serviceName}</span>
+                              <c:if test="${svc.requiresFasting}">
+                                <span class="badge bg-warning text-dark ms-1" style="font-size:.6rem;">Nhịn ăn</span>
+                              </c:if>
+                            </label>
+                          </div>
+                        </div>
+                      </c:forEach>
+                    </div>
+                    <p class="text-muted small mt-2 mb-0 d-none" id="no-us">Không tìm thấy siêu âm phù hợp.</p>
+                  </div>
+
+                </div>
+              </div>
+            </c:if>
+
+            <%-- Hidden field để phân biệt draft vs final --%>
+            <input type="hidden" name="submitAction" id="submitActionField" value="final">
+
             <div class="d-flex gap-3 align-items-center flex-wrap">
-              <button type="button" onclick="submitObsForm()" class="btn btn-success rounded-3 px-4">
+              <%-- Nút lưu chính thức --%>
+              <button type="button" onclick="doSubmit('final')" class="btn btn-success rounded-3 px-4">
                 <i class="bi bi-floppy me-2"></i>
                 <c:choose>
-                  <c:when test="${record.id > 0}">Cập nhật hồ sơ</c:when>
+                  <c:when test="${record.id > 0}">
+                    <c:choose>
+                      <c:when test="${record.status == 'draft'}">Lưu hồ sơ chính thức</c:when>
+                      <c:otherwise>Cập nhật hồ sơ</c:otherwise>
+                    </c:choose>
+                  </c:when>
                   <c:otherwise>Lưu hồ sơ</c:otherwise>
                 </c:choose>
               </button>
+
+              <%-- Nút chỉ định XN + lưu tạm (chỉ hiện khi có tick xét nghiệm) --%>
+              <button type="button" onclick="doSubmit('draft')"
+                      id="btnDraft"
+                      class="btn btn-outline-danger rounded-3 px-4 d-none">
+                <i class="bi bi-droplet me-2"></i>Chỉ định XN & Chờ kết quả
+              </button>
+
               <a href="${pageContext.request.contextPath}/doctor/appointments" class="btn btn-outline-secondary rounded-3">Huỷ</a>
               <span class="ms-auto text-muted small">
                 <c:if test="${record.id == 0}">
@@ -646,17 +791,43 @@
           </div><%-- card-body --%>
         </div><%-- card --%>
 
-            <%-- Điều hướng sang đơn thuốc --%>
+            <%-- Xem chi tiết / in đơn thuốc đầy đủ (đơn đã được kê ngay trong form ở trên) --%>
             <c:if test="${record.id > 0}">
                 <div class="card rounded-4 border-0 shadow-sm mt-3">
                     <div class="card-body p-3 d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="fw-medium">Bước tiếp theo</span>
-                            <span class="text-muted small ms-2">Kê đơn thuốc cho bệnh nhân này</span>
+                            <span class="fw-medium">Đơn thuốc</span>
+                            <span class="text-muted small ms-2">Xem chi tiết đầy đủ hoặc in đơn cho bệnh nhân</span>
                         </div>
                         <a href="${pageContext.request.contextPath}/doctor/prescriptions?recordId=${record.id}"
                            class="btn btn-outline-primary btn-sm rounded-pill px-3">
-                            <i class="bi bi-prescription2 me-1"></i>Kê đơn thuốc
+                            <i class="bi bi-prescription2 me-1"></i>Xem đơn thuốc
+                        </a>
+                    </div>
+                </div>
+
+                <div class="card rounded-4 border-0 shadow-sm mt-3">
+                    <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="fw-medium">Xét nghiệm</span>
+                            <span class="text-muted small ms-2">Chỉ định & xem kết quả xét nghiệm</span>
+                        </div>
+                        <a href="${pageContext.request.contextPath}/doctor/lab-orders?recordId=${record.id}"
+                           class="btn btn-outline-danger btn-sm rounded-pill px-3">
+                            <i class="bi bi-droplet me-1"></i>Xét nghiệm
+                        </a>
+                    </div>
+                </div>
+
+                <div class="card rounded-4 border-0 shadow-sm mt-3">
+                    <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="fw-medium">Kết quả cận lâm sàng</span>
+                            <span class="text-muted small ms-2">Xem kết quả xét nghiệm & siêu âm (kèm AI)</span>
+                        </div>
+                        <a href="${pageContext.request.contextPath}/doctor/results?recordId=${record.id}"
+                           class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                            <i class="bi bi-clipboard2-pulse me-1"></i>Xem kết quả
                         </a>
                     </div>
                 </div>
@@ -794,72 +965,165 @@
       }
     }
 
+    // 7. Đơn thuốc kèm theo (tab4) — tùy chọn, chỉ validate các dòng đã chọn thuốc
+    if (!firstError) {
+      const rxSelects = document.querySelectorAll('select[name="medicineId[]"]');
+      const seenMed = new Set();
+      rxSelects.forEach(sel => {
+        if (firstError) return;
+        if (!sel.value) return;
+        const row = sel.closest('tr');
+        const qtyEl = row.querySelector('input[name="quantity[]"]');
+        const q = parseInt(qtyEl.value);
+        if (!qtyEl.value || isNaN(q) || q < 1 || q > 9999) {
+          qtyEl.classList.add('is-invalid');
+          document.querySelector('[data-tab="tab4"]').click();
+          qtyEl.focus();
+          firstError = 'rxQuantity';
+          return;
+        } else {
+          qtyEl.classList.remove('is-invalid');
+        }
+        if (seenMed.has(sel.value)) {
+          sel.classList.add('is-invalid');
+          document.querySelector('[data-tab="tab4"]').click();
+          firstError = 'rxDuplicate';
+          return;
+        }
+        seenMed.add(sel.value);
+        sel.classList.remove('is-invalid');
+      });
+    }
+
     if (firstError) return;
 
     document.getElementById('obsForm').submit();
   }
 
-  // --- Ultrasound Integration Scripts ---
-  function submitUltrasoundRequest() {
-      const selectSvc = document.getElementById("selectUltrasoundService");
-      if (!selectSvc) {
-          alert("Không tìm thấy dịch vụ siêu âm.");
-          return;
+  // ── Bảng kê đơn thuốc (tab Chẩn đoán & Kế hoạch) ─────────────────────────
+  (function () {
+    const tbody  = document.getElementById('rxMedicineRows');
+    const addBtn = document.getElementById('rxAddRowBtn');
+    const tpl    = document.getElementById('rxRowTemplate');
+    if (!tbody || !addBtn || !tpl) return;
+
+    function updateCount() {
+      const n = tbody.querySelectorAll('.rx-medicine-row').length;
+      document.getElementById('rxRowCount').textContent = n + ' loại thuốc';
+    }
+    updateCount();
+
+    function bindDescHint(sel) {
+      const row = sel.closest('tr');
+
+      function refresh() {
+        const opt    = sel.options[sel.selectedIndex];
+        const hint   = row.querySelector('.rx-med-desc-hint');
+        const unitEl = row.querySelector('.rx-unit-suffix');
+        const desc   = opt ? (opt.dataset.desc || '') : '';
+        const unit   = opt ? (opt.dataset.unit || '') : '';
+        if (unitEl) unitEl.textContent = unit || '—';
+        if (hint) hint.textContent = desc;
+        checkStock();
       }
-      const serviceId = selectSvc.value;
-      const apptId = "${apptId}";
-      
-      const form = document.createElement("form");
-      form.method = "POST";
-      form.action = "${pageContext.request.contextPath}/doctor/ultrasound-request/create";
-      
-      const inputAppt = document.createElement("input");
-      inputAppt.type = "hidden";
-      inputAppt.name = "apptId";
-      inputAppt.value = apptId;
-      form.appendChild(inputAppt);
-      
-      const inputSvc = document.createElement("input");
-      inputSvc.type = "hidden";
-      inputSvc.name = "serviceId";
-      inputSvc.value = serviceId;
-      form.appendChild(inputSvc);
-      
-      document.body.appendChild(form);
-      form.submit();
+
+      function checkStock() {
+        const opt   = sel.options[sel.selectedIndex];
+        const hint  = row.querySelector('.rx-med-desc-hint');
+        const qtyEl = row.querySelector('input[name="quantity[]"]');
+        if (!opt || !opt.value || !hint) return;
+        const stock = parseInt(opt.dataset.stock);
+        const qty   = parseInt(qtyEl.value);
+        const desc  = opt.dataset.desc || '';
+        if (!isNaN(stock) && !isNaN(qty) && qty > stock) {
+          hint.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i>' +
+            'Kho chỉ còn ' + stock + ' — số lượng kê vượt tồn kho.</span>';
+        } else {
+          hint.textContent = desc;
+        }
+      }
+
+      sel.addEventListener('change', refresh);
+      const qtyInput = row.querySelector('input[name="quantity[]"]');
+      if (qtyInput) qtyInput.addEventListener('input', checkStock);
+      refresh();
+    }
+
+    tbody.querySelectorAll('.rx-med-dropdown').forEach(bindDescHint);
+
+    addBtn.addEventListener('click', () => {
+      const clone = tpl.content.cloneNode(true);
+      tbody.appendChild(clone);
+      const newSel = tbody.lastElementChild.querySelector('.rx-med-dropdown');
+      if (newSel) bindDescHint(newSel);
+      updateCount();
+    });
+
+    tbody.addEventListener('click', (e) => {
+      const btn = e.target.closest('.rx-remove-row');
+      if (!btn) return;
+      btn.closest('tr').remove();
+      updateCount();
+    });
+  })();
+
+  // ── Submit với action (draft / final) ──────────────────────────────────────
+  function doSubmit(action) {
+    document.getElementById('submitActionField').value = action;
+    submitObsForm();
   }
 
-  function viewAiImage(imgUrl, message) {
-      document.getElementById("modalAiResultImage").src = imgUrl;
-      document.getElementById("modalAiResultMessage").innerText = message;
-      const aiImageModal = new bootstrap.Modal(document.getElementById("aiImageModal"));
-      aiImageModal.show();
+  // ── Tab xét nghiệm / siêu âm và tìm kiếm ─────────────────────────────────
+  var _activePanel = 'lab';
+
+  function switchTab(panel, btn) {
+    _activePanel = panel;
+    document.getElementById('panel-lab').classList.toggle('d-none', panel !== 'lab');
+    document.getElementById('panel-us').classList.toggle('d-none',  panel !== 'us');
+    document.querySelectorAll('#svcTabs .nav-link').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    // Áp dụng lại filter nếu đang tìm kiếm
+    var q = document.getElementById('svcSearchInput');
+    if (q) filterServices(q.value);
   }
+
+  function filterServices(q) {
+    q = q.toLowerCase().trim();
+    ['lab','us'].forEach(function(panel) {
+      var items = document.querySelectorAll('.svc-item[data-panel="' + panel + '"]');
+      var visible = 0;
+      items.forEach(function(el) {
+        var name = el.dataset.name.toLowerCase();
+        var show = !q || name.includes(q);
+        el.classList.toggle('d-none', !show);
+        if (show) visible++;
+      });
+      var noEl = document.getElementById('no-' + panel);
+      if (noEl) noEl.classList.toggle('d-none', visible > 0 || !q);
+    });
+  }
+
+  function updateTabCount(panel) {
+    var checked = document.querySelectorAll('input.svc-check[data-panel="' + panel + '"]:checked').length;
+    var badge = document.getElementById('cnt-' + panel);
+    if (badge) {
+      badge.textContent = checked;
+      badge.style.display = checked > 0 ? '' : 'none';
+    }
+    // Hiện/ẩn nút draft
+    var anyChecked = document.querySelectorAll('input.svc-check:checked').length > 0;
+    var btnDraft = document.getElementById('btnDraft');
+    if (btnDraft) btnDraft.classList.toggle('d-none', !anyChecked);
+  }
+
+  // Ẩn badge 0 lúc đầu
+  document.addEventListener('DOMContentLoaded', function() {
+    ['lab','us'].forEach(function(p) {
+      var b = document.getElementById('cnt-' + p);
+      if (b) b.style.display = 'none';
+    });
+  });
   </script>
-
-  <!-- Modal xem ảnh AI của Doctor -->
-  <div class="modal fade" id="aiImageModal" tabindex="-1" aria-labelledby="aiImageModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-lg modal-dialog-centered">
-          <div class="modal-content border-0 shadow">
-              <div class="modal-header bg-rose text-white" style="background-color: #be123c;">
-                  <h5 class="modal-title fw-bold text-white" id="aiImageModalLabel">
-                      <i class="bi bi-robot"></i> Hình Ảnh Siêu Âm Phân Tích Bởi AI
-                  </h5>
-                  <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-              </div>
-              <div class="modal-body p-4 text-center">
-                  <img id="modalAiResultImage" src="" class="img-fluid rounded border mb-3" style="max-height: 450px; object-fit: contain;">
-                  <div class="alert alert-info border text-start mb-0">
-                      <strong class="text-dark small d-block mb-1">MÔ TẢ CHI TIẾT CỦA AI:</strong>
-                      <span id="modalAiResultMessage" class="text-dark"></span>
-                  </div>
-              </div>
-              <div class="modal-footer bg-light border-0">
-                  <button type="button" class="btn btn-secondary border" data-bs-dismiss="modal">Đóng</button>
-              </div>
-          </div>
-      </div>
-  </div>
 
 </c:if>
 

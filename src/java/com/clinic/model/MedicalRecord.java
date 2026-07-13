@@ -50,6 +50,7 @@ public class MedicalRecord {
     private String    treatmentPlan;
     private LocalDate nextAppointmentDate;
     private String    referredTo;
+    private String    status;   // 'draft' = đang chờ XN, 'final' = hoàn tất
 
     // ── Trường JOIN (không lưu DB) ──────────────────────────────────────────
     private String  patientName;
@@ -149,6 +150,11 @@ public class MedicalRecord {
 
     public String getReferredTo() { return referredTo; }
     public void setReferredTo(String v) { this.referredTo = v; }
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+    public boolean isDraft()  { return "draft".equals(status); }
+    public boolean isFinal()  { return status == null || "final".equals(status); }
 
     public String getPatientName() { return patientName; }
     public void setPatientName(String v) { this.patientName = v; }

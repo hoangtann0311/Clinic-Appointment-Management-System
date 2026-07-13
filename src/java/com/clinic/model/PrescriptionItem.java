@@ -14,7 +14,8 @@ public class PrescriptionItem {
 
     // Trường trung gian từ JOIN medicines
     private String medicineName;
-    private String medicineUnit;  // đơn vị tính (viên, gói, ml…)
+    private String medicineUnit;     // đơn vị tính (viên, gói, ml…)
+    private String medicineCategory; // nhóm thuốc (từ medicine_categories)
 
     public PrescriptionItem() {}
 
@@ -38,4 +39,7 @@ public class PrescriptionItem {
 
     public String getMedicineUnit() { return medicineUnit; }
     public void setMedicineUnit(String medicineUnit) { this.medicineUnit = medicineUnit; }
+
+    public String getMedicineCategory() { return medicineCategory; }
+    public void setMedicineCategory(String medicineCategory) { this.medicineCategory = medicineCategory; }
 }

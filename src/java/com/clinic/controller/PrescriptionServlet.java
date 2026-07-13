@@ -166,6 +166,14 @@ public class PrescriptionServlet extends HttpServlet {
             sendError(request, response, "Đơn thuốc phải có ít nhất một thuốc được chọn."); return;
         }
 
+        // Validate các medicineId đều tồn tại và đang được phép kê (is_active = 1)
+        java.util.Set<Integer> idsToCheck = new java.util.HashSet<>();
+        for (PrescriptionItem item : items) idsToCheck.add(item.getMedicineId());
+        if (!prescriptionDAO.allMedicineIdsValid(idsToCheck)) {
+            sendError(request, response, "Một hoặc nhiều thuốc đã chọn không còn khả dụng. Vui lòng tải lại trang và chọn lại.");
+            return;
+        }
+
         boolean success;
         int finalPrescriptionId;
 

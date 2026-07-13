@@ -4,6 +4,7 @@ package com.clinic.controller;
 import com.clinic.config.DatabaseConfig;
 import com.clinic.dao.AppointmentDAO;
 import com.clinic.dao.MedicalRecordDAO;
+import com.clinic.utils.NotificationHelper;
 import com.clinic.model.Appointment;
 import com.clinic.model.MedicalRecord;
 import com.clinic.model.User;
@@ -67,6 +68,10 @@ public class DoctorDashboardServlet extends HttpServlet {
         req.setAttribute("totalRecords",      totalRecords);
         req.setAttribute("recentRecords",     recentRecords);
         req.setAttribute("today",             today);
+
+        // Kiểm tra và tạo nhắc nhở cho hồ sơ draft chờ > 24h
+        try { NotificationHelper.checkDraftReminders(doctorId, user.getId()); }
+        catch (Exception ignored) {}
 
         req.getRequestDispatcher("/views/doctors/dashboard.jsp").forward(req, resp);
     }

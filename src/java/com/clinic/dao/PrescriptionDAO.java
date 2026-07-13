@@ -133,9 +133,11 @@ public class PrescriptionDAO {
             throws SQLException {
         String sql =
             "SELECT pi.id, pi.prescription_id, pi.medicine_id, pi.quantity, pi.dosage, " +
-            "       m.name AS medicine_name, m.category " +
+            "       m.name AS medicine_name, m.unit AS medicine_unit, " +
+            "       mc.category_name AS medicine_category " +
             "FROM   prescription_items pi " +
             "JOIN   medicines m ON pi.medicine_id = m.id " +
+            "LEFT JOIN medicine_categories mc ON mc.id = m.category_id " +
             "WHERE  pi.prescription_id = ?";
 
         List<PrescriptionItem> list = new ArrayList<>();
@@ -150,7 +152,8 @@ public class PrescriptionDAO {
                 item.setQuantity(rs.getInt("quantity"));
                 item.setDosage(rs.getString("dosage"));
                 item.setMedicineName(rs.getString("medicine_name"));
-                item.setMedicineUnit(rs.getString("category"));  // dùng category làm nhãn nhóm
+                item.setMedicineUnit(rs.getString("medicine_unit"));
+                item.setMedicineCategory(rs.getString("medicine_category"));
                 list.add(item);
             }
         }
@@ -235,7 +238,13 @@ public class PrescriptionDAO {
      * Lấy toàn bộ danh sách thuốc (dùng cho dropdown).
      */
     public List<Medicine> getAllMedicines() {
-        String sql = "SELECT id, name, price, description, category FROM medicines ORDER BY name, category";
+        String sql =
+            "SELECT m.id, m.name, m.price, m.description, m.unit, m.stock_quantity, " +
+            "       mc.category_name " +
+            "FROM   medicines m " +
+            "LEFT JOIN medicine_categories mc ON mc.id = m.category_id " +
+            "WHERE  m.is_active = 1 " +
+            "ORDER BY mc.category_name, m.name";
         List<Medicine> list = new ArrayList<>();
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -246,13 +255,39 @@ public class PrescriptionDAO {
                 m.setName(rs.getString("name"));
                 m.setPrice(rs.getBigDecimal("price"));
                 m.setDescription(rs.getString("description"));
-                m.setCategory(rs.getString("category"));
+                m.setUnit(rs.getString("unit"));
+                m.setStockQuantity(rs.getInt("stock_quantity"));
+                m.setCategoryName(rs.getString("category_name"));
                 list.add(m);
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
         return list;
+    }
+
+    /**
+     * Kiểm tra tất cả medicineId trong tập hợp đều tồn tại và đang active.
+     * Trả về true nếu tất cả hợp lệ, false nếu có ít nhất 1 ID không hợp lệ.
+     * Dùng để chống trường hợp client gửi ID giả hoặc thuốc đã bị ngừng kinh doanh.
+     */
+    public boolean allMedicineIdsValid(java.util.Collection<Integer> medicineIds) {
+        if (medicineIds == null || medicineIds.isEmpty()) return false;
+        StringBuilder placeholders = new StringBuilder();
+        for (int i = 0; i < medicineIds.size(); i++) {
+            placeholders.append(i == 0 ? "?" : ",?");
+        }
+        String sql = "SELECT COUNT(*) FROM medicines WHERE is_active = 1 AND id IN (" + placeholders + ")";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            int idx = 1;
+            for (Integer id : medicineIds) ps.setInt(idx++, id);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) return rs.getInt(1) == medicineIds.size();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 
     // ── Security checks ──────────────────────────────────────────────────────

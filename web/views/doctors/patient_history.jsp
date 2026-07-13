@@ -28,6 +28,49 @@
     </div>
 </div>
 
+<%-- ── Danh sách thai kỳ của bệnh nhân ─────────────────────────────────── --%>
+<c:if test="${not empty pregnancies}">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h6 class="fw-bold mb-2">
+                <i class="bi bi-heart-pulse-fill text-danger me-1"></i>Thai kỳ đã theo dõi
+            </h6>
+            <div class="row g-2">
+                <c:forEach var="preg" items="${pregnancies}">
+                    <div class="col-md-6 col-lg-4">
+                        <a href="${pageContext.request.contextPath}/doctor/pregnancy?id=${preg.id}"
+                           class="card border-0 rounded-3 shadow-sm text-decoration-none h-100
+                                  ${preg.pregnancyStatus == 'active' ? 'border-start border-4 border-danger' : ''}">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="fw-semibold text-dark small">
+                                        Bắt đầu: ${preg.startDate}
+                                    </span>
+                                    <c:choose>
+                                        <c:when test="${preg.pregnancyStatus == 'active'}">
+                                            <span class="badge bg-success rounded-pill">Đang theo dõi</span>
+                                        </c:when>
+                                        <c:when test="${preg.pregnancyStatus == 'delivered'}">
+                                            <span class="badge bg-primary rounded-pill">Đã sinh</span>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <span class="badge bg-light text-dark border rounded-pill">${preg.pregnancyStatus}</span>
+                                        </c:otherwise>
+                                    </c:choose>
+                                </div>
+                                <div class="text-muted small">
+                                    <c:if test="${preg.estimatedDueDate != null}">Dự sinh: ${preg.estimatedDueDate} — </c:if>
+                                    ${preg.visitCount} lần khám
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </c:forEach>
+            </div>
+        </div>
+    </div>
+</c:if>
+
 <c:choose>
     <c:when test="${empty records}">
         <div class="card border-0 rounded-4">

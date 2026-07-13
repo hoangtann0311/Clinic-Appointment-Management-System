@@ -122,8 +122,8 @@ public class MedicalRecordDAO {
             "  fetal_heart_rate, fetal_presentation, fetal_position, fetal_movement, " +
             "  cervical_dilation_cm, cervical_effacement, amniotic_fluid, presentation_station, " +
             "  edema, proteinuria, vaginal_bleeding, uterine_contractions, risk_flags_json, " +
-            "  treatment_plan, next_appointment_date, referred_to" +
-            ") VALUES (?,?,?,?,  ?,?,?,?,?,  ?,?,?,  ?,?,?,?,  ?,?,?,?,  ?,?,?,?,?,  ?,?,?)";
+            "  treatment_plan, next_appointment_date, referred_to, status" +
+            ") VALUES (?,?,?,?,  ?,?,?,?,?,  ?,?,?,  ?,?,?,?,  ?,?,?,?,  ?,?,?,?,?,  ?,?,?,?)";
 
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -148,13 +148,13 @@ public class MedicalRecordDAO {
             "  fetal_heart_rate=?, fetal_presentation=?, fetal_position=?, fetal_movement=?, " +
             "  cervical_dilation_cm=?, cervical_effacement=?, amniotic_fluid=?, presentation_station=?, " +
             "  edema=?, proteinuria=?, vaginal_bleeding=?, uterine_contractions=?, risk_flags_json=?, " +
-            "  treatment_plan=?, next_appointment_date=?, referred_to=? " +
+            "  treatment_plan=?, next_appointment_date=?, referred_to=?, status=? " +
             "WHERE id=?";
 
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             bindParams(ps, mr, false);
-            ps.setInt(27, mr.getId());
+            ps.setInt(28, mr.getId());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) { e.printStackTrace(); }
         return false;
@@ -209,6 +209,8 @@ public class MedicalRecordDAO {
             ps.setDate(i++, Date.valueOf(mr.getNextAppointmentDate()));
         } else { ps.setNull(i++, Types.DATE); }
         ps.setString(i++, mr.getReferredTo());
+        // Status (draft / final)
+        ps.setString(i++, mr.getStatus() != null ? mr.getStatus() : "final");
     }
 
     private void setDoubleOrNull(PreparedStatement ps, int idx, Double val) throws SQLException {
@@ -265,6 +267,8 @@ public class MedicalRecordDAO {
         Date nad = rs.getDate("next_appointment_date");
         if (nad != null) mr.setNextAppointmentDate(nad.toLocalDate());
         mr.setReferredTo(rs.getString("referred_to"));
+        // Status — đọc an toàn, nếu cột chưa tồn tại thì dùng mặc định "final"
+        try { mr.setStatus(rs.getString("status")); } catch (SQLException ignored) { mr.setStatus("final"); }
 
         // JOIN fields
         mr.setPatientName(rs.getString("patient_name"));
