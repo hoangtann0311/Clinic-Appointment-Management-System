@@ -187,6 +187,32 @@ public class ServiceDAO {
     }
 
     /**
+     * Tìm dịch vụ theo service_name (để kiểm tra trùng tên).
+     */
+    public Service findByName(String serviceName) {
+        String sql = "SELECT s.id, s.service_code, s.service_name, s.price, s.is_active "
+                   + "FROM services s WHERE LOWER(s.service_name) = LOWER(?)";
+
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, serviceName.trim());
+            rs = ps.executeQuery();
+            if (rs.next()) {
+                return mapRow(rs, false);
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi findByName service: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return null;
+    }
+
+    /**
      * Thêm dịch vụ mới.
      */
     public int insert(Service service) {

@@ -102,10 +102,11 @@ public class ManagerServiceServlet extends HttpServlet {
         String action = req.getParameter("action");
         String redirectUrl = req.getContextPath() + "/manager/services/";
 
-        // Lấy user hiện tại từ session để ghi log
+        // Lấy user hiện tại từ session + IP client để ghi audit log
         HttpSession session = req.getSession();
         User currentUser = (User) session.getAttribute("user");
         Integer changedBy = (currentUser != null) ? currentUser.getId() : null;
+        String clientIp = getClientIp(req);
 
         try {
             switch (action != null ? action : "") {
@@ -126,8 +127,9 @@ public class ManagerServiceServlet extends HttpServlet {
                     if (serviceService.createService(serviceCode, serviceName, description,
                             price, durationMins, requiresFasting, requiresFullBladder,
                             requiredRoomType, allowedSpecialties, categoryId, errors, changedBy)) {
-                        AuditUtil.log(changedBy, "Tạo mới dịch vụ: " + serviceName, "services",
-                                null, "price=" + price, null);
+                        AuditUtil.log(changedBy,
+                                "Tạo mới dịch vụ: " + serviceName + " (mã: " + serviceCode + ")",
+                                "services", null, "price=" + price, clientIp);
                         resp.sendRedirect(redirectUrl + "?success=created");
                     } else {
                         req.setAttribute("errors", errors);
@@ -140,6 +142,8 @@ public class ManagerServiceServlet extends HttpServlet {
 
                 case "edit": {
                     int id = parseInt(req.getParameter("id"), -1);
+                    // Lưu ý: serviceCode từ request bị Service layer bỏ qua
+                    // để bảo vệ khóa định danh (không cho phép sửa mã DV)
                     String serviceCode = req.getParameter("serviceCode");
                     String serviceName = req.getParameter("serviceName");
                     String description = req.getParameter("description");
@@ -158,8 +162,9 @@ public class ManagerServiceServlet extends HttpServlet {
                             price, durationMins, requiresFasting, requiresFullBladder,
                             requiredRoomType, allowedSpecialties, categoryId, isActive, errors,
                             changedBy, changeReason)) {
-                        AuditUtil.log(changedBy, "Cập nhật dịch vụ: " + serviceName, "services",
-                                null, "price=" + price + ", active=" + isActive, null);
+                        AuditUtil.log(changedBy,
+                                "Cập nhật dịch vụ ID=" + id + ": " + serviceName,
+                                "services", null, "price=" + price + ", active=" + isActive, clientIp);
                         resp.sendRedirect(redirectUrl + "?success=updated");
                     } else {
                         req.setAttribute("errors", errors);
@@ -181,7 +186,8 @@ public class ManagerServiceServlet extends HttpServlet {
                     if (serviceService.toggleServiceStatus(id)) {
                         String msg = svc.isActive() ? "deactivated" : "activated";
                         String actionLabel = svc.isActive() ? "Vô hiệu hóa dịch vụ: " : "Kích hoạt dịch vụ: ";
-                        AuditUtil.log(changedBy, actionLabel + svc.getServiceName(), "services", null, null, null);
+                        AuditUtil.log(changedBy, actionLabel + svc.getServiceName(),
+                                "services", null, null, clientIp);
                         resp.sendRedirect(redirectUrl + "?success=" + msg);
                     } else {
                         resp.sendRedirect(redirectUrl + "?error=Thay+đổi+trạng+thái+thất+bại");
@@ -192,6 +198,8 @@ public class ManagerServiceServlet extends HttpServlet {
                 case "deactivate": {
                     int id = parseInt(req.getParameter("id"), -1);
                     if (serviceService.deactivateService(id)) {
+                        AuditUtil.log(changedBy, "Vô hiệu hóa dịch vụ ID=" + id,
+                                "services", null, null, clientIp);
                         resp.sendRedirect(redirectUrl + "?success=deactivated");
                     } else {
                         resp.sendRedirect(redirectUrl + "?error=Vô+hiệu+hóa+thất+bại");
@@ -207,6 +215,20 @@ public class ManagerServiceServlet extends HttpServlet {
             e.printStackTrace(System.err);
             resp.sendRedirect(redirectUrl + "?error=Lỗi+hệ+thống:+vui+lòng+thử+lại");
         }
+    }
+
+    /**
+     * Trích xuất địa chỉ IP thực của client (hỗ trợ sau proxy/load balancer).
+     */
+    private String getClientIp(HttpServletRequest req) {
+        String xForwardedFor = req.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isEmpty()
+                && !"unknown".equalsIgnoreCase(xForwardedFor)) {
+            int commaIdx = xForwardedFor.indexOf(',');
+            return commaIdx > 0 ? xForwardedFor.substring(0, commaIdx).trim() : xForwardedFor.trim();
+        }
+        String remoteAddr = req.getRemoteAddr();
+        return (remoteAddr != null && !remoteAddr.isEmpty()) ? remoteAddr : "unknown";
     }
 
     /** Xử lý xem chi tiết dịch vụ (AJAX/trang riêng) */
