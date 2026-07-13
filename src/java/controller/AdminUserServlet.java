@@ -349,15 +349,75 @@ public class AdminUserServlet extends HttpServlet {
                 case "resetPassword": {
                     int userId = parseInt(req.getParameter("userId"), -1);
                     String newPassword = req.getParameter("newPassword");
+                    String confirmPassword = req.getParameter("confirmPassword");
+
+                    // ── Server-side validation ──
+                    List<String> pwdErrors = new ArrayList<>();
+
+                    // 1. Không được rỗng
+                    if (newPassword == null || newPassword.trim().isEmpty()) {
+                        pwdErrors.add("Vui lòng nhập mật khẩu mới.");
+                    } else {
+                        newPassword = newPassword.trim();
+
+                        // 2. Độ dài tối thiểu
+                        if (newPassword.length() < 6) {
+                            pwdErrors.add("Mật khẩu phải có ít nhất 6 ký tự.");
+                        }
+
+                        // 3. Độ dài tối đa
+                        if (newPassword.length() > 50) {
+                            pwdErrors.add("Mật khẩu không được vượt quá 50 ký tự.");
+                        }
+
+                        // 4. Phải có ít nhất 1 chữ cái
+                        if (!newPassword.matches(".*[a-zA-Z].*")) {
+                            pwdErrors.add("Mật khẩu phải có ít nhất 1 chữ cái.");
+                        }
+
+                        // 5. Phải có ít nhất 1 chữ số
+                        if (!newPassword.matches(".*[0-9].*")) {
+                            pwdErrors.add("Mật khẩu phải có ít nhất 1 chữ số.");
+                        }
+
+                        // 6. Phải có ít nhất 1 ký tự đặc biệt
+                        if (!newPassword.matches(".*[^a-zA-Z0-9].*")) {
+                            pwdErrors.add("Mật khẩu phải có ít nhất 1 ký tự đặc biệt.");
+                        }
+                    }
+
+                    // 4. Xác nhận mật khẩu
+                    if (confirmPassword == null || confirmPassword.trim().isEmpty()) {
+                        pwdErrors.add("Vui lòng xác nhận mật khẩu mới.");
+                    } else if (!confirmPassword.equals(newPassword)) {
+                        pwdErrors.add("Mật khẩu xác nhận không khớp.");
+                    }
+
+                    // Nếu có lỗi → forward về JSP với modal mở
+                    if (!pwdErrors.isEmpty()) {
+                        User target = userService.getUserById(userId);
+                        req.setAttribute("resetPwdUserId", userId);
+                        req.setAttribute("resetPwdUserName", target != null ? target.getFullName() : "");
+                        req.setAttribute("resetPwdErrors",
+                                String.join(" ", pwdErrors));
+                        req.setAttribute("showResetPwdModal", true);
+                        doGet(req, resp);
+                        return;
+                    }
+
+                    // Gọi service reset password
                     Map<String, String> errors = new HashMap<>();
                     if (userService.resetPassword(userId, newPassword, errors)) {
                         logAudit(req, "RESET_PASSWORD", "Reset mật khẩu cho user #" + userId);
                         resp.sendRedirect(redirectUrl + "?success=updated" + querySuffix);
                     } else {
-                        resp.sendRedirect(redirectUrl + "?error="
-                            + java.net.URLEncoder.encode(
-                                errors.getOrDefault("password", "Reset thất bại"), "UTF-8")
-                            + querySuffix);
+                        User target = userService.getUserById(userId);
+                        req.setAttribute("resetPwdUserId", userId);
+                        req.setAttribute("resetPwdUserName", target != null ? target.getFullName() : "");
+                        req.setAttribute("resetPwdErrors",
+                                errors.getOrDefault("password", "Đặt lại mật khẩu thất bại."));
+                        req.setAttribute("showResetPwdModal", true);
+                        doGet(req, resp);
                     }
                     return;
                 }

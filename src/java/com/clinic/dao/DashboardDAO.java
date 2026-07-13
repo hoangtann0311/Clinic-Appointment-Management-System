@@ -34,12 +34,46 @@ public class DashboardDAO {
     }
 
     /**
+     * Tổng số bệnh nhân được tạo trong khoảng ngày.
+     * Nhất quán với các KPI khác: đếm trong khoảng, không lũy kế.
+     */
+    public int countPatients(LocalDate from, LocalDate to) {
+        String sql = "SELECT COUNT(*) AS total FROM users WHERE role_id = 5 AND created_at >= ? AND created_at <= ?";
+        return executeCount(sql, from, to);
+    }
+
+    /**
+     * Tổng số người dùng được tạo trong khoảng ngày.
+     */
+    public int countUsers(LocalDate from, LocalDate to) {
+        String sql = "SELECT COUNT(*) AS total FROM users WHERE created_at >= ? AND created_at <= ?";
+        return executeCount(sql, from, to);
+    }
+
+    /**
+     * Tổng số bác sĩ (role_id = 2) được tạo trong khoảng ngày.
+     */
+    public int countDoctors(LocalDate from, LocalDate to) {
+        String sql = "SELECT COUNT(*) AS total FROM users WHERE role_id = 2 AND created_at >= ? AND created_at <= ?";
+        return executeCount(sql, from, to);
+    }
+
+    /**
      * Số lịch hẹn trong ngày hôm nay.
      */
     public int countAppointmentsToday() {
         String sql = "SELECT COUNT(*) AS total FROM appointments "
                    + "WHERE appointment_date = CAST(GETDATE() AS DATE)";
         return executeCount(sql);
+    }
+
+    /**
+     * Số lịch hẹn trong khoảng ngày (tất cả trạng thái).
+     */
+    public int countAppointments(LocalDate from, LocalDate to) {
+        String sql = "SELECT COUNT(*) AS total FROM appointments "
+                   + "WHERE appointment_date >= ? AND appointment_date <= ?";
+        return executeCount(sql, from, to);
     }
 
     /**
@@ -53,12 +87,31 @@ public class DashboardDAO {
     }
 
     /**
+     * Số bệnh nhân đang chờ khám trong khoảng ngày.
+     */
+    public int countWaitingPatients(LocalDate from, LocalDate to) {
+        String sql = "SELECT COUNT(*) AS total FROM appointments "
+                   + "WHERE appointment_date >= ? AND appointment_date <= ? "
+                   + "AND status IN ('waiting', 'confirmed', 'in_progress')";
+        return executeCount(sql, from, to);
+    }
+
+    /**
      * Số bác sĩ đang làm việc hôm nay (có lịch được duyệt).
      */
     public int countDoctorsWorkingToday() {
         String sql = "SELECT COUNT(DISTINCT doctor_id) AS total FROM doctor_schedules "
                    + "WHERE work_date = CAST(GETDATE() AS DATE) AND is_approved = 1";
         return executeCount(sql);
+    }
+
+    /**
+     * Số bác sĩ làm việc trong một ngày cụ thể (có lịch được duyệt).
+     */
+    public int countDoctorsWorking(LocalDate date) {
+        String sql = "SELECT COUNT(DISTINCT doctor_id) AS total FROM doctor_schedules "
+                   + "WHERE work_date = ? AND is_approved = 1";
+        return executeCount(sql, date);
     }
 
     /**
@@ -75,6 +128,18 @@ public class DashboardDAO {
     }
 
     /**
+     * Số ca siêu âm trong khoảng ngày.
+     */
+    public int countUltrasound(LocalDate from, LocalDate to) {
+        String sql = "SELECT COUNT(*) AS total FROM appointments a "
+                   + "INNER JOIN services s ON a.service_id = s.id "
+                   + "WHERE a.appointment_date >= ? AND a.appointment_date <= ? "
+                   + "AND (LOWER(s.service_name) LIKE N'%siêu âm%' "
+                   + "     OR LOWER(s.service_name) LIKE '%ultrasound%')";
+        return executeCount(sql, from, to);
+    }
+
+    /**
      * Doanh thu hôm nay (tổng invoice đã thanh toán cho lịch hẹn hôm nay).
      */
     public double sumRevenueToday() {
@@ -85,9 +150,63 @@ public class DashboardDAO {
         return executeSum(sql);
     }
 
+    /**
+     * Doanh thu trong khoảng ngày (tổng invoice đã thanh toán).
+     */
+    public double sumRevenue(LocalDate from, LocalDate to) {
+        String sql = "SELECT ISNULL(SUM(i.total_amount), 0) AS total FROM invoices i "
+                   + "INNER JOIN appointments a ON i.appointment_id = a.id "
+                   + "WHERE a.appointment_date >= ? AND a.appointment_date <= ? "
+                   + "AND i.status = 'paid'";
+        return executeSum(sql, from, to);
+    }
+
     // ──────────────────────────────────────────────
     // CHARTS DATA
     // ──────────────────────────────────────────────
+
+    /**
+     * Thống kê số lịch hẹn theo từng ngày trong khoảng ngày.
+     * Trả về Map<ngày (dd/MM), số lượng>.
+     */
+    public Map<String, Integer> getAppointmentsChart(LocalDate from, LocalDate to) {
+        String sql = "SELECT appointment_date, COUNT(*) AS cnt "
+                   + "FROM appointments "
+                   + "WHERE appointment_date >= ? AND appointment_date <= ? "
+                   + "GROUP BY appointment_date "
+                   + "ORDER BY appointment_date";
+
+        Map<String, Integer> result = new LinkedHashMap<>();
+        // Khởi tạo tất cả các ngày trong khoảng với giá trị 0
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM");
+        for (LocalDate d = from; !d.isAfter(to); d = d.plusDays(1)) {
+            result.put(d.format(fmt), 0);
+        }
+
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setDate(1, java.sql.Date.valueOf(from));
+            ps.setDate(2, java.sql.Date.valueOf(to));
+            rs = ps.executeQuery();
+            while (rs.next()) {
+                java.sql.Date date = rs.getDate("appointment_date");
+                int count = rs.getInt("cnt");
+                if (date != null) {
+                    String key = date.toLocalDate().format(fmt);
+                    result.put(key, count);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("DashboardDAO: Lỗi getAppointmentsChart - " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return result;
+    }
 
     /**
      * Thống kê số lịch hẹn trong 7 ngày gần nhất.
@@ -206,7 +325,7 @@ public class DashboardDAO {
     }
 
     /**
-     * Lấy danh sách hiệu suất bác sĩ (tổng bệnh nhân đã khám + hôm nay + doanh thu).
+     * Lấy danh sách hiệu suất bác sĩ (toàn thời gian + hôm nay).
      */
     public List<DoctorPerformance> getDoctorPerformance() {
         String sql = "SELECT "
@@ -242,6 +361,60 @@ public class DashboardDAO {
             }
         } catch (SQLException e) {
             System.err.println("DashboardDAO: Lỗi getDoctorPerformance - " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return list;
+    }
+
+    /**
+     * Lấy danh sách hiệu suất bác sĩ trong khoảng ngày.
+     * Tất cả 3 chỉ số (total_patients, appointments_today, revenue) đều lọc trong khoảng.
+     */
+    public List<DoctorPerformance> getDoctorPerformance(LocalDate from, LocalDate to) {
+        String sql = "SELECT "
+                   + "  d.id AS doctor_id, "
+                   + "  d.full_name AS doctor_name, "
+                   + "  ISNULL(d.specialization, N'Chưa cập nhật') AS specialization, "
+                   + "  (SELECT COUNT(*) FROM appointments a2 WHERE a2.doctor_id = d.id "
+                   + "     AND a2.status = 'completed' "
+                   + "     AND a2.appointment_date >= ? AND a2.appointment_date <= ?) AS total_patients, "
+                   + "  (SELECT COUNT(*) FROM appointments a3 WHERE a3.doctor_id = d.id "
+                   + "     AND a3.appointment_date >= ? AND a3.appointment_date <= ?) AS appointments_today, "
+                   + "  ISNULL((SELECT SUM(i.total_amount) FROM invoices i "
+                   + "     INNER JOIN appointments a4 ON i.appointment_id = a4.id "
+                   + "     WHERE a4.doctor_id = d.id AND i.status = 'paid' "
+                   + "     AND a4.appointment_date >= ? AND a4.appointment_date <= ?), 0) AS revenue "
+                   + "FROM doctors d "
+                   + "ORDER BY total_patients DESC";
+
+        List<DoctorPerformance> list = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            // 6 tham số: 3 cặp from/to cho 3 subquery
+            ps.setDate(1, java.sql.Date.valueOf(from));
+            ps.setDate(2, java.sql.Date.valueOf(to));
+            ps.setDate(3, java.sql.Date.valueOf(from));
+            ps.setDate(4, java.sql.Date.valueOf(to));
+            ps.setDate(5, java.sql.Date.valueOf(from));
+            ps.setDate(6, java.sql.Date.valueOf(to));
+            rs = ps.executeQuery();
+            while (rs.next()) {
+                DoctorPerformance dp = new DoctorPerformance();
+                dp.doctorId = rs.getInt("doctor_id");
+                dp.doctorName = rs.getString("doctor_name");
+                dp.specialization = rs.getString("specialization");
+                dp.totalPatients = rs.getInt("total_patients");
+                dp.appointmentsToday = rs.getInt("appointments_today");
+                dp.revenueGenerated = rs.getDouble("revenue");
+                list.add(dp);
+            }
+        } catch (SQLException e) {
+            System.err.println("DashboardDAO: Lỗi getDoctorPerformance(range) - " + e.getMessage());
         } finally {
             closeResources(conn, ps, rs);
         }
@@ -287,6 +460,13 @@ public class DashboardDAO {
      * Lấy lịch làm việc của tất cả bác sĩ trong hôm nay.
      */
     public List<TodaySchedule> getTodaySchedules() {
+        return getSchedules(LocalDate.now());
+    }
+
+    /**
+     * Lấy lịch làm việc của tất cả bác sĩ trong một ngày cụ thể.
+     */
+    public List<TodaySchedule> getSchedules(LocalDate date) {
         String sql = "SELECT "
                    + "  ds.id AS schedule_id, "
                    + "  d.full_name AS doctor_name, "
@@ -300,7 +480,7 @@ public class DashboardDAO {
                    + "     AND a.appointment_date = ds.work_date) AS booked_slots "
                    + "FROM doctor_schedules ds "
                    + "INNER JOIN doctors d ON ds.doctor_id = d.id "
-                   + "WHERE ds.work_date = CAST(GETDATE() AS DATE) "
+                   + "WHERE ds.work_date = ? "
                    + "ORDER BY ds.start_time";
 
         List<TodaySchedule> list = new ArrayList<>();
@@ -310,6 +490,7 @@ public class DashboardDAO {
         try {
             conn = DatabaseConfig.getConnection();
             ps = conn.prepareStatement(sql);
+            ps.setDate(1, java.sql.Date.valueOf(date));
             rs = ps.executeQuery();
             while (rs.next()) {
                 TodaySchedule ts = new TodaySchedule();
@@ -324,7 +505,7 @@ public class DashboardDAO {
                 list.add(ts);
             }
         } catch (SQLException e) {
-            System.err.println("DashboardDAO: Lỗi getTodaySchedules - " + e.getMessage());
+            System.err.println("DashboardDAO: Lỗi getSchedules - " + e.getMessage());
         } finally {
             closeResources(conn, ps, rs);
         }
@@ -355,7 +536,8 @@ public class DashboardDAO {
     }
 
     /**
-     * Thống kê số ca theo từng dịch vụ siêu âm.
+     * Thống kê số ca theo từng dịch vụ siêu âm (toàn thời gian + hôm nay).
+     * Mặc định: total_cases = toàn bộ, cases_today = hôm nay.
      */
     public List<UltrasoundStat> getUltrasoundStats() {
         String sql = "SELECT "
@@ -396,6 +578,58 @@ public class DashboardDAO {
         return list;
     }
 
+    /**
+     * Thống kê số ca theo từng dịch vụ siêu âm trong khoảng ngày.
+     * Chỉ trả về dịch vụ có ít nhất 1 ca trong khoảng.
+     * Nếu không có dịch vụ nào → list rỗng → JSP hiện "Chưa có dữ liệu".
+     */
+    public List<UltrasoundStat> getUltrasoundStats(LocalDate from, LocalDate to) {
+        // Bọc subquery để lọc bỏ dịch vụ có total_cases = 0
+        String sql = "SELECT * FROM ("
+                   + "SELECT "
+                   + "  s.id, "
+                   + "  s.service_name, "
+                   + "  ISNULL(s.price, 0) AS price, "
+                   + "  (SELECT COUNT(*) FROM appointments a "
+                   + "     WHERE a.service_id = s.id "
+                   + "     AND a.appointment_date >= ? AND a.appointment_date <= ?) AS total_cases, "
+                   + "  (SELECT COUNT(*) FROM appointments a "
+                   + "     WHERE a.service_id = s.id "
+                   + "     AND a.appointment_date >= ? AND a.appointment_date <= ?) AS cases_today "
+                   + "FROM services s "
+                   + "WHERE (LOWER(s.service_name) LIKE N'%siêu âm%' "
+                   + "   OR LOWER(s.service_name) LIKE '%ultrasound%') "
+                   + ") filtered WHERE total_cases > 0 "
+                   + "ORDER BY total_cases DESC";
+
+        List<UltrasoundStat> list = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setDate(1, java.sql.Date.valueOf(from));
+            ps.setDate(2, java.sql.Date.valueOf(to));
+            ps.setDate(3, java.sql.Date.valueOf(from));
+            ps.setDate(4, java.sql.Date.valueOf(to));
+            rs = ps.executeQuery();
+            while (rs.next()) {
+                UltrasoundStat us = new UltrasoundStat();
+                us.serviceName = rs.getString("service_name");
+                us.totalCases = rs.getInt("total_cases");
+                us.casesToday = rs.getInt("cases_today");
+                us.price = rs.getDouble("price");
+                list.add(us);
+            }
+        } catch (SQLException e) {
+            System.err.println("DashboardDAO: Lỗi getUltrasoundStats(range) - " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return list;
+    }
+
     // ──────────────────────────────────────────────
     // BỆNH NHÂN MỚI (Patient role, recent)
     // ──────────────────────────────────────────────
@@ -426,9 +660,25 @@ public class DashboardDAO {
      * Lấy danh sách bệnh nhân mới đăng ký gần đây (role_id = 5).
      */
     public List<RecentPatient> getRecentPatients(int limit) {
-        String sql = "SELECT TOP (?) id, full_name, email, phone, created_at "
-                   + "FROM users WHERE role_id = 5 "
-                   + "ORDER BY id DESC";
+        return getRecentPatients(limit, null, null);
+    }
+
+    /**
+     * Lấy danh sách bệnh nhân mới đăng ký trong khoảng ngày.
+     */
+    public List<RecentPatient> getRecentPatients(int limit, LocalDate from, LocalDate to) {
+        boolean hasDateFilter = (from != null && to != null);
+        String sql;
+        if (hasDateFilter) {
+            sql = "SELECT TOP (?) id, full_name, email, phone, created_at "
+                + "FROM users WHERE role_id = 5 "
+                + "AND created_at >= ? AND created_at <= ? "
+                + "ORDER BY id DESC";
+        } else {
+            sql = "SELECT TOP (?) id, full_name, email, phone, created_at "
+                + "FROM users WHERE role_id = 5 "
+                + "ORDER BY id DESC";
+        }
 
         List<RecentPatient> list = new ArrayList<>();
         Connection conn = null;
@@ -438,6 +688,10 @@ public class DashboardDAO {
             conn = DatabaseConfig.getConnection();
             ps = conn.prepareStatement(sql);
             ps.setInt(1, limit);
+            if (hasDateFilter) {
+                ps.setDate(2, java.sql.Date.valueOf(from));
+                ps.setDate(3, java.sql.Date.valueOf(to));
+            }
             rs = ps.executeQuery();
             while (rs.next()) {
                 RecentPatient rp = new RecentPatient();
@@ -457,8 +711,8 @@ public class DashboardDAO {
                 list.add(rp);
             }
         } catch (SQLException e) {
-            // Fallback: cột created_at có thể chưa tồn tại
             System.err.println("DashboardDAO: Lỗi getRecentPatients - " + e.getMessage());
+            if (hasDateFilter) return list; // fallback: trả về list rỗng
             return getRecentPatientsFallback(limit);
         } finally {
             closeResources(conn, ps, rs);
@@ -525,11 +779,29 @@ public class DashboardDAO {
      * Lấy N audit log gần nhất.
      */
     public List<AuditLogEntry> getRecentAuditLogs(int limit) {
-        String sql = "SELECT TOP (?) al.id, al.action, al.table_name, al.created_at, "
-                   + "ISNULL(u.full_name, 'System') AS user_name "
-                   + "FROM audit_logs al "
-                   + "LEFT JOIN users u ON al.user_id = u.id "
-                   + "ORDER BY al.id DESC";
+        return getRecentAuditLogs(limit, null, null);
+    }
+
+    /**
+     * Lấy N audit log trong khoảng ngày.
+     */
+    public List<AuditLogEntry> getRecentAuditLogs(int limit, LocalDate from, LocalDate to) {
+        boolean hasDateFilter = (from != null && to != null);
+        String sql;
+        if (hasDateFilter) {
+            sql = "SELECT TOP (?) al.id, al.action, al.table_name, al.created_at, "
+                + "ISNULL(u.full_name, 'System') AS user_name "
+                + "FROM audit_logs al "
+                + "LEFT JOIN users u ON al.user_id = u.id "
+                + "WHERE al.created_at >= ? AND al.created_at <= ? "
+                + "ORDER BY al.id DESC";
+        } else {
+            sql = "SELECT TOP (?) al.id, al.action, al.table_name, al.created_at, "
+                + "ISNULL(u.full_name, 'System') AS user_name "
+                + "FROM audit_logs al "
+                + "LEFT JOIN users u ON al.user_id = u.id "
+                + "ORDER BY al.id DESC";
+        }
 
         List<AuditLogEntry> list = new ArrayList<>();
         Connection conn = null;
@@ -539,6 +811,10 @@ public class DashboardDAO {
             conn = DatabaseConfig.getConnection();
             ps = conn.prepareStatement(sql);
             ps.setInt(1, limit);
+            if (hasDateFilter) {
+                ps.setDate(2, java.sql.Date.valueOf(from));
+                ps.setDate(3, java.sql.Date.valueOf(to));
+            }
             rs = ps.executeQuery();
             while (rs.next()) {
                 AuditLogEntry entry = new AuditLogEntry();
@@ -592,21 +868,29 @@ public class DashboardDAO {
     }
 
     /**
-     * Lấy danh sách cảnh báo hệ thống.
+     * Lấy danh sách cảnh báo hệ thống (dùng ngày hiện tại).
      */
     public List<Alert> getSystemAlerts() {
+        return getSystemAlerts(LocalDate.now());
+    }
+
+    /**
+     * Lấy danh sách cảnh báo hệ thống với ngày tham chiếu.
+     * Khi lọc theo ngày cũ, alert lịch hẹn sẽ dùng refDate thay vì GETDATE().
+     */
+    public List<Alert> getSystemAlerts(LocalDate refDate) {
         List<Alert> alerts = new ArrayList<>();
 
-        // 1. Lịch hẹn chưa xác nhận
+        // 1. Lịch hẹn chưa xác nhận — dùng refDate thay vì GETDATE()
         int unconfirmed = executeCount(
             "SELECT COUNT(*) AS total FROM appointments "
-            + "WHERE status = 'pending' AND appointment_date = CAST(GETDATE() AS DATE)");
+            + "WHERE status = 'pending' AND appointment_date = ?", refDate);
         if (unconfirmed > 0) {
             Alert a = new Alert();
             a.type = "warning";
             a.icon = "bi-exclamation-triangle-fill";
             a.title = "Lịch hẹn chưa xác nhận";
-            a.message = "Có " + unconfirmed + " lịch hẹn đang chờ xác nhận trong hôm nay.";
+            a.message = "Có " + unconfirmed + " lịch hẹn đang chờ xác nhận.";
             a.count = unconfirmed;
             alerts.add(a);
         }
@@ -637,9 +921,10 @@ public class DashboardDAO {
             alerts.add(a);
         }
 
-        // 4. Tài khoản chưa xác thực email
+        // 4. Tài khoản chưa xác thực email — chỉ đếm đến refDate
         int unverified = executeCount(
-            "SELECT COUNT(*) AS total FROM users WHERE is_verified = 0 AND status = 'PENDING_VERIFICATION'");
+            "SELECT COUNT(*) AS total FROM users WHERE is_verified = 0 AND status = 'PENDING_VERIFICATION' AND created_at <= ?",
+            refDate);
         if (unverified > 0) {
             Alert a = new Alert();
             a.type = "info";
@@ -676,6 +961,49 @@ public class DashboardDAO {
         return 0;
     }
 
+    /** executeCount với 2 tham số ngày (from, to) */
+    private int executeCount(String sql, LocalDate from, LocalDate to) {
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setDate(1, java.sql.Date.valueOf(from));
+            ps.setDate(2, java.sql.Date.valueOf(to));
+            rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt("total");
+            }
+        } catch (SQLException e) {
+            System.err.println("DashboardDAO executeCount(range): " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return 0;
+    }
+
+    /** executeCount với 1 tham số ngày */
+    private int executeCount(String sql, LocalDate date) {
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setDate(1, java.sql.Date.valueOf(date));
+            rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt("total");
+            }
+        } catch (SQLException e) {
+            System.err.println("DashboardDAO executeCount(date): " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return 0;
+    }
+
     private double executeSum(String sql) {
         Connection conn = null;
         PreparedStatement ps = null;
@@ -689,6 +1017,28 @@ public class DashboardDAO {
             }
         } catch (SQLException e) {
             System.err.println("DashboardDAO executeSum: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return 0.0;
+    }
+
+    /** executeSum với 2 tham số ngày (from, to) */
+    private double executeSum(String sql, LocalDate from, LocalDate to) {
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setDate(1, java.sql.Date.valueOf(from));
+            ps.setDate(2, java.sql.Date.valueOf(to));
+            rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getDouble("total");
+            }
+        } catch (SQLException e) {
+            System.err.println("DashboardDAO executeSum(range): " + e.getMessage());
         } finally {
             closeResources(conn, ps, rs);
         }

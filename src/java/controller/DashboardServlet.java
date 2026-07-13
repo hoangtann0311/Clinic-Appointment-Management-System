@@ -216,51 +216,147 @@ public class DashboardServlet extends HttpServlet {
     /**
      * Load toàn bộ dữ liệu thống kê cho Admin Dashboard.
      * Gọi DashboardService để lấy số liệu thực từ database.
+     * Hỗ trợ lọc theo khoảng ngày (dateFrom → dateTo).
      */
     private void loadAdminDashboardData(HttpServletRequest request) {
         DashboardService dashboardService = new DashboardService();
 
+        // ── Đọc tham số lọc khoảng ngày ──
+        String dateFromStr = request.getParameter("dateFrom");
+        String dateToStr = request.getParameter("dateTo");
+        LocalDate dateFrom = null;
+        LocalDate dateTo = null;
+        LocalDate today = LocalDate.now();
+
+        try {
+            if (dateFromStr != null && !dateFromStr.trim().isEmpty()) {
+                dateFrom = LocalDate.parse(dateFromStr);
+            }
+        } catch (Exception e) {
+            dateFrom = null;
+        }
+        try {
+            if (dateToStr != null && !dateToStr.trim().isEmpty()) {
+                dateTo = LocalDate.parse(dateToStr);
+            }
+        } catch (Exception e) {
+            dateTo = null;
+        }
+
+        // Nếu không có tham số, mặc định là hôm nay
+        boolean isCustomRange = (dateFrom != null || dateTo != null);
+        if (!isCustomRange) {
+            dateFrom = today;
+            dateTo = today;
+        } else {
+            // Nếu chỉ có 1 trong 2, mặc định cái còn lại = hôm nay
+            if (dateFrom == null) dateFrom = today;
+            if (dateTo == null) dateTo = today;
+            // Nếu cả 2 đều là hôm nay → coi như thời gian thực (không filter)
+            if (dateFrom.equals(today) && dateTo.equals(today)) {
+                isCustomRange = false;
+            }
+        }
+
+        // ── Truyền ngày cho JSP ──
+        request.setAttribute("dateFrom", dateFrom);
+        request.setAttribute("dateTo", dateTo);
+        request.setAttribute("isCustomRange", isCustomRange);
+        request.setAttribute("today", today);
+
         // ─── 6 KPI Cards ───
-        request.setAttribute("totalPatients", dashboardService.getTotalPatients());
-        request.setAttribute("totalAppointmentsToday", dashboardService.getTotalAppointmentsToday());
-        request.setAttribute("waitingPatients", dashboardService.getWaitingPatients());
-        request.setAttribute("doctorsWorkingToday", dashboardService.getDoctorsWorkingToday());
-        request.setAttribute("ultrasoundToday", dashboardService.getUltrasoundToday());
-        request.setAttribute("revenueToday", dashboardService.getRevenueToday());
+        // Các KPI entity-count: mặc định = toàn hệ thống; có filter = trong khoảng
+        // Các KPI appointment-based: luôn lọc theo dateFrom/dateTo
+        //   (khi isCustomRange=false, dateFrom=dateTo=today → lấy đúng dữ liệu hôm nay)
+        if (isCustomRange) {
+            request.setAttribute("totalPatients", dashboardService.getTotalPatients(dateFrom, dateTo));
+            request.setAttribute("totalUsers", dashboardService.getTotalUsers(dateFrom, dateTo));
+            request.setAttribute("totalDoctors", dashboardService.getTotalDoctors(dateFrom, dateTo));
+        } else {
+            request.setAttribute("totalPatients", dashboardService.getTotalPatients());
+            request.setAttribute("totalUsers", dashboardService.getTotalUsers());
+            request.setAttribute("totalDoctors", dashboardService.getTotalDoctors());
+        }
+        request.setAttribute("totalAppointmentsToday", dashboardService.getTotalAppointments(dateFrom, dateTo));
+        request.setAttribute("waitingPatients", dashboardService.getWaitingPatients(dateFrom, dateTo));
+        request.setAttribute("doctorsWorkingToday", dashboardService.getDoctorsWorking(dateTo));
+        request.setAttribute("ultrasoundToday", dashboardService.getUltrasound(dateFrom, dateTo));
+        request.setAttribute("revenueToday", dashboardService.getRevenue(dateFrom, dateTo));
 
-        // Tổng số users + doctors (legacy KPI)
-        request.setAttribute("totalUsers", dashboardService.getTotalUsers());
-        request.setAttribute("totalDoctors", dashboardService.getTotalDoctors());
-
-        // ─── Biểu đồ lịch hẹn 7 ngày ───
-        Map<String, Integer> apptChart = dashboardService.getAppointmentsChartData();
+        // ─── Biểu đồ lịch hẹn ───
+        // Mặc định: 7 ngày gần nhất; Có filter: khoảng đã chọn
+        Map<String, Integer> apptChart;
+        if (isCustomRange) {
+            apptChart = dashboardService.getAppointmentsChartData(dateFrom, dateTo);
+        } else {
+            apptChart = dashboardService.getAppointmentsChartData();
+        }
         request.setAttribute("apptChartLabels", apptChart.keySet());
         request.setAttribute("apptChartValues", apptChart.values());
 
-        // ─── Biểu đồ doanh thu 12 tháng ───
+        // ─── Biểu đồ doanh thu 12 tháng (luôn hiển thị 12 tháng gần nhất để có bối cảnh) ───
         Map<String, Double> revenueChart = dashboardService.getRevenueChartData();
         request.setAttribute("revenueChartLabels", revenueChart.keySet());
         request.setAttribute("revenueChartValues", revenueChart.values());
 
         // ─── Bảng hiệu suất bác sĩ ───
-        request.setAttribute("doctorPerformance", dashboardService.getDoctorPerformance());
+        if (isCustomRange) {
+            request.setAttribute("doctorPerformance", dashboardService.getDoctorPerformance(dateFrom, dateTo));
+        } else {
+            request.setAttribute("doctorPerformance", dashboardService.getDoctorPerformance());
+        }
 
-        // ─── Lịch làm việc hôm nay ───
-        request.setAttribute("todaySchedules", dashboardService.getTodaySchedules());
+        // ─── Lịch làm việc ───
+        if (isCustomRange) {
+            request.setAttribute("todaySchedules", dashboardService.getSchedules(dateTo));
+        } else {
+            request.setAttribute("todaySchedules", dashboardService.getTodaySchedules());
+        }
 
         // ─── Thống kê dịch vụ siêu âm ───
-        request.setAttribute("ultrasoundStats", dashboardService.getUltrasoundStats());
+        if (isCustomRange) {
+            request.setAttribute("ultrasoundStats", dashboardService.getUltrasoundStats(dateFrom, dateTo));
+        } else {
+            request.setAttribute("ultrasoundStats", dashboardService.getUltrasoundStats());
+        }
 
         // ─── Bệnh nhân mới đăng ký ───
-        request.setAttribute("recentPatients", dashboardService.getRecentPatients(8));
+        if (isCustomRange) {
+            request.setAttribute("recentPatients", dashboardService.getRecentPatients(8, dateFrom, dateTo));
+        } else {
+            request.setAttribute("recentPatients", dashboardService.getRecentPatients(8));
+        }
 
         // ─── Người dùng mới nhất (legacy table) ───
         request.setAttribute("recentUsers", dashboardService.getRecentUsers(5));
 
         // ─── Nhật ký hệ thống ───
-        request.setAttribute("recentAuditLogs", dashboardService.getRecentAuditLogs(10));
+        if (isCustomRange) {
+            request.setAttribute("recentAuditLogs", dashboardService.getRecentAuditLogs(10, dateFrom, dateTo));
+        } else {
+            request.setAttribute("recentAuditLogs", dashboardService.getRecentAuditLogs(10));
+        }
 
         // ─── Cảnh báo hệ thống ───
-        request.setAttribute("systemAlerts", dashboardService.getSystemAlerts());
+        if (isCustomRange) {
+            request.setAttribute("systemAlerts", dashboardService.getSystemAlerts(dateTo));
+        } else {
+            request.setAttribute("systemAlerts", dashboardService.getSystemAlerts());
+        }
+
+        // ─── Dữ liệu cho hiển thị khoảng ngày ───
+        DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        request.setAttribute("dateFromFormatted", dateFrom.format(dateFmt));
+        request.setAttribute("dateToFormatted", dateTo.format(dateFmt));
+
+        // Label cho khoảng ngày
+        if (!isCustomRange || (dateFrom.equals(today) && dateTo.equals(today))) {
+            request.setAttribute("dateRangeLabel", "Hôm nay");
+        } else if (dateFrom.equals(dateTo)) {
+            request.setAttribute("dateRangeLabel", "Ngày " + dateFrom.format(dateFmt));
+        } else {
+            request.setAttribute("dateRangeLabel",
+                    dateFrom.format(dateFmt) + " → " + dateTo.format(dateFmt));
+        }
     }
 }

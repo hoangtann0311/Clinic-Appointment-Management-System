@@ -4,6 +4,7 @@ import com.clinic.dao.DashboardDAO;
 import com.clinic.dao.UserDAO;
 import com.clinic.model.User;
 
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +42,18 @@ public class DashboardService {
     }
 
     /**
+     * Tổng số người dùng được tạo trong khoảng ngày (lọc theo ngày).
+     */
+    public int getTotalUsers(LocalDate from, LocalDate to) {
+        try {
+            return dashboardDAO.countUsers(from, to);
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getTotalUsers(range) - " + e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
      * Tổng số bác sĩ (role_id = 2).
      */
     public int getTotalDoctors() {
@@ -48,6 +61,18 @@ public class DashboardService {
             return Math.max(userDAO.getTotalDoctors(), 0);
         } catch (Exception e) {
             System.err.println("DashboardService: Lỗi getTotalDoctors - " + e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Tổng số bác sĩ được tạo trong khoảng ngày (lọc theo ngày).
+     */
+    public int getTotalDoctors(LocalDate from, LocalDate to) {
+        try {
+            return dashboardDAO.countDoctors(from, to);
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getTotalDoctors(range) - " + e.getMessage());
             return 0;
         }
     }
@@ -65,6 +90,18 @@ public class DashboardService {
     }
 
     /**
+     * Tổng số bệnh nhân được tạo trong khoảng ngày (lọc theo ngày).
+     */
+    public int getTotalPatients(LocalDate from, LocalDate to) {
+        try {
+            return dashboardDAO.countPatients(from, to);
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getTotalPatients(range) - " + e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
      * Số lịch hẹn trong ngày hôm nay.
      */
     public int getTotalAppointmentsToday() {
@@ -72,6 +109,18 @@ public class DashboardService {
             return dashboardDAO.countAppointmentsToday();
         } catch (Exception e) {
             System.err.println("DashboardService: Lỗi getTotalAppointmentsToday - " + e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Số lịch hẹn trong khoảng ngày.
+     */
+    public int getTotalAppointments(LocalDate from, LocalDate to) {
+        try {
+            return dashboardDAO.countAppointments(from, to);
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getTotalAppointments - " + e.getMessage());
             return 0;
         }
     }
@@ -89,6 +138,18 @@ public class DashboardService {
     }
 
     /**
+     * Số bệnh nhân đang chờ khám trong khoảng ngày.
+     */
+    public int getWaitingPatients(LocalDate from, LocalDate to) {
+        try {
+            return dashboardDAO.countWaitingPatients(from, to);
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getWaitingPatients(range) - " + e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
      * Số bác sĩ đang làm việc hôm nay.
      */
     public int getDoctorsWorkingToday() {
@@ -96,6 +157,18 @@ public class DashboardService {
             return dashboardDAO.countDoctorsWorkingToday();
         } catch (Exception e) {
             System.err.println("DashboardService: Lỗi getDoctorsWorkingToday - " + e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Số bác sĩ làm việc trong một ngày cụ thể.
+     */
+    public int getDoctorsWorking(LocalDate date) {
+        try {
+            return dashboardDAO.countDoctorsWorking(date);
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getDoctorsWorking - " + e.getMessage());
             return 0;
         }
     }
@@ -113,6 +186,18 @@ public class DashboardService {
     }
 
     /**
+     * Số ca siêu âm trong khoảng ngày.
+     */
+    public int getUltrasound(LocalDate from, LocalDate to) {
+        try {
+            return dashboardDAO.countUltrasound(from, to);
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getUltrasound - " + e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
      * Doanh thu hôm nay (VND).
      */
     public String getRevenueToday() {
@@ -122,6 +207,31 @@ public class DashboardService {
         } catch (Exception e) {
             System.err.println("DashboardService: Lỗi getRevenueToday - " + e.getMessage());
             return "0 VNĐ";
+        }
+    }
+
+    /**
+     * Doanh thu trong khoảng ngày (VND).
+     */
+    public String getRevenue(LocalDate from, LocalDate to) {
+        try {
+            double revenue = dashboardDAO.sumRevenue(from, to);
+            return formatCurrency(revenue);
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getRevenue - " + e.getMessage());
+            return "0 VNĐ";
+        }
+    }
+
+    /**
+     * Doanh thu trong khoảng ngày (số thô, để tính toán).
+     */
+    public double getRevenueRaw(LocalDate from, LocalDate to) {
+        try {
+            return dashboardDAO.sumRevenue(from, to);
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getRevenueRaw - " + e.getMessage());
+            return 0.0;
         }
     }
 
@@ -137,6 +247,18 @@ public class DashboardService {
             return dashboardDAO.getAppointmentsLast7Days();
         } catch (Exception e) {
             System.err.println("DashboardService: Lỗi getAppointmentsChartData - " + e.getMessage());
+            return Collections.emptyMap();
+        }
+    }
+
+    /**
+     * Dữ liệu biểu đồ lịch hẹn theo khoảng ngày.
+     */
+    public Map<String, Integer> getAppointmentsChartData(LocalDate from, LocalDate to) {
+        try {
+            return dashboardDAO.getAppointmentsChart(from, to);
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getAppointmentsChartData(range) - " + e.getMessage());
             return Collections.emptyMap();
         }
     }
@@ -170,6 +292,18 @@ public class DashboardService {
     }
 
     /**
+     * Danh sách hiệu suất bác sĩ trong khoảng ngày.
+     */
+    public List<DashboardDAO.DoctorPerformance> getDoctorPerformance(LocalDate from, LocalDate to) {
+        try {
+            return dashboardDAO.getDoctorPerformance(from, to);
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getDoctorPerformance(range) - " + e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
      * Lịch làm việc hôm nay.
      */
     public List<DashboardDAO.TodaySchedule> getTodaySchedules() {
@@ -177,6 +311,18 @@ public class DashboardService {
             return dashboardDAO.getTodaySchedules();
         } catch (Exception e) {
             System.err.println("DashboardService: Lỗi getTodaySchedules - " + e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * Lịch làm việc trong một ngày cụ thể.
+     */
+    public List<DashboardDAO.TodaySchedule> getSchedules(LocalDate date) {
+        try {
+            return dashboardDAO.getSchedules(date);
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getSchedules - " + e.getMessage());
             return Collections.emptyList();
         }
     }
@@ -194,6 +340,18 @@ public class DashboardService {
     }
 
     /**
+     * Thống kê dịch vụ siêu âm trong khoảng ngày.
+     */
+    public List<DashboardDAO.UltrasoundStat> getUltrasoundStats(LocalDate from, LocalDate to) {
+        try {
+            return dashboardDAO.getUltrasoundStats(from, to);
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getUltrasoundStats(range) - " + e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
      * Danh sách bệnh nhân mới đăng ký.
      */
     public List<DashboardDAO.RecentPatient> getRecentPatients(int limit) {
@@ -201,6 +359,18 @@ public class DashboardService {
             return dashboardDAO.getRecentPatients(limit);
         } catch (Exception e) {
             System.err.println("DashboardService: Lỗi getRecentPatients - " + e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * Danh sách bệnh nhân mới đăng ký trong khoảng ngày.
+     */
+    public List<DashboardDAO.RecentPatient> getRecentPatients(int limit, LocalDate from, LocalDate to) {
+        try {
+            return dashboardDAO.getRecentPatients(limit, from, to);
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getRecentPatients(range) - " + e.getMessage());
             return Collections.emptyList();
         }
     }
@@ -218,6 +388,18 @@ public class DashboardService {
     }
 
     /**
+     * Nhật ký hệ thống trong khoảng ngày.
+     */
+    public List<DashboardDAO.AuditLogEntry> getRecentAuditLogs(int limit, LocalDate from, LocalDate to) {
+        try {
+            return dashboardDAO.getRecentAuditLogs(limit, from, to);
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getRecentAuditLogs(range) - " + e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
      * Danh sách cảnh báo hệ thống.
      */
     public List<DashboardDAO.Alert> getSystemAlerts() {
@@ -225,6 +407,18 @@ public class DashboardService {
             return dashboardDAO.getSystemAlerts();
         } catch (Exception e) {
             System.err.println("DashboardService: Lỗi getSystemAlerts - " + e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * Danh sách cảnh báo hệ thống với ngày tham chiếu.
+     */
+    public List<DashboardDAO.Alert> getSystemAlerts(LocalDate refDate) {
+        try {
+            return dashboardDAO.getSystemAlerts(refDate);
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getSystemAlerts(date) - " + e.getMessage());
             return Collections.emptyList();
         }
     }
