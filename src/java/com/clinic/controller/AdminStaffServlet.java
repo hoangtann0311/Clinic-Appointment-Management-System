@@ -51,8 +51,15 @@ public class AdminStaffServlet extends HttpServlet {
         Integer roleFilter = parseInteger(req.getParameter("role"));
         String statusFilter = req.getParameter("status");
 
+        java.util.List<Integer> roleIds;
+        if (roleFilter != null) {
+            roleIds = java.util.Collections.singletonList(roleFilter);
+        } else {
+            roleIds = new ArrayList<>(STAFF_ROLE_IDS);
+        }
+
         // Lấy danh sách nhân sự (chỉ staff roles)
-        List<User> allUsers = userService.getUsers(page, PAGE_SIZE, search, roleFilter, statusFilter);
+        List<User> allUsers = userService.getUsers(page, PAGE_SIZE, search, roleIds, statusFilter, false);
         // Lọc chỉ giữ lại nhân viên
         List<User> staffList = new ArrayList<>();
         for (User u : allUsers) {
@@ -65,12 +72,10 @@ public class AdminStaffServlet extends HttpServlet {
         int totalStaff = 0;
         if (search != null || roleFilter != null || statusFilter != null) {
             // Có filter → đếm từ DB
-            totalStaff = userService.getTotalUsers(search, roleFilter, statusFilter);
+            totalStaff = userService.getTotalUsers(search, roleIds, statusFilter, false);
         } else {
-            // Không filter → đếm tất cả user rồi trừ Admin và Patient
-            totalStaff = userService.getTotalUsers(null, null, null);
-            // Trừ đi số Admin và Patient nếu không lọc (đếm trực tiếp)
-            // Note: đây là ước lượng gần đúng — nếu cần chính xác tuyệt đối, cần thêm DAO method
+            // Không filter → đếm tất cả user có roles nhân sự
+            totalStaff = userService.getTotalUsers(null, new ArrayList<>(STAFF_ROLE_IDS), null, false);
         }
         int totalPages = Math.max(1, (int) Math.ceil((double) totalStaff / PAGE_SIZE));
 
@@ -114,7 +119,7 @@ public class AdminStaffServlet extends HttpServlet {
                         roleId = 4; // fallback Staff
                     }
                     Map<String, String> errors = new HashMap<>();
-                    if (userService.createUser(fullName, email, username, password, phone, roleId, status, errors)) {
+                    if (userService.createUser(fullName, email, password, phone, roleId, status, errors)) {
                         // Ghi audit log (nếu có hệ thống audit)
                         logAudit(req, "CREATE_STAFF", "Tạo nhân viên: " + fullName + " (role=" + roleId + ")");
                         resp.sendRedirect(redirectUrl + "?success=created");
@@ -146,7 +151,7 @@ public class AdminStaffServlet extends HttpServlet {
                         + ", roleId=" + roleId + ", status=" + status);
 
                     Map<String, String> errors = new HashMap<>();
-                    if (userService.updateUser(userId, fullName, username, email, phone, roleId, status, errors)) {
+                    if (userService.updateUser(userId, fullName, email, phone, roleId, status, errors)) {
                         logAudit(req, "EDIT_STAFF", "Sửa nhân viên #" + userId + ": " + fullName);
                         resp.sendRedirect(redirectUrl + "?success=updated");
                     } else {

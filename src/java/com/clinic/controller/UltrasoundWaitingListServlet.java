@@ -16,7 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
- * Shows ultrasound orders waiting to be performed and lets sonographers mark them done.
+ * Servlet hiển thị danh sách chờ siêu âm có phân trang và bộ lọc nâng cao.
  */
 @WebServlet(urlPatterns = {
     "/sonographer/waiting-list",
@@ -27,6 +27,7 @@ import java.util.List;
 public class UltrasoundWaitingListServlet extends HttpServlet {
 
     private UltrasoundOrderService ultrasoundOrderService;
+    private static final int PAGE_SIZE = 10;
 
     @Override
     public void init() throws ServletException {
@@ -42,14 +43,48 @@ public class UltrasoundWaitingListServlet extends HttpServlet {
             return;
         }
 
+        int page = 1;
+        String pageStr = request.getParameter("page");
+        if (pageStr != null && !pageStr.trim().isEmpty()) {
+            try {
+                page = Integer.parseInt(pageStr);
+            } catch (NumberFormatException e) {
+                page = 1;
+            }
+        }
+
+        String search = request.getParameter("search");
+        String status = request.getParameter("status");
+        String date = request.getParameter("date");
+        String emergencyStr = request.getParameter("emergency");
+        Boolean isEmergency = null;
+        if ("true".equalsIgnoreCase(emergencyStr)) {
+            isEmergency = true;
+        } else if ("false".equalsIgnoreCase(emergencyStr)) {
+            isEmergency = false;
+        }
+
         String sortBy = ultrasoundOrderService.normalizeSortBy(request.getParameter("sortBy"));
         String sortDir = ultrasoundOrderService.normalizeSortDir(request.getParameter("sortDir"));
 
+        // Lấy danh sách chỉ định siêu âm theo bộ lọc và phân trang
         List<UltrasoundWaitingPatient> waitingPatients =
-                ultrasoundOrderService.getWaitingPatients(sortBy, sortDir);
+                ultrasoundOrderService.getOrders(page, PAGE_SIZE, search, status, date, isEmergency, sortBy, sortDir);
+
+        int totalOrders = ultrasoundOrderService.countOrders(search, status, date, isEmergency);
+        int totalPages = (int) Math.ceil((double) totalOrders / PAGE_SIZE);
+        if (totalPages <= 0) totalPages = 1;
 
         request.setAttribute("waitingPatients", waitingPatients);
-        request.setAttribute("totalWaiting", waitingPatients.size());
+        request.setAttribute("totalOrders", totalOrders);
+        request.setAttribute("currentPage", page);
+        request.setAttribute("totalPages", totalPages);
+        
+        request.setAttribute("searchParam", search);
+        request.setAttribute("statusParam", status);
+        request.setAttribute("dateParam", date);
+        request.setAttribute("emergencyParam", emergencyStr);
+
         request.setAttribute("sortBy", sortBy);
         request.setAttribute("sortDir", sortDir);
         request.setAttribute("nextSortDir", "asc".equals(sortDir) ? "desc" : "asc");
@@ -57,7 +92,10 @@ public class UltrasoundWaitingListServlet extends HttpServlet {
         request.setAttribute("success", request.getParameter("success"));
         request.setAttribute("error", request.getParameter("error"));
 
-        request.getRequestDispatcher("/views/admin/sonographer/waiting-list.jsp")
+        // Sidebar stats
+        request.setAttribute("currentDisplayDate", java.time.LocalDate.now().toString());
+
+        request.getRequestDispatcher("/views/sonographer/waiting-list.jsp")
                 .forward(request, response);
     }
 

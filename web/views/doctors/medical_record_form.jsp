@@ -502,6 +502,115 @@
                           placeholder="Thuốc, chỉ định xét nghiệm, chỉ định siêu âm, lời khuyên cho mẹ…">${record.treatmentPlan}</textarea>
               </div>
 
+              <%-- ═══ PHÂN HỆ TÍCH HỢP SIÊU ÂM & CHẨN ĐOÁN AI ═══ --%>
+              <div class="card mb-4 border border-rose-200" style="border-color: #f43f5e !important;">
+                <div class="card-header py-3 text-rose-700 fw-bold d-flex align-items-center gap-2" style="background-color: #fff1f2; color: #be123c;">
+                  <i class="bi bi-robot"></i> Chỉ Định Siêu Âm & Trợ Lý AI
+                </div>
+                <div class="card-body">
+                  <!-- Tạo chỉ định siêu âm mới -->
+                  <div class="row g-2 mb-4 align-items-end">
+                    <div class="col-md-8 text-start">
+                      <label class="form-label small text-muted fw-bold">CHỌN LOẠI DỊCH VỤ SIÊU ÂM CHỈ ĐỊNH</label>
+                      <select id="selectUltrasoundService" class="form-select border-rose">
+                        <c:forEach var="svc" items="${ultrasoundServices}">
+                          <option value="${svc.id}">${svc.serviceName} (${String.format('%,.0f', svc.price)}đ)</option>
+                        </c:forEach>
+                      </select>
+                    </div>
+                    <div class="col-md-4">
+                      <button type="button" class="btn btn-rose w-100 fw-bold text-white" style="background-color: #e11d48; border-color: #e11d48;" onclick="submitUltrasoundRequest()">
+                        <i class="bi bi-plus-circle-fill"></i> Tạo Chỉ Định Siêu Âm
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Lịch sử các chỉ định siêu âm và kết quả AI -->
+                  <div class="text-start">
+                    <label class="form-label small text-muted fw-bold mb-2">DANH SÁCH CHỈ ĐỊNH SIÊU ÂM CHO CA KHÁM NÀY</label>
+                    <c:choose>
+                      <c:when test="${empty testOrders}">
+                        <div class="text-center py-4 bg-light rounded border text-muted small">
+                          Chưa có chỉ định siêu âm nào được tạo cho ca khám này.
+                        </div>
+                      </c:when>
+                      <c:otherwise>
+                        <div class="table-responsive">
+                          <table class="table table-bordered table-sm align-middle small mb-0">
+                            <thead class="table-light">
+                              <tr>
+                                <th>Mã SA</th>
+                                <th>Dịch Vụ Siêu Âm</th>
+                                <th>Thời Gian Chỉ Định</th>
+                                <th>Trạng Tác</th>
+                                <th>Kết Quả Chẩn Đoán AI</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <c:forEach var="ord" items="${testOrders}">
+                                <tr>
+                                  <td><strong>SA-${ord.orderId}</strong></td>
+                                  <td><c:out value="${ord.serviceName}"/></td>
+                                  <td><c:out value="${fn:substring(ord.createdAt, 11, 16)} - ${fn:substring(ord.createdAt, 0, 10)}"/></td>
+                                  <td>
+                                    <c:choose>
+                                      <c:when test="${ord.status == 'Pending'}">
+                                        <span class="badge bg-secondary">Chờ siêu âm</span>
+                                      </c:when>
+                                      <c:when test="${ord.status == 'InProgress'}">
+                                        <span class="badge bg-primary">Đang siêu âm</span>
+                                      </c:when>
+                                      <c:when test="${ord.status == 'Uploaded'}">
+                                        <span class="badge bg-warning text-dark">Đã tải ảnh (Chờ AI)</span>
+                                      </c:when>
+                                      <c:when test="${ord.status == 'Analyzing'}">
+                                        <span class="badge bg-info text-dark">AI đang phân tích</span>
+                                      </c:when>
+                                      <c:when test="${ord.status == 'Completed'}">
+                                        <span class="badge bg-success">Đã hoàn thành</span>
+                                      </c:when>
+                                      <c:otherwise>
+                                        <span class="badge bg-light text-muted border">${ord.status}</span>
+                                      </c:otherwise>
+                                    </c:choose>
+                                  </td>
+                                  <td>
+                                    <c:choose>
+                                      <c:when test="${ord.status == 'Completed'}">
+                                        <c:set var="aiResult" value="${aiResultsMap[ord.orderId]}" />
+                                        <c:if test="${not empty aiResult}">
+                                          <div class="p-2 border rounded bg-light-subtle text-start">
+                                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                              <span class="badge ${aiResult.detected ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success'} fw-bold" style="${aiResult.detected ? 'background-color:#fee2e2;color:#991b1b;' : 'background-color:#dcfce7;color:#166534;'}">
+                                                AI: ${aiResult.detected ? 'Có bất thường' : 'Bình thường'} (${aiResult.confidence}%)
+                                              </span>
+                                              <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none fw-bold" style="font-size: 11px; color:#be123c;" onclick="viewAiImage('${pageContext.request.contextPath}/${aiResult.resultImage}', '${fn:escapeXml(aiResult.message)}')">
+                                                <i class="bi bi-image"></i> Xem hình ảnh
+                                              </button>
+                                            </div>
+                                            <div class="text-muted" style="font-size: 11px; line-height: 1.3;"><c:out value="${aiResult.message}"/></div>
+                                          </div>
+                                        </c:if>
+                                        <c:if test="${empty aiResult}">
+                                          <span class="text-muted italic">Đang cập nhật...</span>
+                                        </c:if>
+                                      </c:when>
+                                      <c:otherwise>
+                                        <span class="text-muted italic">Chưa có kết quả siêu âm.</span>
+                                      </c:otherwise>
+                                    </c:choose>
+                                  </td>
+                                </tr>
+                              </c:forEach>
+                            </tbody>
+                          </table>
+                        </div>
+                      </c:otherwise>
+                    </c:choose>
+                  </div>
+                </div>
+              </div>
+
               <div class="row g-3">
                 <div class="col-sm-6">
                   <label class="form-label fw-medium"><i class="bi bi-calendar-plus me-1"></i>Ngày tái khám</label>
@@ -689,7 +798,68 @@
 
     document.getElementById('obsForm').submit();
   }
+
+  // --- Ultrasound Integration Scripts ---
+  function submitUltrasoundRequest() {
+      const selectSvc = document.getElementById("selectUltrasoundService");
+      if (!selectSvc) {
+          alert("Không tìm thấy dịch vụ siêu âm.");
+          return;
+      }
+      const serviceId = selectSvc.value;
+      const apptId = "${apptId}";
+      
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = "${pageContext.request.contextPath}/doctor/ultrasound-request/create";
+      
+      const inputAppt = document.createElement("input");
+      inputAppt.type = "hidden";
+      inputAppt.name = "apptId";
+      inputAppt.value = apptId;
+      form.appendChild(inputAppt);
+      
+      const inputSvc = document.createElement("input");
+      inputSvc.type = "hidden";
+      inputSvc.name = "serviceId";
+      inputSvc.value = serviceId;
+      form.appendChild(inputSvc);
+      
+      document.body.appendChild(form);
+      form.submit();
+  }
+
+  function viewAiImage(imgUrl, message) {
+      document.getElementById("modalAiResultImage").src = imgUrl;
+      document.getElementById("modalAiResultMessage").innerText = message;
+      const aiImageModal = new bootstrap.Modal(document.getElementById("aiImageModal"));
+      aiImageModal.show();
+  }
   </script>
+
+  <!-- Modal xem ảnh AI của Doctor -->
+  <div class="modal fade" id="aiImageModal" tabindex="-1" aria-labelledby="aiImageModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+          <div class="modal-content border-0 shadow">
+              <div class="modal-header bg-rose text-white" style="background-color: #be123c;">
+                  <h5 class="modal-title fw-bold text-white" id="aiImageModalLabel">
+                      <i class="bi bi-robot"></i> Hình Ảnh Siêu Âm Phân Tích Bởi AI
+                  </h5>
+                  <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body p-4 text-center">
+                  <img id="modalAiResultImage" src="" class="img-fluid rounded border mb-3" style="max-height: 450px; object-fit: contain;">
+                  <div class="alert alert-info border text-start mb-0">
+                      <strong class="text-dark small d-block mb-1">MÔ TẢ CHI TIẾT CỦA AI:</strong>
+                      <span id="modalAiResultMessage" class="text-dark"></span>
+                  </div>
+              </div>
+              <div class="modal-footer bg-light border-0">
+                  <button type="button" class="btn btn-secondary border" data-bs-dismiss="modal">Đóng</button>
+              </div>
+          </div>
+      </div>
+  </div>
 
 </c:if>
 

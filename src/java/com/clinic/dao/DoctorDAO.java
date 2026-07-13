@@ -7,6 +7,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -118,15 +119,11 @@ public class DoctorDAO {
     }
 
     /**
-<<<<<<< HEAD
-     * Ánh xạ ResultSet → Doctor (Bác sĩ / manager)
-=======
      * Thêm bác sĩ mới vào bảng doctors.
      * Được gọi tự động khi tạo user có role_id = 2 (Bác Sĩ).
      *
      * @param doctor đối tượng Doctor cần thêm (không có id)
      * @return id của bác sĩ vừa tạo, -1 nếu thất bại
->>>>>>> origin/hieupt
      */
     public int insert(Doctor doctor) {
         String sql = "INSERT INTO doctors (user_id, full_name, specialization, phone_number) "
@@ -208,5 +205,23 @@ public class DoctorDAO {
         }
 
         return new Doctor(id, fullName, specialization, degree, experienceYears, price, avatar);
+    }
+
+    private void closeResources(Connection conn, PreparedStatement ps, ResultSet rs) {
+        if (rs != null) {
+            try {
+                rs.close();
+            } catch (SQLException e) {
+                System.err.println("[DoctorDAO] close ResultSet error: " + e.getMessage());
+            }
+        }
+        if (ps != null) {
+            try {
+                ps.close();
+            } catch (SQLException e) {
+                System.err.println("[DoctorDAO] close PreparedStatement error: " + e.getMessage());
+            }
+        }
+        DatabaseConfig.closeConnection(conn);
     }
 }

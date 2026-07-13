@@ -52,10 +52,48 @@ public class MedicalRecordServlet extends HttpServlet {
             MedicalRecord record = dao.getByAppointmentId(apptId);
             if (record == null) record = loadAppointmentInfo(apptId);
 
-            req.setAttribute("record",     record);
-            req.setAttribute("apptId",     apptId);
-            req.setAttribute("doctorName", user.getFullName());
-            req.setAttribute("mode",       "form");
+            // Load danh sách dịch vụ siêu âm active (category_id = 2)
+            List<com.clinic.model.ServiceItem> ultrasoundServices = new java.util.ArrayList<>();
+            String sql = "SELECT id, service_name, price FROM services WHERE category_id = 2 AND is_active = 1 ORDER BY service_name";
+            try (Connection conn = com.clinic.config.DatabaseConfig.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql);
+                 ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    com.clinic.model.ServiceItem svc = new com.clinic.model.ServiceItem();
+                    svc.setId(rs.getInt("id"));
+                    svc.setServiceName(rs.getString("service_name"));
+                    svc.setPrice(rs.getDouble("price"));
+                    ultrasoundServices.add(svc);
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+
+            // Load danh sách các chỉ định siêu âm đã tạo cho bệnh án này
+            List<com.clinic.model.UltrasoundWaitingPatient> testOrders = new java.util.ArrayList<>();
+            java.util.Map<Integer, com.clinic.model.AiAnalysisResult> aiResultsMap = new java.util.HashMap<>();
+            if (record != null && record.getId() > 0) {
+                com.clinic.service.UltrasoundOrderService uService = new com.clinic.service.UltrasoundOrderService();
+                testOrders = uService.getOrdersByMedicalRecordId(record.getId());
+                
+                // Đọc kết quả AI cho từng order đã Completed
+                for (com.clinic.model.UltrasoundWaitingPatient order : testOrders) {
+                    if ("Completed".equalsIgnoreCase(order.getStatus())) {
+                        com.clinic.model.AiAnalysisResult aiRes = uService.getAiResult(order.getOrderId());
+                        if (aiRes != null) {
+                            aiResultsMap.put(order.getOrderId(), aiRes);
+                        }
+                    }
+                }
+            }
+
+            req.setAttribute("record",             record);
+            req.setAttribute("apptId",             apptId);
+            req.setAttribute("doctorName",         user.getFullName());
+            req.setAttribute("ultrasoundServices", ultrasoundServices);
+            req.setAttribute("testOrders",         testOrders);
+            req.setAttribute("aiResultsMap",       aiResultsMap);
+            req.setAttribute("mode",               "form");
             req.getRequestDispatcher("/views/doctors/medical_record_form.jsp").forward(req, resp);
 
         } else {

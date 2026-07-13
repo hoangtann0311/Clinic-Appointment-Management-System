@@ -92,17 +92,14 @@ public class DashboardServlet extends HttpServlet {
                 response.sendRedirect(request.getContextPath() + "/admin/reception");
                 break;
             case 6: // Sonographer
-                response.sendRedirect(request.getContextPath() + "/sonographer/waiting-list");
+                loadSonographerDashboardData(request);
+                request.getRequestDispatcher("/views/sonographer/dashboard.jsp").forward(request, response);
                 break;
             case 5: // Patient
             default:
                 request.getRequestDispatcher("/views/home/dashboard.jsp").forward(request, response);
                 break;
         }
-<<<<<<< HEAD:src/java/com/clinic/controller/DashboardServlet.java
-=======
-
-        request.getRequestDispatcher(targetJsp).forward(request, response);
     }
 
     /**
@@ -230,7 +227,29 @@ public class DashboardServlet extends HttpServlet {
     /** Tính ngày kết thúc của khoảng trước đó (so sánh tăng trưởng). */
     private LocalDate statsDAO_prevTo(LocalDate from, LocalDate to) {
         return from.minusDays(1);
->>>>>>> origin/hieupt:src/java/controller/DashboardServlet.java
+    }
+
+    private void loadSonographerDashboardData(HttpServletRequest request) {
+        com.clinic.service.UltrasoundOrderService orderService = new com.clinic.service.UltrasoundOrderService();
+        String todayStr = LocalDate.now().toString();
+        
+        int pending = orderService.countOrders(null, "Pending", todayStr, null);
+        int inProgress = orderService.countOrders(null, "InProgress", todayStr, null);
+        int uploaded = orderService.countOrders(null, "Uploaded", todayStr, null);
+        int analyzing = orderService.countOrders(null, "Analyzing", todayStr, null);
+        int completed = orderService.countOrders(null, "Completed", todayStr, null);
+        int emergency = orderService.countOrders(null, null, todayStr, true);
+        
+        java.util.List<com.clinic.model.UltrasoundWaitingPatient> recentOrders = orderService.getOrders(1, 10, null, null, todayStr, null, "createdAt", "desc");
+        
+        request.setAttribute("totalPending", pending);
+        request.setAttribute("totalInProgress", inProgress);
+        request.setAttribute("totalUploaded", uploaded);
+        request.setAttribute("totalAnalyzing", analyzing);
+        request.setAttribute("totalCompletedToday", completed);
+        request.setAttribute("totalEmergencyToday", emergency);
+        request.setAttribute("recentOrders", recentOrders);
+        request.setAttribute("currentDisplayDate", todayStr);
     }
 
     /**
@@ -284,59 +303,5 @@ public class DashboardServlet extends HttpServlet {
         request.setAttribute("systemAlerts", dashboardService.getSystemAlerts());
     }
 
-    /**
-     * Load dữ liệu thống kê cho Manager Dashboard.
-     * Manager tập trung vào quản lý dịch vụ, thuốc, biểu giá và thống kê dịch vụ.
-     */
-    private void loadManagerDashboardData(HttpServletRequest request) {
-        try {
-            MedicineService medicineService = new MedicineService();
-            ServiceService serviceService = new ServiceService();
-            ServiceStatisticsService statsService = new ServiceStatisticsService();
 
-            // Tổng số dịch vụ và thuốc
-            request.setAttribute("totalServices", serviceService.getTotalServices(null, null));
-            request.setAttribute("totalMedicines", medicineService.getTotalMedicines(null, null));
-
-            // Số dịch vụ và thuốc đang active
-            request.setAttribute("activeServicesCount", serviceService.getTotalServices(null, true));
-            request.setAttribute("activeMedicinesCount", medicineService.getTotalMedicines(null, true));
-
-            // ─── Widget "Top Dịch Vụ Hôm Nhất" — 5 dịch vụ có lượt sử dụng cao nhất ───
-            request.setAttribute("topServicesToday", statsService.getTopServicesByUsage(5));
-
-            // ─── Widget "Cảnh Báo Tồn Kho" — thuốc sắp hết (stock ≤ 10) ───
-            request.setAttribute("lowStockMedicines", medicineService.getLowStockMedicines(10, 5));
-
-            // ─── Doanh thu hôm qua cho KPI card so sánh ───
-            double revenueYesterday = statsService.getTotalRevenueYesterday();
-            double revenueGrowthRate = statsService.getRevenueGrowthRate();
-            request.setAttribute("revenueYesterdayFormatted",
-                    ServiceStatisticsService.formatCurrency(revenueYesterday));
-            request.setAttribute("revenueGrowthRate", revenueGrowthRate);
-            request.setAttribute("revenueGrowthFormatted",
-                    ServiceStatisticsService.formatGrowthPercent(revenueGrowthRate));
-
-            // ─── Thống kê dịch vụ (Service Statistics KPI cho Manager Dashboard) ───
-            int totalUsageToday = statsService.getTotalUsageToday();
-            double totalRevenueToday = statsService.getTotalRevenueToday();
-            double usageGrowthRate = statsService.getUsageGrowthRate();
-            String topServiceName = statsService.getTopServiceName();
-            int topServiceUsage = statsService.getTopServiceUsage();
-            int servicesUsedToday = statsService.getServicesUsedToday();
-
-            request.setAttribute("totalUsageToday", totalUsageToday);
-            request.setAttribute("totalRevenueTodayFormatted",
-                    ServiceStatisticsService.formatCurrency(totalRevenueToday));
-            request.setAttribute("usageGrowthRate", usageGrowthRate);
-            request.setAttribute("usageGrowthFormatted",
-                    ServiceStatisticsService.formatGrowthPercent(usageGrowthRate));
-            request.setAttribute("topServiceName", topServiceName);
-            request.setAttribute("topServiceUsage", topServiceUsage);
-            request.setAttribute("servicesUsedToday", servicesUsedToday);
-        } catch (Exception e) {
-            System.err.println("DashboardServlet: Lỗi loadManagerDashboardData - " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
 }

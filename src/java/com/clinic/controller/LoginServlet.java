@@ -2,11 +2,9 @@ package com.clinic.controller;
 
 import com.clinic.model.User;
 import com.clinic.service.AuthService;
-<<<<<<< HEAD:src/java/com/clinic/controller/LoginServlet.java
-=======
 import com.clinic.service.RoleService;
 import com.clinic.utils.AuditUtil;
->>>>>>> origin/hieupt:src/java/controller/LoginServlet.java
+import java.util.Set;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -84,11 +82,6 @@ public class LoginServlet extends HttpServlet {
         // Lưu thêm roleId để tiện kiểm tra nhanh
         session.setAttribute("roleId", user.getRoleId());
 
-<<<<<<< HEAD:src/java/com/clinic/controller/LoginServlet.java
-        // Ghi log đăng nhập (sẽ implement AuditUtil sau)
-        System.out.println(">>> User logged in: " + user.getEmail()
-                + " (roleId=" + user.getRoleId() + ", id=" + user.getId() + ")");
-=======
         // Nạp danh sách quyền (permission keys) vào session để Authorization Filter sử dụng
         try {
             RoleService roleService = new RoleService();
@@ -103,7 +96,6 @@ public class LoginServlet extends HttpServlet {
         // Ghi log đăng nhập thành công
         AuditUtil.log(request, "Đăng nhập thành công", "users",
                 null, "roleId=" + user.getRoleId());
->>>>>>> origin/hieupt:src/java/controller/LoginServlet.java
 
         // Chuyển hướng đến dashboard theo role
         String dashboardPath = getDashboardPath(user.getRoleId());

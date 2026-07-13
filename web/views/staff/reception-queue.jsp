@@ -118,6 +118,13 @@
                     </c:if>
                 </a>
             </li>
+            <li>
+                <a href="${pageContext.request.contextPath}/admin/reception/payments" 
+                   class="${fn:contains(requestURI, 'payments') ? 'active' : ''}">
+                    <i class="bi bi-credit-card-2-front"></i>
+                    <span>Xác Nhận Thanh Toán</span>
+                </a>
+            </li>
         </ul>
     </aside>
 

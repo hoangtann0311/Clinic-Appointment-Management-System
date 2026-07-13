@@ -146,9 +146,38 @@
                     <c:when test="${sessionScope.user.roleId == 6}">
                         <li class="admin-sidebar-section">Chức Năng Siêu Âm</li>
                         <li>
-                            <a href="${pageContext.request.contextPath}/sonographer/waiting-list">
+                            <a href="${pageContext.request.contextPath}/sonographer/dashboard" 
+                               class="${fn:contains(pageContext.request.requestURI, '/dashboard') ? 'active' : ''}">
+                                <i class="bi bi-speedometer2"></i>
+                                <span>Dashboard Thống Kê</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="${pageContext.request.contextPath}/sonographer/waiting-list" 
+                               class="${fn:contains(pageContext.request.requestURI, '/waiting-list') && empty param.status ? 'active' : ''}">
                                 <i class="bi bi-hourglass-split"></i>
-                                <span>Danh Sách Chờ Siêu Âm</span>
+                                <span>Yêu Cầu Chờ Siêu Âm</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="${pageContext.request.contextPath}/sonographer/waiting-list?status=InProgress" 
+                               class="${param.status == 'InProgress' ? 'active' : ''}">
+                                <i class="bi bi-play-circle"></i>
+                                <span>Đang Thực Hiện</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="${pageContext.request.contextPath}/sonographer/waiting-list?status=Uploaded" 
+                               class="${param.status == 'Uploaded' ? 'active' : ''}">
+                                <i class="bi bi-cloud-upload"></i>
+                                <span>Đã Tải Ảnh (Chờ AI)</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="${pageContext.request.contextPath}/sonographer/waiting-list?status=Completed" 
+                               class="${param.status == 'Completed' ? 'active' : ''}">
+                                <i class="bi bi-check-circle"></i>
+                                <span>Đã Hoàn Thành</span>
                             </a>
                         </li>
                     </c:when>

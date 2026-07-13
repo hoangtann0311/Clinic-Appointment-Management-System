@@ -1,11 +1,18 @@
 package com.clinic.dao;
 
 import com.clinic.config.DatabaseConfig;
-<<<<<<< HEAD
+import com.clinic.model.AuditLog;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
+import java.sql.*;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
+/**
+ * Data Access Object cho bảng audit_logs — nhật ký hoạt động.
+ * Hỗ trợ filter đa chiều: tìm kiếm, module (table_name), user, khoảng thời gian.
+ * Sử dụng PreparedStatement để chống SQL Injection.
+ */
 public class AuditLogDAO {
 
     public void logAction(String action, String actor, String tableName, String oldValue, String newValue) {
@@ -29,21 +36,6 @@ public class AuditLogDAO {
             e.printStackTrace();
         }
     }
-}
-=======
-import com.clinic.model.AuditLog;
-
-import java.sql.*;
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-
-/**
- * Data Access Object cho bảng audit_logs — nhật ký hoạt động.
- * Hỗ trợ filter đa chiều: tìm kiếm, module (table_name), user, khoảng thời gian.
- * Sử dụng PreparedStatement để chống SQL Injection.
- */
-public class AuditLogDAO {
 
     /**
      * Lấy danh sách audit log có phân trang + filter.
@@ -385,4 +377,3 @@ public class AuditLogDAO {
         DatabaseConfig.closeConnection(conn);
     }
 }
->>>>>>> origin/hieupt

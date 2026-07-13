@@ -797,4 +797,61 @@ public class StaffReceptionService {
 
         return count;
     }
+
+    // --- Invoice & Payment Confirmation (UC16) ---
+    private final InvoiceDAO invoiceDAO = new InvoiceDAO();
+
+    public List<Invoice> getInvoices(int page, int pageSize, String search, String status, String type, String date) {
+        int offset = (page - 1) * pageSize;
+        return invoiceDAO.getAllInvoices(offset, pageSize, search, status, type, date);
+    }
+
+    public int countInvoices(String search, String status, String type, String date) {
+        return invoiceDAO.countAllInvoices(search, status, type, date);
+    }
+
+    public Invoice getInvoiceById(int id) {
+        return invoiceDAO.getById(id);
+    }
+
+    public boolean confirmPayment(int invoiceId, String paymentMethod, String transactionCode, String paymentNote, int confirmedBy) {
+        Invoice invoice = invoiceDAO.getById(invoiceId);
+        if (invoice == null) {
+            throw new IllegalArgumentException("Không tìm thấy hóa đơn cần thanh toán.");
+        }
+
+        if ("Paid".equalsIgnoreCase(invoice.getStatus())) {
+            throw new IllegalArgumentException("Hóa đơn này đã được thanh toán trước đó.");
+        }
+
+        if ("BankTransfer".equalsIgnoreCase(paymentMethod) && (transactionCode == null || transactionCode.trim().isEmpty())) {
+            throw new IllegalArgumentException("Mã giao dịch là bắt buộc đối với phương thức Chuyển khoản.");
+        }
+
+        String finalTxCode = transactionCode;
+        if ("Cash".equalsIgnoreCase(paymentMethod)) {
+            finalTxCode = "CASH_" + invoiceId + "_" + (System.currentTimeMillis() / 1000);
+        }
+
+        java.sql.Timestamp now = new java.sql.Timestamp(System.currentTimeMillis());
+        boolean success = invoiceDAO.updatePaymentStatus(invoiceId, "Paid", paymentMethod, finalTxCode, paymentNote, confirmedBy, now);
+        
+        if (success) {
+            // Nếu là hóa đơn trước khám (PRE_EXAM), xác nhận lịch hẹn
+            if ("PRE_EXAM".equalsIgnoreCase(invoice.getInvoiceType()) && invoice.getAppointmentId() != null) {
+                appointmentDAO.confirmAppointmentAfterPreExamPaid(invoice.getAppointmentId());
+            }
+
+            // Ghi audit log
+            auditLogDAO.logAction(
+                    "Xác nhận thanh toán hóa đơn " + invoice.getInvoiceType() + " #" + invoiceId + " (" + paymentMethod + ")",
+                    "Staff",
+                    "invoices",
+                    invoice.getStatus(),
+                    "Paid"
+            );
+        }
+
+        return success;
+    }
 }
