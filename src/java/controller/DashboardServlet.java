@@ -14,7 +14,11 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+
+import com.clinic.dao.ServiceStatisticsDAO.ServiceStatDetail;
+import com.clinic.service.ServiceStatisticsService;
 
 /**
  * Servlet xử lý các trang dashboard theo role.
@@ -190,6 +194,15 @@ public class DashboardServlet extends HttpServlet {
         request.setAttribute("topServiceUsage", topServiceUsage);
         request.setAttribute("servicesUsedToday", servicesUsed);
 
+        // ─── Biểu đồ doanh thu 7 ngày & 12 tháng cho Manager Dashboard ───
+        Map<String, Double> mgrRevenue7Days = statsService.getRevenueLast7Days();
+        request.setAttribute("mgrRevenueChartLabels", mgrRevenue7Days.keySet());
+        request.setAttribute("mgrRevenueChartValues", mgrRevenue7Days.values());
+
+        Map<String, Double> mgrRevenue12Months = statsService.getRevenueLast12Months();
+        request.setAttribute("mgrRevenue12MonthsLabels", mgrRevenue12Months.keySet());
+        request.setAttribute("mgrRevenue12MonthsValues", mgrRevenue12Months.values());
+
         // ─── Dữ liệu cho hiển thị khoảng ngày ───
         DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         request.setAttribute("dateFromFormatted", dateFrom.format(dateFmt));
@@ -286,6 +299,16 @@ public class DashboardServlet extends HttpServlet {
         request.setAttribute("doctorsWorkingToday", dashboardService.getDoctorsWorking(dateTo));
         request.setAttribute("ultrasoundToday", dashboardService.getUltrasound(dateFrom, dateTo));
         request.setAttribute("revenueToday", dashboardService.getRevenue(dateFrom, dateTo));
+        request.setAttribute("emergencyCases", dashboardService.getEmergencyCases(dateFrom, dateTo));
+        request.setAttribute("successfulCases", dashboardService.getSuccessfulCases(dateFrom, dateTo));
+
+        // ─── Top Dịch Vụ (dùng chung ServiceStatisticsService) ───
+        ServiceStatisticsService statsService = new ServiceStatisticsService();
+        if (isCustomRange) {
+            request.setAttribute("topServices", statsService.getTopServicesByUsage(5, dateFrom, dateTo));
+        } else {
+            request.setAttribute("topServices", statsService.getTopServicesByUsage(5));
+        }
 
         // ─── Biểu đồ lịch hẹn ───
         // Mặc định: 7 ngày gần nhất; Có filter: khoảng đã chọn

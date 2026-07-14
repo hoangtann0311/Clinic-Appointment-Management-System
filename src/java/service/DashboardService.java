@@ -236,6 +236,54 @@ public class DashboardService {
     }
 
     // ──────────────────────────────────────────────
+    // KPI: CA CẤP CỨU (Emergency)
+    // ──────────────────────────────────────────────
+
+    /** Số ca cấp cứu hôm nay. */
+    public int getEmergencyCasesToday() {
+        try {
+            return dashboardDAO.countEmergencyToday();
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getEmergencyCasesToday - " + e.getMessage());
+            return 0;
+        }
+    }
+
+    /** Số ca cấp cứu trong khoảng ngày. */
+    public int getEmergencyCases(LocalDate from, LocalDate to) {
+        try {
+            return dashboardDAO.countEmergency(from, to);
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getEmergencyCases(range) - " + e.getMessage());
+            return 0;
+        }
+    }
+
+    // ──────────────────────────────────────────────
+    // KPI: CA THÀNH CÔNG (Success = completed + paid)
+    // ──────────────────────────────────────────────
+
+    /** Số ca thành công hôm nay. */
+    public int getSuccessfulCasesToday() {
+        try {
+            return dashboardDAO.countSuccessfulCasesToday();
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getSuccessfulCasesToday - " + e.getMessage());
+            return 0;
+        }
+    }
+
+    /** Số ca thành công trong khoảng ngày. */
+    public int getSuccessfulCases(LocalDate from, LocalDate to) {
+        try {
+            return dashboardDAO.countSuccessfulCases(from, to);
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getSuccessfulCases(range) - " + e.getMessage());
+            return 0;
+        }
+    }
+
+    // ──────────────────────────────────────────────
     // CHARTS DATA
     // ──────────────────────────────────────────────
 

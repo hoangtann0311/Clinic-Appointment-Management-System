@@ -853,12 +853,54 @@
         </div>
     </div>
 
+    <%-- ════════════════════════════════════════════ --%>
+    <%-- BIỂU ĐỒ DOANH THU 7 NGÀY + 12 THÁNG --%>
+    <%-- ════════════════════════════════════════════ --%>
+    <div class="row g-3 mb-4">
+        <%-- Doanh thu 7 ngày --%>
+        <div class="col-xl-6">
+            <div class="admin-card h-100">
+                <div class="card-header">
+                    <h5>
+                        <i class="bi bi-graph-up-arrow"></i>
+                        Doanh Thu 7 Ngày Gần Nhất
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="mgrRevenue7DaysChart" height="240"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <%-- Doanh thu 12 tháng --%>
+        <div class="col-xl-6">
+            <div class="admin-card h-100">
+                <div class="card-header">
+                    <h5>
+                        <i class="bi bi-bar-chart-fill"></i>
+                        Doanh Thu 12 Tháng
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="mgrRevenue12MonthsChart" height="240"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </main>
 
 <!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
         crossorigin="anonymous"></script>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 
 <script>
 // Sidebar toggle
@@ -880,6 +922,58 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
         }
     }
 })();
+
+    // ── Manager Revenue Charts ──
+    (function() {
+        var pink500 = '#e91e8c';
+        var pink200 = '#ffb3d1';
+        var ctx7 = document.getElementById('mgrRevenue7DaysChart');
+        if (ctx7) {
+            new Chart(ctx7, {
+                type: 'line',
+                data: {
+                    labels: [<c:forEach items="${mgrRevenueChartLabels}" var="lbl" varStatus="s">'${lbl}'<c:if test="${!s.last}">,</c:if></c:forEach>],
+                    datasets: [{
+                        label: 'Doanh thu (VND)',
+                        data: [<c:forEach items="${mgrRevenueChartValues}" var="v" varStatus="s">${v}<c:if test="${!s.last}">,</c:if></c:forEach>],
+                        borderColor: pink500,
+                        backgroundColor: pink200,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointBackgroundColor: pink500
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { ticks: { callback: function(v) { return v >= 1e9 ? (v/1e9).toFixed(1)+'B' : v >= 1e6 ? (v/1e6).toFixed(0)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v; } } } }
+                }
+            });
+        }
+        var ctx12 = document.getElementById('mgrRevenue12MonthsChart');
+        if (ctx12) {
+            new Chart(ctx12, {
+                type: 'bar',
+                data: {
+                    labels: [<c:forEach items="${mgrRevenue12MonthsLabels}" var="lbl" varStatus="s">'${lbl}'<c:if test="${!s.last}">,</c:if></c:forEach>],
+                    datasets: [{
+                        label: 'Doanh thu (VND)',
+                        data: [<c:forEach items="${mgrRevenue12MonthsValues}" var="v" varStatus="s">${v}<c:if test="${!s.last}">,</c:if></c:forEach>],
+                        backgroundColor: pink500,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { ticks: { callback: function(v) { return v >= 1e9 ? (v/1e9).toFixed(1)+'B' : v >= 1e6 ? (v/1e6).toFixed(0)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v; } } } }
+                }
+            });
+        }
+    })();
 </script>
 
 </body>

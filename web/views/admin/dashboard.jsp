@@ -374,6 +374,10 @@ body.admin-body {
 .kpi-doctors       .kpi-icon { background: #d1fae5; color: #059669; }
 .kpi-ultrasound    .kpi-icon { background: #cffafe; color: #0891b2; }
 .kpi-revenue       .kpi-icon { background: var(--pink-100); color: var(--pink-600); }
+.kpi-emergency     .kpi-icon { background: #fee2e2; color: #dc2626; }
+.kpi-success       .kpi-icon { background: #d1fae5; color: #059669; }
+.kpi-emergency     .card-body { border-top: 3px solid #dc2626 !important; }
+.kpi-success       .card-body { border-top: 3px solid #059669 !important; }
 
 .kpi-content { flex: 1; min-width: 0; }
 .kpi-value {
@@ -742,11 +746,11 @@ body.admin-body {
     </div>
 
     <%-- ════════════════════════════════════════════ --%>
-    <%-- 6 KPI CARDS --%>
+    <%-- 8 KPI CARDS --%>
     <%-- ════════════════════════════════════════════ --%>
     <div class="row g-3 mb-4">
         <%-- 1. Tổng số bệnh nhân --%>
-        <div class="col-xl-2 col-lg-4 col-md-6">
+        <div class="col-xl-3 col-lg-4 col-md-6">
             <div class="card kpi-card kpi-patients fade-in-up">
                 <div class="card-body">
                     <div class="kpi-icon"><i class="bi bi-people-fill"></i></div>
@@ -765,7 +769,7 @@ body.admin-body {
         </div>
 
         <%-- 2. Lịch hẹn hôm nay --%>
-        <div class="col-xl-2 col-lg-4 col-md-6">
+        <div class="col-xl-3 col-lg-4 col-md-6">
             <div class="card kpi-card kpi-appointments fade-in-up">
                 <div class="card-body">
                     <div class="kpi-icon"><i class="bi bi-calendar-check-fill"></i></div>
@@ -784,7 +788,7 @@ body.admin-body {
         </div>
 
         <%-- 3. Bệnh nhân đang chờ --%>
-        <div class="col-xl-2 col-lg-4 col-md-6">
+        <div class="col-xl-3 col-lg-4 col-md-6">
             <div class="card kpi-card kpi-waiting fade-in-up">
                 <div class="card-body">
                     <div class="kpi-icon"><i class="bi bi-hourglass-split"></i></div>
@@ -803,7 +807,7 @@ body.admin-body {
         </div>
 
         <%-- 4. Bác sĩ đang làm việc --%>
-        <div class="col-xl-2 col-lg-4 col-md-6">
+        <div class="col-xl-3 col-lg-4 col-md-6">
             <div class="card kpi-card kpi-doctors fade-in-up">
                 <div class="card-body">
                     <div class="kpi-icon"><i class="bi bi-person-badge-fill"></i></div>
@@ -822,7 +826,7 @@ body.admin-body {
         </div>
 
         <%-- 5. Ca siêu âm hôm nay --%>
-        <div class="col-xl-2 col-lg-4 col-md-6">
+        <div class="col-xl-3 col-lg-4 col-md-6">
             <div class="card kpi-card kpi-ultrasound fade-in-up">
                 <div class="card-body">
                     <div class="kpi-icon"><i class="bi bi-soundwave"></i></div>
@@ -841,7 +845,7 @@ body.admin-body {
         </div>
 
         <%-- 6. Doanh thu hôm nay --%>
-        <div class="col-xl-2 col-lg-4 col-md-6">
+        <div class="col-xl-3 col-lg-4 col-md-6">
             <div class="card kpi-card kpi-revenue fade-in-up">
                 <div class="card-body">
                     <div class="kpi-icon"><i class="bi bi-cash-coin"></i></div>
@@ -854,6 +858,44 @@ body.admin-body {
                             </c:choose>
                         </div>
                         <div class="kpi-sub"><i class="bi bi-graph-up"></i> <c:choose><c:when test="${isCustomRange}">${dateRangeLabel}</c:when><c:otherwise>Đã thanh toán</c:otherwise></c:choose></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <%-- 7. Ca Cấp Cứu --%>
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="card kpi-card kpi-emergency fade-in-up">
+                <div class="card-body">
+                    <div class="kpi-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
+                    <div class="kpi-content">
+                        <div class="kpi-value">${not empty emergencyCases ? emergencyCases : 0}</div>
+                        <div class="kpi-label">
+                            <c:choose>
+                                <c:when test="${isCustomRange}">Cấp Cứu (Khoảng)</c:when>
+                                <c:otherwise>Ca Cấp Cứu</c:otherwise>
+                            </c:choose>
+                        </div>
+                        <div class="kpi-sub"><i class="bi bi-activity"></i> <c:choose><c:when test="${isCustomRange}">${dateRangeLabel}</c:when><c:otherwise>Hôm nay</c:otherwise></c:choose></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <%-- 8. Ca Thành Công --%>
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="card kpi-card kpi-success fade-in-up">
+                <div class="card-body">
+                    <div class="kpi-icon"><i class="bi bi-check-circle-fill"></i></div>
+                    <div class="kpi-content">
+                        <div class="kpi-value">${not empty successfulCases ? successfulCases : 0}</div>
+                        <div class="kpi-label">
+                            <c:choose>
+                                <c:when test="${isCustomRange}">Thành Công (Khoảng)</c:when>
+                                <c:otherwise>Ca Thành Công</c:otherwise>
+                            </c:choose>
+                        </div>
+                        <div class="kpi-sub"><i class="bi bi-check2-all"></i> <c:choose><c:when test="${isCustomRange}">${dateRangeLabel}</c:when><c:otherwise>Đã khám + TT</c:otherwise></c:choose></div>
                     </div>
                 </div>
             </div>
@@ -941,6 +983,76 @@ body.admin-body {
             </div>
         </div>
     </div>
+
+    <%-- ════════════════════════════════════════════ --%>
+    <%-- TOP DỊCH VỤ ĐƯỢC SỬ DỤNG --%>
+    <%-- ════════════════════════════════════════════ --%>
+    <c:if test="${not empty topServices}">
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="admin-card">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <h5>
+                        <i class="bi bi-star-fill"></i>
+                        <c:choose>
+                            <c:when test="${isCustomRange}">Top Dịch Vụ (${dateRangeLabel})</c:when>
+                            <c:otherwise>Top Dịch Vụ Được Sử Dụng</c:otherwise>
+                        </c:choose>
+                    </h5>
+                    <a href="${pageContext.request.contextPath}/admin/reports/"
+                       style="font-size:0.78rem;font-weight:700;color:var(--pink-500);text-decoration:none;">
+                        Xem báo cáo →
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="admin-table-wrapper">
+                        <table class="admin-table compact">
+                            <thead>
+                                <tr>
+                                    <th style="width:50px;">#</th>
+                                    <th>Tên Dịch Vụ</th>
+                                    <th>Nhóm</th>
+                                    <th class="text-end">Lượt SD</th>
+                                    <th class="text-end">Doanh Thu</th>
+                                    <th style="width:80px;">Tăng Trưởng</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <c:forEach items="${topServices}" var="svc" varStatus="loop">
+                                <tr>
+                                    <td>
+                                        <c:choose>
+                                            <c:when test="${loop.index == 0}"><span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:#e91e63;color:#fff;font-size:0.7rem;font-weight:800;">1</span></c:when>
+                                            <c:when test="${loop.index == 1}"><span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:#ec407a;color:#fff;font-size:0.7rem;font-weight:800;">2</span></c:when>
+                                            <c:when test="${loop.index == 2}"><span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:#f06292;color:#fff;font-size:0.7rem;font-weight:800;">3</span></c:when>
+                                            <c:otherwise><span style="color:var(--c-muted);font-weight:700;">${loop.index + 1}</span></c:otherwise>
+                                        </c:choose>
+                                    </td>
+                                    <td>
+                                        <strong>${svc.serviceName}</strong>
+                                        <div style="font-size:0.7rem;color:var(--c-muted);"><code style="font-size:0.68rem;background:var(--pink-50);color:var(--pink-600);padding:1px 6px;border-radius:4px;">${svc.serviceCode}</code></div>
+                                    </td>
+                                    <td><span class="badge-role-tag">${svc.categoryName}</span></td>
+                                    <td class="text-end"><strong>${svc.usageToday}</strong></td>
+                                    <td class="text-end"><fmt:formatNumber value="${svc.revenueToday}" pattern="#,###"/> đ</td>
+                                    <td>
+                                        <c:set var="trend" value="${svc.growthTrend}" />
+                                        <c:choose>
+                                            <c:when test="${trend == 'up'}"><span style="color:#059669;font-weight:700;font-size:0.72rem;"><i class="bi bi-arrow-up-short"></i> +<fmt:formatNumber value="${svc.usageGrowthPercent}" pattern="#.#"/>%</span></c:when>
+                                            <c:when test="${trend == 'down'}"><span style="color:#dc2626;font-weight:700;font-size:0.72rem;"><i class="bi bi-arrow-down-short"></i> <fmt:formatNumber value="${svc.usageGrowthPercent}" pattern="#.#"/>%</span></c:when>
+                                            <c:otherwise><span style="color:var(--c-muted);font-weight:600;font-size:0.72rem;">—</span></c:otherwise>
+                                        </c:choose>
+                                    </td>
+                                </tr>
+                                </c:forEach>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </c:if>
 
     <%-- ════════════════════════════════════════════ --%>
     <%-- HÀNG GIỮA: Hiệu suất bác sĩ + Lịch làm việc --%>

@@ -162,6 +162,60 @@ public class DashboardDAO {
     }
 
     // ──────────────────────────────────────────────
+    // KPI: CA CẤP CỨU (Emergency)
+    // ──────────────────────────────────────────────
+
+    /**
+     * Số ca cấp cứu trong ngày hôm nay.
+     * Đếm appointment có is_emergency = 1 trong hôm nay.
+     */
+    public int countEmergencyToday() {
+        String sql = "SELECT COUNT(*) AS total FROM appointments "
+                   + "WHERE is_emergency = 1 "
+                   + "AND appointment_date = CAST(GETDATE() AS DATE)";
+        return executeCount(sql);
+    }
+
+    /**
+     * Số ca cấp cứu trong khoảng ngày.
+     */
+    public int countEmergency(LocalDate from, LocalDate to) {
+        String sql = "SELECT COUNT(*) AS total FROM appointments "
+                   + "WHERE is_emergency = 1 "
+                   + "AND appointment_date >= ? AND appointment_date <= ?";
+        return executeCount(sql, from, to);
+    }
+
+    // ──────────────────────────────────────────────
+    // KPI: CA THÀNH CÔNG (Success = completed + paid)
+    // ──────────────────────────────────────────────
+
+    /**
+     * Số ca thành công trong ngày hôm nay.
+     * Ca thành công = appointment completed + invoice đã thanh toán.
+     */
+    public int countSuccessfulCasesToday() {
+        String sql = "SELECT COUNT(DISTINCT a.id) AS total FROM appointments a "
+                   + "INNER JOIN invoices i ON i.appointment_id = a.id "
+                   + "WHERE a.status = 'completed' "
+                   + "AND i.status = 'paid' "
+                   + "AND a.appointment_date = CAST(GETDATE() AS DATE)";
+        return executeCount(sql);
+    }
+
+    /**
+     * Số ca thành công trong khoảng ngày.
+     */
+    public int countSuccessfulCases(LocalDate from, LocalDate to) {
+        String sql = "SELECT COUNT(DISTINCT a.id) AS total FROM appointments a "
+                   + "INNER JOIN invoices i ON i.appointment_id = a.id "
+                   + "WHERE a.status = 'completed' "
+                   + "AND i.status = 'paid' "
+                   + "AND a.appointment_date >= ? AND a.appointment_date <= ?";
+        return executeCount(sql, from, to);
+    }
+
+    // ──────────────────────────────────────────────
     // CHARTS DATA
     // ──────────────────────────────────────────────
 
