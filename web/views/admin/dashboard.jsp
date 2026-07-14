@@ -927,7 +927,10 @@ body.admin-body {
                 <div class="card-header">
                     <h5>
                         <i class="bi bi-graph-up-arrow"></i>
-                        Doanh Thu 12 Tháng
+                        <c:choose>
+                            <c:when test="${isCustomRange}">Doanh Thu 12 Tháng (đến ${dateToFormatted})</c:when>
+                            <c:otherwise>Doanh Thu 12 Tháng</c:otherwise>
+                        </c:choose>
                     </h5>
                 </div>
                 <div class="card-body">
@@ -1007,8 +1010,8 @@ body.admin-body {
                         <c:otherwise>
                             <div class="admin-empty-state">
                                 <i class="bi bi-person-badge"></i>
-                                <h6>Chưa có dữ liệu bác sĩ</h6>
-                                <p>Thêm bác sĩ vào hệ thống để xem hiệu suất.</p>
+                                <h6>Chưa có dữ liệu</h6>
+                                <p><c:choose><c:when test="${isCustomRange}">Không có bác sĩ nào có lịch hẹn trong khoảng ${dateRangeLabel}.</c:when><c:otherwise>Thêm bác sĩ vào hệ thống để xem hiệu suất.</c:otherwise></c:choose></p>
                             </div>
                         </c:otherwise>
                     </c:choose>

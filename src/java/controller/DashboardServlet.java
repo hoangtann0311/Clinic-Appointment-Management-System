@@ -127,6 +127,10 @@ public class DashboardServlet extends HttpServlet {
             // Nếu chỉ có 1 trong 2, mặc định cái còn lại = hôm nay
             if (dateFrom == null) dateFrom = today;
             if (dateTo == null) dateTo = today;
+            // Nếu cả 2 đều là hôm nay → coi như thời gian thực (không filter)
+            if (dateFrom.equals(today) && dateTo.equals(today)) {
+                isCustomRange = false;
+            }
         }
 
         // ── Truyền ngày cho JSP ──
@@ -294,8 +298,14 @@ public class DashboardServlet extends HttpServlet {
         request.setAttribute("apptChartLabels", apptChart.keySet());
         request.setAttribute("apptChartValues", apptChart.values());
 
-        // ─── Biểu đồ doanh thu 12 tháng (luôn hiển thị 12 tháng gần nhất để có bối cảnh) ───
-        Map<String, Double> revenueChart = dashboardService.getRevenueChartData();
+        // ─── Biểu đồ doanh thu 12 tháng ───
+        // Mặc định: 12 tháng gần nhất; Có filter: 12 tháng kết thúc tại dateTo
+        Map<String, Double> revenueChart;
+        if (isCustomRange) {
+            revenueChart = dashboardService.getRevenueChartData(dateTo);
+        } else {
+            revenueChart = dashboardService.getRevenueChartData();
+        }
         request.setAttribute("revenueChartLabels", revenueChart.keySet());
         request.setAttribute("revenueChartValues", revenueChart.values());
 

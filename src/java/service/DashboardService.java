@@ -275,6 +275,18 @@ public class DashboardService {
         }
     }
 
+    /**
+     * Dữ liệu biểu đồ doanh thu 12 tháng tính đến endDate.
+     */
+    public Map<String, Double> getRevenueChartData(LocalDate endDate) {
+        try {
+            return dashboardDAO.getRevenueChart(endDate);
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getRevenueChartData(date) - " + e.getMessage());
+            return Collections.emptyMap();
+        }
+    }
+
     // ──────────────────────────────────────────────
     // TABLES DATA
     // ──────────────────────────────────────────────

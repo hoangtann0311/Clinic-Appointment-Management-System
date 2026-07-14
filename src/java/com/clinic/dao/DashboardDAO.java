@@ -256,21 +256,31 @@ public class DashboardDAO {
      * Trả về Map<tháng (MM/yyyy), tổng doanh thu>.
      */
     public Map<String, Double> getRevenueLast12Months() {
+        return getRevenueChart(LocalDate.now());
+    }
+
+    /**
+     * Thống kê doanh thu 12 tháng tính đến endDate.
+     * Khi lọc theo ngày cũ, biểu đồ doanh thu sẽ hiển thị 12 tháng
+     * kết thúc tại dateTo (trùng khớp với khoảng ngày đã chọn).
+     */
+    public Map<String, Double> getRevenueChart(LocalDate endDate) {
         String sql = "SELECT YEAR(a.appointment_date) AS yr, MONTH(a.appointment_date) AS mth, "
                    + "ISNULL(SUM(i.total_amount), 0) AS total "
                    + "FROM invoices i "
                    + "INNER JOIN appointments a ON i.appointment_id = a.id "
                    + "WHERE i.status = 'paid' "
-                   + "AND a.appointment_date >= DATEADD(MONTH, -11, DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1)) "
+                   + "AND a.appointment_date >= ? "
+                   + "AND a.appointment_date <= ? "
                    + "GROUP BY YEAR(a.appointment_date), MONTH(a.appointment_date) "
                    + "ORDER BY yr, mth";
 
+        // Khởi tạo 12 tháng kết thúc tại endDate
         Map<String, Double> result = new LinkedHashMap<>();
-        // Khởi tạo 12 tháng với giá trị 0
-        LocalDate now = LocalDate.now();
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MM/yyyy");
-        for (int i = 11; i >= 0; i--) {
-            result.put(now.minusMonths(i).format(fmt), 0.0);
+        LocalDate startMonth = endDate.minusMonths(11).withDayOfMonth(1);
+        for (LocalDate d = startMonth; !d.isAfter(endDate); d = d.plusMonths(1)) {
+            result.put(d.format(fmt), 0.0);
         }
 
         Connection conn = null;
@@ -279,6 +289,8 @@ public class DashboardDAO {
         try {
             conn = DatabaseConfig.getConnection();
             ps = conn.prepareStatement(sql);
+            ps.setDate(1, java.sql.Date.valueOf(startMonth));
+            ps.setDate(2, java.sql.Date.valueOf(endDate));
             rs = ps.executeQuery();
             while (rs.next()) {
                 int yr = rs.getInt("yr");
@@ -288,7 +300,7 @@ public class DashboardDAO {
                 result.put(key, total);
             }
         } catch (SQLException e) {
-            System.err.println("DashboardDAO: Lỗi getRevenueLast12Months - " + e.getMessage());
+            System.err.println("DashboardDAO: Lỗi getRevenueChart - " + e.getMessage());
         } finally {
             closeResources(conn, ps, rs);
         }
@@ -369,10 +381,12 @@ public class DashboardDAO {
 
     /**
      * Lấy danh sách hiệu suất bác sĩ trong khoảng ngày.
-     * Tất cả 3 chỉ số (total_patients, appointments_today, revenue) đều lọc trong khoảng.
+     * Chỉ trả về bác sĩ có ít nhất 1 lịch hẹn hoặc 1 bệnh nhân trong khoảng.
+     * Nếu không có bác sĩ nào → list rỗng → JSP hiện "Chưa có dữ liệu".
      */
     public List<DoctorPerformance> getDoctorPerformance(LocalDate from, LocalDate to) {
-        String sql = "SELECT "
+        String sql = "SELECT * FROM ("
+                   + "SELECT "
                    + "  d.id AS doctor_id, "
                    + "  d.full_name AS doctor_name, "
                    + "  ISNULL(d.specialization, N'Chưa cập nhật') AS specialization, "
@@ -386,6 +400,7 @@ public class DashboardDAO {
                    + "     WHERE a4.doctor_id = d.id AND i.status = 'paid' "
                    + "     AND a4.appointment_date >= ? AND a4.appointment_date <= ?), 0) AS revenue "
                    + "FROM doctors d "
+                   + ") filtered WHERE total_patients > 0 OR appointments_today > 0 "
                    + "ORDER BY total_patients DESC";
 
         List<DoctorPerformance> list = new ArrayList<>();
@@ -876,10 +891,13 @@ public class DashboardDAO {
 
     /**
      * Lấy danh sách cảnh báo hệ thống với ngày tham chiếu.
-     * Khi lọc theo ngày cũ, alert lịch hẹn sẽ dùng refDate thay vì GETDATE().
+     * Khi lọc theo ngày cũ, alert sẽ dùng refDate thay vì GETDATE().
+     * Message có context ngày để người dùng hiểu dữ liệu được tính đến thời điểm nào.
      */
     public List<Alert> getSystemAlerts(LocalDate refDate) {
         List<Alert> alerts = new ArrayList<>();
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        String dateLabel = refDate.format(fmt);
 
         // 1. Lịch hẹn chưa xác nhận — dùng refDate thay vì GETDATE()
         int unconfirmed = executeCount(
@@ -890,33 +908,35 @@ public class DashboardDAO {
             a.type = "warning";
             a.icon = "bi-exclamation-triangle-fill";
             a.title = "Lịch hẹn chưa xác nhận";
-            a.message = "Có " + unconfirmed + " lịch hẹn đang chờ xác nhận.";
+            a.message = "Có " + unconfirmed + " lịch hẹn đang chờ xác nhận (ngày " + dateLabel + ").";
             a.count = unconfirmed;
             alerts.add(a);
         }
 
-        // 2. Hóa đơn chưa thanh toán
+        // 2. Hóa đơn chưa thanh toán — chỉ đếm invoice tạo đến refDate
         int unpaid = executeCount(
-            "SELECT COUNT(*) AS total FROM invoices WHERE status IN ('pending', 'unpaid')");
+            "SELECT COUNT(*) AS total FROM invoices WHERE status IN ('pending', 'unpaid') AND created_at <= ?",
+            refDate);
         if (unpaid > 0) {
             Alert a = new Alert();
             a.type = "danger";
             a.icon = "bi-cash-stack";
             a.title = "Hóa đơn chưa thanh toán";
-            a.message = "Có " + unpaid + " hóa đơn chưa được thanh toán.";
+            a.message = "Có " + unpaid + " hóa đơn chưa thanh toán (tính đến " + dateLabel + ").";
             a.count = unpaid;
             alerts.add(a);
         }
 
-        // 3. Tài khoản bị khóa
+        // 3. Tài khoản bị khóa — chỉ đếm user tồn tại đến refDate
         int locked = executeCount(
-            "SELECT COUNT(*) AS total FROM users WHERE status = 'LOCKED'");
+            "SELECT COUNT(*) AS total FROM users WHERE status = 'LOCKED' AND created_at <= ?",
+            refDate);
         if (locked > 0) {
             Alert a = new Alert();
             a.type = "danger";
             a.icon = "bi-lock-fill";
             a.title = "Tài khoản bị khóa";
-            a.message = "Có " + locked + " tài khoản đang bị khóa, cần xem xét mở khóa.";
+            a.message = "Có " + locked + " tài khoản đang bị khóa (tính đến " + dateLabel + ").";
             a.count = locked;
             alerts.add(a);
         }
@@ -930,7 +950,7 @@ public class DashboardDAO {
             a.type = "info";
             a.icon = "bi-envelope-exclamation";
             a.title = "Tài khoản chưa xác thực";
-            a.message = "Có " + unverified + " tài khoản đang chờ xác thực email.";
+            a.message = "Có " + unverified + " tài khoản đang chờ xác thực email (tính đến " + dateLabel + ").";
             a.count = unverified;
             alerts.add(a);
         }
