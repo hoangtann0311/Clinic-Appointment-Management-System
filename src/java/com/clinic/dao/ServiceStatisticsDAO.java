@@ -143,8 +143,12 @@ public class ServiceStatisticsDAO {
      * Top N dịch vụ có lượt sử dụng cao nhất trong khoảng ngày [from, to].
      */
     public List<ServiceStatDetail> getTopServicesByUsageDateRange(int limit, LocalDate from, LocalDate to) {
+        // Bọc subquery để lọc bỏ service có usage_today = 0 trong khoảng ngày.
+        // Đồng nhất với getDoctorPerformance(range) và getUltrasoundStats(range):
+        //   nếu khoảng ngày không có dữ liệu → trả về list rỗng.
         String sql =
-            "SELECT TOP (?) "
+            "SELECT * FROM ("
+            + "SELECT TOP (?) "
             + "  s.id AS service_id, "
             + "  s.service_code, "
             + "  s.service_name, "
@@ -167,7 +171,8 @@ public class ServiceStatisticsDAO {
             + "  GROUP BY a.service_id "
             + ") usage_stats ON usage_stats.service_id = s.id "
             + "WHERE s.is_active = 1 "
-            + "ORDER BY usage_today DESC";
+            + "ORDER BY usage_today DESC"
+            + ") filtered WHERE usage_today > 0";
 
         List<ServiceStatDetail> list = new ArrayList<>();
         Connection conn = null;

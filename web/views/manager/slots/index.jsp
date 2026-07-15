@@ -517,6 +517,7 @@
                     <%-- Không có booked slots → cho phép xóa và sinh lại --%>
                     <form method="post" action="${pageContext.request.contextPath}/manager/time-slots/"
                           onsubmit="return confirm('Xác nhận XÓA TẤT CẢ khung giờ khám của lịch trực này và sinh lại?\n\nHành động này không thể hoàn tác.')">
+                        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                         <input type="hidden" name="action" value="regenerate">
                         <input type="hidden" name="scheduleId" value="${schedule.id}">
                         <button type="submit" class="btn btn-primary-pink">
@@ -525,6 +526,7 @@
                     </form>
                     <form method="post" action="${pageContext.request.contextPath}/manager/time-slots/"
                           onsubmit="return confirm('Xác nhận XÓA TẤT CẢ khung giờ khám của lịch trực #${schedule.id}?\n\nHành động này không thể hoàn tác.')">
+                        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                         <input type="hidden" name="action" value="delete">
                         <input type="hidden" name="scheduleId" value="${schedule.id}">
                         <button type="submit" class="btn btn-outline-danger">
@@ -551,6 +553,7 @@
             <c:otherwise>
                 <%-- Chưa có slots → cho phép sinh mới --%>
                 <form method="post" action="${pageContext.request.contextPath}/manager/time-slots/">
+                    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                     <input type="hidden" name="action" value="regenerate">
                     <input type="hidden" name="scheduleId" value="${schedule.id}">
                     <button type="submit" class="btn btn-primary-pink">
@@ -719,6 +722,7 @@
                         </p>
                         <c:if test="${schedule.isApprovedSchedule()}">
                             <form method="post" action="${pageContext.request.contextPath}/manager/time-slots/">
+                                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                 <input type="hidden" name="action" value="regenerate">
                                 <input type="hidden" name="scheduleId" value="${schedule.id}">
                                 <button type="submit" class="btn btn-primary-pink">

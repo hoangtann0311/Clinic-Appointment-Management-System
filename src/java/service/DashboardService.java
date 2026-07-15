@@ -114,6 +114,18 @@ public class DashboardService {
     }
 
     /**
+     * Tổng số lịch hẹn toàn bộ thời gian (không lọc ngày).
+     */
+    public int getTotalAppointments() {
+        try {
+            return dashboardDAO.countAppointmentsAll();
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getTotalAppointments - " + e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
      * Số lịch hẹn trong khoảng ngày.
      */
     public int getTotalAppointments(LocalDate from, LocalDate to) {
@@ -133,6 +145,18 @@ public class DashboardService {
             return dashboardDAO.countWaitingPatients();
         } catch (Exception e) {
             System.err.println("DashboardService: Lỗi getWaitingPatients - " + e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Số bệnh nhân đang chờ khám toàn bộ thời gian (không lọc ngày).
+     */
+    public int getWaitingPatientsAll() {
+        try {
+            return dashboardDAO.countWaitingPatientsAll();
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getWaitingPatientsAll - " + e.getMessage());
             return 0;
         }
     }
@@ -162,6 +186,18 @@ public class DashboardService {
     }
 
     /**
+     * Tổng số bác sĩ từng có lịch được duyệt (không lọc ngày).
+     */
+    public int getDoctorsWorkingAll() {
+        try {
+            return dashboardDAO.countDoctorsWorkingAll();
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getDoctorsWorkingAll - " + e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
      * Số bác sĩ làm việc trong một ngày cụ thể.
      */
     public int getDoctorsWorking(LocalDate date) {
@@ -181,6 +217,18 @@ public class DashboardService {
             return dashboardDAO.countUltrasoundToday();
         } catch (Exception e) {
             System.err.println("DashboardService: Lỗi getUltrasoundToday - " + e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Tổng số ca siêu âm toàn bộ thời gian (không lọc ngày).
+     */
+    public int getUltrasoundAll() {
+        try {
+            return dashboardDAO.countUltrasoundAll();
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getUltrasoundAll - " + e.getMessage());
             return 0;
         }
     }
@@ -207,6 +255,31 @@ public class DashboardService {
         } catch (Exception e) {
             System.err.println("DashboardService: Lỗi getRevenueToday - " + e.getMessage());
             return "0 VNĐ";
+        }
+    }
+
+    /**
+     * Tổng doanh thu toàn bộ thời gian (tất cả invoice đã thanh toán).
+     */
+    public String getRevenueAll() {
+        try {
+            double revenue = dashboardDAO.sumRevenueAll();
+            return formatCurrency(revenue);
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getRevenueAll - " + e.getMessage());
+            return "0 VNĐ";
+        }
+    }
+
+    /**
+     * Tổng doanh thu toàn bộ thời gian (số thô, để tính toán).
+     */
+    public double getRevenueAllRaw() {
+        try {
+            return dashboardDAO.sumRevenueAll();
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getRevenueAllRaw - " + e.getMessage());
+            return 0.0;
         }
     }
 
@@ -249,6 +322,16 @@ public class DashboardService {
         }
     }
 
+    /** Số ca cấp cứu toàn bộ thời gian (không lọc ngày). */
+    public int getEmergencyCasesAll() {
+        try {
+            return dashboardDAO.countEmergencyAll();
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getEmergencyCasesAll - " + e.getMessage());
+            return 0;
+        }
+    }
+
     /** Số ca cấp cứu trong khoảng ngày. */
     public int getEmergencyCases(LocalDate from, LocalDate to) {
         try {
@@ -269,6 +352,16 @@ public class DashboardService {
             return dashboardDAO.countSuccessfulCasesToday();
         } catch (Exception e) {
             System.err.println("DashboardService: Lỗi getSuccessfulCasesToday - " + e.getMessage());
+            return 0;
+        }
+    }
+
+    /** Số ca thành công toàn bộ thời gian (không lọc ngày). */
+    public int getSuccessfulCasesAll() {
+        try {
+            return dashboardDAO.countSuccessfulCasesAll();
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getSuccessfulCasesAll - " + e.getMessage());
             return 0;
         }
     }
@@ -460,7 +553,7 @@ public class DashboardService {
     }
 
     /**
-     * Danh sách cảnh báo hệ thống.
+     * Danh sách cảnh báo hệ thống — LIVE MODE (không lọc ngày).
      */
     public List<DashboardDAO.Alert> getSystemAlerts() {
         try {
@@ -472,13 +565,13 @@ public class DashboardService {
     }
 
     /**
-     * Danh sách cảnh báo hệ thống với ngày tham chiếu.
+     * Danh sách cảnh báo hệ thống — CUSTOM RANGE (lọc theo khoảng ngày).
      */
-    public List<DashboardDAO.Alert> getSystemAlerts(LocalDate refDate) {
+    public List<DashboardDAO.Alert> getSystemAlerts(LocalDate from, LocalDate to) {
         try {
-            return dashboardDAO.getSystemAlerts(refDate);
+            return dashboardDAO.getSystemAlerts(from, to);
         } catch (Exception e) {
-            System.err.println("DashboardService: Lỗi getSystemAlerts(date) - " + e.getMessage());
+            System.err.println("DashboardService: Lỗi getSystemAlerts(range) - " + e.getMessage());
             return Collections.emptyList();
         }
     }

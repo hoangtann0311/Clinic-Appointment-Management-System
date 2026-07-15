@@ -546,6 +546,7 @@
                                                 <c:choose>
                                                     <c:when test="${u.status eq 'Locked'}">
                                                         <form method="post" action="${pageContext.request.contextPath}/admin/users/" style="display:inline;">
+                                                            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                                             <input type="hidden" name="action" value="toggleStatus">
                                                             <input type="hidden" name="userId" value="${u.id}">
                                                             <input type="hidden" name="newStatus" value="Active">
@@ -561,6 +562,7 @@
                                                     </c:when>
                                                     <c:otherwise>
                                                         <form method="post" action="${pageContext.request.contextPath}/admin/users/" style="display:inline;">
+                                                            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                                             <input type="hidden" name="action" value="toggleStatus">
                                                             <input type="hidden" name="userId" value="${u.id}">
                                                             <input type="hidden" name="newStatus" value="Locked">
@@ -649,6 +651,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form method="post" action="${pageContext.request.contextPath}/admin/users/" autocomplete="off" novalidate>
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                 <input type="hidden" name="action" value="create">
                 <c:if test="${not empty roleGroup}"><input type="hidden" name="roleGroup" value="${roleGroup}"></c:if>
                 <div class="modal-body">
@@ -757,6 +760,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form method="post" action="${pageContext.request.contextPath}/admin/users/" novalidate>
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                 <input type="hidden" name="action" value="edit">
                 <input type="hidden" name="userId" id="editUserId" value="${editUserId}">
                 <c:if test="${not empty roleGroup}"><input type="hidden" name="roleGroup" value="${roleGroup}"></c:if>
@@ -862,6 +866,7 @@
             <form method="post" action="${pageContext.request.contextPath}/admin/users/"
                   id="resetPasswordForm" autocomplete="off" novalidate
                   onsubmit="return validateResetPassword()">
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                 <input type="hidden" name="action" value="resetPassword">
                 <input type="hidden" name="userId" id="resetPwdUserId">
                 <c:if test="${not empty roleGroup}"><input type="hidden" name="roleGroup" value="${roleGroup}"></c:if>

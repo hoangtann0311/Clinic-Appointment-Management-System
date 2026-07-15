@@ -570,6 +570,7 @@
                                                 <i class="bi bi-pencil-square"></i>
                                             </button>
                                             <form method="post" action="${pageContext.request.contextPath}/manager/services/" style="display:inline;">
+                                                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                                 <input type="hidden" name="action" value="toggle">
                                                 <input type="hidden" name="id" value="${svc.id}">
                                                 <button type="submit" class="action-btn ${svc.active ? 'btn-warn' : ''}"
@@ -676,6 +677,7 @@
             </div>
             <form method="post" action="${pageContext.request.contextPath}/manager/services/"
                   id="addServiceForm" novalidate onsubmit="return validateAddService()">
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                 <input type="hidden" name="action" value="create">
                 <div class="modal-body">
                     <!-- Server-side general error -->
@@ -924,6 +926,7 @@
             </div>
             <form method="post" action="${pageContext.request.contextPath}/manager/services/"
                   id="editServiceForm" novalidate onsubmit="return validateEditService()">
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                 <input type="hidden" name="action" value="edit">
                 <input type="hidden" name="id" id="editServiceId">
                 <div class="modal-body">
@@ -1352,6 +1355,10 @@ function validateAddService() {
     if (!valid) {
         var firstError = document.querySelector('#addServiceForm .is-invalid');
         if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+        // Chuẩn hóa giá về số nguyên trước khi submit (bỏ định dạng .000)
+        var addPriceEl = document.getElementById('addPrice');
+        if (addPriceEl) addPriceEl.value = getPriceRaw(addPriceEl);
     }
 
     return valid;
@@ -1465,6 +1472,10 @@ function validateEditService() {
     if (!valid) {
         var firstError = document.querySelector('#editServiceForm .is-invalid');
         if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+        // Chuẩn hóa giá về số nguyên trước khi submit (bỏ định dạng .000)
+        var editPriceEl = document.getElementById('editPrice');
+        if (editPriceEl) editPriceEl.value = getPriceRaw(editPriceEl);
     }
 
     return valid;

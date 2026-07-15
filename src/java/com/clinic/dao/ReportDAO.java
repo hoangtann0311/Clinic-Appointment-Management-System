@@ -251,6 +251,39 @@ public class ReportDAO {
     // ═══════════════════════════════════════════════════════════
 
     /**
+     * Phân bố trạng thái lịch hẹn toàn bộ thời gian (không lọc ngày).
+     * Dùng cho dashboard live mode — luôn có dữ liệu ngay cả khi hôm nay chưa có appointment.
+     */
+    public List<StatusBreakdown> getStatusBreakdown() {
+        String sql =
+            "SELECT status, COUNT(*) AS cnt "
+            + "FROM appointments "
+            + "GROUP BY status "
+            + "ORDER BY cnt DESC";
+
+        List<StatusBreakdown> list = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            rs = ps.executeQuery();
+            while (rs.next()) {
+                StatusBreakdown sb = new StatusBreakdown();
+                sb.setStatus(rs.getString("status"));
+                sb.setCount(rs.getInt("cnt"));
+                list.add(sb);
+            }
+        } catch (SQLException e) {
+            System.err.println("[ReportDAO] getStatusBreakdown(all-time) ERROR: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return list;
+    }
+
+    /**
      * Phân bố trạng thái lịch hẹn trong khoảng ngày.
      */
     public List<StatusBreakdown> getStatusBreakdown(LocalDate from, LocalDate to) {

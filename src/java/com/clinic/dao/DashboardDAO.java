@@ -162,6 +162,59 @@ public class DashboardDAO {
     }
 
     // ──────────────────────────────────────────────
+    // ALL-TIME VERSIONS (không lọc ngày, cho dashboard live mode)
+    // ──────────────────────────────────────────────
+
+    /** Tổng số lịch hẹn toàn bộ thời gian. */
+    public int countAppointmentsAll() {
+        String sql = "SELECT COUNT(*) AS total FROM appointments";
+        return executeCount(sql);
+    }
+
+    /** Tổng số bệnh nhân đang chờ khám (không lọc ngày). */
+    public int countWaitingPatientsAll() {
+        String sql = "SELECT COUNT(*) AS total FROM appointments "
+                   + "WHERE status IN ('waiting', 'confirmed', 'in_progress')";
+        return executeCount(sql);
+    }
+
+    /** Tổng số bác sĩ từng có lịch làm việc được duyệt (không lọc ngày). */
+    public int countDoctorsWorkingAll() {
+        String sql = "SELECT COUNT(DISTINCT doctor_id) AS total FROM doctor_schedules "
+                   + "WHERE is_approved = 1";
+        return executeCount(sql);
+    }
+
+    /** Tổng số ca siêu âm toàn bộ thời gian. */
+    public int countUltrasoundAll() {
+        String sql = "SELECT COUNT(*) AS total FROM appointments a "
+                   + "INNER JOIN services s ON a.service_id = s.id "
+                   + "WHERE LOWER(s.service_name) LIKE N'%siêu âm%' "
+                   + "   OR LOWER(s.service_name) LIKE '%ultrasound%'";
+        return executeCount(sql);
+    }
+
+    /** Tổng doanh thu toàn bộ thời gian (tất cả invoice đã thanh toán). */
+    public double sumRevenueAll() {
+        String sql = "SELECT ISNULL(SUM(total_amount), 0) AS total FROM invoices WHERE status = 'paid'";
+        return executeSum(sql);
+    }
+
+    /** Tổng số ca cấp cứu toàn bộ thời gian. */
+    public int countEmergencyAll() {
+        String sql = "SELECT COUNT(*) AS total FROM appointments WHERE is_emergency = 1";
+        return executeCount(sql);
+    }
+
+    /** Tổng số ca thành công toàn bộ thời gian (completed + paid). */
+    public int countSuccessfulCasesAll() {
+        String sql = "SELECT COUNT(DISTINCT a.id) AS total FROM appointments a "
+                   + "INNER JOIN invoices i ON i.appointment_id = a.id "
+                   + "WHERE a.status = 'completed' AND i.status = 'paid'";
+        return executeCount(sql);
+    }
+
+    // ──────────────────────────────────────────────
     // KPI: CA CẤP CỨU (Emergency)
     // ──────────────────────────────────────────────
 
@@ -937,74 +990,133 @@ public class DashboardDAO {
     }
 
     /**
-     * Lấy danh sách cảnh báo hệ thống (dùng ngày hiện tại).
+     * Lấy danh sách cảnh báo hệ thống — LIVE MODE.
+     * Không lọc ngày: hiển thị trạng thái thực tế hiện tại của toàn hệ thống.
      */
     public List<Alert> getSystemAlerts() {
-        return getSystemAlerts(LocalDate.now());
-    }
-
-    /**
-     * Lấy danh sách cảnh báo hệ thống với ngày tham chiếu.
-     * Khi lọc theo ngày cũ, alert sẽ dùng refDate thay vì GETDATE().
-     * Message có context ngày để người dùng hiểu dữ liệu được tính đến thời điểm nào.
-     */
-    public List<Alert> getSystemAlerts(LocalDate refDate) {
         List<Alert> alerts = new ArrayList<>();
-        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-        String dateLabel = refDate.format(fmt);
 
-        // 1. Lịch hẹn chưa xác nhận — dùng refDate thay vì GETDATE()
+        // 1. Lịch hẹn chưa xác nhận — tất cả pending, không lọc ngày
         int unconfirmed = executeCount(
-            "SELECT COUNT(*) AS total FROM appointments "
-            + "WHERE status = 'pending' AND appointment_date = ?", refDate);
+            "SELECT COUNT(*) AS total FROM appointments WHERE status = 'pending'");
         if (unconfirmed > 0) {
             Alert a = new Alert();
             a.type = "warning";
             a.icon = "bi-exclamation-triangle-fill";
             a.title = "Lịch hẹn chưa xác nhận";
-            a.message = "Có " + unconfirmed + " lịch hẹn đang chờ xác nhận (ngày " + dateLabel + ").";
+            a.message = "Có " + unconfirmed + " lịch hẹn đang chờ xác nhận.";
             a.count = unconfirmed;
             alerts.add(a);
         }
 
-        // 2. Hóa đơn chưa thanh toán — chỉ đếm invoice tạo đến refDate
+        // 2. Hóa đơn chưa thanh toán — tất cả unpaid/pending
         int unpaid = executeCount(
-            "SELECT COUNT(*) AS total FROM invoices WHERE status IN ('pending', 'unpaid') AND created_at <= ?",
-            refDate);
+            "SELECT COUNT(*) AS total FROM invoices WHERE status IN ('pending', 'unpaid')");
         if (unpaid > 0) {
             Alert a = new Alert();
             a.type = "danger";
             a.icon = "bi-cash-stack";
             a.title = "Hóa đơn chưa thanh toán";
-            a.message = "Có " + unpaid + " hóa đơn chưa thanh toán (tính đến " + dateLabel + ").";
+            a.message = "Có " + unpaid + " hóa đơn chưa thanh toán.";
             a.count = unpaid;
             alerts.add(a);
         }
 
-        // 3. Tài khoản bị khóa — chỉ đếm user tồn tại đến refDate
+        // 3. Tài khoản bị khóa
         int locked = executeCount(
-            "SELECT COUNT(*) AS total FROM users WHERE status = 'LOCKED' AND created_at <= ?",
-            refDate);
+            "SELECT COUNT(*) AS total FROM users WHERE status = 'LOCKED'");
         if (locked > 0) {
             Alert a = new Alert();
             a.type = "danger";
             a.icon = "bi-lock-fill";
             a.title = "Tài khoản bị khóa";
-            a.message = "Có " + locked + " tài khoản đang bị khóa (tính đến " + dateLabel + ").";
+            a.message = "Có " + locked + " tài khoản đang bị khóa.";
             a.count = locked;
             alerts.add(a);
         }
 
-        // 4. Tài khoản chưa xác thực email — chỉ đếm đến refDate
+        // 4. Tài khoản chưa xác thực email
         int unverified = executeCount(
-            "SELECT COUNT(*) AS total FROM users WHERE is_verified = 0 AND status = 'PENDING_VERIFICATION' AND created_at <= ?",
-            refDate);
+            "SELECT COUNT(*) AS total FROM users WHERE is_verified = 0 AND status = 'PENDING_VERIFICATION'");
         if (unverified > 0) {
             Alert a = new Alert();
             a.type = "info";
             a.icon = "bi-envelope-exclamation";
             a.title = "Tài khoản chưa xác thực";
-            a.message = "Có " + unverified + " tài khoản đang chờ xác thực email (tính đến " + dateLabel + ").";
+            a.message = "Có " + unverified + " tài khoản đang chờ xác thực email.";
+            a.count = unverified;
+            alerts.add(a);
+        }
+
+        return alerts;
+    }
+
+    /**
+     * Lấy danh sách cảnh báo hệ thống — CUSTOM RANGE.
+     * Lọc theo khoảng ngày người dùng chọn (dateFrom → dateTo).
+     * Alert chỉ hiển thị nếu có dữ liệu thực sự trong khoảng.
+     */
+    public List<Alert> getSystemAlerts(LocalDate from, LocalDate to) {
+        List<Alert> alerts = new ArrayList<>();
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        String rangeLabel = from.format(fmt) + " → " + to.format(fmt);
+
+        // 1. Lịch hẹn chưa xác nhận trong khoảng ngày
+        int unconfirmed = executeCount(
+            "SELECT COUNT(*) AS total FROM appointments "
+            + "WHERE status = 'pending' AND appointment_date >= ? AND appointment_date <= ?",
+            from, to);
+        if (unconfirmed > 0) {
+            Alert a = new Alert();
+            a.type = "warning";
+            a.icon = "bi-exclamation-triangle-fill";
+            a.title = "Lịch hẹn chưa xác nhận";
+            a.message = "Có " + unconfirmed + " lịch hẹn đang chờ xác nhận (" + rangeLabel + ").";
+            a.count = unconfirmed;
+            alerts.add(a);
+        }
+
+        // 2. Hóa đơn chưa thanh toán trong khoảng ngày
+        int unpaid = executeCount(
+            "SELECT COUNT(*) AS total FROM invoices "
+            + "WHERE status IN ('pending', 'unpaid') AND created_at >= ? AND created_at <= ?",
+            from, to);
+        if (unpaid > 0) {
+            Alert a = new Alert();
+            a.type = "danger";
+            a.icon = "bi-cash-stack";
+            a.title = "Hóa đơn chưa thanh toán";
+            a.message = "Có " + unpaid + " hóa đơn chưa thanh toán (" + rangeLabel + ").";
+            a.count = unpaid;
+            alerts.add(a);
+        }
+
+        // 3. Tài khoản bị khóa trong khoảng ngày
+        int locked = executeCount(
+            "SELECT COUNT(*) AS total FROM users "
+            + "WHERE status = 'LOCKED' AND created_at >= ? AND created_at <= ?",
+            from, to);
+        if (locked > 0) {
+            Alert a = new Alert();
+            a.type = "danger";
+            a.icon = "bi-lock-fill";
+            a.title = "Tài khoản bị khóa";
+            a.message = "Có " + locked + " tài khoản đang bị khóa (" + rangeLabel + ").";
+            a.count = locked;
+            alerts.add(a);
+        }
+
+        // 4. Tài khoản chưa xác thực email trong khoảng ngày
+        int unverified = executeCount(
+            "SELECT COUNT(*) AS total FROM users "
+            + "WHERE is_verified = 0 AND status = 'PENDING_VERIFICATION' AND created_at >= ? AND created_at <= ?",
+            from, to);
+        if (unverified > 0) {
+            Alert a = new Alert();
+            a.type = "info";
+            a.icon = "bi-envelope-exclamation";
+            a.title = "Tài khoản chưa xác thực";
+            a.message = "Có " + unverified + " tài khoản đang chờ xác thực email (" + rangeLabel + ").";
             a.count = unverified;
             alerts.add(a);
         }

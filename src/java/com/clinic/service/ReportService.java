@@ -61,6 +61,19 @@ public class ReportService {
     }
 
     /**
+     * Phân bố trạng thái lịch hẹn toàn bộ thời gian (cho doughnut chart).
+     * Dùng cho live mode — không filter theo ngày để luôn có dữ liệu hiển thị.
+     */
+    public List<StatusBreakdown> getStatusBreakdown() {
+        try {
+            return reportDAO.getStatusBreakdown();
+        } catch (Exception e) {
+            System.err.println("[ReportService] getStatusBreakdown(all-time) ERROR: " + e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
      * Phân bố trạng thái lịch hẹn (cho doughnut chart).
      */
     public List<StatusBreakdown> getStatusBreakdown(LocalDate from, LocalDate to) {

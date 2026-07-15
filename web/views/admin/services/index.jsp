@@ -243,6 +243,7 @@
                                                 </button>
                                                 <c:if test="${svc.active}">
                                                     <form method="post" action="${pageContext.request.contextPath}/admin/services/" style="display:inline;">
+                                                        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                                         <input type="hidden" name="action" value="deactivate">
                                                         <input type="hidden" name="id" value="${svc.id}">
                                                         <button type="submit" class="btn btn-sm btn-outline-warning btn-action"
@@ -310,6 +311,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form method="post" action="${pageContext.request.contextPath}/admin/services/">
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                 <input type="hidden" name="action" value="create">
                 <div class="modal-body">
                     <div class="row g-3">
@@ -397,6 +399,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form method="post" action="${pageContext.request.contextPath}/admin/services/">
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                 <input type="hidden" name="action" value="edit">
                 <input type="hidden" name="id" id="editServiceId">
                 <div class="modal-body">

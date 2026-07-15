@@ -561,6 +561,7 @@
                                                     <%-- Nút Duyệt (icon check, xanh) --%>
                                                     <form method="post" action="${pageContext.request.contextPath}/manager/schedules/" style="display:inline;"
                                                           onsubmit="return confirmApproval('${sched.id}', '${fn:escapeXml(sched.doctorName)}', '${sched.shiftLabel}')">
+                                                        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                                         <input type="hidden" name="action" value="approve">
                                                         <input type="hidden" name="id" value="${sched.id}">
                                                         <button type="submit" class="btn btn-sm btn-approve" title="Duyệt lịch trực">
@@ -655,6 +656,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form method="post" action="${pageContext.request.contextPath}/manager/schedules/">
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                 <input type="hidden" name="action" value="reject">
                 <input type="hidden" name="id" id="rejectScheduleId">
                 <div class="modal-body">
@@ -721,6 +723,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form method="post" action="${pageContext.request.contextPath}/manager/schedules/">
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                 <input type="hidden" name="action" value="cancel">
                 <input type="hidden" name="id" id="cancelScheduleId">
                 <div class="modal-body">

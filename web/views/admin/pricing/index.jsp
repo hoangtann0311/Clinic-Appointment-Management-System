@@ -618,6 +618,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form method="post" action="${pageContext.request.contextPath}/admin/pricing/">
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                 <input type="hidden" name="action" value="updateServicePrice">
                 <input type="hidden" name="tab" value="services">
                 <input type="hidden" name="id" id="editSvcId">
@@ -684,6 +685,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form method="post" action="${pageContext.request.contextPath}/admin/pricing/">
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                 <input type="hidden" name="action" value="updateMedicinePrice">
                 <input type="hidden" name="tab" value="medicines">
                 <input type="hidden" name="id" id="editMedId">
@@ -758,6 +760,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form method="post" action="${pageContext.request.contextPath}/admin/pricing/">
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                 <input type="hidden" name="action" value="createService">
                 <input type="hidden" name="tab" value="services">
                 <div class="modal-body">
@@ -849,6 +852,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form method="post" action="${pageContext.request.contextPath}/admin/pricing/">
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                 <input type="hidden" name="action" value="createMedicine">
                 <input type="hidden" name="tab" value="medicines">
                 <div class="modal-body">

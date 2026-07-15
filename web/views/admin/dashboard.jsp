@@ -687,10 +687,13 @@ body.admin-body {
             <div style="display:flex; align-items:center; flex-wrap:wrap; gap:0.75rem;">
                 <div class="admin-page-subtitle" style="margin-bottom:0;">
                     <i class="bi bi-calendar3"></i>
-                    ${not empty todayDisplay ? todayDisplay : 'Hôm nay'}
+                    ${not empty subtitleDisplay ? subtitleDisplay : 'Hôm nay'}
                     <span class="mx-2">&middot;</span>
                     <i class="bi bi-building"></i>
-                    Tổng quan hoạt động phòng khám
+                    <c:choose>
+                        <c:when test="${isCustomRange}">Dữ liệu trong khoảng đã chọn</c:when>
+                        <c:otherwise>Tổng quan toàn hệ thống</c:otherwise>
+                    </c:choose>
                 </div>
                 <%-- Inline Date Filter — nằm ngay bên cạnh subtitle --%>
                 <form method="get" action="${pageContext.request.contextPath}/admin/dashboard" class="header-date-filter">
@@ -783,10 +786,10 @@ body.admin-body {
                         <div class="kpi-label">
                             <c:choose>
                                 <c:when test="${isCustomRange}">Lịch Hẹn (Khoảng)</c:when>
-                                <c:otherwise>Lịch Hẹn Hôm Nay</c:otherwise>
+                                <c:otherwise>Tổng Lịch Hẹn</c:otherwise>
                             </c:choose>
                         </div>
-                        <div class="kpi-sub"><i class="bi bi-clock"></i> ${isCustomRange ? dateRangeLabel : 'Cập nhật thực'}</div>
+                        <div class="kpi-sub"><i class="bi bi-clock"></i> ${isCustomRange ? dateRangeLabel : 'Toàn thời gian'}</div>
                     </div>
                 </div>
             </div>
@@ -805,7 +808,7 @@ body.admin-body {
                                 <c:otherwise>Đang Chờ Khám</c:otherwise>
                             </c:choose>
                         </div>
-                        <div class="kpi-sub"><i class="bi bi-person"></i> ${isCustomRange ? dateRangeLabel : 'Hôm nay'}</div>
+                        <div class="kpi-sub"><i class="bi bi-person"></i> ${isCustomRange ? dateRangeLabel : 'Trạng thái hiện tại'}</div>
                     </div>
                 </div>
             </div>
@@ -821,7 +824,7 @@ body.admin-body {
                         <div class="kpi-label">
                             <c:choose>
                                 <c:when test="${isCustomRange}">Bác Sĩ (Ngày ${dateToFormatted})</c:when>
-                                <c:otherwise>Bác Sĩ Đang Làm</c:otherwise>
+                                <c:otherwise>Bác Sĩ Có Lịch</c:otherwise>
                             </c:choose>
                         </div>
                         <div class="kpi-sub"><i class="bi bi-check-circle"></i> <c:choose><c:when test="${isCustomRange}">Ngày ${dateToFormatted}</c:when><c:otherwise>Đã duyệt lịch</c:otherwise></c:choose></div>
@@ -840,10 +843,10 @@ body.admin-body {
                         <div class="kpi-label">
                             <c:choose>
                                 <c:when test="${isCustomRange}">Siêu Âm (Khoảng)</c:when>
-                                <c:otherwise>Ca Siêu Âm</c:otherwise>
+                                <c:otherwise>Tổng Ca Siêu Âm</c:otherwise>
                             </c:choose>
                         </div>
-                        <div class="kpi-sub"><i class="bi bi-calendar-day"></i> ${isCustomRange ? dateRangeLabel : 'Hôm nay'}</div>
+                        <div class="kpi-sub"><i class="bi bi-calendar-day"></i> ${isCustomRange ? dateRangeLabel : 'Toàn thời gian'}</div>
                     </div>
                 </div>
             </div>
@@ -859,7 +862,7 @@ body.admin-body {
                         <div class="kpi-label">
                             <c:choose>
                                 <c:when test="${isCustomRange}">Doanh Thu (Khoảng)</c:when>
-                                <c:otherwise>Doanh Thu Hôm Nay</c:otherwise>
+                                <c:otherwise>Tổng Doanh Thu</c:otherwise>
                             </c:choose>
                         </div>
                         <div class="kpi-sub"><i class="bi bi-graph-up"></i> <c:choose><c:when test="${isCustomRange}">${dateRangeLabel}</c:when><c:otherwise>Đã thanh toán</c:otherwise></c:choose></div>
@@ -878,10 +881,10 @@ body.admin-body {
                         <div class="kpi-label">
                             <c:choose>
                                 <c:when test="${isCustomRange}">Cấp Cứu (Khoảng)</c:when>
-                                <c:otherwise>Ca Cấp Cứu</c:otherwise>
+                                <c:otherwise>Tổng Ca Cấp Cứu</c:otherwise>
                             </c:choose>
                         </div>
-                        <div class="kpi-sub"><i class="bi bi-activity"></i> <c:choose><c:when test="${isCustomRange}">${dateRangeLabel}</c:when><c:otherwise>Hôm nay</c:otherwise></c:choose></div>
+                        <div class="kpi-sub"><i class="bi bi-activity"></i> <c:choose><c:when test="${isCustomRange}">${dateRangeLabel}</c:when><c:otherwise>Toàn thời gian</c:otherwise></c:choose></div>
                     </div>
                 </div>
             </div>
@@ -897,7 +900,7 @@ body.admin-body {
                         <div class="kpi-label">
                             <c:choose>
                                 <c:when test="${isCustomRange}">Thành Công (Khoảng)</c:when>
-                                <c:otherwise>Ca Thành Công</c:otherwise>
+                                <c:otherwise>Tổng Ca Thành Công</c:otherwise>
                             </c:choose>
                         </div>
                         <div class="kpi-sub"><i class="bi bi-check2-all"></i> <c:choose><c:when test="${isCustomRange}">${dateRangeLabel}</c:when><c:otherwise>Đã khám + TT</c:otherwise></c:choose></div>
@@ -980,9 +983,19 @@ body.admin-body {
                     </h5>
                 </div>
                 <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="appointmentsChart" height="260"></canvas>
-                    </div>
+                    <c:choose>
+                        <c:when test="${hasApptData}">
+                            <div class="chart-container">
+                                <canvas id="appointmentsChart" height="260"></canvas>
+                            </div>
+                        </c:when>
+                        <c:otherwise>
+                            <div class="admin-empty-state py-4">
+                                <i class="bi bi-bar-chart" style="font-size:2rem;color:var(--pink-200);"></i>
+                                <p class="mt-2 mb-0" style="color:var(--c-muted);">Chưa có dữ liệu trong khoảng này</p>
+                            </div>
+                        </c:otherwise>
+                    </c:choose>
                 </div>
             </div>
         </div>
@@ -1030,9 +1043,19 @@ body.admin-body {
                     </h5>
                 </div>
                 <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="revenueChart" height="260"></canvas>
-                    </div>
+                    <c:choose>
+                        <c:when test="${hasRevenueData}">
+                            <div class="chart-container">
+                                <canvas id="revenueChart" height="260"></canvas>
+                            </div>
+                        </c:when>
+                        <c:otherwise>
+                            <div class="admin-empty-state py-4">
+                                <i class="bi bi-graph-up" style="font-size:2rem;color:var(--pink-200);"></i>
+                                <p class="mt-2 mb-0" style="color:var(--c-muted);">Chưa có dữ liệu trong khoảng này</p>
+                            </div>
+                        </c:otherwise>
+                    </c:choose>
                 </div>
             </div>
         </div>

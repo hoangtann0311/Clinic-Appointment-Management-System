@@ -247,10 +247,22 @@
                                                class="action-btn" title="Xem chi tiết">
                                                 <i class="bi bi-eye-fill"></i>
                                             </a>
-                                            <button class="action-btn" onclick="openEditModal('${med.id}','${fn:escapeXml(med.medicineCode)}','${fn:escapeXml(med.name)}','${fn:escapeXml(med.description)}','${fn:escapeXml(med.dosage)}','${fn:escapeXml(med.unit)}','${med.price}','${med.stockQuantity}','${med.active}','${med.categoryId}')" title="Sửa">
+                                            <button class="action-btn edit-med-btn"
+                                                    data-id="${med.id}"
+                                                    data-code="${fn:escapeXml(med.medicineCode)}"
+                                                    data-name="${fn:escapeXml(med.name)}"
+                                                    data-desc="${fn:escapeXml(med.description)}"
+                                                    data-dosage="${fn:escapeXml(med.dosage)}"
+                                                    data-unit="${fn:escapeXml(med.unit)}"
+                                                    data-price="${med.price}"
+                                                    data-stock="${med.stockQuantity}"
+                                                    data-active="${med.active}"
+                                                    data-catid="${med.categoryId}"
+                                                    title="Sửa">
                                                 <i class="bi bi-pencil-square"></i>
                                             </button>
                                             <form method="post" action="${pageContext.request.contextPath}/manager/medicines/" style="display:inline;">
+                                                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                                 <input type="hidden" name="action" value="toggle">
                                                 <input type="hidden" name="id" value="${med.id}">
                                                 <button type="submit" class="action-btn ${med.active ? 'btn-outline-warning' : 'btn-outline-success'}" title="${med.active ? 'Ngừng' : 'Kích hoạt'}"
@@ -298,6 +310,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="post" action="${pageContext.request.contextPath}/manager/medicines/" id="addMedicineForm" novalidate>
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                 <input type="hidden" name="action" value="create">
                 <div class="modal-body">
                     <div class="form-section-title"><i class="bi bi-info-circle me-1"></i>Thông tin cơ bản</div>
@@ -371,7 +384,21 @@
     </div>
 </div>
 
-<%-- ===== MODAL: SUA THUOC ===== --%>
+<%-- Hidden data container để JS đọc khi reopen edit modal sau lỗi — dùng data-* tránh lỗi escape JS --%>
+<div id="reopenEditData" style="display:none;"
+     data-show="${showEditModal ? 'true' : 'false'}"
+     data-id="${editMedicineId}"
+     data-code="${fn:escapeXml(formData.medicineCode)}"
+     data-name="${fn:escapeXml(formData.name)}"
+     data-desc="${fn:escapeXml(formData.description)}"
+     data-dosage="${fn:escapeXml(formData.dosage)}"
+     data-unit="${fn:escapeXml(formData.unit)}"
+     data-price="${formData.price}"
+     data-stock="${formData.stockQuantity}"
+     data-isactive="${param.isActive eq 'on' ? 'true' : 'false'}"
+     data-changereason="${fn:escapeXml(formData.changeReason)}"
+     data-catid="${formData.categoryId}"
+></div>
 <div class="modal fade" id="editMedicineModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
@@ -379,23 +406,38 @@
                 <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Chỉnh Sửa Thuốc</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="post" action="${pageContext.request.contextPath}/manager/medicines/">
+            <form method="post" action="${pageContext.request.contextPath}/manager/medicines/" id="editMedicineForm">
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                 <input type="hidden" name="action" value="edit">
                 <input type="hidden" name="id" id="editMedicineId">
                 <div class="modal-body">
+                    <%-- Hiển thị lỗi chung server-side --%>
+                    <c:if test="${not empty errors.general}">
+                        <div class="alert alert-danger py-2 px-3 mb-3" style="font-size:0.78rem;border-radius:var(--r-sm);">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i>${errors.general}
+                        </div>
+                    </c:if>
                     <div class="form-section-title"><i class="bi bi-info-circle me-1"></i>Thông tin cơ bản</div>
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">
-                            <label class="form-label fw-semibold small">Mã thuốc <span class="text-danger">*</span></label>
-                            <input type="text" name="medicineCode" id="editMedicineCode" class="form-control form-control-sm" required maxlength="50">
+                            <label class="form-label fw-semibold small">Mã thuốc 🔒</label>
+                            <input type="text" id="editMedicineCode"
+                                   class="form-control form-control-sm text-uppercase" readonly disabled
+                                   style="font-family:'Courier New',monospace;letter-spacing:0.05em;background:#f5f5f5;color:#757575;cursor:not-allowed;">
+                            <input type="hidden" name="medicineCode" id="editMedicineCodeHidden">
+                            <div class="form-text" style="font-size:0.68rem;">
+                                <i class="bi bi-lock-fill"></i> Mã định danh — không thể thay đổi sau khi tạo
+                            </div>
                         </div>
                         <div class="col-md-8">
                             <label class="form-label fw-semibold small">Tên thuốc <span class="text-danger">*</span></label>
                             <input type="text" name="name" id="editName" class="form-control form-control-sm" required maxlength="150">
+                            <c:if test="${not empty errors.name}"><div class="text-danger mt-1" style="font-size:0.72rem;">${errors.name}</div></c:if>
                         </div>
                         <div class="col-12">
                             <label class="form-label fw-semibold small">Mô tả / Chỉ định</label>
                             <textarea name="description" id="editDesc" class="form-control form-control-sm" rows="2" maxlength="500"></textarea>
+                            <c:if test="${not empty errors.description}"><div class="text-danger mt-1" style="font-size:0.72rem;">${errors.description}</div></c:if>
                         </div>
                     </div>
                     <div class="form-section-title"><i class="bi bi-cash-coin me-1"></i>Giá &amp; Phân loại</div>
@@ -403,18 +445,22 @@
                         <div class="col-md-3">
                             <label class="form-label fw-semibold small">Hàm lượng</label>
                             <input type="text" name="dosage" id="editDosage" class="form-control form-control-sm" maxlength="100">
+                            <c:if test="${not empty errors.dosage}"><div class="text-danger mt-1" style="font-size:0.72rem;">${errors.dosage}</div></c:if>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label fw-semibold small">Đơn vị tính</label>
                             <input type="text" name="unit" id="editUnit" class="form-control form-control-sm" maxlength="50">
+                            <c:if test="${not empty errors.unit}"><div class="text-danger mt-1" style="font-size:0.72rem;">${errors.unit}</div></c:if>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label fw-semibold small">Giá bán (VNĐ) <span class="text-danger">*</span></label>
                             <div class="input-group input-group-sm"><span class="input-group-text fw-bold">₫</span><input type="number" name="price" id="editPrice" class="form-control" required min="1000" step="100"></div>
+                            <c:if test="${not empty errors.price}"><div class="text-danger mt-1" style="font-size:0.72rem;">${errors.price}</div></c:if>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label fw-semibold small">Tồn kho</label>
                             <input type="number" name="stockQuantity" id="editStock" class="form-control form-control-sm" min="0">
+                            <c:if test="${not empty errors.stockQuantity}"><div class="text-danger mt-1" style="font-size:0.72rem;">${errors.stockQuantity}</div></c:if>
                         </div>
                         <div class="col-md-5">
                             <label class="form-label fw-semibold small">Nhóm thuốc</label>
@@ -424,6 +470,7 @@
                                     <option value="${cat.id}">${fn:escapeXml(cat.categoryName)}</option>
                                 </c:forEach>
                             </select>
+                            <c:if test="${not empty errors.categoryId}"><div class="text-danger mt-1" style="font-size:0.72rem;">${errors.categoryId}</div></c:if>
                         </div>
                         <div class="col-md-3 d-flex align-items-end pb-1">
                             <div class="form-check"><input type="checkbox" name="isActive" class="form-check-input" id="editIsActive"><label class="form-check-label small fw-semibold" for="editIsActive">Đang sử dụng</label></div>
@@ -629,9 +676,21 @@ function resetAddMedicineForm() {
     }
 }
 
+// ═══════════════════════════════════════════════════════════
+//  Xử lý click nút Sửa qua data-attributes (tránh lỗi escape)
+// ═══════════════════════════════════════════════════════════
+document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.edit-med-btn');
+    if (!btn) return;
+    e.preventDefault();
+    var d = btn.dataset;
+    openEditModal(d.id, d.code, d.name, d.desc, d.dosage, d.unit, d.price, d.stock, d.active, d.catid);
+});
+
 function openEditModal(id, code, name, desc, dosage, unit, price, stock, isActive, catId) {
     document.getElementById('editMedicineId').value = id;
     document.getElementById('editMedicineCode').value = code || '';
+    document.getElementById('editMedicineCodeHidden').value = code || '';
     document.getElementById('editName').value = name || '';
     document.getElementById('editDesc').value = desc || '';
     document.getElementById('editDosage').value = dosage || '';
@@ -650,26 +709,26 @@ function openEditModal(id, code, name, desc, dosage, unit, price, stock, isActiv
 }
 
 <c:if test="${showCreateModal}">new bootstrap.Modal(document.getElementById('addMedicineModal')).show();</c:if>
-<c:if test="${showEditModal}">
-document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('editMedicineId').value = '${editMedicineId}';
-    document.getElementById('editMedicineCode').value = '${fn:escapeXml(formData.medicineCode)}';
-    document.getElementById('editName').value = '${fn:escapeXml(formData.name)}';
-    document.getElementById('editDesc').value = '${fn:escapeXml(formData.description)}';
-    document.getElementById('editDosage').value = '${fn:escapeXml(formData.dosage)}';
-    document.getElementById('editUnit').value = '${fn:escapeXml(formData.unit)}';
-    document.getElementById('editPrice').value = '${formData.price}';
-    document.getElementById('editStock').value = '${formData.stockQuantity}';
-    document.getElementById('editChangeReason').value = '${fn:escapeXml(formData.changeReason)}';
-    var catSel = document.getElementById('editCategoryId');
-    if (catSel && '${formData.categoryId}') {
-        for (var i = 0; i < catSel.options.length; i++) {
-            if (catSel.options[i].value === '${formData.categoryId}') { catSel.options[i].selected = true; break; }
-        }
+<%-- Reopen edit modal sau lỗi: đọc từ hidden data container thay vì inject trực tiếp vào JS --%>
+(function() {
+    var reopen = document.getElementById('reopenEditData');
+    if (reopen && reopen.dataset.show === 'true') {
+        openEditModal(
+            reopen.dataset.id,
+            reopen.dataset.code,
+            reopen.dataset.name,
+            reopen.dataset.desc,
+            reopen.dataset.dosage,
+            reopen.dataset.unit,
+            reopen.dataset.price,
+            reopen.dataset.stock,
+            reopen.dataset.isactive || 'false',
+            reopen.dataset.catid
+        );
+        // openEditModal tự reset changeReason → ghi đè lại
+        document.getElementById('editChangeReason').value = reopen.dataset.changereason || '';
     }
-    new bootstrap.Modal(document.getElementById('editMedicineModal')).show();
-});
-</c:if>
+})();
 </script>
 </body>
 </html>

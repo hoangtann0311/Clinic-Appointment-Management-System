@@ -175,7 +175,13 @@ public class MedicineService {
         return updateMedicine(id, medicineCode, name, description, dosage, unit, priceStr, stockQuantityStr, isActive, errors, null, null, null);
     }
 
-    /** Cập nhật thuốc — validate toàn diện + tự động ghi lịch sử nếu giá thay đổi */
+    /**
+     * Cập nhật thuốc — validate toàn diện + tự động ghi lịch sử nếu giá thay đổi.
+     *
+     * <p>Tham số {@code medicineCode} bị bỏ qua khi cập nhật —
+     * hệ thống luôn giữ nguyên mã thuốc gốc từ database để bảo vệ
+     * khóa định danh (không cho phép sửa mã thuốc sau khi tạo).
+     */
     public boolean updateMedicine(int id, String medicineCode, String name,
                                    String description, String dosage, String unit,
                                    String priceStr, String stockQuantityStr,
@@ -187,9 +193,10 @@ public class MedicineService {
             return false;
         }
 
-        // ── Validate từng trường ──
-        String codeError = ValidationUtil.validateMedicineCode(medicineCode);
-        if (codeError != null) { errors.put("medicineCode", codeError); }
+        // ── Luôn giữ nguyên mã thuốc gốc từ DB, bỏ qua medicineCode từ request ──
+        String originalCode = med.getMedicineCode();
+
+        // ── Validate từng trường (bỏ qua medicineCode — giữ nguyên bản gốc) ──
 
         String nameError = ValidationUtil.validateMedicineName(name);
         if (nameError != null) { errors.put("name", nameError); }
@@ -216,13 +223,6 @@ public class MedicineService {
             return false;
         }
 
-        // ── Check trùng mã thuốc (ngoại trừ chính nó) ──
-        Medicine existing = medicineDAO.findByCode(medicineCode.trim());
-        if (existing != null && existing.getId() != id) {
-            errors.put("medicineCode", "Mã thuốc \"" + medicineCode.trim() + "\" đã được sử dụng bởi thuốc khác.");
-            return false;
-        }
-
         BigDecimal oldPrice = med.getPrice();
         BigDecimal price = new BigDecimal(priceStr.trim());
         int stockQuantity = 0;
@@ -230,7 +230,7 @@ public class MedicineService {
             stockQuantity = Integer.parseInt(stockQuantityStr.trim());
         }
 
-        med.setMedicineCode(medicineCode.trim());
+        med.setMedicineCode(originalCode);             // KHÔNG thay đổi mã — bảo vệ khóa định danh
         med.setName(name.trim());
         med.setDescription(description != null && !description.trim().isEmpty() ? description.trim() : null);
         med.setDosage(dosage != null && !dosage.trim().isEmpty() ? dosage.trim() : null);
