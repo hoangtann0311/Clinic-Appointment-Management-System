@@ -728,6 +728,11 @@ body.admin-body {
             <i class="bi bi-arrow-clockwise"></i>
             Làm mới
         </button>
+        <a href="${pageContext.request.contextPath}/export/reports?dateFrom=${dateFrom}&dateTo=${dateTo}"
+           class="btn-refresh" title="Xuất báo cáo CSV" style="color:#059669;background:#ecfdf5;border-color:#a7f3d0;">
+            <i class="bi bi-download"></i>
+            Xuất Báo Cáo
+        </a>
     </div>
 
     <%-- Welcome Banner --%>
@@ -900,6 +905,25 @@ body.admin-body {
                 </div>
             </div>
         </div>
+
+        <%-- 9. Tỉ Lệ Hoàn Thành --%>
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="card kpi-card fade-in-up" style="--kpi-accent: #f59e0b;">
+                <div class="card-body" style="border-top:3px solid #f59e0b !important;">
+                    <div class="kpi-icon" style="background:#fff7ed;color:#ea580c;"><i class="bi bi-percent"></i></div>
+                    <div class="kpi-content">
+                        <div class="kpi-value">${not empty completionRate ? completionRate : '0%'}</div>
+                        <div class="kpi-label">
+                            <c:choose>
+                                <c:when test="${isCustomRange}">Tỉ Lệ HT (Khoảng)</c:when>
+                                <c:otherwise>Tỉ Lệ Hoàn Thành</c:otherwise>
+                            </c:choose>
+                        </div>
+                        <div class="kpi-sub"><i class="bi bi-graph-up"></i> <c:choose><c:when test="${isCustomRange}">${dateRangeLabel}</c:when><c:otherwise>Completed / Total</c:otherwise></c:choose></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <%-- ════════════════════════════════════════════ --%>
@@ -940,11 +964,11 @@ body.admin-body {
     </c:if>
 
     <%-- ════════════════════════════════════════════ --%>
-    <%-- BIỂU ĐỒ: Lịch hẹn 7 ngày + Doanh thu 12 tháng --%>
+    <%-- BIỂU ĐỒ: Lịch hẹn + Phân bố trạng thái + Doanh thu 12 tháng --%>
     <%-- ════════════════════════════════════════════ --%>
     <div class="row g-3 mb-4">
-        <%-- Biểu đồ lịch hẹn theo ngày (7 ngày) --%>
-        <div class="col-xl-6">
+        <%-- Biểu đồ lịch hẹn theo ngày --%>
+        <div class="col-xl-4 col-lg-6">
             <div class="admin-card h-100">
                 <div class="card-header">
                     <h5>
@@ -963,14 +987,44 @@ body.admin-body {
             </div>
         </div>
 
+        <%-- Biểu đồ phân bố trạng thái (Doughnut) --%>
+        <div class="col-xl-4 col-lg-6">
+            <div class="admin-card h-100">
+                <div class="card-header">
+                    <h5>
+                        <i class="bi bi-pie-chart-fill"></i>
+                        <c:choose>
+                            <c:when test="${isCustomRange}">Phân Bố Trạng Thái (${dateRangeLabel})</c:when>
+                            <c:otherwise>Phân Bố Trạng Thái</c:otherwise>
+                        </c:choose>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <c:choose>
+                        <c:when test="${not empty statusBreakdown}">
+                            <div class="chart-container">
+                                <canvas id="statusChart" height="260"></canvas>
+                            </div>
+                        </c:when>
+                        <c:otherwise>
+                            <div class="admin-empty-state py-4">
+                                <i class="bi bi-pie-chart" style="font-size:2rem;color:var(--pink-200);"></i>
+                                <p class="mt-2 mb-0" style="color:var(--c-muted);">Chưa có dữ liệu trong khoảng này</p>
+                            </div>
+                        </c:otherwise>
+                    </c:choose>
+                </div>
+            </div>
+        </div>
+
         <%-- Biểu đồ doanh thu theo tháng (12 tháng) --%>
-        <div class="col-xl-6">
+        <div class="col-xl-4 col-lg-6">
             <div class="admin-card h-100">
                 <div class="card-header">
                     <h5>
                         <i class="bi bi-graph-up-arrow"></i>
                         <c:choose>
-                            <c:when test="${isCustomRange}">Doanh Thu 12 Tháng (đến ${dateToFormatted})</c:when>
+                            <c:when test="${isCustomRange}">Doanh Thu 12 Tháng (${dateRangeLabel})</c:when>
                             <c:otherwise>Doanh Thu 12 Tháng</c:otherwise>
                         </c:choose>
                     </h5>
@@ -999,10 +1053,6 @@ body.admin-body {
                             <c:otherwise>Top Dịch Vụ Được Sử Dụng</c:otherwise>
                         </c:choose>
                     </h5>
-                    <a href="${pageContext.request.contextPath}/admin/reports/"
-                       style="font-size:0.78rem;font-weight:700;color:var(--pink-500);text-decoration:none;">
-                        Xem báo cáo →
-                    </a>
                 </div>
                 <div class="card-body p-0">
                     <div class="admin-table-wrapper">
@@ -1593,6 +1643,64 @@ document.addEventListener('keydown', function(e) {
     var pink500 = '#e91e8c';
     var pink200 = '#ffb3d1';
     var pink100 = '#ffe0ef';
+
+    // ── Status Breakdown Doughnut Chart ──
+    var statusCtx = document.getElementById('statusChart');
+    if (statusCtx) {
+        // Map trạng thái tiếng Anh → tiếng Việt cho nhãn biểu đồ
+        var statusLabelsVi = {
+            'completed':   'Hoàn Thành',
+            'confirmed':   'Đã Xác Nhận',
+            'pending':     'Chờ Xác Nhận',
+            'cancelled':   'Đã Hủy',
+            'waiting':     'Đang Chờ',
+            'in_progress': 'Đang Khám'
+        };
+        var rawLabels = [
+            <c:forEach var="sb" items="${statusBreakdown}" varStatus="s">
+                '${sb.status}'${s.last ? '' : ','}
+            </c:forEach>
+        ];
+        var translatedLabels = rawLabels.map(function(label) {
+            return statusLabelsVi[label] || label;
+        });
+
+        new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: translatedLabels,
+                datasets: [{
+                    data: [
+                        <c:forEach var="sb" items="${statusBreakdown}" varStatus="s">
+                            ${sb.count}${s.last ? '' : ','}
+                        </c:forEach>
+                    ],
+                    backgroundColor: [
+                        '#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#f97316'
+                    ],
+                    borderColor: '#fff',
+                    borderWidth: 2.5,
+                    hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '60%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 14,
+                            usePointStyle: true,
+                            pointStyleWidth: 8,
+                            font: { size: 11 }
+                        }
+                    }
+                }
+            }
+        });
+    }
 
     // ── Appointments Chart (7 days) ──
     var apptCtx = document.getElementById('appointmentsChart');

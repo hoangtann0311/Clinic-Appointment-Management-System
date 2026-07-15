@@ -156,7 +156,13 @@ public class DashboardServlet extends HttpServlet {
         request.setAttribute("topServicesToday", statsService.getTopServicesByUsage(5, dateFrom, dateTo));
 
         // ─── Widget "Cảnh Báo Tồn Kho" — thuốc sắp hết (stock ≤ 10) ───
-        request.setAttribute("lowStockMedicines", medicineService.getLowStockMedicines(10, 5));
+        // Tồn kho là dữ liệu hiện tại, không có ý nghĩa lịch sử.
+        // Khi lọc theo ngày cũ → ẩn widget (trả về list rỗng).
+        if (isCustomRange) {
+            request.setAttribute("lowStockMedicines", java.util.Collections.emptyList());
+        } else {
+            request.setAttribute("lowStockMedicines", medicineService.getLowStockMedicines(10, 5));
+        }
 
         // ─── Doanh thu khoảng trước cho KPI card so sánh ───
         double revenuePrevious;
@@ -195,11 +201,18 @@ public class DashboardServlet extends HttpServlet {
         request.setAttribute("servicesUsedToday", servicesUsed);
 
         // ─── Biểu đồ doanh thu 7 ngày & 12 tháng cho Manager Dashboard ───
-        Map<String, Double> mgrRevenue7Days = statsService.getRevenueLast7Days();
+        // Mặc định: 7 ngày / 12 tháng gần nhất. Có filter: kết thúc tại dateTo.
+        Map<String, Double> mgrRevenue7Days;
+        Map<String, Double> mgrRevenue12Months;
+        if (isCustomRange) {
+            mgrRevenue7Days = statsService.getRevenueLast7Days(dateTo);
+            mgrRevenue12Months = statsService.getRevenueLast12Months(dateTo);
+        } else {
+            mgrRevenue7Days = statsService.getRevenueLast7Days();
+            mgrRevenue12Months = statsService.getRevenueLast12Months();
+        }
         request.setAttribute("mgrRevenueChartLabels", mgrRevenue7Days.keySet());
         request.setAttribute("mgrRevenueChartValues", mgrRevenue7Days.values());
-
-        Map<String, Double> mgrRevenue12Months = statsService.getRevenueLast12Months();
         request.setAttribute("mgrRevenue12MonthsLabels", mgrRevenue12Months.keySet());
         request.setAttribute("mgrRevenue12MonthsValues", mgrRevenue12Months.values());
 
@@ -301,6 +314,23 @@ public class DashboardServlet extends HttpServlet {
         request.setAttribute("revenueToday", dashboardService.getRevenue(dateFrom, dateTo));
         request.setAttribute("emergencyCases", dashboardService.getEmergencyCases(dateFrom, dateTo));
         request.setAttribute("successfulCases", dashboardService.getSuccessfulCases(dateFrom, dateTo));
+
+        // ─── Tỉ lệ hoàn thành ───
+        int completedApps = dashboardService.getTotalAppointments(dateFrom, dateTo) > 0
+            ? dashboardService.getSuccessfulCases(dateFrom, dateTo) : 0;
+        int totalApps = dashboardService.getTotalAppointments(dateFrom, dateTo);
+        double completionRate = totalApps > 0
+            ? (double) completedApps / totalApps * 100.0 : 0.0;
+        request.setAttribute("completionRate", String.format("%.1f%%", completionRate));
+
+        // ─── Phân bố trạng thái lịch hẹn (Doughnut chart) ───
+        try {
+            com.clinic.service.ReportService reportService = new com.clinic.service.ReportService();
+            request.setAttribute("statusBreakdown",
+                reportService.getStatusBreakdown(dateFrom, dateTo));
+        } catch (Exception e) {
+            request.setAttribute("statusBreakdown", java.util.Collections.emptyList());
+        }
 
         // ─── Top Dịch Vụ (dùng chung ServiceStatisticsService) ───
         ServiceStatisticsService statsService = new ServiceStatisticsService();

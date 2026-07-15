@@ -51,28 +51,35 @@
     </context-param>
 
     <!-- ============================================================
-         FILTER ORDER (annotation-based @WebFilter)
+         FILTER ORDER
          ============================================================
-         Thứ tự thực thi trong Tomcat (theo alphabetical class name):
-         1. AuthenticationFilter (com.clinic.filter)
-         2. AuthorizationFilter  (com.clinic.filter)
-         3. EncodingFilter       (com.clinic.filter)
+         Tất cả filter dùng annotation @WebFilter, Tomcat thực thi
+         theo thứ tự alphabetical của TÊN LỚP (class name).
 
-         LUỒNG XỬ LÝ:
-         EncodingFilter:       UTF-8 → pass
-         AuthenticationFilter: Public path? → pass | No session? → redirect /login
-                               | Not Active? → invalidate + redirect | OK → pass
-         AuthorizationFilter:  Public path? → pass | Zone check → Whitelist check
-                               → Permission check → Audit Log → pass | Default Deny → 403
+         THỨ TỰ THỰC THI (Tomcat default — alphabetical):
+         1. AuthenticationFilter — Kiểm tra đăng nhập + Active status
+         2. AuthorizationFilter  — RBAC + Permission Check + Audit Log
+         3. CsrfFilter          — Bảo vệ CSRF cho POST/PUT/DELETE
+         4. EncodingFilter      — UTF-8 encoding
+         5. SecurityHeadersFilter — Security headers (XSS, clickjack, etc.)
 
-         NGHIỆP VỤ PHÂN QUYỀN (AuthorizationFilter):
-         YC1: Tất cả role đều qua filter
-         YC2: Whitelist theo Role + Permission
-         YC3: Default Deny — mọi URL không trong whitelist → 403
-         YC4: Chỉ Active user + session hợp lệ mới được truy cập
-         YC5: Từ chối → HTTP 403 + trang Access Denied
-         YC6: Audit Log: user, role, URL, action, time, IP, result
-         YC7: Session Sync: phát hiện thay đổi role/permission → reload hoặc re-login
+         LUỒNG XỬ LÝ ĐẦY ĐỦ:
+         Request
+         ├─ SecurityHeadersFilter: Set security headers
+         ├─ EncodingFilter:       UTF-8 → pass
+         ├─ CsrfFilter:           GET → tạo token | POST → validate token
+         ├─ AuthenticationFilter: Public path? → pass
+         │                        | No session? → redirect /login
+         │                        | Not Active? → invalidate + redirect
+         │                        | OK → pass
+         └─ AuthorizationFilter:  Public path? → pass
+                                  | Zone check → Role trong zone?
+                                  | Whitelist check → URL có trong whitelist?
+                                  | Permission check → Có permission key?
+                                  | Session sync → Reload nếu role thay đổi
+                                  | Audit Log → Ghi log truy cập
+                                  | Default Deny → 403
+                                  | OK → Controller
     -->
 
     <!-- Error pages -->

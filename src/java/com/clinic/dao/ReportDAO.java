@@ -12,7 +12,7 @@ import java.util.Map;
 
 /**
  * DAO tổng hợp dữ liệu báo cáo cho Admin & Manager.
- * Cung cấp dữ liệu cho ReportService → AdminReportServlet.
+ * Cung cấp dữ liệu cho ReportService → ExportReportServlet & DashboardServlet.
  *
  * <p>Tuân thủ: PreparedStatement, try-finally, closeResources.
  */

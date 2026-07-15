@@ -361,6 +361,11 @@
             <i class="bi bi-arrow-clockwise"></i>
             Làm mới
         </button>
+        <a href="${pageContext.request.contextPath}/export/reports?dateFrom=${dateFrom}&dateTo=${dateTo}"
+           class="btn-refresh" title="Xuất báo cáo CSV" style="color:#059669;background:#ecfdf5;border-color:#a7f3d0;">
+            <i class="bi bi-download"></i>
+            Xuất Báo Cáo
+        </a>
     </div>
 
     <%-- Welcome Banner --%>
@@ -657,11 +662,22 @@
                                         <tr>
                                             <td colspan="4">
                                                 <div class="admin-empty-state" style="padding:1.5rem;">
-                                                    <i class="bi bi-check-circle" style="font-size:1.8rem;color:#2e7d32;"></i>
-                                                    <p class="text-muted mt-1 mb-0" style="font-size:0.8rem;color:#2e7d32 !important;">
-                                                        <strong>Tất cả thuốc đều đủ tồn kho.</strong>
-                                                    </p>
-                                                    <small style="font-size:0.7rem;color:var(--c-muted);">Không có thuốc nào dưới ngưỡng cảnh báo (≤10).</small>
+                                                    <c:choose>
+                                                        <c:when test="${isCustomRange}">
+                                                            <i class="bi bi-inbox" style="font-size:1.8rem;color:var(--c-muted);"></i>
+                                                            <p class="text-muted mt-1 mb-0" style="font-size:0.8rem;">
+                                                                <strong>Không có dữ liệu</strong>
+                                                            </p>
+                                                            <small style="font-size:0.7rem;color:var(--c-muted);">Tồn kho là dữ liệu hiện tại, không có dữ liệu lịch sử trong khoảng ${dateRangeLabel}.</small>
+                                                        </c:when>
+                                                        <c:otherwise>
+                                                            <i class="bi bi-check-circle" style="font-size:1.8rem;color:#2e7d32;"></i>
+                                                            <p class="text-muted mt-1 mb-0" style="font-size:0.8rem;color:#2e7d32 !important;">
+                                                                <strong>Tất cả thuốc đều đủ tồn kho.</strong>
+                                                            </p>
+                                                            <small style="font-size:0.7rem;color:var(--c-muted);">Không có thuốc nào dưới ngưỡng cảnh báo (≤10).</small>
+                                                        </c:otherwise>
+                                                    </c:choose>
                                                 </div>
                                             </td>
                                         </tr>
@@ -863,7 +879,10 @@
                 <div class="card-header">
                     <h5>
                         <i class="bi bi-graph-up-arrow"></i>
-                        Doanh Thu 7 Ngày Gần Nhất
+                        <c:choose>
+                            <c:when test="${isCustomRange}">Doanh Thu 7 Ngày (${dateRangeLabel})</c:when>
+                            <c:otherwise>Doanh Thu 7 Ngày Gần Nhất</c:otherwise>
+                        </c:choose>
                     </h5>
                 </div>
                 <div class="card-body">
@@ -880,7 +899,10 @@
                 <div class="card-header">
                     <h5>
                         <i class="bi bi-bar-chart-fill"></i>
-                        Doanh Thu 12 Tháng
+                        <c:choose>
+                            <c:when test="${isCustomRange}">Doanh Thu 12 Tháng (${dateRangeLabel})</c:when>
+                            <c:otherwise>Doanh Thu 12 Tháng</c:otherwise>
+                        </c:choose>
                     </h5>
                 </div>
                 <div class="card-body">

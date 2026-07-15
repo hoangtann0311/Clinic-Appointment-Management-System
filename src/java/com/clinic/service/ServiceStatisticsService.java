@@ -4,6 +4,7 @@ import com.clinic.dao.ServiceStatisticsDAO;
 import com.clinic.dao.ServiceStatisticsDAO.CategoryRevenueStat;
 import com.clinic.dao.ServiceStatisticsDAO.ServiceStatDetail;
 
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -308,6 +309,16 @@ public class ServiceStatisticsService {
         }
     }
 
+    /** Doanh thu 7 ngày kết thúc tại endDate. */
+    public Map<String, Double> getRevenueLast7Days(LocalDate endDate) {
+        try {
+            return statsDAO.getRevenueLast7Days(endDate);
+        } catch (Exception e) {
+            System.err.println("[ServiceStatisticsService] getRevenueLast7Days(date) ERROR: " + e.getMessage());
+            return Collections.emptyMap();
+        }
+    }
+
     /** Lượt sử dụng 7 ngày gần nhất. Map<ngày, số lượt>. */
     public Map<String, Integer> getUsageLast7Days() {
         try {
@@ -324,6 +335,16 @@ public class ServiceStatisticsService {
             return statsDAO.getRevenueLast12Months();
         } catch (Exception e) {
             System.err.println("[ServiceStatisticsService] getRevenueLast12Months ERROR: " + e.getMessage());
+            return Collections.emptyMap();
+        }
+    }
+
+    /** Doanh thu 12 tháng kết thúc tại endDate. */
+    public Map<String, Double> getRevenueLast12Months(LocalDate endDate) {
+        try {
+            return statsDAO.getRevenueLast12Months(endDate);
+        } catch (Exception e) {
+            System.err.println("[ServiceStatisticsService] getRevenueLast12Months(date) ERROR: " + e.getMessage());
             return Collections.emptyMap();
         }
     }

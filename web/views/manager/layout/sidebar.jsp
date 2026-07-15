@@ -81,7 +81,7 @@
             </a>
         </li>
         <li>
-            <a href="#" class="disabled" title="Đang phát triển">
+            <a href="#" class="disabled" title="Sử dụng nút Xuất Báo Cáo trên Dashboard">
                 <i class="bi bi-graph-up-arrow"></i>
                 <span>Báo Cáo Doanh Thu</span>
             </a>

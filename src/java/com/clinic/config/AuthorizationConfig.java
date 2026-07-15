@@ -50,8 +50,14 @@ public final class AuthorizationConfig {
     /**
      * Kiểm tra path có thuộc zone của role không.
      * Patient đặc biệt: còn có /home.
+     * Export paths (/export/*) được phép cho Admin và Manager.
      */
     public static boolean isInZone(int roleId, String path) {
+        // Shared paths: export endpoints cho Admin & Manager
+        if (path.startsWith("/export/") && (roleId == ROLE_ADMIN || roleId == ROLE_MANAGER)) {
+            return true;
+        }
+
         String zone = ROLE_ZONES.get(roleId);
         if (zone == null) return false;
 
@@ -88,8 +94,6 @@ public final class AuthorizationConfig {
         Map.entry("/admin/medicines/",   "medicine.view"),
         Map.entry("/admin/pricing",      "service.view"),
         Map.entry("/admin/pricing/",     "service.view"),
-        Map.entry("/admin/reports",      "report.view"),
-        Map.entry("/admin/reports/",     "report.view"),
 
         // ──────────── MANAGER ZONE (/manager/*) ────────────
         Map.entry("/manager/dashboard",     "report.view_dashboard"),
@@ -103,8 +107,9 @@ public final class AuthorizationConfig {
         Map.entry("/manager/time-slots/",   "schedule.view"),
         Map.entry("/manager/statistics",    "service.view"),
         Map.entry("/manager/statistics/",   "service.view"),
-        Map.entry("/manager/reports",       "report.view"),
-        Map.entry("/manager/reports/",      "report.view"),
+
+        // ──────────── EXPORT (/export/*) ────────────
+        Map.entry("/export/reports",    "report.view"),
 
         // ──────────── DOCTOR ZONE (/doctor/*) ────────────
         Map.entry("/doctor/dashboard",         "report.view_dashboard"),
@@ -159,8 +164,8 @@ public final class AuthorizationConfig {
     // ═══════════════════════════════════════════════════════════
     public static final Set<String> CRITICAL_PATH_PREFIXES = Set.of(
         "/admin/users", "/admin/roles", "/admin/settings",
-        "/admin/audit-logs", "/admin/reports",
-        "/manager/reports", "/manager/statistics"
+        "/admin/audit-logs", "/export/reports",
+        "/manager/statistics"
     );
 
     // ═══════════════════════════════════════════════════════════
