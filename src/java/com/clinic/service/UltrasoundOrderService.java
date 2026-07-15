@@ -241,6 +241,54 @@ public class UltrasoundOrderService {
     }
 
     /**
+     * Bác sĩ xác nhận kết quả phân tích AI và ghi kết luận chính thức.
+     * Cập nhật trạng thái đơn từ Completed → confirmed
+     * và lưu kết luận chính thức của bác sĩ vào trường message.
+     */
+    public boolean confirmUltrasoundResult(int orderId, String doctorMessage) {
+        UltrasoundWaitingPatient order = ultrasoundOrderDAO.getById(orderId);
+        if (order == null) return false;
+
+        // Cho phép xác nhận từ Completed, Uploaded hoặc Failed (đảm bảo luồng khám không bị gián đoạn khi AI lỗi)
+        if (!"Completed".equalsIgnoreCase(order.getStatus()) 
+                && !"Uploaded".equalsIgnoreCase(order.getStatus())
+                && !"Failed".equalsIgnoreCase(order.getStatus())) {
+            System.err.println("[UltrasoundOrderService] confirmUltrasoundResult: Đơn " + orderId
+                    + " không thể xác nhận ở trạng thái hiện tại: " + order.getStatus());
+            return false;
+        }
+
+        // Kiểm tra xem đã có bản ghi trong bảng ai_analysis_results chưa
+        AiAnalysisResult existingResult = aiAnalysisResultDAO.getByTestOrderId(orderId);
+        if (existingResult == null) {
+            // Nếu chưa có (ví dụ AI lỗi hoặc không chạy AI), tạo một bản ghi rỗng để lưu kết luận của bác sĩ
+            AiAnalysisResult newResult = new AiAnalysisResult();
+            newResult.setTestOrderId(orderId);
+            newResult.setStatus("ManualConfirmed"); // Đánh dấu là bác sĩ xác nhận thủ công
+            newResult.setDetected(false); // Mặc định
+            newResult.setConfidence(BigDecimal.ZERO);
+            newResult.setMessage(doctorMessage != null ? doctorMessage.trim() : "Bác sĩ chốt kết luận thủ công.");
+            
+            // Lấy ảnh gốc đầu tiên làm ảnh đầu vào nếu có
+            List<UltrasoundImage> images = ultrasoundImageDAO.getByTestOrderId(orderId);
+            if (!images.isEmpty()) {
+                newResult.setInputImage(images.get(0).getFilePath());
+                newResult.setResultImage(images.get(0).getFilePath()); // Dùng ảnh gốc làm ảnh kết quả luôn
+            }
+            newResult.setAnalyzedAt(new Timestamp(System.currentTimeMillis()));
+            aiAnalysisResultDAO.insert(newResult);
+        } else {
+            // Nếu đã có, chỉ cần cập nhật nội dung kết luận của bác sĩ
+            if (doctorMessage != null && !doctorMessage.trim().isEmpty()) {
+                aiAnalysisResultDAO.updateMessage(orderId, doctorMessage.trim());
+            }
+        }
+
+        // Cập nhật trạng thái đơn siêu âm thành 'confirmed'
+        return ultrasoundOrderDAO.updateStatus(orderId, "confirmed");
+    }
+
+    /**
      * Kiểm tra quy tắc chuyển đổi trạng thái của máy trạng thái
      */
     public boolean checkTransition(String currentStatus, String targetStatus) {
@@ -267,6 +315,8 @@ public class UltrasoundOrderService {
             case "analyzing":
                 return "completed".equalsIgnoreCase(targetStatus) || "uploaded".equalsIgnoreCase(targetStatus);
             case "completed":
+                return "confirmed".equalsIgnoreCase(targetStatus);
+            case "confirmed":
                 return false;
             default:
                 return false;

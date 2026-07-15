@@ -2,6 +2,7 @@ package com.clinic.controller;
 
 import com.clinic.config.DatabaseConfig;
 import com.clinic.model.User;
+import com.clinic.service.UltrasoundOrderService;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -57,6 +58,55 @@ public class DoctorResultsServlet extends HttpServlet {
         req.setAttribute("ultrasoundResults",  ultrasoundResults);
         req.setAttribute("doctorName",         user.getFullName());
         req.getRequestDispatcher("/views/doctors/doctor_results.jsp").forward(req, resp);
+    }
+
+    /**
+     * POST /doctor/results
+     * Bác sĩ xác nhận kết quả phân tích AI siêu âm.
+     * Params: orderId, doctorMessage, recordId (dùng để redirect sau khi xác nhận)
+     */
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+
+        // Auth
+        HttpSession session = req.getSession(false);
+        if (session == null || session.getAttribute("user") == null) {
+            resp.sendRedirect(req.getContextPath() + "/login"); return;
+        }
+        User user = (User) session.getAttribute("user");
+        // Chỉ bác sĩ (roleId=2) hoặc admin (roleId=1) mới được xác nhận
+        if (user.getRoleId() != 1 && user.getRoleId() != 2) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ Bác sĩ mới có quyền xác nhận kết quả siêu âm."); return;
+        }
+
+        // Nhận tham số
+        String orderIdStr   = req.getParameter("orderId");
+        String doctorMsg    = req.getParameter("doctorMessage");
+        String recordIdStr  = req.getParameter("recordId");
+
+        int recordId = -1;
+        try { recordId = Integer.parseInt(recordIdStr); } catch (Exception ignored) {}
+
+        if (orderIdStr == null || orderIdStr.isBlank()) {
+            resp.sendRedirect(req.getContextPath() + "/doctor/results?recordId=" + recordId + "&error=invalidOrder"); return;
+        }
+
+        int orderId;
+        try { orderId = Integer.parseInt(orderIdStr); }
+        catch (NumberFormatException e) {
+            resp.sendRedirect(req.getContextPath() + "/doctor/results?recordId=" + recordId + "&error=invalidOrder"); return;
+        }
+
+        // Thực hiện xác nhận
+        UltrasoundOrderService orderService = new UltrasoundOrderService();
+        boolean success = orderService.confirmUltrasoundResult(orderId, doctorMsg);
+
+        if (success) {
+            resp.sendRedirect(req.getContextPath() + "/doctor/results?recordId=" + recordId + "&success=confirmed#us-order-" + orderId);
+        } else {
+            resp.sendRedirect(req.getContextPath() + "/doctor/results?recordId=" + recordId + "&error=confirmFailed&orderId=" + orderId);
+        }
     }
 
     // ── Kết quả xét nghiệm ──────────────────────────────────────────────────

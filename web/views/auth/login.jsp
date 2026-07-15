@@ -61,8 +61,8 @@
         <div class="auth-form-card">
             
             <div class="auth-form-header">
-                <h2>Chào Mừng Trở Lại</h2>
-                <p>Đăng nhập vào hệ thống để bắt đầu theo dõi sức khỏe.</p>
+                <h2>Đăng Nhập Hệ Thống</h2>
+                <p>Đăng nhập vào hệ thống để bắt đầu theo dõi sức khỏe thai kỳ.</p>
             </div>
 
             <%-- ========== Success Message ========== --%>

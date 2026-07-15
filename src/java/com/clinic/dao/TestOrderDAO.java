@@ -120,6 +120,8 @@ public class TestOrderDAO {
                 ps.setInt(3, sid);
                 ps.addBatch();
                 count++;
+                // Gửi thông báo cho bệnh nhân đi thực hiện xét nghiệm cận lâm sàng
+                com.clinic.utils.NotificationHelper.notifyPatientForTest(medicalRecordId, sid);
             }
             if (count > 0) ps.executeBatch();
         } catch (SQLException e) { e.printStackTrace(); }

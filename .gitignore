@@ -10,9 +10,11 @@
 *.zip
 *.tar.gz
 *.rar
+out/
 build/
 dist/
 nbdist/
+uploads/
 
 # --- NetBeans private configurations (CRITICAL) ---
 nbproject/private/

@@ -191,6 +191,28 @@ public class InvoiceDAO {
         return null;
     }
 
+    public List<Invoice> getByAppointmentId(int appointmentId) {
+        String sql = BASE_SELECT + " WHERE i.appointment_id = ? ORDER BY i.id DESC";
+        List<Invoice> list = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setInt(1, appointmentId);
+            rs = ps.executeQuery();
+            while (rs.next()) {
+                list.add(mapRow(rs));
+            }
+        } catch (SQLException e) {
+            System.err.println("[InvoiceDAO] getByAppointmentId ERROR: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return list;
+    }
+
     public boolean updatePaymentStatus(int id, String status, String paymentMethod, String transactionCode, String paymentNote, int confirmedBy, Timestamp confirmedAt) {
         String sql = "UPDATE invoices SET status = ?, payment_method = ?, transaction_code = ?, payment_note = ?, confirmed_by = ?, confirmed_at = ? WHERE id = ? ";
         Connection conn = null;

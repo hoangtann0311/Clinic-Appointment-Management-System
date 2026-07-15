@@ -95,6 +95,11 @@
 *, *::before, *::after { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 
+html {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
 body.admin-body {
     font-family: var(--font-body);
     background: var(--c-bg);
@@ -102,6 +107,8 @@ body.admin-body {
     margin: 0; padding: 0;
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
+    max-width: 100%;
+    overflow-x: hidden;
 }
 
 /* ============================================================
@@ -386,7 +393,8 @@ body.admin-body {
     padding: 2rem 2.25rem;
     min-height: calc(100vh - var(--topbar-h));
     flex-grow: 1;
-    width: calc(100vw - var(--sidebar-w));
+    width: calc(100% - var(--sidebar-w));
+    max-width: 100%;
 }
 
 /* ── Page Header ── */
@@ -992,3 +1000,109 @@ body.admin-login-page {
     transform: translateY(-1px);
     box-shadow: 0 8px 28px rgba(233,30,140,0.4);
 }
+
+/* ============================================================
+   BOOTSTRAP OVERRIDES FOR BRAND HARMONY (ROSE PINK THEME)
+   ============================================================ */
+
+/* Primary Button Override */
+.btn-primary {
+    background: linear-gradient(135deg, var(--pink-600) 0%, var(--pink-500) 100%) !important;
+    border: none !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(194, 24, 91, 0.2) !important;
+    transition: all 0.2s ease !important;
+}
+.btn-primary:hover, .btn-primary:focus, .btn-primary:active {
+    background: linear-gradient(135deg, var(--pink-700) 0%, var(--pink-600) 100%) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(194, 24, 91, 0.35) !important;
+    color: #ffffff !important;
+}
+
+/* Outline Primary Button Override */
+.btn-outline-primary {
+    color: var(--pink-600) !important;
+    border-color: var(--pink-600) !important;
+    background: transparent !important;
+    transition: all 0.2s ease !important;
+}
+.btn-outline-primary:hover, .btn-outline-primary:focus, .btn-outline-primary:active {
+    background-color: var(--pink-600) !important;
+    border-color: var(--pink-600) !important;
+    color: #ffffff !important;
+}
+
+/* Text Primary Override */
+.text-primary {
+    color: var(--pink-600) !important;
+}
+
+/* Background Primary Override */
+.bg-primary {
+    background-color: var(--pink-600) !important;
+}
+.bg-primary-subtle {
+    background-color: var(--pink-50) !important;
+    color: var(--pink-800) !important;
+}
+
+/* Border Primary Override */
+.border-primary {
+    border-color: var(--pink-300) !important;
+}
+
+/* Tab Overrides (nav-pills and nav-tabs) */
+.nav-pills .nav-link.active {
+    background: linear-gradient(135deg, var(--pink-600) 0%, var(--pink-500) 100%) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(194, 24, 91, 0.25) !important;
+}
+.nav-tabs .nav-link.active {
+    border-color: var(--pink-300) var(--pink-300) #ffffff !important;
+    color: var(--pink-700) !important;
+    font-weight: 700;
+}
+
+/* Form Input Focus Overrides */
+.form-control:focus, .form-select:focus {
+    border-color: var(--pink-300) !important;
+    box-shadow: 0 0 0 0.25rem rgba(194, 24, 91, 0.15) !important;
+}
+
+/* Alert Overrides */
+.alert-primary {
+    background-color: var(--pink-50) !important;
+    border-color: var(--pink-200) !important;
+    color: var(--pink-800) !important;
+}
+.alert-info {
+    background-color: #f0fdfa !important; /* Mảnh xanh teal mát dịu */
+    border-color: #ccfbf1 !important;
+    color: #0f766e !important;
+}
+
+/* Badge primary override */
+.badge.bg-primary {
+    background-color: var(--pink-600) !important;
+    color: #ffffff !important;
+}
+
+/* Pagination Overrides */
+.page-item.active .page-link {
+    background-color: var(--pink-600) !important;
+    border-color: var(--pink-600) !important;
+    color: #ffffff !important;
+}
+.page-link {
+    color: var(--pink-600) !important;
+}
+.page-link:hover {
+    background-color: var(--pink-50) !important;
+}
+
+/* Medical Record / Lab Orders detail cards border override */
+.card-accent-primary {
+    border-left: 4px solid var(--pink-600) !important;
+}
+

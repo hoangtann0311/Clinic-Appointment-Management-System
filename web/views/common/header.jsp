@@ -212,6 +212,13 @@
                                 <span>Đã Hoàn Thành</span>
                             </a>
                         </li>
+                        <li>
+                            <a href="${pageContext.request.contextPath}/sonographer/ai-model" 
+                               class="${fn:contains(pageContext.request.requestURI, '/ai-model') ? 'active' : ''}">
+                                <i class="bi bi-robot"></i>
+                                <span>Model AI</span>
+                            </a>
+                        </li>
                     </c:when>
                 </c:choose>
             </ul>

@@ -24,9 +24,27 @@
     <div class="admin-page-header-left">
         <h1 class="admin-page-title">Dashboard Thống Kê</h1>
         <div class="admin-page-subtitle">
-            Tổng quan &gt; Số liệu siêu âm trong ngày hôm nay
+            <i class="bi bi-calendar3"></i>
+            <span>${not empty displayDate ? displayDate : 'Hôm nay'}</span>
         </div>
     </div>
+    <form action="${pageContext.request.contextPath}/sonographer/dashboard"
+          method="get"
+          class="d-flex align-items-center gap-2">
+        <input type="date"
+               name="date"
+               class="form-control"
+               style="width: 170px;"
+               value="${selectedDate}">
+
+        <button type="submit" class="btn-refresh">
+            <i class="bi bi-search"></i> Xem
+        </button>
+
+        <a href="${pageContext.request.contextPath}/sonographer/dashboard" class="btn-refresh">
+            <i class="bi bi-calendar-check"></i> Hôm nay
+        </a>
+    </form>
 </div>
 
 <!-- Quick Statistics Row -->
@@ -50,62 +68,87 @@
     </c:if>
 
     <!-- PENDING -->
-    <div class="col-md-4 col-xl-2">
-        <div class="admin-kpi-card text-start">
-            <div class="kpi-icon-wrapper text-secondary bg-secondary-subtle">
-                <i class="bi bi-hourglass-split"></i>
+    <div class="col-xl col-md-4 col-sm-6">
+        <div class="card kpi-card kpi-pending">
+            <div class="card-body">
+                <div class="kpi-icon">
+                    <i class="bi bi-hourglass-split"></i>
+                </div>
+                <div class="kpi-content">
+                    <div class="kpi-value">${totalPending}</div>
+                    <div class="kpi-label">Yêu Cầu Chờ</div>
+                    <div class="kpi-sub"><i class="bi bi-clock"></i> Đang chờ tiếp nhận</div>
+                </div>
+                <a href="${pageContext.request.contextPath}/sonographer/waiting-list?status=Pending" class="stretched-link"></a>
             </div>
-            <div class="kpi-value">${totalPending}</div>
-            <div class="kpi-label">Yêu Cầu Chờ</div>
-            <a href="${pageContext.request.contextPath}/sonographer/waiting-list?status=Pending" class="stretched-link"></a>
         </div>
     </div>
 
     <!-- IN PROGRESS -->
-    <div class="col-md-4 col-xl-2">
-        <div class="admin-kpi-card text-start">
-            <div class="kpi-icon-wrapper text-primary bg-primary-subtle">
-                <i class="bi bi-play-circle"></i>
+    <div class="col-xl col-md-4 col-sm-6">
+        <div class="card kpi-card kpi-inprogress">
+            <div class="card-body">
+                <div class="kpi-icon">
+                    <i class="bi bi-play-circle"></i>
+                </div>
+                <div class="kpi-content">
+                    <div class="kpi-value">${totalInProgress}</div>
+                    <div class="kpi-label">Đang Siêu Âm</div>
+                    <div class="kpi-sub"><i class="bi bi-activity"></i> Đang thực hiện</div>
+                </div>
+                <a href="${pageContext.request.contextPath}/sonographer/waiting-list?status=InProgress" class="stretched-link"></a>
             </div>
-            <div class="kpi-value">${totalInProgress}</div>
-            <div class="kpi-label">Đang Siêu Âm</div>
-            <a href="${pageContext.request.contextPath}/sonographer/waiting-list?status=InProgress" class="stretched-link"></a>
         </div>
     </div>
 
     <!-- UPLOADED -->
-    <div class="col-md-4 col-xl-2">
-        <div class="admin-kpi-card text-start">
-            <div class="kpi-icon-wrapper text-warning bg-warning-subtle">
-                <i class="bi bi-cloud-upload"></i>
+    <div class="col-xl col-md-4 col-sm-6">
+        <div class="card kpi-card kpi-uploaded">
+            <div class="card-body">
+                <div class="kpi-icon">
+                    <i class="bi bi-cloud-upload"></i>
+                </div>
+                <div class="kpi-content">
+                    <div class="kpi-value">${totalUploaded}</div>
+                    <div class="kpi-label">Đã Tải Ảnh (Chờ AI)</div>
+                    <div class="kpi-sub"><i class="bi bi-cpu"></i> Chờ AI xử lý</div>
+                </div>
+                <a href="${pageContext.request.contextPath}/sonographer/waiting-list?status=Uploaded" class="stretched-link"></a>
             </div>
-            <div class="kpi-value">${totalUploaded}</div>
-            <div class="kpi-label">Đã Tải Ảnh (Chờ AI)</div>
-            <a href="${pageContext.request.contextPath}/sonographer/waiting-list?status=Uploaded" class="stretched-link"></a>
         </div>
     </div>
 
     <!-- ANALYZING -->
-    <div class="col-md-4 col-xl-2">
-        <div class="admin-kpi-card text-start">
-            <div class="kpi-icon-wrapper text-info bg-info-subtle">
-                <i class="bi bi-cpu" style="animation: spin 3s infinite linear;"></i>
+    <div class="col-xl col-md-4 col-sm-6">
+        <div class="card kpi-card kpi-analyzing">
+            <div class="card-body">
+                <div class="kpi-icon">
+                    <i class="bi bi-cpu" style="animation: spin 3s infinite linear;"></i>
+                </div>
+                <div class="kpi-content">
+                    <div class="kpi-value">${totalAnalyzing}</div>
+                    <div class="kpi-label">AI Đang Phân Tích</div>
+                    <div class="kpi-sub"><i class="bi bi-gear-fill" style="animation: spin 6s infinite linear;"></i> Đang phân tích</div>
+                </div>
+                <a href="${pageContext.request.contextPath}/sonographer/waiting-list?status=Analyzing" class="stretched-link"></a>
             </div>
-            <div class="kpi-value">${totalAnalyzing}</div>
-            <div class="kpi-label">AI Đang Phân Tích</div>
-            <a href="${pageContext.request.contextPath}/sonographer/waiting-list?status=Analyzing" class="stretched-link"></a>
         </div>
     </div>
 
     <!-- COMPLETED -->
-    <div class="col-md-4 col-xl-2">
-        <div class="admin-kpi-card text-start">
-            <div class="kpi-icon-wrapper text-success bg-success-subtle">
-                <i class="bi bi-check-circle"></i>
+    <div class="col-xl col-md-4 col-sm-6">
+        <div class="card kpi-card kpi-completed">
+            <div class="card-body">
+                <div class="kpi-icon">
+                    <i class="bi bi-check-circle"></i>
+                </div>
+                <div class="kpi-content">
+                    <div class="kpi-value">${totalCompletedToday}</div>
+                    <div class="kpi-label">${selectedDate == currentDisplayDate ? 'Hoàn Thành Hôm Nay' : 'Hoàn Thành Trong Ngày'}</div>
+                    <div class="kpi-sub"><i class="bi bi-check2-all"></i> Đã hoàn thành</div>
+                </div>
+                <a href="${pageContext.request.contextPath}/sonographer/waiting-list?status=Completed" class="stretched-link"></a>
             </div>
-            <div class="kpi-value">${totalCompletedToday}</div>
-            <div class="kpi-label">Hoàn Thành Hôm Nay</div>
-            <a href="${pageContext.request.contextPath}/sonographer/waiting-list?status=Completed" class="stretched-link"></a>
         </div>
     </div>
 </div>
@@ -165,20 +208,23 @@
                                     </td>
                                     <td>
                                         <c:choose>
-                                            <c:when test="${order.status == 'Pending'}">
+                                            <c:when test="${fn:toLowerCase(order.status) == 'pending'}">
                                                 <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Chờ tiếp nhận</span>
                                             </c:when>
-                                            <c:when test="${order.status == 'InProgress'}">
+                                            <c:when test="${fn:toLowerCase(order.status) == 'inprogress'}">
                                                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Đang tiến hành</span>
                                             </c:when>
-                                            <c:when test="${order.status == 'Uploaded'}">
+                                            <c:when test="${fn:toLowerCase(order.status) == 'uploaded'}">
                                                 <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Đã tải ảnh</span>
                                             </c:when>
-                                            <c:when test="${order.status == 'Analyzing'}">
+                                            <c:when test="${fn:toLowerCase(order.status) == 'analyzing'}">
                                                 <span class="badge bg-info-subtle text-info border border-info-subtle">AI Đang phân tích</span>
                                             </c:when>
-                                            <c:when test="${order.status == 'Completed'}">
+                                            <c:when test="${fn:toLowerCase(order.status) == 'completed'}">
                                                 <span class="badge bg-success-subtle text-success border border-success-subtle">Hoàn thành</span>
+                                            </c:when>
+                                            <c:when test="${fn:toLowerCase(order.status) == 'confirmed'}">
+                                                <span class="badge bg-success text-white border border-success">Đã xác nhận</span>
                                             </c:when>
                                             <c:otherwise>
                                                 <span class="badge bg-light text-muted border"><c:out value="${order.status}"/></span>
@@ -203,6 +249,113 @@
 <jsp:include page="../common/footer.jsp" />
 
 <style>
+    /* KPI Cards Styling matching Staff page */
+    .kpi-card {
+        background: var(--c-surface) !important;
+        border: 1px solid var(--c-outline-variant) !important;
+        border-radius: var(--r-lg) !important;
+        box-shadow: var(--shadow-sm) !important;
+        transition: transform var(--t-normal), box-shadow var(--t-normal), border-color var(--t-normal);
+        position: relative;
+        overflow: hidden;
+        height: 100%;
+    }
+    .kpi-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-md) !important;
+        border-color: var(--pink-300) !important;
+    }
+    .kpi-card .card-body {
+        padding: 1.25rem 1.3rem !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 1.1rem !important;
+    }
+    .kpi-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: var(--r-md);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        flex-shrink: 0;
+        transition: transform var(--t-normal);
+    }
+    .kpi-card:hover .kpi-icon {
+        transform: scale(1.08) rotate(4deg);
+    }
+    .kpi-content {
+        flex-grow: 1;
+        min-width: 0;
+    }
+    .kpi-value {
+        font-size: 1.9rem;
+        font-weight: 800;
+        color: var(--c-on-bg);
+        line-height: 1.1;
+        margin-bottom: 0.2rem;
+        letter-spacing: -0.02em;
+    }
+    .kpi-label {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--c-on-surface-var);
+        margin-bottom: 0.15rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .kpi-sub {
+        font-size: 0.72rem;
+        color: var(--c-muted);
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        white-space: nowrap;
+    }
+
+    /* Individual Card Styles */
+    .kpi-pending {
+        border-left: 4px solid #6c757d !important;
+    }
+    .kpi-pending .kpi-icon {
+        background: #f1f3f5;
+        color: #495057;
+    }
+
+    .kpi-inprogress {
+        border-left: 4px solid #0d6efd !important;
+    }
+    .kpi-inprogress .kpi-icon {
+        background: #e7f1ff;
+        color: #0d6efd;
+    }
+
+    .kpi-uploaded {
+        border-left: 4px solid #f59e0b !important;
+    }
+    .kpi-uploaded .kpi-icon {
+        background: #fffbeb;
+        color: #d97706;
+    }
+
+    .kpi-analyzing {
+        border-left: 4px solid #0dcaf0 !important;
+    }
+    .kpi-analyzing .kpi-icon {
+        background: #e0f7fa;
+        color: #00838f;
+    }
+
+    .kpi-completed {
+        border-left: 4px solid #198754 !important;
+    }
+    .kpi-completed .kpi-icon {
+        background: #e8f5e9;
+        color: #2e7d32;
+    }
+
     @keyframes pulse-sos {
         0% { transform: scale(1); opacity: 1; }
         50% { transform: scale(1.1); opacity: 0.8; }

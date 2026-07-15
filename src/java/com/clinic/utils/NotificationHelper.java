@@ -69,6 +69,40 @@ public class NotificationHelper {
             " có dấu hiệu cần theo dõi: " + flags + ". Vui lòng xem lại.");
     }
 
+    // ── Loại 6: Báo bệnh nhân đi thực hiện cận lâm sàng (Siêu âm/Xét nghiệm) ────
+    public static int getPatientUserIdByRecord(int medicalRecordId) {
+        try (Connection c = DatabaseConfig.getConnection();
+             PreparedStatement ps = c.prepareStatement(
+                     "SELECT a.patient_id FROM medical_records mr " +
+                     "JOIN appointments a ON a.id = mr.appointment_id WHERE mr.id=?")) {
+            ps.setInt(1, medicalRecordId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) return rs.getInt("patient_id");
+        } catch (Exception e) { e.printStackTrace(); }
+        return 0;
+    }
+
+    public static String getServiceName(int serviceId) {
+        try (Connection c = DatabaseConfig.getConnection();
+             PreparedStatement ps = c.prepareStatement(
+                     "SELECT service_name FROM services WHERE id=?")) {
+            ps.setInt(1, serviceId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) return rs.getString("service_name");
+        } catch (Exception e) { e.printStackTrace(); }
+        return "Dịch vụ chỉ định";
+    }
+
+    public static void notifyPatientForTest(int medicalRecordId, int serviceId) {
+        int patientId = getPatientUserIdByRecord(medicalRecordId);
+        String serviceName = getServiceName(serviceId);
+        if (patientId > 0) {
+            dao.create(patientId,
+                "📋 Chỉ định cận lâm sàng mới",
+                "Bác sĩ đã chỉ định bạn thực hiện \"" + serviceName + "\". Vui lòng di chuyển đến phòng chức năng/phòng siêu âm để chờ thực hiện.");
+        }
+    }
+
     // ── Helpers ─────────────────────────────────────────────────────────────
 
     /** Lấy user_id của bác sĩ từ doctor.id */

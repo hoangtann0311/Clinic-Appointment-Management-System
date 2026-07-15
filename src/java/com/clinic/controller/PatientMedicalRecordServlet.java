@@ -65,7 +65,7 @@ public class PatientMedicalRecordServlet extends HttpServlet {
             request.setAttribute("record",       record);
             request.setAttribute("prescription", prescription);
             request.setAttribute("mode",         "detail");
-            request.getRequestDispatcher("/views/patient/medical_record_detail.jsp")
+            request.getRequestDispatcher("/views/admin/patient/medical_record_detail.jsp")
                    .forward(request, response);
 
         } else {
@@ -73,7 +73,7 @@ public class PatientMedicalRecordServlet extends HttpServlet {
             List<MedicalRecord> records = recordDAO.getByPatientId(user.getId());
             request.setAttribute("records", records);
             request.setAttribute("mode",    "list");
-            request.getRequestDispatcher("/views/patient/medical_record_detail.jsp")
+            request.getRequestDispatcher("/views/admin/patient/medical_record_detail.jsp")
                    .forward(request, response);
         }
     }

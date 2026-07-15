@@ -118,6 +118,24 @@ public class AiAnalysisResultDAO {
         }
     }
 
+    public boolean updateMessage(int testOrderId, String newMessage) {
+        String sql = "UPDATE ai_analysis_results SET message = ? WHERE test_order_id = ?";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, newMessage);
+            ps.setInt(2, testOrderId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("[AiAnalysisResultDAO] updateMessage ERROR: " + e.getMessage());
+            return false;
+        } finally {
+            closeResources(conn, ps, null);
+        }
+    }
+
     private void closeResources(Connection conn, PreparedStatement ps, ResultSet rs) {
         if (rs != null) { try { rs.close(); } catch (SQLException e) { } }
         if (ps != null) { try { ps.close(); } catch (SQLException e) { } }

@@ -231,16 +231,35 @@ public class DashboardServlet extends HttpServlet {
 
     private void loadSonographerDashboardData(HttpServletRequest request) {
         com.clinic.service.UltrasoundOrderService orderService = new com.clinic.service.UltrasoundOrderService();
-        String todayStr = LocalDate.now().toString();
         
-        int pending = orderService.countOrders(null, "Pending", todayStr, null);
-        int inProgress = orderService.countOrders(null, "InProgress", todayStr, null);
-        int uploaded = orderService.countOrders(null, "Uploaded", todayStr, null);
-        int analyzing = orderService.countOrders(null, "Analyzing", todayStr, null);
-        int completed = orderService.countOrders(null, "Completed", todayStr, null);
-        int emergency = orderService.countOrders(null, null, todayStr, true);
+        // Nhận tham số date từ request
+        String dateParam = request.getParameter("date");
+        LocalDate selectedDate;
+        if (dateParam != null && !dateParam.trim().isEmpty()) {
+            try {
+                selectedDate = LocalDate.parse(dateParam.trim());
+            } catch (Exception e) {
+                selectedDate = LocalDate.now();
+            }
+        } else {
+            selectedDate = LocalDate.now();
+        }
         
-        java.util.List<com.clinic.model.UltrasoundWaitingPatient> recentOrders = orderService.getOrders(1, 10, null, null, todayStr, null, "createdAt", "desc");
+        String filterDateStr = selectedDate.toString();
+        
+        int pending = orderService.countOrders(null, "Pending", filterDateStr, null);
+        int inProgress = orderService.countOrders(null, "InProgress", filterDateStr, null);
+        int uploaded = orderService.countOrders(null, "Uploaded", filterDateStr, null);
+        int analyzing = orderService.countOrders(null, "Analyzing", filterDateStr, null);
+        int completed = orderService.countOrders(null, "Completed", filterDateStr, null)
+                      + orderService.countOrders(null, "confirmed", filterDateStr, null);
+        int emergency = orderService.countOrders(null, null, filterDateStr, true);
+        
+        java.util.List<com.clinic.model.UltrasoundWaitingPatient> recentOrders = orderService.getOrders(1, 10, null, null, filterDateStr, null, "createdAt", "desc");
+        
+        // Định dạng ngày tiếng Việt hiển thị
+        DateTimeFormatter displayFmt = DateTimeFormatter.ofPattern("dd 'tháng' MM, yyyy");
+        String displayDate = selectedDate.format(displayFmt);
         
         request.setAttribute("totalPending", pending);
         request.setAttribute("totalInProgress", inProgress);
@@ -249,7 +268,10 @@ public class DashboardServlet extends HttpServlet {
         request.setAttribute("totalCompletedToday", completed);
         request.setAttribute("totalEmergencyToday", emergency);
         request.setAttribute("recentOrders", recentOrders);
-        request.setAttribute("currentDisplayDate", todayStr);
+        
+        request.setAttribute("selectedDate", filterDateStr);
+        request.setAttribute("displayDate", displayDate);
+        request.setAttribute("currentDisplayDate", LocalDate.now().toString());
     }
 
     /**

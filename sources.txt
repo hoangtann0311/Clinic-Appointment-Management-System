@@ -51,6 +51,7 @@ C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\StaffSosServlet.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\UltrasoundAnalyzeServlet.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\UltrasoundDetailServlet.java
+C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\UltrasoundModelServlet.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\UltrasoundTemplateServlet.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\UltrasoundUploadServlet.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\UltrasoundWaitingListServlet.java

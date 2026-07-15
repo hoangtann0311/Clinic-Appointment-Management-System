@@ -229,8 +229,48 @@ public class StaffReceptionService {
 
     public List<Appointment> getSmartQueue() {
         List<Appointment> result = new ArrayList<>();
+        LocalDate today = LocalDate.now();
+        java.time.LocalTime nowTime = java.time.LocalTime.now();
 
         for (Appointment appointment : appointmentDAO.getAllAppointments()) {
+            // Tự động chuyển đổi NoShow đối với các lịch hẹn Confirmed quá hạn 30 phút
+            if ("Confirmed".equalsIgnoreCase(appointment.getStatus())) {
+                boolean markNoShow = false;
+                if (appointment.getAppointmentDate() != null) {
+                    if (appointment.getAppointmentDate().isBefore(today)) {
+                        markNoShow = true;
+                    } else if (appointment.getAppointmentDate().equals(today)) {
+                        String slot = appointment.getTimeSlot();
+                        if (slot != null && !slot.trim().isEmpty() && !"Khẩn cấp (SOS)".equalsIgnoreCase(slot)) {
+                            try {
+                                String startTimeStr = slot.split(" - ")[0].trim();
+                                java.time.LocalTime startTime = java.time.LocalTime.parse(startTimeStr);
+                                java.time.LocalTime cutoffTime = startTime.plusMinutes(30);
+                                if (nowTime.isAfter(cutoffTime)) {
+                                    markNoShow = true;
+                                }
+                            } catch (Exception e) {
+                                // Bỏ qua nếu lỗi định dạng time slot
+                            }
+                        }
+                    }
+                }
+                
+                if (markNoShow) {
+                    appointment.setStatus("NoShow");
+                    appointmentDAO.updateStatus(appointment.getId(), "NoShow");
+                    
+                    // Ghi log hoạt động hệ thống
+                    auditLogDAO.logAction(
+                            "Tự động chuyển NoShow (quá giờ khám 30 phút)",
+                            "System",
+                            "appointments",
+                            "Confirmed -> NoShow",
+                            String.valueOf(appointment.getId())
+                    );
+                }
+            }
+
             if (!"Cancelled".equalsIgnoreCase(appointment.getStatus())
                     && !"NoShow".equalsIgnoreCase(appointment.getStatus())) {
                 result.add(appointment);

@@ -63,11 +63,12 @@
                 <label class="form-label text-muted small fw-bold">TRẠNG THÁI</label>
                 <select name="status" class="form-select">
                     <option value="">Tất cả trạng thái</option>
-                    <option value="Pending" ${statusParam == 'Pending' ? 'selected' : ''}>Chờ siêu âm (Pending)</option>
-                    <option value="InProgress" ${statusParam == 'InProgress' ? 'selected' : ''}>Đang siêu âm (InProgress)</option>
-                    <option value="Uploaded" ${statusParam == 'Uploaded' ? 'selected' : ''}>Đã tải ảnh (Uploaded)</option>
-                    <option value="Analyzing" ${statusParam == 'Analyzing' ? 'selected' : ''}>AI phân tích (Analyzing)</option>
-                    <option value="Completed" ${statusParam == 'Completed' ? 'selected' : ''}>Đã hoàn thành (Completed)</option>
+                    <option value="Pending" ${statusParam == 'Pending' ? 'selected' : ''}>Chờ siêu âm</option>
+                    <option value="InProgress" ${statusParam == 'InProgress' ? 'selected' : ''}>Đang siêu âm</option>
+                    <option value="Uploaded" ${statusParam == 'Uploaded' ? 'selected' : ''}>Đã tải ảnh</option>
+                    <option value="Analyzing" ${statusParam == 'Analyzing' ? 'selected' : ''}>AI phân tích</option>
+                    <option value="Completed" ${statusParam == 'Completed' ? 'selected' : ''}>Đã hoàn thành</option>
+                    <option value="confirmed" ${statusParam == 'confirmed' ? 'selected' : ''}>Đã xác nhận</option>
                 </select>
             </div>
             <div class="col-md-2">
@@ -194,6 +195,9 @@
                                             </c:when>
                                             <c:when test="${fn:toLowerCase(order.status) == 'completed'}">
                                                 <span class="badge bg-success-subtle text-success border border-success-subtle">Hoàn thành</span>
+                                            </c:when>
+                                            <c:when test="${fn:toLowerCase(order.status) == 'confirmed'}">
+                                                <span class="badge bg-success text-white border border-success">Đã xác nhận</span>
                                             </c:when>
                                             <c:otherwise>
                                                 <span class="badge bg-light text-muted border"><c:out value="${order.status}"/></span>

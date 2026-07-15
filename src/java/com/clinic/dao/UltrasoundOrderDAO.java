@@ -196,7 +196,10 @@ public class UltrasoundOrderDAO {
             if (rows > 0) {
                 rs = ps.getGeneratedKeys();
                 if (rs.next()) {
-                    return rs.getInt(1);
+                    int orderId = rs.getInt(1);
+                    // Gửi thông báo cho bệnh nhân đi siêu âm/xét nghiệm
+                    com.clinic.utils.NotificationHelper.notifyPatientForTest(medicalRecordId, serviceId);
+                    return orderId;
                 }
             }
         } catch (SQLException e) {
