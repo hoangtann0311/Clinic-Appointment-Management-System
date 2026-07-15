@@ -117,6 +117,43 @@ public class AuditUtil {
     }
 
     /**
+     * Ghi audit log cho kiểm soát truy cập (Authorization).
+     * Dành riêng cho AuthorizationFilter — ghi lại mọi lần truy cập
+     * thành công hoặc bị từ chối vào các chức năng quan trọng.
+     *
+     * <p>Thông tin được ghi:
+     * <ul>
+     *   <li>Người dùng: email + userId</li>
+     *   <li>Vai trò: roleName</li>
+     *   <li>URL: path được yêu cầu</li>
+     *   <li>Hành động: ACCESS_GRANTED hoặc ACCESS_DENIED</li>
+     *   <li>Kết quả: SUCCESS hoặc DENIED + lý do</li>
+     *   <li>Thời gian: tự động (GETDATE())</li>
+     *   <li>Địa chỉ IP: trích xuất từ request</li>
+     * </ul>
+     *
+     * @param request   HttpServletRequest (để lấy user + IP)
+     * @param userEmail email của người dùng
+     * @param roleName  tên vai trò (VD: "Admin", "Doctor")
+     * @param path      đường dẫn được yêu cầu (VD: "/admin/users/")
+     * @param result    kết quả: "SUCCESS" hoặc "DENIED"
+     * @param reason    lý do (nếu bị từ chối), null nếu thành công
+     */
+    public static void logAccess(jakarta.servlet.http.HttpServletRequest request,
+                                  String userEmail, String roleName, String path,
+                                  String result, String reason) {
+        StringBuilder detail = new StringBuilder();
+        detail.append("[").append(result).append("] ");
+        detail.append(userEmail);
+        detail.append(" (").append(roleName).append(")");
+        detail.append(" → ").append(path);
+        if (reason != null && !reason.isEmpty()) {
+            detail.append(" | Reason: ").append(reason);
+        }
+        log(request, detail.toString(), "access_control", null, null);
+    }
+
+    /**
      * Ghi audit log cho hệ thống tự động (không có user).
      *
      * @param action    mô tả hành động

@@ -299,6 +299,17 @@ public class AdminUserServlet extends HttpServlet {
                         String targetName = target != null ? target.getFullName() : ("#" + userId);
                         logAudit(req, "EDIT_USER", "Sửa người dùng #" + userId + ": " + targetName
                                 + " (role=" + roleId + ", status=" + status + ")");
+
+                        // Nếu role bị thay đổi → bump global permissions version
+                        // để AuthorizationFilter buộc user đó phải sync/re-login
+                        if (target != null && target.getRoleId() != roleId) {
+                            com.clinic.filter.AuthorizationFilter.bumpPermissionsVersion();
+                        }
+                        // Nếu status bị thay đổi → cũng bump để sync
+                        if (target != null && !status.equals(target.getStatus())) {
+                            com.clinic.filter.AuthorizationFilter.bumpPermissionsVersion();
+                        }
+
                         resp.sendRedirect(redirectUrl + "?success=updated" + querySuffix);
                     } else {
                         // Load lại user info để hiển thị readonly fields khi validation fail
@@ -338,6 +349,8 @@ public class AdminUserServlet extends HttpServlet {
                     String actionLabel = "Locked".equals(newStatus) ? "Khoá" : "Mở khoá";
                     if (userService.updateStatus(userId, newStatus)) {
                         logAudit(req, "TOGGLE_STATUS", actionLabel + " người dùng #" + userId);
+                        // Bump permissions version vì status thay đổi ảnh hưởng đến quyền truy cập
+                        com.clinic.filter.AuthorizationFilter.bumpPermissionsVersion();
                         resp.sendRedirect(redirectUrl + "?success=updated" + querySuffix);
                     } else {
                         resp.sendRedirect(redirectUrl + "?error=Cập+nhật+trạng+thái+thất+bại" + querySuffix);

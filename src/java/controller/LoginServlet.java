@@ -87,10 +87,14 @@ public class LoginServlet extends HttpServlet {
             RoleService roleService = new RoleService();
             Set<String> userPermissions = roleService.getPermissionKeysByUserId(user.getId());
             session.setAttribute("userPermissions", userPermissions);
+            // Lưu version hiện tại để AuthorizationFilter phát hiện thay đổi quyền
+            session.setAttribute("permissionsLoadedVersion",
+                com.clinic.filter.AuthorizationFilter.GLOBAL_PERMISSIONS_VERSION.get());
             System.out.println(">>> Loaded " + userPermissions.size() + " permissions for user " + user.getEmail());
         } catch (Exception e) {
             System.err.println(">>> Failed to load permissions for user " + user.getEmail() + ": " + e.getMessage());
             session.setAttribute("userPermissions", java.util.Collections.emptySet());
+            session.setAttribute("permissionsLoadedVersion", 0L);
         }
 
         // Ghi log đăng nhập thành công

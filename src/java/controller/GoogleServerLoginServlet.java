@@ -95,6 +95,17 @@ public class GoogleServerLoginServlet extends HttpServlet {
             session.setAttribute("user", user);
             session.setAttribute("roleId", user.getRoleId());
 
+            // Nạp permissions vào session
+            try {
+                com.clinic.service.RoleService roleService = new com.clinic.service.RoleService();
+                java.util.Set<String> perms = roleService.getPermissionKeysByUserId(user.getId());
+                session.setAttribute("userPermissions", perms);
+                System.out.println(">>> Loaded " + perms.size() + " permissions for " + user.getEmail());
+            } catch (Exception ex) {
+                session.setAttribute("userPermissions", java.util.Collections.emptySet());
+                System.err.println(">>> Failed to load permissions: " + ex.getMessage());
+            }
+
             System.out.println(">>> Google server-side login success: " + user.getEmail()
                     + " (roleId=" + user.getRoleId() + ", id=" + user.getId() + ")");
 

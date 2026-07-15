@@ -50,7 +50,36 @@
         <description>Google OAuth 2.0 Client Secret (chỉ dùng cho server-side flow)</description>
     </context-param>
 
+    <!-- ============================================================
+         FILTER ORDER (annotation-based @WebFilter)
+         ============================================================
+         Thứ tự thực thi trong Tomcat (theo alphabetical class name):
+         1. AuthenticationFilter (com.clinic.filter)
+         2. AuthorizationFilter  (com.clinic.filter)
+         3. EncodingFilter       (com.clinic.filter)
+
+         LUỒNG XỬ LÝ:
+         EncodingFilter:       UTF-8 → pass
+         AuthenticationFilter: Public path? → pass | No session? → redirect /login
+                               | Not Active? → invalidate + redirect | OK → pass
+         AuthorizationFilter:  Public path? → pass | Zone check → Whitelist check
+                               → Permission check → Audit Log → pass | Default Deny → 403
+
+         NGHIỆP VỤ PHÂN QUYỀN (AuthorizationFilter):
+         YC1: Tất cả role đều qua filter
+         YC2: Whitelist theo Role + Permission
+         YC3: Default Deny — mọi URL không trong whitelist → 403
+         YC4: Chỉ Active user + session hợp lệ mới được truy cập
+         YC5: Từ chối → HTTP 403 + trang Access Denied
+         YC6: Audit Log: user, role, URL, action, time, IP, result
+         YC7: Session Sync: phát hiện thay đổi role/permission → reload hoặc re-login
+    -->
+
     <!-- Error pages -->
+    <error-page>
+        <error-code>403</error-code>
+        <location>/views/errors/403.jsp</location>
+    </error-page>
     <error-page>
         <error-code>404</error-code>
         <location>/views/errors/404.jsp</location>
