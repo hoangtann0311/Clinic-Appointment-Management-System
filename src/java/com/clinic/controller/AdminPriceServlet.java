@@ -53,8 +53,8 @@ public class AdminPriceServlet extends HttpServlet {
 
         if ("medicines".equals(tab)) {
             // Tab Thuốc
-            List<Medicine> medicines = medicineService.getMedicines(page, PAGE_SIZE, search, activeFilter);
-            int totalMedicines = medicineService.getTotalMedicines(search, activeFilter);
+            List<Medicine> medicines = medicineService.getMedicines(page, PAGE_SIZE, search, activeFilter, null);
+            int totalMedicines = medicineService.getTotalMedicines(search, activeFilter, (Integer) null);
             int totalPages = (int) Math.ceil((double) totalMedicines / PAGE_SIZE);
 
             req.setAttribute("medicines", medicines);
@@ -62,8 +62,8 @@ public class AdminPriceServlet extends HttpServlet {
             req.setAttribute("totalPages", totalPages);
         } else {
             // Tab Dịch Vụ (mặc định)
-            List<Service> services = serviceService.getServices(page, PAGE_SIZE, search, activeFilter);
-            int totalServices = serviceService.getTotalServices(search, activeFilter);
+            List<Service> services = serviceService.getServices(page, PAGE_SIZE, search, activeFilter, null);
+            int totalServices = serviceService.getTotalServices(search, activeFilter, (Integer) null);
             int totalPages = (int) Math.ceil((double) totalServices / PAGE_SIZE);
 
             req.setAttribute("services", services);
@@ -92,6 +92,9 @@ public class AdminPriceServlet extends HttpServlet {
         String tab = req.getParameter("tab");
         if (tab == null || tab.isEmpty()) tab = "services";
         String redirectUrl = req.getContextPath() + "/admin/pricing/?tab=" + tab;
+
+        User loggedInUser = (User) req.getSession().getAttribute("user");
+        Integer currentUserId = (loggedInUser != null) ? loggedInUser.getId() : null;
 
         try {
             switch (action != null ? action : "") {
@@ -143,7 +146,9 @@ public class AdminPriceServlet extends HttpServlet {
                             existing.getAllowedSpecialties(),
                             existing.getCategoryId() != null ? String.valueOf(existing.getCategoryId()) : "",
                             isActive,
-                            errors);
+                            errors,
+                            currentUserId,
+                            "Sửa giá dịch vụ (Admin)");
 
                     if (success) {
                         logAudit(req, "UPDATE_SERVICE_PRICE",
@@ -204,7 +209,10 @@ public class AdminPriceServlet extends HttpServlet {
                             newPriceStr,
                             stockQuantity != null ? stockQuantity : String.valueOf(existing.getStockQuantity()),
                             isActive,
-                            errors);
+                            errors,
+                            currentUserId,
+                            "Sửa giá thuốc (Admin)",
+                            existing.getCategoryId() != null ? String.valueOf(existing.getCategoryId()) : "");
 
                     if (success) {
                         logAudit(req, "UPDATE_MEDICINE_PRICE",
@@ -252,7 +260,9 @@ public class AdminPriceServlet extends HttpServlet {
                             existing.isRequiresFasting(), existing.isRequiresFullBladder(),
                             existing.getRequiredRoomType(), existing.getAllowedSpecialties(),
                             existing.getCategoryId() != null ? String.valueOf(existing.getCategoryId()) : "",
-                            existing.isActive(), errors);
+                            existing.isActive(), errors,
+                            currentUserId,
+                            "Sửa nhanh giá dịch vụ (Admin)");
 
                     if (success) {
                         logAudit(req, "QUICK_UPDATE_SERVICE",
@@ -278,7 +288,8 @@ public class AdminPriceServlet extends HttpServlet {
                     Map<String, String> errors = new HashMap<>();
                     if (serviceService.createService(serviceCode, serviceName, description,
                             price, durationMins, requiresFasting, requiresFullBladder,
-                            requiredRoomType, allowedSpecialties, categoryId, errors)) {
+                            requiredRoomType, allowedSpecialties, categoryId, errors,
+                            currentUserId)) {
                         logAudit(req, "CREATE_SERVICE", "Thêm dịch vụ: " + serviceName + " (giá=" + price + ")");
                         resp.sendRedirect(redirectUrl + "&success=created");
                     } else {
@@ -302,7 +313,8 @@ public class AdminPriceServlet extends HttpServlet {
 
                     Map<String, String> errors = new HashMap<>();
                     if (medicineService.createMedicine(medicineCode, medicineName, description,
-                            dosage, unit, price, stockQuantity, errors)) {
+                            dosage, unit, price, stockQuantity, errors,
+                            currentUserId, null)) {
                         logAudit(req, "CREATE_MEDICINE", "Thêm thuốc: " + medicineName + " (giá=" + price + ")");
                         resp.sendRedirect(redirectUrl + "&success=created");
                     } else {
@@ -343,7 +355,10 @@ public class AdminPriceServlet extends HttpServlet {
                             existing.getMedicineCode(), existing.getName(),
                             existing.getDescription(), existing.getDosage(), existing.getUnit(),
                             newPriceStr, String.valueOf(existing.getStockQuantity()),
-                            existing.isActive(), errors);
+                            existing.isActive(), errors,
+                            currentUserId,
+                            "Sửa nhanh giá thuốc (Admin)",
+                            existing.getCategoryId() != null ? String.valueOf(existing.getCategoryId()) : "");
 
                     if (success) {
                         logAudit(req, "QUICK_UPDATE_MEDICINE",

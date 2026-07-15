@@ -81,39 +81,47 @@ public class DoctorResultsServlet extends HttpServlet {
 
     // ── Kết quả siêu âm ─────────────────────────────────────────────────────
     private List<Map<String,Object>> loadUltrasoundResults(int recordId) {
+        // Query đúng bảng: test_orders → ultrasound_images (ảnh gốc) + ai_analysis_results (kết quả AI)
         String sql =
-            "SELECT ur.id, ur.raw_image_url, ur.ai_processed_image_url, " +
-            "       ur.ai_suggested_label, ur.ai_confidence_score, " +
-            "       u.full_name AS sonographer_name, " +
+            "SELECT to2.id AS id, " +
+            "       to2.id AS order_id, to2.status AS order_status, " +
+            "       to2.created_at AS ordered_at, " +
             "       s.service_name, " +
-            "       to2.id AS order_id, to2.status AS order_status, to2.created_at AS ordered_at " +
-            "FROM ultrasound_results ur " +
-            "JOIN test_orders to2 ON to2.medical_record_id = ur.medical_record_id " +
+            // Ảnh gốc từ ultrasound_images (lấy ảnh đầu tiên)
+            "       ui.file_path AS raw_image_url, " +
+            // Kết quả AI từ ai_analysis_results
+            "       air.result_image AS ai_processed_image_url, " +
+            "       air.message AS ai_suggested_label, " +
+            "       air.confidence AS ai_confidence_score, " +
+            // Sonographer (người upload ảnh)
+            "       uploader.full_name AS sonographer_name " +
+            "FROM test_orders to2 " +
             "JOIN services s ON s.id = to2.service_id " +
             "LEFT JOIN service_categories sc ON sc.id = s.category_id " +
-            "LEFT JOIN users u ON u.id = ur.sonographer_id " +
-            "WHERE ur.medical_record_id = ? " +
+            // Lấy ảnh đầu tiên đã upload
+            "OUTER APPLY ( " +
+            "    SELECT TOP 1 file_path " +
+            "    FROM ultrasound_images " +
+            "    WHERE test_order_id = to2.id " +
+            "    ORDER BY uploaded_at ASC " +
+            ") ui " +
+            // Kết quả phân tích AI
+            "LEFT JOIN ai_analysis_results air ON air.test_order_id = to2.id " +
+            // Tên sonographer (người upload)
+            "OUTER APPLY ( " +
+            "    SELECT TOP 1 u.full_name " +
+            "    FROM ultrasound_images img " +
+            "    JOIN users u ON u.id = img.uploaded_by " +
+            "    WHERE img.test_order_id = to2.id " +
+            "    ORDER BY img.uploaded_at ASC " +
+            ") uploader " +
+            "WHERE to2.medical_record_id = ? " +
             "  AND (sc.category_name LIKE N'%siêu âm%' " +
             "       OR sc.category_name LIKE N'%ultrasound%' " +
             "       OR ISNULL(s.required_room_type,'') LIKE N'%ultrasound%') " +
-            "ORDER BY ur.id";
+            "ORDER BY to2.created_at";
 
-        // Nếu không có kết quả siêu âm qua test_orders, thử lấy trực tiếp từ ultrasound_results
-        List<Map<String,Object>> list = queryToMapList(sql, recordId);
-        if (list.isEmpty()) {
-            String fallback =
-                "SELECT ur.id, ur.raw_image_url, ur.ai_processed_image_url, " +
-                "       ur.ai_suggested_label, ur.ai_confidence_score, " +
-                "       u.full_name AS sonographer_name, " +
-                "       NULL AS service_name, NULL AS order_id, " +
-                "       NULL AS order_status, NULL AS ordered_at " +
-                "FROM ultrasound_results ur " +
-                "LEFT JOIN users u ON u.id = ur.sonographer_id " +
-                "WHERE ur.medical_record_id = ? " +
-                "ORDER BY ur.id";
-            list = queryToMapList(fallback, recordId);
-        }
-        return list;
+        return queryToMapList(sql, recordId);
     }
 
     // ── Thông tin hồ sơ bệnh án ─────────────────────────────────────────────

@@ -54,16 +54,16 @@ public class ManagerPricingServlet extends HttpServlet {
         }
 
         if ("medicines".equals(tab)) {
-            List<Medicine> medicines = medicineService.getMedicines(page, PAGE_SIZE, search, activeFilter);
-            int totalMedicines = medicineService.getTotalMedicines(search, activeFilter);
+            List<Medicine> medicines = medicineService.getMedicines(page, PAGE_SIZE, search, activeFilter, null);
+            int totalMedicines = medicineService.getTotalMedicines(search, activeFilter, (Integer) null);
             int totalPages = (int) Math.ceil((double) totalMedicines / PAGE_SIZE);
 
             req.setAttribute("medicines", medicines);
             req.setAttribute("totalMedicines", totalMedicines);
             req.setAttribute("totalPages", totalPages);
         } else {
-            List<Service> services = serviceService.getServices(page, PAGE_SIZE, search, activeFilter);
-            int totalServices = serviceService.getTotalServices(search, activeFilter);
+            List<Service> services = serviceService.getServices(page, PAGE_SIZE, search, activeFilter, null);
+            int totalServices = serviceService.getTotalServices(search, activeFilter, (Integer) null);
             int totalPages = (int) Math.ceil((double) totalServices / PAGE_SIZE);
 
             req.setAttribute("services", services);
@@ -91,6 +91,9 @@ public class ManagerPricingServlet extends HttpServlet {
         String tab = req.getParameter("tab");
         if (tab == null || tab.isEmpty()) tab = "services";
         String redirectUrl = req.getContextPath() + "/manager/pricing/?tab=" + tab;
+
+        User loggedInUser = (User) req.getSession().getAttribute("user");
+        Integer currentUserId = (loggedInUser != null) ? loggedInUser.getId() : null;
 
         try {
             switch (action != null ? action : "") {
@@ -145,7 +148,9 @@ public class ManagerPricingServlet extends HttpServlet {
                             existing.getAllowedSpecialties(),
                             existing.getCategoryId() != null ? String.valueOf(existing.getCategoryId()) : "",
                             isActive,
-                            errors);
+                            errors,
+                            currentUserId,
+                            "Sửa giá dịch vụ (Manager)");
 
                     if (success) {
                         logAudit(req, "UPDATE_SERVICE_PRICE",
@@ -213,7 +218,10 @@ public class ManagerPricingServlet extends HttpServlet {
                             newPriceStr,
                             stockQuantity != null ? stockQuantity : String.valueOf(existing.getStockQuantity()),
                             isActive,
-                            errors);
+                            errors,
+                            currentUserId,
+                            "Sửa giá thuốc (Manager)",
+                            existing.getCategoryId() != null ? String.valueOf(existing.getCategoryId()) : "");
 
                     if (success) {
                         logAudit(req, "UPDATE_MEDICINE_PRICE",
@@ -247,7 +255,8 @@ public class ManagerPricingServlet extends HttpServlet {
                     Map<String, String> errors = new HashMap<>();
                     if (serviceService.createService(serviceCode, serviceName, description,
                             price, durationMins, requiresFasting, requiresFullBladder,
-                            requiredRoomType, allowedSpecialties, categoryId, errors)) {
+                            requiredRoomType, allowedSpecialties, categoryId, errors,
+                            currentUserId)) {
                         logAudit(req, "CREATE_SERVICE", "Thêm dịch vụ: " + serviceName + " (giá=" + price + ")");
                         resp.sendRedirect(redirectUrl + "&success=created");
                     } else {
@@ -270,7 +279,8 @@ public class ManagerPricingServlet extends HttpServlet {
 
                     Map<String, String> errors = new HashMap<>();
                     if (medicineService.createMedicine(medicineCode, medicineName, description,
-                            dosage, unit, price, stockQuantity, errors)) {
+                            dosage, unit, price, stockQuantity, errors,
+                            currentUserId, null)) {
                         logAudit(req, "CREATE_MEDICINE", "Thêm thuốc: " + medicineName + " (giá=" + price + ")");
                         resp.sendRedirect(redirectUrl + "&success=created");
                     } else {

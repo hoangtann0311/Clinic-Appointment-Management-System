@@ -1,6 +1,7 @@
 package com.clinic.controller;
 
 import com.clinic.model.Service;
+import com.clinic.model.User;
 import com.clinic.service.ServiceService;
 import com.clinic.utils.AuditUtil;
 import jakarta.servlet.ServletException;
@@ -43,8 +44,8 @@ public class AdminServiceServlet extends HttpServlet {
             activeFilter = "1".equals(activeStr);
         }
 
-        List<Service> services = serviceService.getServices(page, PAGE_SIZE, search, activeFilter);
-        int totalServices = serviceService.getTotalServices(search, activeFilter);
+        List<Service> services = serviceService.getServices(page, PAGE_SIZE, search, activeFilter, null);
+        int totalServices = serviceService.getTotalServices(search, activeFilter, (Integer) null);
         int totalPages = (int) Math.ceil((double) totalServices / PAGE_SIZE);
 
         req.setAttribute("services", services);
@@ -68,6 +69,9 @@ public class AdminServiceServlet extends HttpServlet {
         String action = req.getParameter("action");
         String redirectUrl = req.getContextPath() + "/admin/services/";
 
+        User loggedInUser = (User) req.getSession().getAttribute("user");
+        Integer currentUserId = (loggedInUser != null) ? loggedInUser.getId() : null;
+
         try {
             switch (action != null ? action : "") {
 
@@ -86,7 +90,8 @@ public class AdminServiceServlet extends HttpServlet {
                     Map<String, String> errors = new HashMap<>();
                     if (serviceService.createService(serviceCode, serviceName, description,
                             price, durationMins, requiresFasting, requiresFullBladder,
-                            requiredRoomType, allowedSpecialties, categoryId, errors)) {
+                            requiredRoomType, allowedSpecialties, categoryId, errors,
+                            currentUserId)) {
                         AuditUtil.log(req, "Tạo mới dịch vụ: " + serviceName, "services",
                                 null, "price=" + price);
                         resp.sendRedirect(redirectUrl + "?success=created");
@@ -116,7 +121,8 @@ public class AdminServiceServlet extends HttpServlet {
                     Map<String, String> errors = new HashMap<>();
                     if (serviceService.updateService(id, serviceCode, serviceName, description,
                             price, durationMins, requiresFasting, requiresFullBladder,
-                            requiredRoomType, allowedSpecialties, categoryId, isActive, errors)) {
+                            requiredRoomType, allowedSpecialties, categoryId, isActive, errors,
+                            currentUserId, "Cập nhật dịch vụ (Admin)")) {
                         AuditUtil.log(req, "Cập nhật dịch vụ: " + serviceName, "services",
                                 null, "price=" + price + ", active=" + isActive);
                         resp.sendRedirect(redirectUrl + "?success=updated");

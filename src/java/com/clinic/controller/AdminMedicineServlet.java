@@ -1,6 +1,7 @@
 package com.clinic.controller;
 
 import com.clinic.model.Medicine;
+import com.clinic.model.User;
 import com.clinic.service.MedicineService;
 import com.clinic.utils.AuditUtil;
 import jakarta.servlet.ServletException;
@@ -43,8 +44,8 @@ public class AdminMedicineServlet extends HttpServlet {
             activeFilter = "1".equals(activeStr);
         }
 
-        List<Medicine> medicines = medicineService.getMedicines(page, PAGE_SIZE, search, activeFilter);
-        int totalMedicines = medicineService.getTotalMedicines(search, activeFilter);
+        List<Medicine> medicines = medicineService.getMedicines(page, PAGE_SIZE, search, activeFilter, null);
+        int totalMedicines = medicineService.getTotalMedicines(search, activeFilter, (Integer) null);
         int totalPages = (int) Math.ceil((double) totalMedicines / PAGE_SIZE);
 
         req.setAttribute("medicines", medicines);
@@ -68,6 +69,9 @@ public class AdminMedicineServlet extends HttpServlet {
         String action = req.getParameter("action");
         String redirectUrl = req.getContextPath() + "/admin/medicines/";
 
+        User loggedInUser = (User) req.getSession().getAttribute("user");
+        Integer currentUserId = (loggedInUser != null) ? loggedInUser.getId() : null;
+
         try {
             switch (action != null ? action : "") {
 
@@ -82,7 +86,8 @@ public class AdminMedicineServlet extends HttpServlet {
 
                     Map<String, String> errors = new HashMap<>();
                     if (medicineService.createMedicine(medicineCode, name, description,
-                            dosage, unit, price, stockQuantity, errors)) {
+                            dosage, unit, price, stockQuantity, errors,
+                            currentUserId, null)) {
                         AuditUtil.log(req, "Tạo mới thuốc: " + name, "medicines",
                                 null, "price=" + price);
                         resp.sendRedirect(redirectUrl + "?success=created");
@@ -108,7 +113,8 @@ public class AdminMedicineServlet extends HttpServlet {
 
                     Map<String, String> errors = new HashMap<>();
                     if (medicineService.updateMedicine(id, medicineCode, name, description,
-                            dosage, unit, price, stockQuantity, isActive, errors)) {
+                            dosage, unit, price, stockQuantity, isActive, errors,
+                            currentUserId, "Cập nhật thuốc (Admin)", null)) {
                         AuditUtil.log(req, "Cập nhật thuốc: " + name, "medicines",
                                 null, "price=" + price + ", active=" + isActive);
                         resp.sendRedirect(redirectUrl + "?success=updated");

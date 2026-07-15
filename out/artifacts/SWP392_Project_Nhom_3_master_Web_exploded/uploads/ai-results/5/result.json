@@ -1,0 +1,24 @@
+{
+  "success": true,
+  "detected": true,
+  "confidence": 0.8061,
+  "message": "AI phát hiện vùng nghi ngờ u xơ. Kết quả chỉ mang tính hỗ trợ tham khảo.",
+  "inputImage": "C:\\Users\\admin\\IdeaProjects\\SWP392-Project-Nhom-3\\build\\web\\uploads\\ultrasound\\079cbac1-ebb2-4507-9ea0-f3c8ea0543b3.jpg",
+  "resultImage": "C:\\Users\\admin\\IdeaProjects\\SWP392-Project-Nhom-3\\build\\web\\uploads\\ai-results\\5\\result.png",
+  "maskImage": "C:\\Users\\admin\\IdeaProjects\\SWP392-Project-Nhom-3\\build\\web\\uploads\\ai-results\\5\\mask.png",
+  "rawMaskImage": "C:\\Users\\admin\\IdeaProjects\\SWP392-Project-Nhom-3\\build\\web\\uploads\\ai-results\\5\\raw_mask.png",
+  "bbox": {
+    "xmin": 429,
+    "ymin": 271,
+    "xmax": 490,
+    "ymax": 310
+  },
+  "expandedBbox": {
+    "xmin": 426,
+    "ymin": 270,
+    "xmax": 493,
+    "ymax": 311
+  },
+  "rawMaskArea": 1520,
+  "finalMaskArea": 1516
+}

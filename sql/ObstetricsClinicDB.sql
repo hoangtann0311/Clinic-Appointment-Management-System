@@ -106,6 +106,35 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
+/****** Object:  Table [dbo].[time_slots] ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[time_slots](
+	[id]          INT IDENTITY(1,1) NOT NULL,
+	[schedule_id] INT NOT NULL,
+	[doctor_id]   INT NOT NULL,
+	[work_date]   DATE NOT NULL,
+	[start_time]  TIME(7) NOT NULL,
+	[end_time]    TIME(7) NOT NULL,
+	[status]      NVARCHAR(30) NOT NULL DEFAULT 'AVAILABLE',
+	[notes]       NVARCHAR(500) NULL,
+	[created_at]  DATETIME2 NOT NULL DEFAULT GETDATE(),
+	[updated_at]  DATETIME2 NOT NULL DEFAULT GETDATE(),
+	[booked_by]   INT NULL,
+	[booked_at]   DATETIME2 NULL,
+	[version]     ROWVERSION,
+ CONSTRAINT [PK_time_slots] PRIMARY KEY CLUSTERED ([id] ASC)
+) ON [PRIMARY]
+GO
+CREATE NONCLUSTERED INDEX [IX_time_slots_doctor_date] ON [dbo].[time_slots] ([doctor_id], [work_date], [start_time]) INCLUDE ([status], [end_time])
+GO
+CREATE NONCLUSTERED INDEX [IX_time_slots_schedule] ON [dbo].[time_slots] ([schedule_id])
+GO
+CREATE NONCLUSTERED INDEX [IX_time_slots_booking] ON [dbo].[time_slots] ([doctor_id], [work_date], [status], [start_time]) INCLUDE ([end_time], [schedule_id], [booked_by])
+GO
+
 /****** Object:  Table [dbo].[audit_logs]    Script Date: 6/14/2026 10:28:53 PM ******/
 SET ANSI_NULLS ON
 GO
@@ -126,6 +155,35 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
+/****** Object:  Table [dbo].[time_slots] ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[time_slots](
+	[id]          INT IDENTITY(1,1) NOT NULL,
+	[schedule_id] INT NOT NULL,
+	[doctor_id]   INT NOT NULL,
+	[work_date]   DATE NOT NULL,
+	[start_time]  TIME(7) NOT NULL,
+	[end_time]    TIME(7) NOT NULL,
+	[status]      NVARCHAR(30) NOT NULL DEFAULT 'AVAILABLE',
+	[notes]       NVARCHAR(500) NULL,
+	[created_at]  DATETIME2 NOT NULL DEFAULT GETDATE(),
+	[updated_at]  DATETIME2 NOT NULL DEFAULT GETDATE(),
+	[booked_by]   INT NULL,
+	[booked_at]   DATETIME2 NULL,
+	[version]     ROWVERSION,
+ CONSTRAINT [PK_time_slots] PRIMARY KEY CLUSTERED ([id] ASC)
+) ON [PRIMARY]
+GO
+CREATE NONCLUSTERED INDEX [IX_time_slots_doctor_date] ON [dbo].[time_slots] ([doctor_id], [work_date], [start_time]) INCLUDE ([status], [end_time])
+GO
+CREATE NONCLUSTERED INDEX [IX_time_slots_schedule] ON [dbo].[time_slots] ([schedule_id])
+GO
+CREATE NONCLUSTERED INDEX [IX_time_slots_booking] ON [dbo].[time_slots] ([doctor_id], [work_date], [status], [start_time]) INCLUDE ([end_time], [schedule_id], [booked_by])
+GO
+
 /****** Object:  Table [dbo].[doctor_schedules]    Script Date: 6/14/2026 10:28:53 PM ******/
 SET ANSI_NULLS ON
 GO
@@ -139,12 +197,53 @@ CREATE TABLE [dbo].[doctor_schedules](
 	[end_time] [time](7) NULL,
 	[is_approved] [bit] NULL,
 	[max_slots] [int] NULL,
+	[status] [nvarchar](30) NOT NULL DEFAULT 'PENDING',
+	[rejection_reason] [nvarchar](500) NULL,
+	[approved_by] [int] NULL,
+	[approved_at] [datetime2](7) NULL,
+	[created_by] [int] NULL,
+	[created_at] [datetime2](7) NULL DEFAULT GETDATE(),
+	[updated_at] [datetime2](7) NULL DEFAULT GETDATE(),
+	[notes] [nvarchar](max) NULL,
+	[version] [rowversion] NULL,
+	[cancelled_by] [int] NULL,
+	[cancelled_at] [datetime2](7) NULL,
+	[cancellation_reason] [nvarchar](500) NULL,
 PRIMARY KEY CLUSTERED 
 (
 	[id] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[time_slots] ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[time_slots](
+	[id]          INT IDENTITY(1,1) NOT NULL,
+	[schedule_id] INT NOT NULL,
+	[doctor_id]   INT NOT NULL,
+	[work_date]   DATE NOT NULL,
+	[start_time]  TIME(7) NOT NULL,
+	[end_time]    TIME(7) NOT NULL,
+	[status]      NVARCHAR(30) NOT NULL DEFAULT 'AVAILABLE',
+	[notes]       NVARCHAR(500) NULL,
+	[created_at]  DATETIME2 NOT NULL DEFAULT GETDATE(),
+	[updated_at]  DATETIME2 NOT NULL DEFAULT GETDATE(),
+	[booked_by]   INT NULL,
+	[booked_at]   DATETIME2 NULL,
+	[version]     ROWVERSION,
+ CONSTRAINT [PK_time_slots] PRIMARY KEY CLUSTERED ([id] ASC)
 ) ON [PRIMARY]
 GO
+CREATE NONCLUSTERED INDEX [IX_time_slots_doctor_date] ON [dbo].[time_slots] ([doctor_id], [work_date], [start_time]) INCLUDE ([status], [end_time])
+GO
+CREATE NONCLUSTERED INDEX [IX_time_slots_schedule] ON [dbo].[time_slots] ([schedule_id])
+GO
+CREATE NONCLUSTERED INDEX [IX_time_slots_booking] ON [dbo].[time_slots] ([doctor_id], [work_date], [status], [start_time]) INCLUDE ([end_time], [schedule_id], [booked_by])
+GO
+
 /****** Object:  Table [dbo].[doctors]    Script Date: 6/14/2026 10:28:53 PM ******/
 SET ANSI_NULLS ON
 GO
@@ -192,6 +291,12 @@ CREATE TABLE [dbo].[invoices](
 	[total_amount] [decimal](18, 2) NULL,
 	[status] [varchar](30) NULL,
 	[transaction_code] [varchar](100) NULL,
+	[invoice_type] [varchar](30) NULL DEFAULT 'PRE_EXAM',
+	[payment_method] [varchar](30) NULL,
+	[confirmed_by] [int] NULL,
+	[confirmed_at] [datetime] NULL,
+	[payment_note] [nvarchar](500) NULL,
+	[created_at] [datetime] NULL DEFAULT getdate(),
 PRIMARY KEY CLUSTERED 
 (
 	[id] ASC
@@ -217,6 +322,35 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
+/****** Object:  Table [dbo].[time_slots] ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[time_slots](
+	[id]          INT IDENTITY(1,1) NOT NULL,
+	[schedule_id] INT NOT NULL,
+	[doctor_id]   INT NOT NULL,
+	[work_date]   DATE NOT NULL,
+	[start_time]  TIME(7) NOT NULL,
+	[end_time]    TIME(7) NOT NULL,
+	[status]      NVARCHAR(30) NOT NULL DEFAULT 'AVAILABLE',
+	[notes]       NVARCHAR(500) NULL,
+	[created_at]  DATETIME2 NOT NULL DEFAULT GETDATE(),
+	[updated_at]  DATETIME2 NOT NULL DEFAULT GETDATE(),
+	[booked_by]   INT NULL,
+	[booked_at]   DATETIME2 NULL,
+	[version]     ROWVERSION,
+ CONSTRAINT [PK_time_slots] PRIMARY KEY CLUSTERED ([id] ASC)
+) ON [PRIMARY]
+GO
+CREATE NONCLUSTERED INDEX [IX_time_slots_doctor_date] ON [dbo].[time_slots] ([doctor_id], [work_date], [start_time]) INCLUDE ([status], [end_time])
+GO
+CREATE NONCLUSTERED INDEX [IX_time_slots_schedule] ON [dbo].[time_slots] ([schedule_id])
+GO
+CREATE NONCLUSTERED INDEX [IX_time_slots_booking] ON [dbo].[time_slots] ([doctor_id], [work_date], [status], [start_time]) INCLUDE ([end_time], [schedule_id], [booked_by])
+GO
+
 /****** Object:  Table [dbo].[medical_records]    Script Date: 6/14/2026 10:28:53 PM ******/
 SET ANSI_NULLS ON
 GO
@@ -234,6 +368,35 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
+/****** Object:  Table [dbo].[time_slots] ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[time_slots](
+	[id]          INT IDENTITY(1,1) NOT NULL,
+	[schedule_id] INT NOT NULL,
+	[doctor_id]   INT NOT NULL,
+	[work_date]   DATE NOT NULL,
+	[start_time]  TIME(7) NOT NULL,
+	[end_time]    TIME(7) NOT NULL,
+	[status]      NVARCHAR(30) NOT NULL DEFAULT 'AVAILABLE',
+	[notes]       NVARCHAR(500) NULL,
+	[created_at]  DATETIME2 NOT NULL DEFAULT GETDATE(),
+	[updated_at]  DATETIME2 NOT NULL DEFAULT GETDATE(),
+	[booked_by]   INT NULL,
+	[booked_at]   DATETIME2 NULL,
+	[version]     ROWVERSION,
+ CONSTRAINT [PK_time_slots] PRIMARY KEY CLUSTERED ([id] ASC)
+) ON [PRIMARY]
+GO
+CREATE NONCLUSTERED INDEX [IX_time_slots_doctor_date] ON [dbo].[time_slots] ([doctor_id], [work_date], [start_time]) INCLUDE ([status], [end_time])
+GO
+CREATE NONCLUSTERED INDEX [IX_time_slots_schedule] ON [dbo].[time_slots] ([schedule_id])
+GO
+CREATE NONCLUSTERED INDEX [IX_time_slots_booking] ON [dbo].[time_slots] ([doctor_id], [work_date], [status], [start_time]) INCLUDE ([end_time], [schedule_id], [booked_by])
+GO
+
 /****** Object:  Table [dbo].[medicine_categories]    Script Date: 6/14/2026 10:28:53 PM ******/
 SET ANSI_NULLS ON
 GO
@@ -297,6 +460,35 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
+/****** Object:  Table [dbo].[time_slots] ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[time_slots](
+	[id]          INT IDENTITY(1,1) NOT NULL,
+	[schedule_id] INT NOT NULL,
+	[doctor_id]   INT NOT NULL,
+	[work_date]   DATE NOT NULL,
+	[start_time]  TIME(7) NOT NULL,
+	[end_time]    TIME(7) NOT NULL,
+	[status]      NVARCHAR(30) NOT NULL DEFAULT 'AVAILABLE',
+	[notes]       NVARCHAR(500) NULL,
+	[created_at]  DATETIME2 NOT NULL DEFAULT GETDATE(),
+	[updated_at]  DATETIME2 NOT NULL DEFAULT GETDATE(),
+	[booked_by]   INT NULL,
+	[booked_at]   DATETIME2 NULL,
+	[version]     ROWVERSION,
+ CONSTRAINT [PK_time_slots] PRIMARY KEY CLUSTERED ([id] ASC)
+) ON [PRIMARY]
+GO
+CREATE NONCLUSTERED INDEX [IX_time_slots_doctor_date] ON [dbo].[time_slots] ([doctor_id], [work_date], [start_time]) INCLUDE ([status], [end_time])
+GO
+CREATE NONCLUSTERED INDEX [IX_time_slots_schedule] ON [dbo].[time_slots] ([schedule_id])
+GO
+CREATE NONCLUSTERED INDEX [IX_time_slots_booking] ON [dbo].[time_slots] ([doctor_id], [work_date], [status], [start_time]) INCLUDE ([end_time], [schedule_id], [booked_by])
+GO
+
 /****** Object:  Table [dbo].[notifications]    Script Date: 6/14/2026 10:28:53 PM ******/
 SET ANSI_NULLS ON
 GO
@@ -316,6 +508,35 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
+/****** Object:  Table [dbo].[time_slots] ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[time_slots](
+	[id]          INT IDENTITY(1,1) NOT NULL,
+	[schedule_id] INT NOT NULL,
+	[doctor_id]   INT NOT NULL,
+	[work_date]   DATE NOT NULL,
+	[start_time]  TIME(7) NOT NULL,
+	[end_time]    TIME(7) NOT NULL,
+	[status]      NVARCHAR(30) NOT NULL DEFAULT 'AVAILABLE',
+	[notes]       NVARCHAR(500) NULL,
+	[created_at]  DATETIME2 NOT NULL DEFAULT GETDATE(),
+	[updated_at]  DATETIME2 NOT NULL DEFAULT GETDATE(),
+	[booked_by]   INT NULL,
+	[booked_at]   DATETIME2 NULL,
+	[version]     ROWVERSION,
+ CONSTRAINT [PK_time_slots] PRIMARY KEY CLUSTERED ([id] ASC)
+) ON [PRIMARY]
+GO
+CREATE NONCLUSTERED INDEX [IX_time_slots_doctor_date] ON [dbo].[time_slots] ([doctor_id], [work_date], [start_time]) INCLUDE ([status], [end_time])
+GO
+CREATE NONCLUSTERED INDEX [IX_time_slots_schedule] ON [dbo].[time_slots] ([schedule_id])
+GO
+CREATE NONCLUSTERED INDEX [IX_time_slots_booking] ON [dbo].[time_slots] ([doctor_id], [work_date], [status], [start_time]) INCLUDE ([end_time], [schedule_id], [booked_by])
+GO
+
 /****** Object:  Table [dbo].[password_reset_tokens]    Script Date: 6/14/2026 10:28:53 PM ******/
 SET ANSI_NULLS ON
 GO
@@ -390,6 +611,35 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
+/****** Object:  Table [dbo].[time_slots] ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[time_slots](
+	[id]          INT IDENTITY(1,1) NOT NULL,
+	[schedule_id] INT NOT NULL,
+	[doctor_id]   INT NOT NULL,
+	[work_date]   DATE NOT NULL,
+	[start_time]  TIME(7) NOT NULL,
+	[end_time]    TIME(7) NOT NULL,
+	[status]      NVARCHAR(30) NOT NULL DEFAULT 'AVAILABLE',
+	[notes]       NVARCHAR(500) NULL,
+	[created_at]  DATETIME2 NOT NULL DEFAULT GETDATE(),
+	[updated_at]  DATETIME2 NOT NULL DEFAULT GETDATE(),
+	[booked_by]   INT NULL,
+	[booked_at]   DATETIME2 NULL,
+	[version]     ROWVERSION,
+ CONSTRAINT [PK_time_slots] PRIMARY KEY CLUSTERED ([id] ASC)
+) ON [PRIMARY]
+GO
+CREATE NONCLUSTERED INDEX [IX_time_slots_doctor_date] ON [dbo].[time_slots] ([doctor_id], [work_date], [start_time]) INCLUDE ([status], [end_time])
+GO
+CREATE NONCLUSTERED INDEX [IX_time_slots_schedule] ON [dbo].[time_slots] ([schedule_id])
+GO
+CREATE NONCLUSTERED INDEX [IX_time_slots_booking] ON [dbo].[time_slots] ([doctor_id], [work_date], [status], [start_time]) INCLUDE ([end_time], [schedule_id], [booked_by])
+GO
+
 /****** Object:  Table [dbo].[prescription_items]    Script Date: 6/14/2026 10:28:53 PM ******/
 SET ANSI_NULLS ON
 GO
@@ -460,6 +710,35 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
+/****** Object:  Table [dbo].[time_slots] ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[time_slots](
+	[id]          INT IDENTITY(1,1) NOT NULL,
+	[schedule_id] INT NOT NULL,
+	[doctor_id]   INT NOT NULL,
+	[work_date]   DATE NOT NULL,
+	[start_time]  TIME(7) NOT NULL,
+	[end_time]    TIME(7) NOT NULL,
+	[status]      NVARCHAR(30) NOT NULL DEFAULT 'AVAILABLE',
+	[notes]       NVARCHAR(500) NULL,
+	[created_at]  DATETIME2 NOT NULL DEFAULT GETDATE(),
+	[updated_at]  DATETIME2 NOT NULL DEFAULT GETDATE(),
+	[booked_by]   INT NULL,
+	[booked_at]   DATETIME2 NULL,
+	[version]     ROWVERSION,
+ CONSTRAINT [PK_time_slots] PRIMARY KEY CLUSTERED ([id] ASC)
+) ON [PRIMARY]
+GO
+CREATE NONCLUSTERED INDEX [IX_time_slots_doctor_date] ON [dbo].[time_slots] ([doctor_id], [work_date], [start_time]) INCLUDE ([status], [end_time])
+GO
+CREATE NONCLUSTERED INDEX [IX_time_slots_schedule] ON [dbo].[time_slots] ([schedule_id])
+GO
+CREATE NONCLUSTERED INDEX [IX_time_slots_booking] ON [dbo].[time_slots] ([doctor_id], [work_date], [status], [start_time]) INCLUDE ([end_time], [schedule_id], [booked_by])
+GO
+
 /****** Object:  Table [dbo].[role_permissions]    Script Date: 6/14/2026 10:28:53 PM ******/
 SET ANSI_NULLS ON
 GO
@@ -537,6 +816,35 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
+/****** Object:  Table [dbo].[time_slots] ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[time_slots](
+	[id]          INT IDENTITY(1,1) NOT NULL,
+	[schedule_id] INT NOT NULL,
+	[doctor_id]   INT NOT NULL,
+	[work_date]   DATE NOT NULL,
+	[start_time]  TIME(7) NOT NULL,
+	[end_time]    TIME(7) NOT NULL,
+	[status]      NVARCHAR(30) NOT NULL DEFAULT 'AVAILABLE',
+	[notes]       NVARCHAR(500) NULL,
+	[created_at]  DATETIME2 NOT NULL DEFAULT GETDATE(),
+	[updated_at]  DATETIME2 NOT NULL DEFAULT GETDATE(),
+	[booked_by]   INT NULL,
+	[booked_at]   DATETIME2 NULL,
+	[version]     ROWVERSION,
+ CONSTRAINT [PK_time_slots] PRIMARY KEY CLUSTERED ([id] ASC)
+) ON [PRIMARY]
+GO
+CREATE NONCLUSTERED INDEX [IX_time_slots_doctor_date] ON [dbo].[time_slots] ([doctor_id], [work_date], [start_time]) INCLUDE ([status], [end_time])
+GO
+CREATE NONCLUSTERED INDEX [IX_time_slots_schedule] ON [dbo].[time_slots] ([schedule_id])
+GO
+CREATE NONCLUSTERED INDEX [IX_time_slots_booking] ON [dbo].[time_slots] ([doctor_id], [work_date], [status], [start_time]) INCLUDE ([end_time], [schedule_id], [booked_by])
+GO
+
 /****** Object:  Table [dbo].[sonographers]    Script Date: 6/14/2026 10:28:53 PM ******/
 SET ANSI_NULLS ON
 GO
@@ -573,6 +881,50 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
+/****** Object:  Table [dbo].[ultrasound_images] ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[ultrasound_images](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[test_order_id] [int] NOT NULL,
+	[original_filename] [nvarchar](255) NULL,
+	[stored_filename] [nvarchar](255) NULL,
+	[file_path] [nvarchar](500) NULL,
+	[file_size] [bigint] NULL,
+	[content_type] [varchar](100) NULL,
+	[uploaded_by] [int] NULL,
+	[uploaded_at] [datetime] NULL DEFAULT getdate(),
+ PRIMARY KEY CLUSTERED ([id] ASC)
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[ai_analysis_results] ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[ai_analysis_results](
+	[id] [int] IDENTITY(1,1) NOT NULL,
+	[test_order_id] [int] NOT NULL,
+	[status] [varchar](30) NULL,
+	[detected] [bit] NULL,
+	[confidence] [decimal](5, 2) NULL,
+	[message] [nvarchar](max) NULL,
+	[input_image] [varchar](255) NULL,
+	[result_image] [varchar](255) NULL,
+	[mask_image] [varchar](255) NULL,
+	[raw_mask_image] [varchar](255) NULL,
+	[xmin] [int] NULL,
+	[ymin] [int] NULL,
+	[xmax] [int] NULL,
+	[ymax] [int] NULL,
+	[analyzed_at] [datetime] NULL DEFAULT getdate(),
+	[error_message] [nvarchar](max) NULL,
+ PRIMARY KEY CLUSTERED ([id] ASC)
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+
 /****** Object:  Table [dbo].[ultrasound_results]    Script Date: 6/14/2026 10:28:53 PM ******/
 SET ANSI_NULLS ON
 GO
@@ -611,8 +963,8 @@ CREATE TABLE [dbo].[users](
 	[auth_provider] [varchar](20) NOT NULL,
 	[username] [nvarchar](50) NULL,
 	[is_deleted] [bit] NOT NULL,
-	[created_at] [datetime2](7) NULL,
-	[updated_at] [datetime2](7) NULL,
+	[created_at] [datetime2](7) NULL DEFAULT GETDATE(),
+	[updated_at] [datetime2](7) NULL DEFAULT GETDATE(),
 PRIMARY KEY CLUSTERED
 (
 	[id] ASC
@@ -997,8 +1349,45 @@ INSERT [dbo].[users] ([id], [full_name], [email], [password_hash], [phone], [rol
 INSERT [dbo].[users] ([id], [full_name], [email], [password_hash], [phone], [role_id], [status], [verification_token], [is_verified], [google_id], [auth_provider], [username], [is_deleted], [created_at], [updated_at]) VALUES (15, N'Tran Quang Duc (K18 HL)', 0x02000000A931D1E99A38128453EF493DFE55CF5475D4CD67838E2158E11E2B71972E36C2C0B33B04A7C1D64D8844B85E18BC4AEEE7D9848E5FFEEFE40087294AF8695BDB112D63975022F68168A67FEB2971B354, NULL, 0x0200000069531C254A3D2B73E0BF72C4639CFE74B4A9AF40ECBFCC47F330D25FC3EFB6231D1CAC40C1BA95AAE326DC3AB6C1CF92, 2, N'Inactive', NULL, 1, N'114690907459202692756', N'google', N'ductqhe181164@fpt.edu.vn', 1, CAST(N'2026-06-10T11:25:51.7400000' AS DateTime2), CAST(N'2026-06-10T11:25:51.7400000' AS DateTime2))
 INSERT [dbo].[users] ([id], [full_name], [email], [password_hash], [phone], [role_id], [status], [verification_token], [is_verified], [google_id], [auth_provider], [username], [is_deleted], [created_at], [updated_at]) VALUES (16, N'Phạm Trung Hiếu', 0x02000000FB4B7D021B11380E530364C1F9A5254BC8285DD3D67C2640F1AC3F18B111CE4630F12BB43FCCD99665DBC6DCE1F99A762FFF511F11C72DB4667F69BDF282285971B80599E39B70A6BACED79230CC555D, N'$2a$12$EEMO7pEblXxRp2KnOHEp7O5wYH0lfIyAt.ie699nc.tDGTwuAtt0.', 0x0200000055673BA86D102A145E9B0898316D9EC3A0DA723D110FF2DC144C5AF1401926D78CF66D8401DB060F738A17198910A50B, 1, N'Active', NULL, 1, N'101199833005616986329', N'google', N'hieupthe182418@fpt.edu.vn', 0, CAST(N'2026-06-10T10:52:45.0566667' AS DateTime2), CAST(N'2026-06-10T10:52:45.0566667' AS DateTime2))
 INSERT [dbo].[users] ([id], [full_name], [email], [password_hash], [phone], [role_id], [status], [verification_token], [is_verified], [google_id], [auth_provider], [username], [is_deleted], [created_at], [updated_at]) VALUES (17, N'khangnd', 0x02000000E8B3690DF9C66077768B4CCF9DFA45599682BAA7E5C90B07880A6143CE4FFC37B3697712D615C6542D984B977FF74FB9F4910FF92266A413EDD334B2AFFEBDA39403E0B38132C1230277C9B47F6DE619, N'$2a$12$bpy52KJs0/rX6h/jAjwBfu1ddjQzMi0I99RuVAgJzUltV6M.FNe76', 0x02000000FED9EF57AB2FD6D5CF1F28476577CE89785F200343D11BA1983B43044FED6250B5293A6CF0F433D05A0D4B96467DC216, 3, N'Active', NULL, 1, NULL, N'local', N'nguyendangkheng@gmail.com', 0, CAST(N'2026-06-14T11:28:00.4700000' AS DateTime2), CAST(N'2026-06-14T11:28:00.4700000' AS DateTime2))
+INSERT [dbo].[users] ([id], [full_name], [email], [password_hash], [phone], [role_id], [status], [verification_token], [is_verified], [google_id], [auth_provider], [username], [is_deleted], [created_at], [updated_at]) VALUES (18, N'Nguyễn Thị Mai Hương', 0x02000000D0C1F2E3A4B5C6D7E8F9A0B1C2D3E4F5, N'$2a$12$Uk17F3P.WgUbMx7CqFF3Geh4gULlaNY3ODghLQ72vdwpBmhBTH3uS', 0x02000000A1B2C3D4E5F60718293A4B5C6D7E8F90, 2, N'Active', NULL, 1, NULL, N'local', N'doctor.huong', 0, GETDATE(), GETDATE())
+INSERT [dbo].[users] ([id], [full_name], [email], [password_hash], [phone], [role_id], [status], [verification_token], [is_verified], [google_id], [auth_provider], [username], [is_deleted], [created_at], [updated_at]) VALUES (19, N'Trần Văn Hoàng', 0x02000000D0C1F2E3A4B5C6D7E8F9A0B1C2D3E4F6, N'$2a$12$Uk17F3P.WgUbMx7CqFF3Geh4gULlaNY3ODghLQ72vdwpBmhBTH3uS', 0x02000000B2C3D4E5F60718293A4B5C6D7E8F9001, 2, N'Active', NULL, 1, NULL, N'local', N'doctor.hoang', 0, GETDATE(), GETDATE())
+INSERT [dbo].[users] ([id], [full_name], [email], [password_hash], [phone], [role_id], [status], [verification_token], [is_verified], [google_id], [auth_provider], [username], [is_deleted], [created_at], [updated_at]) VALUES (20, N'Lê Thị Thanh Tâm', 0x02000000D0C1F2E3A4B5C6D7E8F9A0B1C2D3E4F7, N'$2a$12$Uk17F3P.WgUbMx7CqFF3Geh4gULlaNY3ODghLQ72vdwpBmhBTH3uS', 0x02000000C3D4E5F60718293A4B5C6D7E8F900102, 2, N'Active', NULL, 1, NULL, N'local', N'doctor.tam', 0, GETDATE(), GETDATE())
+INSERT [dbo].[users] ([id], [full_name], [email], [password_hash], [phone], [role_id], [status], [verification_token], [is_verified], [google_id], [auth_provider], [username], [is_deleted], [created_at], [updated_at]) VALUES (21, N'Phạm Minh Tuấn', 0x02000000D0C1F2E3A4B5C6D7E8F9A0B1C2D3E4F8, N'$2a$12$Uk17F3P.WgUbMx7CqFF3Geh4gULlaNY3ODghLQ72vdwpBmhBTH3uS', 0x02000000D4E5F60718293A4B5C6D7E8F90010203, 2, N'Active', NULL, 1, NULL, N'local', N'doctor.tuan', 0, GETDATE(), GETDATE())
+INSERT [dbo].[users] ([id], [full_name], [email], [password_hash], [phone], [role_id], [status], [verification_token], [is_verified], [google_id], [auth_provider], [username], [is_deleted], [created_at], [updated_at]) VALUES (22, N'Võ Thị Kim Anh', 0x02000000E5F60718293A4B5C6D7E8F9001020304, N'$2a$12$Uk17F3P.WgUbMx7CqFF3Geh4gULlaNY3ODghLQ72vdwpBmhBTH3uS', 0x02000000E5F60718293A4B5C6D7E8F9001020304, 2, N'Active', NULL, 1, NULL, N'local', N'doctor.anhh', 0, GETDATE(), GETDATE())
 SET IDENTITY_INSERT [dbo].[users] OFF
 GO
+SET IDENTITY_INSERT [dbo].[doctors] ON
+INSERT INTO [dbo].[doctors] ([id], [user_id], [full_name], [specialization], [phone_number]) VALUES (1, 18, N'Nguyễn Thị Mai Hương', N'Sản khoa — Trưởng khoa', '0903-111-001')
+INSERT INTO [dbo].[doctors] ([id], [user_id], [full_name], [specialization], [phone_number]) VALUES (2, 19, N'Trần Văn Hoàng', N'Siêu âm thai — Chẩn đoán hình ảnh', '0903-111-002')
+INSERT INTO [dbo].[doctors] ([id], [user_id], [full_name], [specialization], [phone_number]) VALUES (3, 20, N'Lê Thị Thanh Tâm', N'Sản phụ khoa tổng quát', '0903-111-003')
+INSERT INTO [dbo].[doctors] ([id], [user_id], [full_name], [specialization], [phone_number]) VALUES (4, 21, N'Phạm Minh Tuấn', N'Hiếm muộn & Hỗ trợ sinh sản (IVF)', '0903-111-004')
+INSERT INTO [dbo].[doctors] ([id], [user_id], [full_name], [specialization], [phone_number]) VALUES (5, 22, N'Võ Thị Kim Anh', N'Khám thai tổng quát & Tư vấn dinh dưỡng', '0903-111-005')
+SET IDENTITY_INSERT [dbo].[doctors] OFF
+GO
+-- Ca trực quy ước:
+--   Ca sáng:   07:00 - 12:00  (max_slots = 4)
+--   Ca chiều:  13:00 - 17:00  (max_slots = 3)
+--   Ca tối:    17:00 - 21:00  (max_slots = 2)
+SET IDENTITY_INSERT [dbo].[doctor_schedules] ON
+INSERT INTO [dbo].[doctor_schedules] ([id], [doctor_id], [work_date], [start_time], [end_time], [max_slots], [status], [is_approved], [approved_by], [approved_at], [created_by], [created_at], [updated_at], [notes]) VALUES (1, 3, '2026-06-14', '07:00', '12:00', 4, 'APPROVED', 1, 17, DATEADD(DAY, -3, GETDATE()), 3, DATEADD(DAY, -5, GETDATE()), DATEADD(DAY, -3, GETDATE()), NULL)
+INSERT INTO [dbo].[doctor_schedules] ([id], [doctor_id], [work_date], [start_time], [end_time], [max_slots], [status], [is_approved], [approved_by], [approved_at], [created_by], [created_at], [updated_at], [notes]) VALUES (2, 5, '2026-06-14', '13:00', '17:00', 3, 'APPROVED', 1, 17, DATEADD(DAY, -4, GETDATE()), 5, DATEADD(DAY, -6, GETDATE()), DATEADD(DAY, -4, GETDATE()), NULL)
+INSERT INTO [dbo].[doctor_schedules] ([id], [doctor_id], [work_date], [start_time], [end_time], [max_slots], [status], [is_approved], [approved_by], [approved_at], [rejection_reason], [created_by], [created_at], [updated_at], [notes]) VALUES (3, 2, '2026-06-14', '17:00', '21:00', 2, 'REJECTED', 0, 17, DATEADD(DAY, -3, GETDATE()), N'Ca tối đã đủ 2 bác sĩ (BS. Hương và BS. Anh đã được duyệt trước). Vui lòng chọn ca khác.', 2, DATEADD(DAY, -4, GETDATE()), DATEADD(DAY, -3, GETDATE()), NULL)
+INSERT INTO [dbo].[doctor_schedules] ([id], [doctor_id], [work_date], [start_time], [end_time], [max_slots], [status], [is_approved], [approved_by], [approved_at], [created_by], [created_at], [updated_at], [notes]) VALUES (4, 1, '2026-06-15', '07:00', '12:00', 4, 'APPROVED', 1, 17, DATEADD(DAY, -1, GETDATE()), 1, DATEADD(DAY, -3, GETDATE()), DATEADD(DAY, -1, GETDATE()), NULL)
+INSERT INTO [dbo].[doctor_schedules] ([id], [doctor_id], [work_date], [start_time], [end_time], [max_slots], [status], [is_approved], [approved_by], [approved_at], [rejection_reason], [created_by], [created_at], [updated_at], [notes]) VALUES (5, 3, '2026-06-15', '07:00', '12:00', 4, 'REJECTED', 0, 17, GETDATE(), N'Bác sĩ Tâm đã có lịch họp chuyên môn vào sáng thứ Hai. Vui lòng đăng ký ca chiều hoặc ngày khác.', 3, DATEADD(DAY, -3, GETDATE()), GETDATE(), NULL)
+INSERT INTO [dbo].[doctor_schedules] ([id], [doctor_id], [work_date], [start_time], [end_time], [max_slots], [status], [is_approved], [approved_by], [approved_at], [created_by], [created_at], [updated_at], [notes]) VALUES (6, 2, '2026-06-15', '13:00', '17:00', 3, 'APPROVED', 1, 17, DATEADD(DAY, -1, GETDATE()), 2, DATEADD(DAY, -2, GETDATE()), DATEADD(DAY, -1, GETDATE()), N'Đã xác nhận lịch chiều thứ Hai')
+INSERT INTO [dbo].[doctor_schedules] ([id], [doctor_id], [work_date], [start_time], [end_time], [max_slots], [status], [is_approved], [approved_by], [approved_at], [rejection_reason], [created_by], [created_at], [updated_at], [notes]) VALUES (7, 4, '2026-06-15', '13:00', '17:00', 3, 'REJECTED', 0, 17, GETDATE(), N'Phòng khám chiều thứ Hai đang bảo trì máy siêu âm, không thể tiếp nhận bệnh nhân siêu âm. Tạm hoãn lịch bác sĩ Tuấn.', 4, DATEADD(DAY, -2, GETDATE()), GETDATE(), NULL)
+INSERT INTO [dbo].[doctor_schedules] ([id], [doctor_id], [work_date], [start_time], [end_time], [max_slots], [status], [is_approved], [created_by], [created_at], [updated_at], [notes]) VALUES (8, 1, '2026-06-16', '07:00', '12:00', 4, 'PENDING', 0, 1, GETDATE(), GETDATE(), N'Đăng ký trực sáng thứ Ba tuần này')
+INSERT INTO [dbo].[doctor_schedules] ([id], [doctor_id], [work_date], [start_time], [end_time], [max_slots], [status], [is_approved], [created_by], [created_at], [updated_at], [notes]) VALUES (9, 2, '2026-06-16', '07:00', '12:00', 4, 'PENDING', 0, 2, GETDATE(), GETDATE(), NULL)
+INSERT INTO [dbo].[doctor_schedules] ([id], [doctor_id], [work_date], [start_time], [end_time], [max_slots], [status], [is_approved], [approved_by], [approved_at], [created_by], [created_at], [updated_at], [notes]) VALUES (10, 4, '2026-06-16', '07:00', '12:00', 4, 'APPROVED', 1, 17, DATEADD(DAY, -2, GETDATE()), 4, DATEADD(DAY, -7, GETDATE()), DATEADD(DAY, -2, GETDATE()), N'Duyệt từ tuần trước, lịch cố định thứ Ba hàng tuần')
+INSERT INTO [dbo].[doctor_schedules] ([id], [doctor_id], [work_date], [start_time], [end_time], [max_slots], [status], [is_approved], [created_by], [created_at], [updated_at], [notes]) VALUES (11, 3, '2026-06-16', '13:00', '17:00', 3, 'PENDING', 0, 3, GETDATE(), GETDATE(), N'Có thể về sớm 30 phút nếu hết bệnh nhân')
+INSERT INTO [dbo].[doctor_schedules] ([id], [doctor_id], [work_date], [start_time], [end_time], [max_slots], [status], [is_approved], [created_by], [created_at], [updated_at], [notes]) VALUES (12, 4, '2026-06-17', '07:00', '12:00', 4, 'PENDING', 0, 4, GETDATE(), GETDATE(), NULL)
+INSERT INTO [dbo].[doctor_schedules] ([id], [doctor_id], [work_date], [start_time], [end_time], [max_slots], [status], [is_approved], [created_by], [created_at], [updated_at], [notes]) VALUES (13, 5, '2026-06-17', '17:00', '21:00', 2, 'PENDING', 0, 5, GETDATE(), GETDATE(), N'Đăng ký trực tối, phòng khám có ca đặc biệt')
+INSERT INTO [dbo].[doctor_schedules] ([id], [doctor_id], [work_date], [start_time], [end_time], [max_slots], [status], [is_approved], [created_by], [created_at], [updated_at], [notes]) VALUES (14, 2, '2026-06-18', '13:00', '17:00', 3, 'PENDING', 0, 2, GETDATE(), GETDATE(), NULL)
+INSERT INTO [dbo].[doctor_schedules] ([id], [doctor_id], [work_date], [start_time], [end_time], [max_slots], [status], [is_approved], [created_by], [created_at], [updated_at], [notes]) VALUES (15, 1, '2026-06-19', '07:00', '12:00', 4, 'PENDING', 0, 1, GETDATE(), GETDATE(), N'Tuần sau đăng ký lịch đều đặn')
+SET IDENTITY_INSERT [dbo].[doctor_schedules] OFF
+GO
+
+
 /****** Object:  Index [UQ__doctors__B9BE370E1435ABC2]    Script Date: 6/14/2026 10:28:53 PM ******/
 ALTER TABLE [dbo].[doctors] ADD UNIQUE NONCLUSTERED 
 (
@@ -1400,6 +1789,211 @@ REFERENCES [dbo].[roles] ([id])
 GO
 ALTER TABLE [dbo].[users] CHECK CONSTRAINT [fk_users_role]
 GO
+
+-- ============================================================
+-- STORED PROCEDURE: Đặt slot nguyên tử (atomic booking)
+-- ============================================================
+IF EXISTS (SELECT 1 FROM sys.objects WHERE object_id = OBJECT_ID('usp_BookTimeSlot') AND type = 'P')
+    DROP PROCEDURE [dbo].[usp_BookTimeSlot];
+GO
+CREATE PROCEDURE [dbo].[usp_BookTimeSlot]
+    @slot_id    INT,
+    @patient_id INT,
+    @result_code INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        DECLARE @current_status NVARCHAR(30);
+        SELECT @current_status = [status]
+        FROM [dbo].[time_slots] WITH (UPDLOCK, ROWLOCK, HOLDLOCK)
+        WHERE [id] = @slot_id;
+        IF @current_status IS NULL
+        BEGIN
+            SET @result_code = 1;
+            ROLLBACK TRANSACTION;
+            RETURN;
+        END
+        IF @current_status != 'AVAILABLE'
+        BEGIN
+            SET @result_code = 2;
+            ROLLBACK TRANSACTION;
+            RETURN;
+        END
+        UPDATE [dbo].[time_slots]
+        SET [status]    = 'BOOKED',
+            [booked_by] = @patient_id,
+            [booked_at] = GETDATE(),
+            [updated_at] = GETDATE()
+        WHERE [id] = @slot_id
+          AND [status] = 'AVAILABLE';
+        COMMIT TRANSACTION;
+        SET @result_code = 0;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        SET @result_code = 3;
+    END CATCH
+END
+GO
+
+-- ============================================================
+-- STORED PROCEDURE: Hủy slot (cancellation) — chỉ slot BOOKED
+-- ============================================================
+IF EXISTS (SELECT 1 FROM sys.objects WHERE object_id = OBJECT_ID('usp_CancelTimeSlot') AND type = 'P')
+    DROP PROCEDURE [dbo].[usp_CancelTimeSlot];
+GO
+CREATE PROCEDURE [dbo].[usp_CancelTimeSlot]
+    @slot_id     INT,
+    @cancelled_by INT,
+    @reason      NVARCHAR(500),
+    @result_code INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        DECLARE @current_status NVARCHAR(30);
+        SELECT @current_status = [status]
+        FROM [dbo].[time_slots] WITH (UPDLOCK, ROWLOCK, HOLDLOCK)
+        WHERE [id] = @slot_id;
+        IF @current_status IS NULL
+        BEGIN
+            SET @result_code = 1;
+            ROLLBACK TRANSACTION;
+            RETURN;
+        END
+        IF @current_status != 'BOOKED'
+        BEGIN
+            SET @result_code = 2;
+            ROLLBACK TRANSACTION;
+            RETURN;
+        END
+        UPDATE [dbo].[time_slots]
+        SET [status]     = 'CANCELLED',
+            [notes]      = ISNULL(@reason, N'Bệnh nhân hủy lịch'),
+            [booked_by]  = NULL,
+            [booked_at]  = NULL,
+            [updated_at] = GETDATE()
+        WHERE [id] = @slot_id
+          AND [status] = 'BOOKED';
+        COMMIT TRANSACTION;
+        SET @result_code = 0;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        SET @result_code = 3;
+    END CATCH
+END
+GO
+
+-- ============================================================
+-- STORED PROCEDURE: Duyệt lịch trực với optimistic locking
+-- ============================================================
+IF EXISTS (SELECT 1 FROM sys.objects WHERE object_id = OBJECT_ID('usp_ApproveSchedule') AND type = 'P')
+    DROP PROCEDURE [dbo].[usp_ApproveSchedule];
+GO
+CREATE PROCEDURE [dbo].[usp_ApproveSchedule]
+    @schedule_id INT,
+    @approved_by INT,
+    @result_code INT OUTPUT,
+    @slot_count  INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        UPDATE [dbo].[doctor_schedules]
+        SET [status]      = 'APPROVED',
+            [is_approved] = 1,
+            [approved_by] = @approved_by,
+            [approved_at] = GETDATE(),
+            [updated_at]  = GETDATE()
+        WHERE [id] = @schedule_id
+          AND [status] = 'PENDING';
+        IF @@ROWCOUNT = 0
+        BEGIN
+            IF EXISTS (SELECT 1 FROM [dbo].[doctor_schedules] WHERE [id] = @schedule_id)
+                SET @result_code = 2;
+            ELSE
+                SET @result_code = 1;
+            SET @slot_count = 0;
+            ROLLBACK TRANSACTION;
+            RETURN;
+        END
+        DECLARE @doctor_id INT, @work_date DATE, @start_time TIME(7), @end_time TIME(7);
+        SELECT @doctor_id  = [doctor_id], @work_date  = [work_date], @start_time = [start_time], @end_time   = [end_time]
+        FROM [dbo].[doctor_schedules]
+        WHERE [id] = @schedule_id;
+        DECLARE @total_minutes INT, @slot_count_local INT, @i INT;
+        DECLARE @current_minutes INT, @slot_start TIME(7), @slot_end TIME(7);
+        SET @total_minutes = DATEDIFF(MINUTE, @start_time, @end_time);
+        SET @slot_count_local = @total_minutes / 20;
+        SET @i = 0;
+        WHILE @i < @slot_count_local
+        BEGIN
+            SET @slot_start = DATEADD(MINUTE, @i * 20, @start_time);
+            SET @slot_end   = DATEADD(MINUTE, (@i + 1) * 20, @start_time);
+            INSERT INTO [dbo].[time_slots] ([schedule_id], [doctor_id], [work_date], [start_time], [end_time], [status], [created_at], [updated_at])
+            VALUES (@schedule_id, @doctor_id, @work_date, @slot_start, @slot_end, 'AVAILABLE', GETDATE(), GETDATE());
+            SET @i = @i + 1;
+        END
+        COMMIT TRANSACTION;
+        SET @result_code = 0;
+        SET @slot_count  = @slot_count_local;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        SET @result_code = 3;
+        SET @slot_count  = 0;
+    END CATCH
+END
+GO
+
+
+-- Integrated Migration Foreign Keys
+ALTER TABLE [dbo].[invoices] WITH CHECK ADD CONSTRAINT [FK_invoices_confirmed_by] FOREIGN KEY([confirmed_by]) REFERENCES [dbo].[users] ([id])
+GO
+ALTER TABLE [dbo].[invoices] CHECK CONSTRAINT [FK_invoices_confirmed_by]
+GO
+ALTER TABLE [dbo].[ultrasound_images] WITH CHECK ADD FOREIGN KEY([test_order_id]) REFERENCES [dbo].[test_orders] ([id]) ON DELETE CASCADE
+GO
+ALTER TABLE [dbo].[ultrasound_images] WITH CHECK ADD FOREIGN KEY([uploaded_by]) REFERENCES [dbo].[users] ([id])
+GO
+ALTER TABLE [dbo].[ai_analysis_results] WITH CHECK ADD FOREIGN KEY([test_order_id]) REFERENCES [dbo].[test_orders] ([id]) ON DELETE CASCADE
+GO
+ALTER TABLE [dbo].[time_slots] WITH CHECK ADD CONSTRAINT [FK_time_slots_schedule] FOREIGN KEY([schedule_id]) REFERENCES [dbo].[doctor_schedules] ([id])
+GO
+ALTER TABLE [dbo].[time_slots] CHECK CONSTRAINT [FK_time_slots_schedule]
+GO
+ALTER TABLE [dbo].[time_slots] WITH CHECK ADD CONSTRAINT [FK_time_slots_doctor] FOREIGN KEY([doctor_id]) REFERENCES [dbo].[doctors] ([id])
+GO
+ALTER TABLE [dbo].[time_slots] CHECK CONSTRAINT [FK_time_slots_doctor]
+GO
+ALTER TABLE [dbo].[time_slots] WITH CHECK ADD CONSTRAINT [FK_time_slots_booked_by] FOREIGN KEY([booked_by]) REFERENCES [dbo].[users] ([id])
+GO
+ALTER TABLE [dbo].[time_slots] CHECK CONSTRAINT [FK_time_slots_booked_by]
+GO
+ALTER TABLE [dbo].[doctor_schedules] WITH CHECK ADD CONSTRAINT [FK_doctor_schedules_approved_by] FOREIGN KEY([approved_by]) REFERENCES [dbo].[users] ([id])
+GO
+ALTER TABLE [dbo].[doctor_schedules] CHECK CONSTRAINT [FK_doctor_schedules_approved_by]
+GO
+ALTER TABLE [dbo].[doctor_schedules] WITH CHECK ADD CONSTRAINT [FK_doctor_schedules_created_by] FOREIGN KEY([created_by]) REFERENCES [dbo].[users] ([id])
+GO
+ALTER TABLE [dbo].[doctor_schedules] CHECK CONSTRAINT [FK_doctor_schedules_created_by]
+GO
+ALTER TABLE [dbo].[doctor_schedules] WITH CHECK ADD CONSTRAINT [FK_doctor_schedules_cancelled_by] FOREIGN KEY([cancelled_by]) REFERENCES [dbo].[users] ([id])
+GO
+ALTER TABLE [dbo].[doctor_schedules] CHECK CONSTRAINT [FK_doctor_schedules_cancelled_by]
+GO
+
 USE [master]
 GO
 ALTER DATABASE [ObstetricsClinicDB] SET  READ_WRITE 
