@@ -125,7 +125,7 @@ public class AuthorizationFilter implements Filter {
         // ═══════════════════════════════════════════════════════════
         if (user.getStatus() == null || !"Active".equalsIgnoreCase(user.getStatus())) {
             session.invalidate();
-            logAccess(httpReq, user, path, "DENIED", "ACCOUNT_NOT_ACTIVE");
+            logAccess(httpReq, user, path, "TỪ CHỐI", "TÀI KHOẢN KHÔNG HOẠT ĐỘNG");
             httpRes.sendRedirect(ctx + "/login");
             return;
         }
@@ -143,7 +143,7 @@ public class AuthorizationFilter implements Filter {
                 HttpSession newSession = httpReq.getSession(true);
                 newSession.setAttribute(AuthorizationConfig.SESSION_ERROR_MESSAGE,
                     "Quyền truy cập của bạn đã được cập nhật. Vui lòng đăng nhập lại.");
-                logAccess(httpReq, user, path, "DENIED", "SESSION_SYNC_FAILED");
+                logAccess(httpReq, user, path, "TỪ CHỐI", "ĐỒNG BỘ PHIÊN THẤT BẠI");
                 httpRes.sendRedirect(ctx + "/login");
                 return;
             }
@@ -159,7 +159,7 @@ public class AuthorizationFilter implements Filter {
         // Mỗi role CHỈ được vào khu vực của mình
         // ═══════════════════════════════════════════════════════════
         if (!AuthorizationConfig.isInZone(roleId, path)) {
-            logAccess(httpReq, user, path, "DENIED", "OUT_OF_ZONE");
+            logAccess(httpReq, user, path, "TỪ CHỐI", "NGOÀI KHU VỰC CHO PHÉP");
             send403(httpReq, httpRes, path,
                 "Bạn không có quyền truy cập khu vực này.",
                 "Role \"" + AuthorizationConfig.getRoleDisplayName(roleId)
@@ -175,7 +175,7 @@ public class AuthorizationFilter implements Filter {
 
         if (requiredPermission == null) {
             // Path KHÔNG có trong whitelist → DEFAULT DENY
-            logAccess(httpReq, user, path, "DENIED", "NOT_IN_WHITELIST");
+            logAccess(httpReq, user, path, "TỪ CHỐI", "KHÔNG CÓ TRONG DANH SÁCH CHO PHÉP");
             send403(httpReq, httpRes, path,
                 "Trang này không tồn tại hoặc không được phép truy cập.",
                 "Đường dẫn \"" + path + "\" không có trong danh sách được phép.");
@@ -194,7 +194,7 @@ public class AuthorizationFilter implements Filter {
 
         if (!hasPermission) {
             // Không có permission → TỪ CHỐI
-            logAccess(httpReq, user, path, "DENIED", "MISSING_PERMISSION:" + requiredPermission);
+            logAccess(httpReq, user, path, "TỪ CHỐI", "THIẾU QUYỀN:" + requiredPermission);
             send403(httpReq, httpRes, path,
                 "Bạn không có quyền thực hiện thao tác này.",
                 "Yêu cầu quyền: <code>" + requiredPermission + "</code>.");
@@ -205,7 +205,7 @@ public class AuthorizationFilter implements Filter {
         // YÊU CẦU 6: Audit Log — truy cập THÀNH CÔNG vào critical path
         // ═══════════════════════════════════════════════════════════
         if (AuthorizationConfig.isCriticalPath(path)) {
-            logAccess(httpReq, user, path, "SUCCESS", null);
+            logAccess(httpReq, user, path, "THÀNH CÔNG", null);
         }
 
         // ── PASS — user được phép truy cập ──
@@ -424,24 +424,25 @@ public class AuthorizationFilter implements Filter {
     private void logAccess(HttpServletRequest request, User user, String path,
                            String result, String reason) {
         try {
-            String action = "DENIED".equals(result)
-                ? "ACCESS_DENIED"
-                : "ACCESS_GRANTED";
+            // Action label ngắn gọn để phân loại
+            String action = "TỪ CHỐI".equals(result)
+                ? "TRUY CẬP BỊ TỪ CHỐI"
+                : "TRUY CẬP THÀNH CÔNG";
 
-            // Format: [RESULT] user (role) → path | reason
+            // Detail chứa thông tin đầy đủ: [KẾT QUẢ] user (role) → path | Lý do
             StringBuilder detail = new StringBuilder();
             detail.append("[").append(result).append("] ");
             detail.append(user.getEmail());
             detail.append(" (").append(AuthorizationConfig.getRoleDisplayName(user.getRoleId())).append(")");
             detail.append(" → ").append(path);
             if (reason != null && !reason.isEmpty()) {
-                detail.append(" | Reason: ").append(reason);
+                detail.append(" | Lý do: ").append(reason);
             }
 
-            AuditUtil.log(request, detail.toString(), "access_control", null, null);
+            AuditUtil.log(request, action, "access_control", null, detail.toString());
         } catch (Exception e) {
             // Audit log failure không được làm hỏng request chính
-            System.err.println("[AUTHZ-FILTER] Failed to write audit log: " + e.getMessage());
+            System.err.println("[AUTHZ-FILTER] Không thể ghi audit log: " + e.getMessage());
         }
     }
 

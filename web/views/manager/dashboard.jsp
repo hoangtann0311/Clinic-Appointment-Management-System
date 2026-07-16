@@ -856,7 +856,10 @@
                 <div class="card-header d-flex align-items-center justify-content-between">
                     <h5>
                         <i class="bi bi-trophy-fill"></i>
-                        Hiệu Suất Bác Sĩ
+                        <c:choose>
+                            <c:when test="${isCustomRange}">Hiệu Suất Bác Sĩ (${dateRangeLabel})</c:when>
+                            <c:otherwise>Hiệu Suất Bác Sĩ</c:otherwise>
+                        </c:choose>
                     </h5>
                 </div>
                 <div class="card-body p-0">
@@ -987,7 +990,12 @@
         <div class="col-xl-4">
             <div class="admin-card h-100">
                 <div class="card-header">
-                    <h5><i class="bi bi-soundwave"></i> Thống Kê Dịch Vụ Siêu Âm</h5>
+                    <h5><i class="bi bi-soundwave"></i>
+                        <c:choose>
+                            <c:when test="${isCustomRange}">Thống Kê Dịch Vụ Siêu Âm (${dateRangeLabel})</c:when>
+                            <c:otherwise>Thống Kê Dịch Vụ Siêu Âm</c:otherwise>
+                        </c:choose>
+                    </h5>
                 </div>
                 <div class="card-body p-0">
                     <c:choose>
@@ -995,7 +1003,7 @@
                             <div class="admin-table-wrapper">
                                 <table class="admin-table compact">
                                     <thead>
-                                        <tr><th>Dịch Vụ</th><th class="text-center">Tổng Ca</th><th class="text-center"><c:choose><c:when test="${isCustomRange}">Khoảng</c:when><c:otherwise>Hôm Nay</c:otherwise></c:choose></th><th class="text-end">Giá</th></tr>
+                                        <tr><th>Dịch Vụ</th><th class="text-center">Tổng Ca</th><th class="text-center"><c:choose><c:when test="${isCustomRange}">${dateToFormatted}</c:when><c:otherwise>Hôm Nay</c:otherwise></c:choose></th><th class="text-end">Giá</th></tr>
                                     </thead>
                                     <tbody>
                                         <c:forEach var="us" items="${ultrasoundStats}">

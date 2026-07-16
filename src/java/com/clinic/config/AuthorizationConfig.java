@@ -130,6 +130,10 @@ public final class AuthorizationConfig {
         Map.entry("/sonographer/upload",    "ultrasound.upload"),
         Map.entry("/sonographer/upload/",   "ultrasound.upload"),
 
+        // ──────────── DOCTOR ZONE (tiếp) ────────────
+        Map.entry("/doctor/upload",         "ultrasound.upload"),
+        Map.entry("/doctor/upload/",        "ultrasound.upload"),
+
         // ──────────── PATIENT ZONE (/home, /patient/*) ────────────
         Map.entry("/home",                   "report.view_dashboard"),
         Map.entry("/patient/appointments",   "appointment.view"),
@@ -257,13 +261,13 @@ public final class AuthorizationConfig {
      */
     public static String getRoleDisplayName(int roleId) {
         return switch (roleId) {
-            case ROLE_ADMIN       -> "Admin";
-            case ROLE_DOCTOR      -> "Doctor";
-            case ROLE_MANAGER     -> "Manager";
-            case ROLE_STAFF       -> "Staff";
-            case ROLE_PATIENT     -> "Patient";
-            case ROLE_SONOGRAPHER -> "Sonographer";
-            default               -> "Unknown (#" + roleId + ")";
+            case ROLE_ADMIN       -> "Quản trị viên";
+            case ROLE_DOCTOR      -> "Bác sĩ";
+            case ROLE_MANAGER     -> "Quản lý";
+            case ROLE_STAFF       -> "Nhân viên";
+            case ROLE_PATIENT     -> "Bệnh nhân";
+            case ROLE_SONOGRAPHER -> "Kỹ thuật viên siêu âm";
+            default               -> "Không rõ (#" + roleId + ")";
         };
     }
 }

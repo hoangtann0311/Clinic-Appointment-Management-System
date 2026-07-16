@@ -188,7 +188,7 @@ public class AdminAuditLogServlet extends HttpServlet {
         out.print('﻿');
 
         // Header
-        out.println("ID,Thời Gian,Người Dùng,Vai Trò,Hành Động,Module,Loại,Địa Chỉ IP");
+        out.println("ID,Thời Gian,Người Dùng,Vai Trò,Hành Động,Phân Hệ,Loại,Địa Chỉ IP");
 
         DateTimeFormatter dtFmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
 
@@ -200,10 +200,10 @@ public class AdminAuditLogServlet extends HttpServlet {
             out.println(log.getId() + ","
                 + "\"" + time + "\","
                 + "\"" + csvEscape(log.getUserName()) + "\","
-                + "\"" + csvEscape(log.getRoleName()) + "\","
+                + "\"" + csvEscape(log.getRoleNameDisplay()) + "\","
                 + "\"" + csvEscape(log.getAction()) + "\","
                 + "\"" + csvEscape(log.getTableName()) + "\","
-                + log.getActionType() + ","
+                + log.getActionTypeDisplay() + ","
                 + "\"" + ip + "\"");
         }
 
@@ -253,14 +253,15 @@ public class AdminAuditLogServlet extends HttpServlet {
         json.append("{");
         json.append("\"id\":").append(log.getId()).append(",");
         json.append("\"userName\":\"").append(escapeJson(log.getUserName())).append("\",");
-        json.append("\"roleName\":\"").append(escapeJson(log.getRoleName())).append("\",");
+        json.append("\"roleName\":\"").append(escapeJson(log.getRoleNameDisplay())).append("\",");
         json.append("\"action\":\"").append(escapeJson(log.getAction())).append("\",");
         json.append("\"tableName\":\"").append(escapeJson(log.getTableName())).append("\",");
         json.append("\"oldValue\":\"").append(escapeJson(log.getOldValue())).append("\",");
         json.append("\"newValue\":\"").append(escapeJson(log.getNewValue())).append("\",");
         json.append("\"ipAddress\":\"").append(escapeJson(log.getIpAddress())).append("\",");
         json.append("\"createdAtDisplay\":\"").append(createdAtStr).append("\",");
-        json.append("\"actionType\":\"").append(escapeJson(log.getActionType())).append("\"");
+        json.append("\"actionType\":\"").append(escapeJson(log.getActionType())).append("\",");
+        json.append("\"actionTypeDisplay\":\"").append(escapeJson(log.getActionTypeDisplay())).append("\"");
         json.append("}");
 
         response.getWriter().write(json.toString());

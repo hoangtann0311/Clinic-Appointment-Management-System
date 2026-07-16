@@ -34,7 +34,27 @@ public class AuditLogService {
         TABLE_NAME_LABELS.put("invoices", "Hoá Đơn");
         TABLE_NAME_LABELS.put("notifications", "Thông Báo");
         TABLE_NAME_LABELS.put("reviews", "Đánh Giá");
+        TABLE_NAME_LABELS.put("ultrasound_images", "Ảnh Siêu Âm");
+        TABLE_NAME_LABELS.put("ultrasound_results", "Kết Quả Siêu Âm");
         TABLE_NAME_LABELS.put("system_settings", "Cài Đặt");
+        TABLE_NAME_LABELS.put("access_control", "Kiểm Soát Truy Cập");
+        TABLE_NAME_LABELS.put("security", "Bảo Mật");
+        TABLE_NAME_LABELS.put("reports", "Báo Cáo");
+        TABLE_NAME_LABELS.put("audit_logs", "Nhật Ký Hệ Thống");
+        TABLE_NAME_LABELS.put("test_orders", "Phiếu Xét Nghiệm");
+        TABLE_NAME_LABELS.put("lab_results", "Kết Quả Xét Nghiệm");
+        TABLE_NAME_LABELS.put("ai_analysis_results", "Kết Quả AI");
+        TABLE_NAME_LABELS.put("pregnancies", "Thai Kỳ");
+        TABLE_NAME_LABELS.put("sonographers", "Kỹ Thuật Viên Siêu Âm");
+        TABLE_NAME_LABELS.put("prescription_items", "Chi Tiết Đơn Thuốc");
+        TABLE_NAME_LABELS.put("invoice_items", "Chi Tiết Hoá Đơn");
+        TABLE_NAME_LABELS.put("medicine_categories", "Danh Mục Thuốc");
+        TABLE_NAME_LABELS.put("service_categories", "Danh Mục Dịch Vụ");
+        TABLE_NAME_LABELS.put("price_history", "Lịch Sử Giá Dịch Vụ");
+        TABLE_NAME_LABELS.put("medicine_price_history", "Lịch Sử Giá Thuốc");
+        TABLE_NAME_LABELS.put("role_permissions", "Phân Quyền Vai Trò");
+        TABLE_NAME_LABELS.put("permissions", "Quyền Hệ Thống");
+        TABLE_NAME_LABELS.put("password_reset_tokens", "Token Đặt Lại Mật Khẩu");
     }
 
     public AuditLogService() {

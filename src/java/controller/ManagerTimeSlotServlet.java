@@ -233,7 +233,7 @@ public class ManagerTimeSlotServlet extends HttpServlet {
         if (count > 0) {
             User actor = getCurrentUser(req);
             AuditUtil.log(actor != null ? actor.getId() : null,
-                    "Sinh " + count + " slot cho lịch trực #" + scheduleId
+                    "Tạo " + count + " suất khám cho lịch trực #" + scheduleId
                     + " (" + schedule.getDoctorName() + " - " + schedule.getWorkDate() + ")",
                     "time_slots", null, "count=" + count, null);
             resp.sendRedirect(redirectUrl + "&success=generated&count=" + count);
@@ -269,7 +269,7 @@ public class ManagerTimeSlotServlet extends HttpServlet {
         if (deleted) {
             User actor = getCurrentUser(req);
             AuditUtil.log(actor != null ? actor.getId() : null,
-                    "Xóa toàn bộ slot của lịch trực #" + scheduleId,
+                    "Xoá toàn bộ suất khám của lịch trực #" + scheduleId,
                     "time_slots", null, null, null);
             resp.sendRedirect(redirectUrl + "&success=deleted");
         } else if (errors.containsKey("hasBookedSlots")) {

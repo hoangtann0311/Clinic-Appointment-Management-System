@@ -393,7 +393,7 @@
 
             <%-- Module (table_name) --%>
             <div class="col-md-1 col-sm-6">
-                <label class="form-label"><i class="bi bi-grid"></i> Module</label>
+                <label class="form-label"><i class="bi bi-grid"></i> Phân hệ</label>
                 <select name="tableName" class="form-select">
                     <option value="">Tất cả</option>
                     <c:forEach var="opt" items="${tableOptions}">
@@ -475,7 +475,7 @@
                                 <th style="width:60px;">#</th>
                                 <th style="width:160px;">Thời Gian</th>
                                 <th style="width:150px;">Người Dùng</th>
-                                <th style="width:110px;">Module</th>
+                                <th style="width:110px;">Phân hệ</th>
                                 <th style="width:90px;">Loại</th>
                                 <th>Hành Động</th>
                             </tr>
@@ -506,11 +506,11 @@
                                     <%-- Người dùng --%>
                                     <td data-label="Người Dùng">
                                         <div class="audit-user-name">${log.userName}</div>
-                                        <div class="audit-user-role">${log.roleName}</div>
+                                        <div class="audit-user-role">${log.roleNameDisplay}</div>
                                     </td>
 
                                     <%-- Module --%>
-                                    <td data-label="Module">
+                                    <td data-label="Phân hệ">
                                         <c:set var="tbl" value="${log.tableName}"/>
                                         <span class="badge-module">
                                             <c:choose>
@@ -529,6 +529,25 @@
                                                 <c:when test="${tbl eq 'notifications'}"><i class="bi bi-bell"></i> Thông báo</c:when>
                                                 <c:when test="${tbl eq 'reviews'}"><i class="bi bi-star"></i> Đánh giá</c:when>
                                                 <c:when test="${tbl eq 'system_settings'}"><i class="bi bi-gear"></i> Cài đặt</c:when>
+                                                <c:when test="${tbl eq 'ultrasound_images'}"><i class="bi bi-camera"></i> Ảnh siêu âm</c:when>
+                                                <c:when test="${tbl eq 'ultrasound_results'}"><i class="bi bi-file-image"></i> Kết quả siêu âm</c:when>
+                                                <c:when test="${tbl eq 'access_control'}"><i class="bi bi-shield-lock-fill"></i> Kiểm soát truy cập</c:when>
+                                                <c:when test="${tbl eq 'security'}"><i class="bi bi-shield-exclamation"></i> Bảo mật</c:when>
+                                                <c:when test="${tbl eq 'audit_logs'}"><i class="bi bi-journal-text"></i> Nhật ký</c:when>
+                                                <c:when test="${tbl eq 'test_orders'}"><i class="bi bi-clipboard-check"></i> Phiếu xét nghiệm</c:when>
+                                                <c:when test="${tbl eq 'lab_results'}"><i class="bi bi-file-earmark-bar-graph"></i> Kết quả xét nghiệm</c:when>
+                                                <c:when test="${tbl eq 'ai_analysis_results'}"><i class="bi bi-cpu"></i> Kết quả AI</c:when>
+                                                <c:when test="${tbl eq 'pregnancies'}"><i class="bi bi-heart-pulse"></i> Thai kỳ</c:when>
+                                                <c:when test="${tbl eq 'sonographers'}"><i class="bi bi-person-workspace"></i> KTV siêu âm</c:when>
+                                                <c:when test="${tbl eq 'prescription_items'}"><i class="bi bi-prescription2"></i> Chi tiết đơn thuốc</c:when>
+                                                <c:when test="${tbl eq 'invoice_items'}"><i class="bi bi-receipt-cutoff"></i> Chi tiết hoá đơn</c:when>
+                                                <c:when test="${tbl eq 'medicine_categories'}"><i class="bi bi-tags"></i> Danh mục thuốc</c:when>
+                                                <c:when test="${tbl eq 'service_categories'}"><i class="bi bi-tags-fill"></i> Danh mục dịch vụ</c:when>
+                                                <c:when test="${tbl eq 'price_history'}"><i class="bi bi-graph-up"></i> Lịch sử giá DV</c:when>
+                                                <c:when test="${tbl eq 'medicine_price_history'}"><i class="bi bi-graph-up-arrow"></i> Lịch sử giá thuốc</c:when>
+                                                <c:when test="${tbl eq 'role_permissions'}"><i class="bi bi-key"></i> Phân quyền</c:when>
+                                                <c:when test="${tbl eq 'permissions'}"><i class="bi bi-key-fill"></i> Quyền hệ thống</c:when>
+                                                <c:when test="${tbl eq 'password_reset_tokens'}"><i class="bi bi-lock"></i> Token đặt lại MK</c:when>
                                                 <c:otherwise>${tbl}</c:otherwise>
                                             </c:choose>
                                         </span>
@@ -537,7 +556,7 @@
                                     <%-- Loại hành động --%>
                                     <td data-label="Loại">
                                         <c:set var="atype" value="${log.actionType}"/>
-                                        <span class="badge-action badge-${fn:toLowerCase(atype)}">${atype}</span>
+                                        <span class="badge-action badge-${fn:toLowerCase(atype)}">${log.actionTypeDisplay}</span>
                                     </td>
 
                                     <%-- Hành động --%>
@@ -760,7 +779,7 @@
                     <div class="detail-value">` + ip + `</div>
                 </div>
                 <div class="col-sm-6">
-                    <div class="detail-label"><i class="bi bi-grid-fill me-1"></i> Module / Bảng</div>
+                    <div class="detail-label"><i class="bi bi-grid-fill me-1"></i> Phân hệ / Bảng</div>
                     <div class="detail-value">
                         <span class="badge-module">` + escapeHtml(log.tableName || '—') + `</span>
                     </div>
