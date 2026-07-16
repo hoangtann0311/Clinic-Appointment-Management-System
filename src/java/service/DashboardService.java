@@ -343,6 +343,40 @@ public class DashboardService {
     }
 
     // ──────────────────────────────────────────────
+    // KPI: CA HỦY (Cancelled Appointments)
+    // ──────────────────────────────────────────────
+
+    /** Số ca hủy hôm nay. */
+    public int getCancelledToday() {
+        try {
+            return dashboardDAO.countCancelledToday();
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getCancelledToday - " + e.getMessage());
+            return 0;
+        }
+    }
+
+    /** Số ca hủy toàn bộ thời gian. */
+    public int getCancelledAll() {
+        try {
+            return dashboardDAO.countCancelledAll();
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getCancelledAll - " + e.getMessage());
+            return 0;
+        }
+    }
+
+    /** Số ca hủy trong khoảng ngày. */
+    public int getCancelled(LocalDate from, LocalDate to) {
+        try {
+            return dashboardDAO.countCancelled(from, to);
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getCancelled(range) - " + e.getMessage());
+            return 0;
+        }
+    }
+
+    // ──────────────────────────────────────────────
     // KPI: CA THÀNH CÔNG (Success = completed + paid)
     // ──────────────────────────────────────────────
 

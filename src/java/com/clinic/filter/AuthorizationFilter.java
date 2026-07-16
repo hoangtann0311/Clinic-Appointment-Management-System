@@ -100,7 +100,7 @@ public class AuthorizationFilter implements Filter {
         HttpServletRequest httpReq = (HttpServletRequest) req;
         HttpServletResponse httpRes = (HttpServletResponse) res;
         String ctx = httpReq.getContextPath();
-        String path = httpReq.getRequestURI().substring(ctx.length());
+        String path = normalizePath(httpReq.getRequestURI().substring(ctx.length()));
 
         // ── YÊU CẦU 1 & 2: Public paths → pass (đã được AuthFilter xử lý trước) ──
         if (AuthorizationConfig.isPublicPath(path)) {
@@ -333,6 +333,43 @@ public class AuthorizationFilter implements Filter {
             }
             DatabaseConfig.closeConnection(conn);
         }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // PATH NORMALIZATION — loại bỏ session ID và path parameters
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Chuẩn hóa path để loại bỏ các path parameters (như ;jsessionid=...)
+     * mà Tomcat có thể chèn vào URL khi dùng URL rewriting.
+     *
+     * <p>Ví dụ: {@code /admin/dashboard;jsessionid=ABC123} → {@code /admin/dashboard}
+     *
+     * <p><b>Lưu ý:</b> {@link HttpServletRequest#getRequestURI()} KHÔNG bao gồm
+     * query string, nhưng CÓ BAO GỒM path parameters (phần sau dấu {@code ;}).
+     * Điều này khiến cho việc so khớp whitelist bị lỗi nếu không chuẩn hóa.
+     *
+     * @param rawPath path gốc từ getRequestURI() (đã bỏ context path)
+     * @return path đã chuẩn hóa, không chứa path parameters
+     */
+    private String normalizePath(String rawPath) {
+        if (rawPath == null || rawPath.isEmpty()) {
+            return rawPath;
+        }
+
+        // Loại bỏ path parameters: mọi thứ từ dấu ';' đầu tiên trở đi
+        // Ví dụ: /admin/dashboard;jsessionid=abc → /admin/dashboard
+        int semicolonIdx = rawPath.indexOf(';');
+        if (semicolonIdx >= 0) {
+            String normalized = rawPath.substring(0, semicolonIdx);
+            if (!normalized.equals(rawPath)) {
+                System.out.println(">>> [AUTHZ] Path normalized: \""
+                    + rawPath + "\" → \"" + normalized + "\"");
+            }
+            return normalized;
+        }
+
+        return rawPath;
     }
 
     // ═══════════════════════════════════════════════════════════

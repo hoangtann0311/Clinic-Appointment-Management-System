@@ -55,7 +55,7 @@ public class SecurityHeadersFilter implements Filter {
 
         // ── Cache-Control cho các trang cần bảo mật ──
         String ctx = httpReq.getContextPath();
-        String path = httpReq.getRequestURI().substring(ctx.length());
+        String path = normalizePath(httpReq.getRequestURI().substring(ctx.length()));
         if (!AuthorizationConfig.isPublicPath(path)
                 && !path.startsWith("/assets/")) {
             httpRes.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, private");
@@ -73,5 +73,19 @@ public class SecurityHeadersFilter implements Filter {
     @Override
     public void destroy() {
         // No cleanup
+    }
+
+    /**
+     * Chuẩn hóa path để loại bỏ path parameters (như ;jsessionid=...).
+     */
+    private String normalizePath(String rawPath) {
+        if (rawPath == null || rawPath.isEmpty()) {
+            return rawPath;
+        }
+        int semicolonIdx = rawPath.indexOf(';');
+        if (semicolonIdx >= 0) {
+            return rawPath.substring(0, semicolonIdx);
+        }
+        return rawPath;
     }
 }

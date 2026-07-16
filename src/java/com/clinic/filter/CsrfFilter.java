@@ -51,7 +51,7 @@ public class CsrfFilter implements Filter {
         HttpServletRequest httpReq = (HttpServletRequest) req;
         HttpServletResponse httpRes = (HttpServletResponse) res;
         String ctx = httpReq.getContextPath();
-        String path = httpReq.getRequestURI().substring(ctx.length());
+        String path = normalizePath(httpReq.getRequestURI().substring(ctx.length()));
         String method = httpReq.getMethod().toUpperCase();
 
         // ── Miễn trừ public paths ──
@@ -128,6 +128,21 @@ public class CsrfFilter implements Filter {
         byte[] bytes = new byte[32];
         RANDOM.nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    /**
+     * Chuẩn hóa path để loại bỏ path parameters (như ;jsessionid=...)
+     * mà Tomcat có thể chèn vào URL khi dùng URL rewriting.
+     */
+    private String normalizePath(String rawPath) {
+        if (rawPath == null || rawPath.isEmpty()) {
+            return rawPath;
+        }
+        int semicolonIdx = rawPath.indexOf(';');
+        if (semicolonIdx >= 0) {
+            return rawPath.substring(0, semicolonIdx);
+        }
+        return rawPath;
     }
 
     @Override

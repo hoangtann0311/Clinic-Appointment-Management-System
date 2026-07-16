@@ -63,21 +63,6 @@
         </li> -->
         <!-- Dịch Vụ, Thuốc, Biểu Giá → Đã chuyển sang Manager -->
 
-        <!-- NỘI DUNG -->
-        <li class="admin-sidebar-section">Nội Dung</li>
-        <li>
-            <a href="#" class="disabled" title="Đang phát triển">
-                <i class="bi bi-newspaper"></i>
-                <span>Tin Tức</span>
-            </a>
-        </li>
-        <li>
-            <a href="#" class="disabled" title="Đang phát triển">
-                <i class="bi bi-star-fill"></i>
-                <span>Đánh Giá</span>
-            </a>
-        </li>
-
         <!-- HỆ THỐNG -->
         <li class="admin-sidebar-section">Hệ Thống</li>
         <li>
@@ -85,13 +70,6 @@
                class="${fn:contains(requestURI, '/admin/audit-logs') ? 'active' : ''}">
                 <i class="bi bi-clipboard-data"></i>
                 <span>Lịch Sử Hoạt Động</span>
-            </a>
-        </li>
-        <li>
-            <a href="${pageContext.request.contextPath}/admin/settings/"
-               class="${fn:contains(requestURI, '/admin/settings') ? 'active' : ''}">
-                <i class="bi bi-gear-fill"></i>
-                <span>Cài Đặt Hệ Thống</span>
             </a>
         </li>
     </ul>

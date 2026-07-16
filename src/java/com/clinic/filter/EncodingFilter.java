@@ -34,7 +34,7 @@ public class EncodingFilter implements Filter {
         // Only set Content-Type for HTML requests — skip static resources (CSS, JS, images...)
         if (request instanceof HttpServletRequest) {
             HttpServletRequest req = (HttpServletRequest) request;
-            String path = req.getRequestURI();
+            String path = normalizePath(req.getRequestURI());
             if (!isStaticResource(path)) {
                 response.setContentType("text/html; charset=UTF-8");
             }
@@ -62,5 +62,19 @@ public class EncodingFilter implements Filter {
     @Override
     public void destroy() {
         // No cleanup needed
+    }
+
+    /**
+     * Chuẩn hóa path để loại bỏ path parameters (như ;jsessionid=...).
+     */
+    private String normalizePath(String rawPath) {
+        if (rawPath == null || rawPath.isEmpty()) {
+            return rawPath;
+        }
+        int semicolonIdx = rawPath.indexOf(';');
+        if (semicolonIdx >= 0) {
+            return rawPath.substring(0, semicolonIdx);
+        }
+        return rawPath;
     }
 }

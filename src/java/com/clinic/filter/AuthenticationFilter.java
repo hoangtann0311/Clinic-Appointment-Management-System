@@ -46,7 +46,7 @@ public class AuthenticationFilter implements Filter {
         HttpServletRequest httpReq = (HttpServletRequest) req;
         HttpServletResponse httpRes = (HttpServletResponse) res;
         String ctx = httpReq.getContextPath();
-        String path = httpReq.getRequestURI().substring(ctx.length());
+        String path = normalizePath(httpReq.getRequestURI().substring(ctx.length()));
 
         // ── Rule 1: Public paths → pass ──
         // Sử dụng AuthorizationConfig để thống nhất định nghĩa public paths
@@ -83,5 +83,23 @@ public class AuthenticationFilter implements Filter {
     @Override
     public void destroy() {
         // No cleanup needed
+    }
+
+    /**
+     * Chuẩn hóa path để loại bỏ path parameters (như ;jsessionid=...)
+     * mà Tomcat có thể chèn vào URL khi dùng URL rewriting.
+     *
+     * @param rawPath path gốc từ getRequestURI() (đã bỏ context path)
+     * @return path đã chuẩn hóa, không chứa path parameters
+     */
+    private String normalizePath(String rawPath) {
+        if (rawPath == null || rawPath.isEmpty()) {
+            return rawPath;
+        }
+        int semicolonIdx = rawPath.indexOf(';');
+        if (semicolonIdx >= 0) {
+            return rawPath.substring(0, semicolonIdx);
+        }
+        return rawPath;
     }
 }

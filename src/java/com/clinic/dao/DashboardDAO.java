@@ -240,6 +240,32 @@ public class DashboardDAO {
     }
 
     // ──────────────────────────────────────────────
+    // KPI: CA HỦY (Cancelled Appointments)
+    // ──────────────────────────────────────────────
+
+    /** Số lịch hẹn bị hủy hôm nay. */
+    public int countCancelledToday() {
+        String sql = "SELECT COUNT(*) AS total FROM appointments "
+                   + "WHERE status = 'cancelled' "
+                   + "AND appointment_date = CAST(GETDATE() AS DATE)";
+        return executeCount(sql);
+    }
+
+    /** Số lịch hẹn bị hủy toàn bộ thời gian. */
+    public int countCancelledAll() {
+        String sql = "SELECT COUNT(*) AS total FROM appointments WHERE status = 'cancelled'";
+        return executeCount(sql);
+    }
+
+    /** Số lịch hẹn bị hủy trong khoảng ngày. */
+    public int countCancelled(LocalDate from, LocalDate to) {
+        String sql = "SELECT COUNT(*) AS total FROM appointments "
+                   + "WHERE status = 'cancelled' "
+                   + "AND appointment_date >= ? AND appointment_date <= ?";
+        return executeCount(sql, from, to);
+    }
+
+    // ──────────────────────────────────────────────
     // KPI: CA THÀNH CÔNG (Success = completed + paid)
     // ──────────────────────────────────────────────
 
@@ -425,9 +451,13 @@ public class DashboardDAO {
         private int doctorId;
         private String doctorName;
         private String specialization;
-        private int totalPatients;
-        private int appointmentsToday;
-        private double revenueGenerated;
+        private int totalPatients;       // Tổng BN đã khám (completed)
+        private int appointmentsToday;   // Lịch hẹn hôm nay / trong khoảng
+        private double revenueGenerated; // Doanh thu tạo ra
+        private int completedCases;      // Số ca hoàn thành
+        private int cancelledCases;      // Số ca hủy
+        private int emergencyCases;      // Số ca cấp cứu
+        private double completionRate;   // Tỷ lệ hoàn thành (%)
 
         public int getDoctorId() { return doctorId; }
         public void setDoctorId(int doctorId) { this.doctorId = doctorId; }
@@ -441,24 +471,38 @@ public class DashboardDAO {
         public void setAppointmentsToday(int appointmentsToday) { this.appointmentsToday = appointmentsToday; }
         public double getRevenueGenerated() { return revenueGenerated; }
         public void setRevenueGenerated(double revenueGenerated) { this.revenueGenerated = revenueGenerated; }
+        public int getCompletedCases() { return completedCases; }
+        public void setCompletedCases(int completedCases) { this.completedCases = completedCases; }
+        public int getCancelledCases() { return cancelledCases; }
+        public void setCancelledCases(int cancelledCases) { this.cancelledCases = cancelledCases; }
+        public int getEmergencyCases() { return emergencyCases; }
+        public void setEmergencyCases(int emergencyCases) { this.emergencyCases = emergencyCases; }
+        public double getCompletionRate() { return completionRate; }
+        public void setCompletionRate(double completionRate) { this.completionRate = completionRate; }
     }
 
     /**
      * Lấy danh sách hiệu suất bác sĩ (toàn thời gian + hôm nay).
+     * Bao gồm: tổng BN, completed, cancelled, emergency, completion rate, doanh thu.
      */
     public List<DoctorPerformance> getDoctorPerformance() {
         String sql = "SELECT "
                    + "  d.id AS doctor_id, "
                    + "  d.full_name AS doctor_name, "
                    + "  ISNULL(d.specialization, N'Chưa cập nhật') AS specialization, "
-                   + "  (SELECT COUNT(*) FROM appointments a2 WHERE a2.doctor_id = d.id AND a2.status = 'completed') AS total_patients, "
+                   + "  (SELECT COUNT(*) FROM appointments a2 WHERE a2.doctor_id = d.id AND a2.status = 'completed') AS completed_cases, "
+                   + "  (SELECT COUNT(*) FROM appointments a2 WHERE a2.doctor_id = d.id) AS total_appointments, "
                    + "  (SELECT COUNT(*) FROM appointments a3 WHERE a3.doctor_id = d.id "
                    + "     AND a3.appointment_date = CAST(GETDATE() AS DATE)) AS appointments_today, "
+                   + "  (SELECT COUNT(*) FROM appointments a4 WHERE a4.doctor_id = d.id "
+                   + "     AND a4.status = 'cancelled') AS cancelled_cases, "
+                   + "  (SELECT COUNT(*) FROM appointments a5 WHERE a5.doctor_id = d.id "
+                   + "     AND a5.is_emergency = 1) AS emergency_cases, "
                    + "  ISNULL((SELECT SUM(i.total_amount) FROM invoices i "
-                   + "     INNER JOIN appointments a4 ON i.appointment_id = a4.id "
-                   + "     WHERE a4.doctor_id = d.id AND i.status = 'paid'), 0) AS revenue "
+                   + "     INNER JOIN appointments a6 ON i.appointment_id = a6.id "
+                   + "     WHERE a6.doctor_id = d.id AND i.status = 'paid'), 0) AS revenue "
                    + "FROM doctors d "
-                   + "ORDER BY total_patients DESC";
+                   + "ORDER BY completed_cases DESC";
 
         List<DoctorPerformance> list = new ArrayList<>();
         Connection conn = null;
@@ -473,9 +517,15 @@ public class DashboardDAO {
                 dp.doctorId = rs.getInt("doctor_id");
                 dp.doctorName = rs.getString("doctor_name");
                 dp.specialization = rs.getString("specialization");
-                dp.totalPatients = rs.getInt("total_patients");
+                dp.totalPatients = rs.getInt("completed_cases");
+                int totalApps = rs.getInt("total_appointments");
+                dp.completedCases = rs.getInt("completed_cases");
+                dp.cancelledCases = rs.getInt("cancelled_cases");
+                dp.emergencyCases = rs.getInt("emergency_cases");
                 dp.appointmentsToday = rs.getInt("appointments_today");
                 dp.revenueGenerated = rs.getDouble("revenue");
+                dp.completionRate = totalApps > 0
+                    ? (double) dp.completedCases / totalApps * 100.0 : 0.0;
                 list.add(dp);
             }
         } catch (SQLException e) {
@@ -487,9 +537,9 @@ public class DashboardDAO {
     }
 
     /**
-     * Lấy danh sách hiệu suất bác sĩ trong khoảng ngày.
+     * Lấy danh sách hiệu suất bác sĩ trong khoảng ngày (mở rộng).
+     * Bao gồm: completed, cancelled, emergency, completion rate, doanh thu.
      * Chỉ trả về bác sĩ có ít nhất 1 lịch hẹn hoặc 1 bệnh nhân trong khoảng.
-     * Nếu không có bác sĩ nào → list rỗng → JSP hiện "Chưa có dữ liệu".
      */
     public List<DoctorPerformance> getDoctorPerformance(LocalDate from, LocalDate to) {
         String sql = "SELECT * FROM ("
@@ -499,16 +549,24 @@ public class DashboardDAO {
                    + "  ISNULL(d.specialization, N'Chưa cập nhật') AS specialization, "
                    + "  (SELECT COUNT(*) FROM appointments a2 WHERE a2.doctor_id = d.id "
                    + "     AND a2.status = 'completed' "
-                   + "     AND a2.appointment_date >= ? AND a2.appointment_date <= ?) AS total_patients, "
+                   + "     AND a2.appointment_date >= ? AND a2.appointment_date <= ?) AS completed_cases, "
+                   + "  (SELECT COUNT(*) FROM appointments a2 WHERE a2.doctor_id = d.id "
+                   + "     AND a2.appointment_date >= ? AND a2.appointment_date <= ?) AS total_appointments, "
                    + "  (SELECT COUNT(*) FROM appointments a3 WHERE a3.doctor_id = d.id "
-                   + "     AND a3.appointment_date >= ? AND a3.appointment_date <= ?) AS appointments_today, "
+                   + "     AND a3.appointment_date >= ? AND a3.appointment_date <= ?) AS appointments_in_range, "
+                   + "  (SELECT COUNT(*) FROM appointments a4 WHERE a4.doctor_id = d.id "
+                   + "     AND a4.status = 'cancelled' "
+                   + "     AND a4.appointment_date >= ? AND a4.appointment_date <= ?) AS cancelled_cases, "
+                   + "  (SELECT COUNT(*) FROM appointments a5 WHERE a5.doctor_id = d.id "
+                   + "     AND a5.is_emergency = 1 "
+                   + "     AND a5.appointment_date >= ? AND a5.appointment_date <= ?) AS emergency_cases, "
                    + "  ISNULL((SELECT SUM(i.total_amount) FROM invoices i "
-                   + "     INNER JOIN appointments a4 ON i.appointment_id = a4.id "
-                   + "     WHERE a4.doctor_id = d.id AND i.status = 'paid' "
-                   + "     AND a4.appointment_date >= ? AND a4.appointment_date <= ?), 0) AS revenue "
+                   + "     INNER JOIN appointments a6 ON i.appointment_id = a6.id "
+                   + "     WHERE a6.doctor_id = d.id AND i.status = 'paid' "
+                   + "     AND a6.appointment_date >= ? AND a6.appointment_date <= ?), 0) AS revenue "
                    + "FROM doctors d "
-                   + ") filtered WHERE total_patients > 0 OR appointments_today > 0 "
-                   + "ORDER BY total_patients DESC";
+                   + ") filtered WHERE completed_cases > 0 OR appointments_in_range > 0 "
+                   + "ORDER BY completed_cases DESC";
 
         List<DoctorPerformance> list = new ArrayList<>();
         Connection conn = null;
@@ -517,22 +575,30 @@ public class DashboardDAO {
         try {
             conn = DatabaseConfig.getConnection();
             ps = conn.prepareStatement(sql);
-            // 6 tham số: 3 cặp from/to cho 3 subquery
-            ps.setDate(1, java.sql.Date.valueOf(from));
-            ps.setDate(2, java.sql.Date.valueOf(to));
-            ps.setDate(3, java.sql.Date.valueOf(from));
-            ps.setDate(4, java.sql.Date.valueOf(to));
-            ps.setDate(5, java.sql.Date.valueOf(from));
-            ps.setDate(6, java.sql.Date.valueOf(to));
+            // 12 tham số: 6 cặp from/to cho 6 subquery
+            java.sql.Date sqlFrom = java.sql.Date.valueOf(from);
+            java.sql.Date sqlTo = java.sql.Date.valueOf(to);
+            ps.setDate(1, sqlFrom);  ps.setDate(2, sqlTo);   // completed_cases
+            ps.setDate(3, sqlFrom);  ps.setDate(4, sqlTo);   // total_appointments
+            ps.setDate(5, sqlFrom);  ps.setDate(6, sqlTo);   // appointments_in_range
+            ps.setDate(7, sqlFrom);  ps.setDate(8, sqlTo);   // cancelled_cases
+            ps.setDate(9, sqlFrom);  ps.setDate(10, sqlTo);  // emergency_cases
+            ps.setDate(11, sqlFrom); ps.setDate(12, sqlTo);  // revenue
             rs = ps.executeQuery();
             while (rs.next()) {
                 DoctorPerformance dp = new DoctorPerformance();
                 dp.doctorId = rs.getInt("doctor_id");
                 dp.doctorName = rs.getString("doctor_name");
                 dp.specialization = rs.getString("specialization");
-                dp.totalPatients = rs.getInt("total_patients");
-                dp.appointmentsToday = rs.getInt("appointments_today");
+                dp.completedCases = rs.getInt("completed_cases");
+                int totalApps = rs.getInt("total_appointments");
+                dp.totalPatients = dp.completedCases;
+                dp.appointmentsToday = rs.getInt("appointments_in_range");
+                dp.cancelledCases = rs.getInt("cancelled_cases");
+                dp.emergencyCases = rs.getInt("emergency_cases");
                 dp.revenueGenerated = rs.getDouble("revenue");
+                dp.completionRate = totalApps > 0
+                    ? (double) dp.completedCases / totalApps * 100.0 : 0.0;
                 list.add(dp);
             }
         } catch (SQLException e) {
