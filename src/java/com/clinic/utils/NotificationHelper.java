@@ -13,13 +13,6 @@ public class NotificationHelper {
 
     private static final NotificationDAO dao = new NotificationDAO();
 
-    // ── Loại 1: KTV trả kết quả xét nghiệm ─────────────────────────────────
-    public static void labResultReady(int doctorUserId, String serviceName, int recordId) {
-        dao.create(doctorUserId,
-            "🔬 Kết quả xét nghiệm đã có",
-            "Xét nghiệm \"" + serviceName + "\" (hồ sơ #" + recordId + ") " +
-            "đã có kết quả. Vui lòng vào xem và hoàn tất hồ sơ bệnh án.");
-    }
 
     // ── Loại 2: Lịch hẹn mới được đặt với bác sĩ ───────────────────────────
     public static void newAppointment(int doctorUserId, String patientName,
@@ -49,14 +42,12 @@ public class NotificationHelper {
             ") đã bị từ chối. Lý do: " + (reason != null ? reason : "không rõ") + ".");
     }
 
-    // ── Loại 4: Hồ sơ draft chờ quá 24 giờ ─────────────────────────────────
-    // (Gọi từ scheduled job hoặc khi bác sĩ vào dashboard)
     public static void draftRecordReminder(int doctorUserId, int recordId,
                                            String patientName) {
         dao.create(doctorUserId,
-            "⏰ Hồ sơ đang chờ kết quả XN",
+            "⏰ Hồ sơ chưa hoàn tất (Draft)",
             "Hồ sơ bệnh án #" + recordId + " của " + patientName +
-            " đang ở trạng thái chờ kết quả xét nghiệm hơn 24 giờ. " +
+            " đang ở trạng thái nháp (draft) hơn 24 giờ. " +
             "Vui lòng kiểm tra và hoàn tất.");
     }
 

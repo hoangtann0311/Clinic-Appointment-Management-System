@@ -92,28 +92,13 @@
   </div>
 </c:if>
 
-<%-- ── Tabs ─────────────────────────────────────────────────────────── --%>
-<ul class="nav nav-pills mb-4 gap-2" id="resultTabs">
-  <li class="nav-item">
-    <button class="nav-link active rounded-pill px-4 fw-medium"
-            onclick="switchTab('lab', this)" type="button">
-      <i class="bi bi-droplet me-1"></i>Xét nghiệm
-      <span class="badge bg-danger ms-1 rounded-pill">${fn:length(labResults)}</span>
-    </button>
-  </li>
-  <li class="nav-item">
-    <button class="nav-link rounded-pill px-4 fw-medium"
-            onclick="switchTab('us', this)" type="button">
-      <i class="bi bi-soundwave me-1"></i>Siêu âm
-      <span class="badge bg-danger ms-1 rounded-pill">${fn:length(ultrasoundResults)}</span>
-    </button>
-  </li>
-</ul>
+<%-- ── Kết quả siêu âm ── --%>
+<div class="d-flex align-items-center mb-4">
+  <h4 class="fw-bold mb-0 text-dark"><i class="bi bi-soundwave me-2 text-brand"></i>Kết quả siêu âm</h4>
+  <span class="badge bg-danger ms-2 rounded-pill">${fn:length(ultrasoundResults)}</span>
+</div>
 
-<%-- ══════════════════════════════════════════════════════════════════
-     PANEL: KẾT QUẢ XÉT NGHIỆM
-     ══════════════════════════════════════════════════════════════════ --%>
-<div id="panel-lab">
+<div id="panel-lab" class="d-none">
   <c:choose>
     <c:when test="${empty labResults}">
       <div class="card border-0 rounded-4 text-center py-5 text-muted">
@@ -198,7 +183,7 @@
 <%-- ══════════════════════════════════════════════════════════════════
      PANEL: KẾT QUẢ SIÊU ÂM
      ══════════════════════════════════════════════════════════════════ --%>
-<div id="panel-us" class="d-none">
+<div id="panel-us">
   <c:choose>
     <c:when test="${empty ultrasoundResults}">
       <div class="card border-0 rounded-4 text-center py-5 text-muted">
@@ -429,30 +414,12 @@
 </div>
 
 <script>
-  function switchTab(tab, btn) {
-    document.getElementById('panel-lab').classList.toggle('d-none', tab !== 'lab');
-    document.getElementById('panel-us').classList.toggle('d-none',  tab !== 'us');
-    document.querySelectorAll('#resultTabs .nav-link')
-            .forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-  }
-
-  // Tự động mở tab siêu âm nếu đang xử lý xác nhận hoặc lỗi
+  // Tự động cuộn đến card kết quả tương ứng nếu có hash trong URL
   (function() {
-    const params = new URLSearchParams(window.location.search);
-    const success = params.get('success');
-    const error   = params.get('error');
-    if (success === 'confirmed' || error === 'confirmFailed') {
-      const usBtn = document.querySelector('#resultTabs button:nth-child(2)');
-      if (usBtn) {
-        switchTab('us', usBtn);
-        // Cuộn đến card đã xác nhận nếu có hash
-        const hash = window.location.hash;
-        if (hash) {
-          const el = document.querySelector(hash);
-          if (el) { setTimeout(() => el.scrollIntoView({behavior:'smooth', block:'start'}), 200); }
-        }
-      }
+    const hash = window.location.hash;
+    if (hash) {
+      const el = document.querySelector(hash);
+      if (el) { setTimeout(() => el.scrollIntoView({behavior:'smooth', block:'start'}), 200); }
     }
   })();
 </script>

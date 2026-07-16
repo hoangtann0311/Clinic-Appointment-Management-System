@@ -618,7 +618,10 @@ public class StaffReceptionService {
                 throw new IllegalArgumentException("Ca SOS khẩn cấp không thể hủy bằng thao tác thường.");
             }
 
-            appointmentDAO.updateStatus(appointmentId, "Cancelled");
+            boolean success = appointmentDAO.cancelAppointmentAndReleaseSlot(appointmentId, 0, "Lễ tân hủy lịch hẹn");
+            if (!success) {
+                throw new IllegalArgumentException("Không thể hủy lịch hẹn hoặc lịch đã hoàn thành/đang khám.");
+            }
 
             auditLogDAO.logAction(
                     "Hủy lịch hẹn của " + apt.getPatientName(),

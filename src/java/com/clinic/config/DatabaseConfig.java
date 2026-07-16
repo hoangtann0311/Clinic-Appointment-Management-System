@@ -17,11 +17,11 @@ import java.sql.SQLException;
  */
 public class DatabaseConfig {
 
-    private static final String DATABASE_NAME = "ObstetricsClinicDB2";
+    private static final String DATABASE_NAME = "ObstetricsClinicDB";
 
     // SQL Server Authentication credentials (chỉ dùng khi Windows Auth thất bại)
     private static final String DB_USER = "sa";
-    private static final String DB_PASSWORD = "admin";
+    private static final String DB_PASSWORD = "sa";
 
     // Danh sách các URL kết nối sẽ thử lần lượt
     private static final String[] CONNECTION_URLS = {

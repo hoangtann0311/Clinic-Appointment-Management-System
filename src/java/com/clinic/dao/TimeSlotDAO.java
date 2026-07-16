@@ -296,7 +296,7 @@ public class TimeSlotDAO {
                     : "Hủy bởi user #" + cancelledBy;
 
             String updateSql = "UPDATE time_slots SET "
-                    + "status = 'CANCELLED', "
+                    + "status = 'AVAILABLE', "
                     + "notes = ?, "
                     + "booked_by = NULL, "
                     + "booked_at = NULL, "
@@ -335,6 +335,32 @@ public class TimeSlotDAO {
                 DatabaseConfig.closeConnection(conn);
             }
         }
+    }
+
+    public TimeSlot findById(int id) {
+        String sql = "SELECT " + BASE_COLUMNS + ", d.full_name AS doctor_name, "
+                   + "u.full_name AS booked_by_name "
+                   + "FROM time_slots ts "
+                   + "LEFT JOIN doctors d ON ts.doctor_id = d.id "
+                   + "LEFT JOIN users u ON ts.booked_by = u.id "
+                   + "WHERE ts.id = ?";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setInt(1, id);
+            rs = ps.executeQuery();
+            if (rs.next()) {
+                return mapRow(rs);
+            }
+        } catch (SQLException e) {
+            System.err.println("[TimeSlotDAO] findById ERROR: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return null;
     }
 
     // ──────────────────────────────────────────────

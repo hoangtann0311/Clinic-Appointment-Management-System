@@ -37,10 +37,14 @@ public class PatientMedicalRecordServlet extends HttpServlet {
         }
         User user = (User) session.getAttribute("user");
 
+        int patientId = new com.clinic.dao.PatientDAO().getPatientIdByUserId(user.getId());
         String recordIdParam = request.getParameter("recordId");
 
         if (recordIdParam != null) {
             // Chi tiết 1 hồ sơ
+            if (patientId <= 0) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN); return;
+            }
             int recordId;
             try { recordId = Integer.parseInt(recordIdParam); }
             catch (NumberFormatException e) {
@@ -53,8 +57,7 @@ public class PatientMedicalRecordServlet extends HttpServlet {
             }
 
             // Bảo mật: chỉ xem được hồ sơ của chính mình
-            // (getById JOIN users; ta kiểm tra bằng cách lấy danh sách rồi tìm trong đó)
-            List<MedicalRecord> myRecords = recordDAO.getByPatientId(user.getId());
+            List<MedicalRecord> myRecords = recordDAO.getByPatientId(patientId);
             boolean mine = myRecords.stream().anyMatch(r -> r.getId() == recordId);
             if (!mine) {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN); return;
@@ -90,15 +93,18 @@ public class PatientMedicalRecordServlet extends HttpServlet {
             request.setAttribute("orderImages", orderImages);
             request.setAttribute("orderAiResults", orderAiResults);
             request.setAttribute("mode",         "detail");
-            request.getRequestDispatcher("/views/admin/patient/medical_record_detail.jsp")
+            request.getRequestDispatcher("/views/patient/medical_record_detail.jsp")
                    .forward(request, response);
 
         } else {
             // Danh sách tất cả hồ sơ
-            List<MedicalRecord> records = recordDAO.getByPatientId(user.getId());
+            List<MedicalRecord> records = java.util.Collections.emptyList();
+            if (patientId > 0) {
+                records = recordDAO.getByPatientId(patientId);
+            }
             request.setAttribute("records", records);
             request.setAttribute("mode",    "list");
-            request.getRequestDispatcher("/views/admin/patient/medical_record_detail.jsp")
+            request.getRequestDispatcher("/views/patient/medical_record_detail.jsp")
                    .forward(request, response);
         }
     }

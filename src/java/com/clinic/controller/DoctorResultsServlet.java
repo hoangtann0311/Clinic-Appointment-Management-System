@@ -109,24 +109,8 @@ public class DoctorResultsServlet extends HttpServlet {
         }
     }
 
-    // ── Kết quả xét nghiệm ──────────────────────────────────────────────────
     private List<Map<String,Object>> loadLabResults(int recordId) {
-        String sql =
-            "SELECT to2.id AS order_id, s.service_name, s.service_code, " +
-            "       to2.status, to2.created_at AS ordered_at, " +
-            "       lr.result_details, lr.image_url, lr.updated_at AS result_at, " +
-            "       u.full_name AS tech_name " +
-            "FROM test_orders to2 " +
-            "JOIN services s ON s.id = to2.service_id " +
-            "LEFT JOIN service_categories sc ON sc.id = s.category_id " +
-            "LEFT JOIN lab_results lr ON lr.test_order_id = to2.id " +
-            "LEFT JOIN users u ON u.id = lr.lab_technician_id " +
-            "WHERE to2.medical_record_id = ? " +
-            "  AND (sc.category_name NOT LIKE N'%siêu âm%' " +
-            "       AND sc.category_name NOT LIKE N'%ultrasound%' " +
-            "       AND ISNULL(s.required_room_type,'') NOT LIKE N'%ultrasound%') " +
-            "ORDER BY to2.created_at";
-        return queryToMapList(sql, recordId);
+        return new ArrayList<>();
     }
 
     // ── Kết quả siêu âm ─────────────────────────────────────────────────────

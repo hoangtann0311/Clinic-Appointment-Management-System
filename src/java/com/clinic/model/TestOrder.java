@@ -26,8 +26,7 @@ public class TestOrder {
     private java.math.BigDecimal servicePrice;
     private boolean requiresFasting;
 
-    // Kết quả xét nghiệm (JOIN lab_results nếu đã có)
-    private LabResult labResult;
+
 
     // Trường tiện ích cho trang KTV
     private String patientName;
@@ -65,8 +64,7 @@ public class TestOrder {
     public boolean isRequiresFasting() { return requiresFasting; }
     public void setRequiresFasting(boolean requiresFasting) { this.requiresFasting = requiresFasting; }
 
-    public LabResult getLabResult() { return labResult; }
-    public void setLabResult(LabResult labResult) { this.labResult = labResult; }
+
 
     public boolean isPending()   { return STATUS_PENDING.equals(status); }
     public boolean isCompleted() { return STATUS_COMPLETED.equals(status); }

@@ -85,6 +85,16 @@ public class PatientAppointmentServlet extends HttpServlet {
             try {
                 int appointmentId = Integer.parseInt(request.getParameter("appointmentId"));
 
+                // Bảo mật: Xác minh lịch hẹn có thuộc về bệnh nhân đang đăng nhập không
+                int patientId = new com.clinic.dao.PatientDAO().getPatientIdByUserId(user.getId());
+                Appointment appt = appointmentDAO.findAppointmentById(appointmentId);
+                HttpSession session = request.getSession();
+                if (appt == null || appt.getPatientId() != patientId) {
+                    session.setAttribute("bookingError", "Bạn không có quyền kích hoạt SOS cho lịch hẹn này.");
+                    response.sendRedirect(request.getContextPath() + "/patient/appointments");
+                    return;
+                }
+
                 // Triệu chứng bệnh nhân mô tả trong modal
                 String sosSymptoms = request.getParameter("symptoms");
                 if (sosSymptoms == null || sosSymptoms.isBlank()) {
@@ -114,7 +124,7 @@ public class PatientAppointmentServlet extends HttpServlet {
                     }
                 }
 
-                HttpSession session = request.getSession();
+                session = request.getSession();
                 if (ok) {
                     session.setAttribute("bookingSuccess",
                             "Báo động khẩn cấp SOS đã được kích hoạt! Số thứ tự ưu tiên: "

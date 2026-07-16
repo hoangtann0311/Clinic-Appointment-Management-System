@@ -399,6 +399,139 @@
         </c:if>
 
     </c:when>
+    <c:when test="${not empty sessionScope.user && sessionScope.user.roleId == 5}">
+        <!-- Rose-Pink Theme Header/Sidebar for Patient (5) -->
+        <link href="${pageContext.request.contextPath}/assets/css/patient.css" rel="stylesheet">
+        <body class="patient-body">
+
+        <%-- TOP BAR --%>
+        <nav class="patient-topbar">
+            <div class="patient-topbar-left">
+                <button class="patient-sidebar-toggle" id="ptSidebarToggle" onclick="togglePtSidebar()" aria-label="Toggle sidebar">
+                    <i class="bi bi-list"></i>
+                </button>
+                <a href="${pageContext.request.contextPath}/home" class="patient-topbar-brand">
+                    <i class="bi bi-heart-pulse-fill"></i>
+                    CAMS
+                    <span class="pt-brand-badge">Bệnh Nhân</span>
+                </a>
+            </div>
+            <div class="patient-topbar-right">
+                <div class="patient-topbar-user d-none d-md-flex">
+                    <div class="patient-avatar-sm">
+                        ${fn:substring(sessionScope.user.fullName, 0, 1)}
+                    </div>
+                    <span>${sessionScope.user.fullName}</span>
+                    <span class="patient-topbar-role">
+                        <i class="bi bi-person-heart me-1"></i>Bệnh Nhân
+                    </span>
+                </div>
+                <a href="${pageContext.request.contextPath}/logout" class="patient-topbar-logout" title="Đăng xuất">
+                    <i class="bi bi-box-arrow-right"></i>
+                    <span class="d-none d-md-inline">Đăng xuất</span>
+                </a>
+            </div>
+        </nav>
+
+        <!-- Sidebar Backdrop (mobile) -->
+        <div class="patient-sidebar-backdrop" id="ptSidebarBackdrop" onclick="closePtSidebar()"></div>
+
+        <!-- Sidebar -->
+        <aside class="patient-sidebar" id="ptSidebar">
+            <div class="patient-sidebar-user">
+                <div class="patient-sidebar-avatar">
+                    ${fn:substring(sessionScope.user.fullName, 0, 1)}
+                </div>
+                <div class="patient-sidebar-name">${sessionScope.user.fullName}</div>
+                <span class="patient-sidebar-badge">
+                    <i class="bi bi-person-heart me-1"></i>Bệnh Nhân
+                </span>
+            </div>
+
+            <ul class="patient-sidebar-menu">
+                <li class="patient-sidebar-section">Tổng Quan</li>
+                <li>
+                    <a href="${pageContext.request.contextPath}/home">
+                        <i class="bi bi-speedometer2"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+
+                <li class="patient-sidebar-section">Lịch Hẹn & Khám</li>
+                <li>
+                    <a href="${pageContext.request.contextPath}/patient/booking">
+                        <i class="bi bi-calendar-plus"></i>
+                        <span>Đặt Lịch Khám</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="${pageContext.request.contextPath}/patient/appointments">
+                        <i class="bi bi-calendar2-week"></i>
+                        <span>Lịch Hẹn Của Tôi</span>
+                    </a>
+                </li>
+
+                <li class="patient-sidebar-section">Hồ Sơ Y Tế</li>
+                <li>
+                    <a href="${pageContext.request.contextPath}/patient/medical-records">
+                        <i class="bi bi-journal-medical"></i>
+                        <span>Hồ Sơ Bệnh Án</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="${pageContext.request.contextPath}/patient/pregnancy">
+                        <i class="bi bi-heart-pulse-fill"></i>
+                        <span>Theo Dõi Thai Kỳ</span>
+                    </a>
+                </li>
+
+                <li class="patient-sidebar-section">Tài Khoản</li>
+                <li>
+                    <a href="${pageContext.request.contextPath}/patient/profile">
+                        <i class="bi bi-person-circle"></i>
+                        <span>Hồ Sơ Cá Nhân</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="${pageContext.request.contextPath}/patient/notifications">
+                        <i class="bi bi-bell"></i>
+                        <span>Thông Báo</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="${pageContext.request.contextPath}/logout" class="pt-logout-link">
+                        <i class="bi bi-box-arrow-right"></i>
+                        <span>Đăng Xuất</span>
+                    </a>
+                </li>
+            </ul>
+        </aside>
+
+        <!-- Main Content Wrapper -->
+        <main class="patient-main" id="ptMain">
+
+        <%-- JS: Auto active sidebar link --%>
+        <script>
+        (function() {
+            var path = window.location.pathname;
+            var links = document.querySelectorAll('.patient-sidebar-menu li a');
+            var bestMatch = null, bestLen = 0;
+            links.forEach(function(a) {
+                var href = a.getAttribute('href');
+                if (!href) return;
+                var rel = href.split('?')[0];
+                if (path === rel || path.startsWith(rel + '/') || path.startsWith(rel + '?')) {
+                    if (rel.length > bestLen && rel.length > 1) {
+                        bestLen = rel.length;
+                        bestMatch = a;
+                    }
+                }
+            });
+            if (bestMatch) bestMatch.classList.add('active');
+        })();
+        </script>
+
+    </c:when>
     <c:otherwise>
         <body>
         <!-- Navbar -->

@@ -52,6 +52,38 @@
         </body>
         </html>
     </c:when>
+    <c:when test="${not empty sessionScope.user && sessionScope.user.roleId == 5}">
+        </main> <!-- Close patient-main -->
+
+        <!-- Bootstrap 5 JS Bundle -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+                integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+                crossorigin="anonymous"></script>
+
+        <script>
+        function openPtSidebar() {
+            var s = document.getElementById('ptSidebar');
+            var b = document.getElementById('ptSidebarBackdrop');
+            if (s) s.classList.add('show');
+            if (b) b.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+        function closePtSidebar() {
+            var s = document.getElementById('ptSidebar');
+            var b = document.getElementById('ptSidebarBackdrop');
+            if (s) s.classList.remove('show');
+            if (b) b.classList.remove('show');
+            document.body.style.overflow = '';
+        }
+        function togglePtSidebar() {
+            var s = document.getElementById('ptSidebar');
+            if (!s) return;
+            s.classList.contains('show') ? closePtSidebar() : openPtSidebar();
+        }
+        </script>
+        </body>
+        </html>
+    </c:when>
     <c:otherwise>
         </main>
         <!-- End Main Content -->

@@ -1,4 +1,4 @@
-﻿<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ include file="../common/header.jsp" %>
 
@@ -125,7 +125,7 @@
                     <%-- ── Patient (roleId=5) ────────────────────────────── --%>
                     <c:if test="${user.roleId == 5}">
                         <div class="col-sm-6">
-                            <a href="#" class="text-decoration-none">
+                            <a href="${pageContext.request.contextPath}/patient/booking" class="text-decoration-none">
                                 <div class="quick-link-card p-3 rounded-3 border">
                                     <i class="bi bi-calendar-plus fs-4 text-primary"></i>
                                     <h6 class="mt-2 mb-1">Đặt Lịch Khám</h6>
@@ -134,7 +134,7 @@
                             </a>
                         </div>
                         <div class="col-sm-6">
-                            <a href="#" class="text-decoration-none">
+                            <a href="${pageContext.request.contextPath}/patient/appointments" class="text-decoration-none">
                                 <div class="quick-link-card p-3 rounded-3 border">
                                     <i class="bi bi-clock-history fs-4 text-info"></i>
                                     <h6 class="mt-2 mb-1">Lịch Sử Khám</h6>
@@ -143,11 +143,20 @@
                             </a>
                         </div>
                         <div class="col-sm-6">
-                            <a href="#" class="text-decoration-none">
+                            <a href="${pageContext.request.contextPath}/patient/medical-records" class="text-decoration-none">
                                 <div class="quick-link-card p-3 rounded-3 border">
-                                    <i class="bi bi-file-earmark-medical fs-4 text-success"></i>
-                                    <h6 class="mt-2 mb-1">Kết Quả Xét Nghiệm</h6>
-                                    <small class="text-muted">Xem kết quả xét nghiệm</small>
+                                    <i class="bi bi-journal-medical fs-4 text-success"></i>
+                                    <h6 class="mt-2 mb-1">Hồ Sơ Bệnh Án</h6>
+                                    <small class="text-muted">Xem chẩn đoán & đơn thuốc</small>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-sm-6">
+                            <a href="${pageContext.request.contextPath}/patient/pregnancy" class="text-decoration-none">
+                                <div class="quick-link-card p-3 rounded-3 border">
+                                    <i class="bi bi-heart-pulse-fill fs-4 text-danger"></i>
+                                    <h6 class="mt-2 mb-1">Theo Dõi Thai Kỳ</h6>
+                                    <small class="text-muted">Hành trình bé yêu từng tuần</small>
                                 </div>
                             </a>
                         </div>
@@ -156,7 +165,7 @@
                     <%-- ── Manager (roleId=3) ────────────────────────────── --%>
                     <c:if test="${user.roleId == 3}">
                         <div class="col-sm-6">
-                            <a href="#" class="text-decoration-none">
+                            <a href="${pageContext.request.contextPath}/manager/statistics" class="text-decoration-none">
                                 <div class="quick-link-card p-3 rounded-3 border">
                                     <i class="bi bi-graph-up fs-4 text-primary"></i>
                                     <h6 class="mt-2 mb-1">Báo Cáo</h6>
@@ -165,7 +174,7 @@
                             </a>
                         </div>
                         <div class="col-sm-6">
-                            <a href="#" class="text-decoration-none">
+                            <a href="${pageContext.request.contextPath}/manager/schedules" class="text-decoration-none">
                                 <div class="quick-link-card p-3 rounded-3 border">
                                     <i class="bi bi-people fs-4 text-success"></i>
                                     <h6 class="mt-2 mb-1">Nhân Sự</h6>
@@ -178,7 +187,7 @@
                     <%-- ── Staff (roleId=4) ──────────────────────────────── --%>
                     <c:if test="${user.roleId == 4}">
                         <div class="col-sm-6">
-                            <a href="#" class="text-decoration-none">
+                            <a href="${pageContext.request.contextPath}/admin/reception" class="text-decoration-none">
                                 <div class="quick-link-card p-3 rounded-3 border">
                                     <i class="bi bi-calendar-check fs-4 text-primary"></i>
                                     <h6 class="mt-2 mb-1">Quản Lý Lịch Hẹn</h6>
@@ -187,7 +196,7 @@
                             </a>
                         </div>
                         <div class="col-sm-6">
-                            <a href="#" class="text-decoration-none">
+                            <a href="${pageContext.request.contextPath}/admin/reception/payments" class="text-decoration-none">
                                 <div class="quick-link-card p-3 rounded-3 border">
                                     <i class="bi bi-receipt fs-4 text-warning"></i>
                                     <h6 class="mt-2 mb-1">Hóa Đơn</h6>
@@ -200,7 +209,7 @@
                     <%-- ── Sonographer (roleId=6) ─────────────────────────── --%>
                     <c:if test="${user.roleId == 6}">
                         <div class="col-sm-6">
-                            <a href="#" class="text-decoration-none">
+                            <a href="${pageContext.request.contextPath}/sonographer/waiting-list" class="text-decoration-none">
                                 <div class="quick-link-card p-3 rounded-3 border">
                                     <i class="bi bi-soundwave fs-4 text-primary"></i>
                                     <h6 class="mt-2 mb-1">Kết Quả Siêu Âm</h6>
@@ -216,5 +225,4 @@
     </div>
 </div>
 
-<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css">
 <%@ include file="../common/footer.jsp" %>

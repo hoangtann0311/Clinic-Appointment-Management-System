@@ -78,7 +78,6 @@ public class MedicalRecordServlet extends HttpServlet {
             req.setAttribute("mode",         "form");
             req.setAttribute("prescription", prescription);
             req.setAttribute("medicines",    prescriptionDAO.getAllMedicines());
-            req.setAttribute("labServices",        serviceDAO.findByCategoryId(3));
             req.setAttribute("ultrasoundServices", serviceDAO.findByCategoryId(2));
             if (record.getId() > 0) {
                 req.setAttribute("testOrders", testOrderDAO.getByMedicalRecordId(record.getId()));
@@ -325,17 +324,7 @@ public class MedicalRecordServlet extends HttpServlet {
             }
         }
 
-        // ── Tạo chỉ định xét nghiệm ─────────────────────────────────────────
-        if (success) {
-            String[] labSids = req.getParameterValues("labServiceIds");
-            if (labSids != null && labSids.length > 0) {
-                java.util.List<Integer> labIds = new java.util.ArrayList<>();
-                for (String s : labSids) {
-                    try { labIds.add(Integer.parseInt(s)); } catch (NumberFormatException ignored) {}
-                }
-                if (!labIds.isEmpty()) testOrderDAO.createBatch(finalRecordId, doctorId, labIds);
-            }
-        }
+
 
         if (!success) {
             errorOnPost(req, resp, apptId, user.getFullName(), "Lưu hồ sơ thất bại. Vui lòng thử lại.");
@@ -372,7 +361,7 @@ public class MedicalRecordServlet extends HttpServlet {
         }
 
         if (isDraft) {
-            resp.sendRedirect(req.getContextPath() + "/doctor/lab-orders?recordId=" + finalRecordId + "&fromDraft=1");
+            resp.sendRedirect(req.getContextPath() + "/doctor/medical-records?apptId=" + apptId + "&saved=1&draft=1");
         } else {
             resp.sendRedirect(req.getContextPath() + "/doctor/medical-records?apptId=" + apptId + "&saved=1");
         }

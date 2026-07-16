@@ -689,97 +689,16 @@
             <c:if test="${record.id > 0 and record.status == 'draft'}">
               <div class="alert alert-warning rounded-3 mb-3">
                 <i class="bi bi-hourglass-split me-2"></i>
-                <strong>Hồ sơ đang chờ kết quả xét nghiệm.</strong>
-                Sau khi KTV nhập kết quả, bấm <strong>"Lưu hồ sơ chính thức"</strong> để hoàn tất.
-                <a href="${pageContext.request.contextPath}/doctor/lab-orders?recordId=${record.id}"
+                <strong>Hồ sơ chưa hoàn tất (Draft).</strong>
+                Sau khi có kết quả siêu âm cận lâm sàng, vui lòng cập nhật và lưu hồ sơ chính thức để hoàn tất.
+                <a href="${pageContext.request.contextPath}/doctor/results?recordId=${record.id}"
                    class="ms-2 btn btn-sm btn-warning rounded-pill">
-                  <i class="bi bi-droplet me-1"></i>Xem kết quả XN
+                  <i class="bi bi-soundwave me-1"></i>Xem kết quả siêu âm
                 </a>
               </div>
             </c:if>
 
-            <%-- Section chọn dịch vụ: Xét nghiệm + Siêu âm với tìm kiếm --%>
-            <c:if test="${not empty labServices or not empty ultrasoundServices}">
-              <div class="card border-0 rounded-3 mb-3" style="background:#fff8f8;">
-                <div class="card-body p-3">
 
-                  <%-- Header + tìm kiếm --%>
-                  <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
-                    <h6 class="fw-bold mb-0">
-                      <i class="bi bi-droplet me-1 text-danger"></i>Chỉ định kèm theo
-                    </h6>
-                    <input type="text" id="svcSearchInput" class="form-control form-control-sm rounded-pill"
-                           style="max-width:220px;" placeholder="🔍 Tìm dịch vụ…"
-                           oninput="filterServices(this.value)">
-                  </div>
-
-                  <%-- Tab Xét nghiệm / Siêu âm --%>
-                  <ul class="nav nav-pills nav-fill mb-3" id="svcTabs" role="tablist" style="gap:6px;">
-                    <li class="nav-item">
-                      <button class="nav-link active rounded-pill py-1 px-3 small fw-medium"
-                              id="tab-lab" onclick="switchTab('lab',this)" type="button">
-                        <i class="bi bi-droplet me-1"></i>Xét nghiệm
-                        <span class="badge bg-danger ms-1 rounded-pill" id="cnt-lab">0</span>
-                      </button>
-                    </li>
-                    <li class="nav-item">
-                      <button class="nav-link rounded-pill py-1 px-3 small fw-medium"
-                              id="tab-us" onclick="switchTab('us',this)" type="button">
-                        <i class="bi bi-soundwave me-1"></i>Siêu âm
-                        <span class="badge bg-danger ms-1 rounded-pill" id="cnt-us">0</span>
-                      </button>
-                    </li>
-                  </ul>
-
-                  <%-- Danh sách Xét nghiệm --%>
-                  <div id="panel-lab">
-                    <div class="row g-2" id="list-lab">
-                      <c:forEach var="svc" items="${labServices}">
-                        <div class="col-md-6 svc-item" data-name="${svc.serviceName}" data-panel="lab">
-                          <div class="form-check">
-                            <input class="form-check-input svc-check" type="checkbox"
-                                   name="labServiceIds" value="${svc.id}"
-                                   id="lab_${svc.id}" data-panel="lab"
-                                   onchange="updateTabCount('lab')">
-                            <label class="form-check-label small" for="lab_${svc.id}">
-                              <span class="fw-medium">${svc.serviceName}</span>
-                              <c:if test="${svc.requiresFasting}">
-                                <span class="badge bg-warning text-dark ms-1" style="font-size:.6rem;">Nhịn ăn</span>
-                              </c:if>
-                            </label>
-                          </div>
-                        </div>
-                      </c:forEach>
-                    </div>
-                    <p class="text-muted small mt-2 mb-0 d-none" id="no-lab">Không tìm thấy xét nghiệm phù hợp.</p>
-                  </div>
-
-                  <%-- Danh sách Siêu âm --%>
-                  <div id="panel-us" class="d-none">
-                    <div class="row g-2" id="list-us">
-                      <c:forEach var="svc" items="${ultrasoundServices}">
-                        <div class="col-md-6 svc-item" data-name="${svc.serviceName}" data-panel="us">
-                          <div class="form-check">
-                            <input class="form-check-input svc-check" type="checkbox"
-                                   name="labServiceIds" value="${svc.id}"
-                                   id="us_${svc.id}" data-panel="us"
-                                   onchange="updateTabCount('us')">
-                            <label class="form-check-label small" for="us_${svc.id}">
-                              <span class="fw-medium">${svc.serviceName}</span>
-                              <c:if test="${svc.requiresFasting}">
-                                <span class="badge bg-warning text-dark ms-1" style="font-size:.6rem;">Nhịn ăn</span>
-                              </c:if>
-                            </label>
-                          </div>
-                        </div>
-                      </c:forEach>
-                    </div>
-                    <p class="text-muted small mt-2 mb-0 d-none" id="no-us">Không tìm thấy siêu âm phù hợp.</p>
-                  </div>
-
-                </div>
-              </div>
-            </c:if>
 
             <%-- Hidden field để phân biệt draft vs final --%>
             <input type="hidden" name="submitAction" id="submitActionField" value="final">
@@ -799,11 +718,11 @@
                 </c:choose>
               </button>
 
-              <%-- Nút chỉ định XN + lưu tạm (chỉ hiện khi có tick xét nghiệm) --%>
+              <%-- Nút lưu nháp (draft) --%>
               <button type="button" onclick="doSubmit('draft')"
                       id="btnDraft"
-                      class="btn btn-outline-danger rounded-3 px-4 d-none">
-                <i class="bi bi-droplet me-2"></i>Chỉ định XN & Chờ kết quả
+                      class="btn btn-outline-warning rounded-3 px-4">
+                <i class="bi bi-file-earmark me-2"></i>Lưu nháp (Draft)
               </button>
 
               <a href="${pageContext.request.contextPath}/doctor/appointments" class="btn btn-outline-secondary rounded-3">Huỷ</a>
@@ -835,21 +754,8 @@
                 <div class="card rounded-4 border-0 shadow-sm mt-3">
                     <div class="card-body p-3 d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="fw-medium">Xét nghiệm</span>
-                            <span class="text-muted small ms-2">Chỉ định & xem kết quả xét nghiệm</span>
-                        </div>
-                        <a href="${pageContext.request.contextPath}/doctor/lab-orders?recordId=${record.id}"
-                           class="btn btn-outline-danger btn-sm rounded-pill px-3">
-                            <i class="bi bi-droplet me-1"></i>Xét nghiệm
-                        </a>
-                    </div>
-                </div>
-
-                <div class="card rounded-4 border-0 shadow-sm mt-3">
-                    <div class="card-body p-3 d-flex align-items-center justify-content-between">
-                        <div>
-                            <span class="fw-medium">Kết quả cận lâm sàng</span>
-                            <span class="text-muted small ms-2">Xem kết quả xét nghiệm & siêu âm (kèm AI)</span>
+                            <span class="fw-medium">Kết quả siêu âm cận lâm sàng</span>
+                            <span class="text-muted small ms-2">Xem kết quả siêu âm &amp; phân tích AI</span>
                         </div>
                         <a href="${pageContext.request.contextPath}/doctor/results?recordId=${record.id}"
                            class="btn btn-outline-primary btn-sm rounded-pill px-3">
@@ -1099,56 +1005,7 @@
     submitObsForm();
   }
 
-  // ── Tab xét nghiệm / siêu âm và tìm kiếm ─────────────────────────────────
-  var _activePanel = 'lab';
 
-  function switchTab(panel, btn) {
-    _activePanel = panel;
-    document.getElementById('panel-lab').classList.toggle('d-none', panel !== 'lab');
-    document.getElementById('panel-us').classList.toggle('d-none',  panel !== 'us');
-    document.querySelectorAll('#svcTabs .nav-link').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    // Áp dụng lại filter nếu đang tìm kiếm
-    var q = document.getElementById('svcSearchInput');
-    if (q) filterServices(q.value);
-  }
-
-  function filterServices(q) {
-    q = q.toLowerCase().trim();
-    ['lab','us'].forEach(function(panel) {
-      var items = document.querySelectorAll('.svc-item[data-panel="' + panel + '"]');
-      var visible = 0;
-      items.forEach(function(el) {
-        var name = el.dataset.name.toLowerCase();
-        var show = !q || name.includes(q);
-        el.classList.toggle('d-none', !show);
-        if (show) visible++;
-      });
-      var noEl = document.getElementById('no-' + panel);
-      if (noEl) noEl.classList.toggle('d-none', visible > 0 || !q);
-    });
-  }
-
-  function updateTabCount(panel) {
-    var checked = document.querySelectorAll('input.svc-check[data-panel="' + panel + '"]:checked').length;
-    var badge = document.getElementById('cnt-' + panel);
-    if (badge) {
-      badge.textContent = checked;
-      badge.style.display = checked > 0 ? '' : 'none';
-    }
-    // Hiện/ẩn nút draft
-    var anyChecked = document.querySelectorAll('input.svc-check:checked').length > 0;
-    var btnDraft = document.getElementById('btnDraft');
-    if (btnDraft) btnDraft.classList.toggle('d-none', !anyChecked);
-  }
-
-  // Ẩn badge 0 lúc đầu
-  document.addEventListener('DOMContentLoaded', function() {
-    ['lab','us'].forEach(function(p) {
-      var b = document.getElementById('cnt-' + p);
-      if (b) b.style.display = 'none';
-    });
-  });
   </script>
 
 </c:if>

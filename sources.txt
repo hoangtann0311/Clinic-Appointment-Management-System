@@ -16,7 +16,6 @@ C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\DashboardServlet.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\DoctorAppointmentServlet.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\DoctorDashboardServlet.java
-C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\DoctorLabOrderServlet.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\DoctorPatientHistoryServlet.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\DoctorPatientListServlet.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\DoctorPregnancyServlet.java
@@ -28,7 +27,6 @@ C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\ForgotPasswordServlet.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\GoogleLoginServlet.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\GoogleServerLoginServlet.java
-C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\LabTechServlet.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\LoginServlet.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\LogoutServlet.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\ManagerMedicineServlet.java
@@ -40,7 +38,15 @@ C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\MedicalRecordServlet.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\MockAiEngineServlet.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\NotificationServlet.java
+C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\PatientAppointmentServlet.java
+C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\PatientBookingServlet.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\PatientMedicalRecordServlet.java
+C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\PatientNotificationServlet.java
+C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\PatientPaymentServlet.java
+C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\PatientPregnancyServlet.java
+C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\PatientProfileServlet.java
+C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\PatientReviewServlet.java
+C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\PatientSlotApiServlet.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\PrescriptionServlet.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\RegisterServlet.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\ResetPasswordServlet.java
@@ -51,6 +57,7 @@ C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\StaffSosServlet.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\UltrasoundAnalyzeServlet.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\UltrasoundDetailServlet.java
+C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\UltrasoundModelServlet.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\UltrasoundTemplateServlet.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\UltrasoundUploadServlet.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\controller\UltrasoundWaitingListServlet.java
@@ -73,6 +80,7 @@ C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\dao\Permis
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\dao\PregnancyDAO.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\dao\PrescriptionDAO.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\dao\PriceHistoryDAO.java
+C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\dao\ReviewDAO.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\dao\RoleDAO.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\dao\RolePermissionDAO.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\dao\ServiceCategoryDAO.java
@@ -92,7 +100,6 @@ C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\model\Doct
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\model\DoctorSchedule.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\model\Invoice.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\model\InvoiceItem.java
-C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\model\LabResult.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\model\MedicalRecord.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\model\Medicine.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\model\MedicineCategory.java
@@ -105,6 +112,7 @@ C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\model\Preg
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\model\Prescription.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\model\PrescriptionItem.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\model\PriceHistory.java
+C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\model\Review.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\model\Role.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\model\Service.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\model\ServiceCategory.java
@@ -127,6 +135,7 @@ C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\service\Go
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\service\GoogleUserInfo.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\service\MedicineService.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\service\PasswordService.java
+C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\service\PatientBookingService.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\service\RoleService.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\service\ServiceService.java
 C:\Users\admin\IdeaProjects\SWP392-Project-Nhom-3\src\java\com\clinic\service\ServiceStatisticsService.java

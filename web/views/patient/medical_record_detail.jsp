@@ -249,34 +249,7 @@
                                     </div>
                                 </div>
 
-                                <%-- Lab Result details if completed --%>
-                                <c:if test="${test.status == 'completed' && not empty test.labResult}">
-                                    <div class="rounded-3 p-3 mt-2 bg-light border">
-                                        <div class="row g-3">
-                                            <div class="col-sm-8">
-                                                <div class="fw-bold mb-1 text-secondary">
-                                                    <i class="bi bi-card-text me-1"></i>Chi tiết kết quả:
-                                                </div>
-                                                <p class="mb-2 text-dark" style="white-space: pre-wrap;">${test.labResult.resultDetails}</p>
-                                                <div class="text-muted small">
-                                                    KTV thực hiện: <strong>${test.labResult.labTechnicianName}</strong> 
-                                                    <c:if test="${not empty test.labResult.updatedAt}">
-                                                        | Cập nhật lúc: ${test.labResult.updatedAt}
-                                                    </c:if>
-                                                </div>
-                                            </div>
-                                            <c:if test="${not empty test.labResult.imageUrl}">
-                                                <div class="col-sm-4 text-center">
-                                                    <a href="${test.labResult.imageUrl}" target="_blank">
-                                                        <img src="${test.labResult.imageUrl}" alt="Phiếu kết quả xét nghiệm"
-                                                             style="max-width: 100%; max-height: 120px; object-fit: contain; border: 1px solid #dee2e6; border-radius: 6px;">
-                                                    </a>
-                                                    <div class="form-text small mt-1">Click để phóng to</div>
-                                                </div>
-                                            </c:if>
-                                        </div>
-                                    </div>
-                                </c:if>
+
                             </div>
                         </c:forEach>
                     </div>

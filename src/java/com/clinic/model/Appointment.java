@@ -18,6 +18,7 @@ public class Appointment {
     private String queueNumber; // STT, e.g., "SOS-01", "STT-02"
     private String preExamPaymentStatus;
     private String gestationalAge; // E.g. "10 tuần 2 ngày"
+    private Integer slotId; // nullable
 
     // Complex object associations (for receptionist / HEAD)
     private Patient patient;
@@ -172,6 +173,9 @@ public class Appointment {
 
     public String getPreExamPaymentStatus() { return preExamPaymentStatus; }
     public void setPreExamPaymentStatus(String preExamPaymentStatus) { this.preExamPaymentStatus = preExamPaymentStatus; }
+
+    public Integer getSlotId() { return slotId; }
+    public void setSlotId(Integer slotId) { this.slotId = slotId; }
 
     public boolean isPreExamPaid() {
         return "Paid".equalsIgnoreCase(preExamPaymentStatus);

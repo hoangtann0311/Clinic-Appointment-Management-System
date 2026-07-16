@@ -1,0 +1,595 @@
+/* ============================================================
+   CAMS — Patient Portal Stylesheet
+   Sidebar + Topbar layout, Rose-Pink design system
+   Mirrors staff.css / admin.css structure exactly
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800;900&display=swap');
+
+/* ── Variables ── */
+:root {
+    --pt-sidebar-w: 260px;
+    --pt-topbar-h: 65px;
+
+    /* Pink Core Palette */
+    --pt-pink-50:  #fff0f6;
+    --pt-pink-100: #ffe0ef;
+    --pt-pink-200: #ffb3d1;
+    --pt-pink-300: #ff80b3;
+    --pt-pink-400: #ff4d94;
+    --pt-pink-500: #e91e8c;
+    --pt-pink-600: #c2185b;
+    --pt-pink-700: #9c0f4a;
+    --pt-pink-800: #7b0a39;
+
+    --pt-rose-500: #f43f5e;
+    --pt-rose-600: #e11d48;
+
+    /* Surfaces */
+    --pt-bg:           #fff5f9;
+    --pt-surface:      #ffffff;
+    --pt-surface-var:  #fff0f5;
+    --pt-outline:      #e8c5d5;
+    --pt-outline-var:  #f5dfe9;
+
+    /* Text */
+    --pt-on-bg:       #1f1117;
+    --pt-on-surface:  #2d1a25;
+    --pt-on-var:      #5a3d4e;
+    --pt-muted:       #8a6070;
+
+    /* Sidebar – very dark rose */
+    --pt-sb-bg:       #1a0a12;
+    --pt-sb-bg-mid:   #2d1020;
+    --pt-sb-bg-deep:  #0f0509;
+    --pt-sb-hover:    #3d1830;
+    --pt-sb-active:   rgba(233,30,140,0.18);
+    --pt-sb-active-border: var(--pt-pink-500);
+    --pt-sb-text:     #f0d5e3;
+    --pt-sb-muted:    #a07085;
+    --pt-sb-border:   rgba(255,255,255,0.07);
+    --pt-sb-accent:   #ff80b3;
+
+    /* Shadows */
+    --pt-shadow-xs: 0 1px 3px rgba(194,24,91,0.07);
+    --pt-shadow-sm: 0 2px 8px rgba(194,24,91,0.10);
+    --pt-shadow-md: 0 4px 20px rgba(194,24,91,0.13);
+    --pt-shadow-lg: 0 8px 32px rgba(194,24,91,0.16);
+    --pt-shadow-xl: 0 16px 56px rgba(194,24,91,0.20);
+    --pt-shadow-pink: 0 4px 24px rgba(233,30,140,0.30);
+
+    /* Radius */
+    --pt-r-sm: 8px;
+    --pt-r-md: 12px;
+    --pt-r-lg: 16px;
+    --pt-r-xl: 22px;
+    --pt-r-pill: 999px;
+
+    /* Transitions */
+    --pt-t-fast:   0.15s ease;
+    --pt-t-normal: 0.25s ease;
+    --pt-t-slow:   0.35s cubic-bezier(0.4,0,0.2,1);
+
+    /* Font */
+    --pt-font: 'Be Vietnam Pro', 'Segoe UI', system-ui, sans-serif;
+}
+
+/* ── Base ── */
+.patient-body {
+    font-family: var(--pt-font);
+    background-color: var(--pt-bg);
+    color: var(--pt-on-bg);
+    margin: 0; padding: 0;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================================
+   TOPBAR
+   ============================================================ */
+.patient-topbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: var(--pt-topbar-h);
+    background: var(--pt-surface);
+    border-bottom: 2px solid var(--pt-pink-200);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1.5rem;
+    z-index: 1030;
+    box-shadow: var(--pt-shadow-xs);
+}
+
+.patient-topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.patient-sidebar-toggle {
+    background: none;
+    border: none;
+    color: var(--pt-on-var);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 6px 8px;
+    border-radius: var(--pt-r-sm);
+    display: none;
+    transition: background var(--pt-t-fast), color var(--pt-t-fast);
+    line-height: 1;
+}
+.patient-sidebar-toggle:hover {
+    background: var(--pt-pink-100);
+    color: var(--pt-pink-600);
+}
+
+.patient-topbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    font-family: var(--pt-font);
+    font-weight: 900;
+    font-size: 1.25rem;
+    color: var(--pt-pink-600);
+    letter-spacing: -0.03em;
+}
+.patient-topbar-brand i {
+    color: var(--pt-pink-500);
+    font-size: 1.45rem;
+    filter: drop-shadow(0 0 5px rgba(233,30,140,0.35));
+}
+.pt-brand-badge {
+    font-size: 0.62rem;
+    font-weight: 700;
+    color: var(--pt-pink-600);
+    background: var(--pt-pink-100);
+    padding: 3px 10px;
+    border-radius: var(--pt-r-pill);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border: 1px solid var(--pt-pink-200);
+    margin-left: 0.25rem;
+}
+
+.patient-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.patient-topbar-user {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.375rem 0.875rem;
+    background: var(--pt-pink-50);
+    border-radius: var(--pt-r-pill);
+    border: 1px solid var(--pt-pink-200);
+}
+.patient-topbar-user span {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--pt-pink-700);
+}
+
+.patient-avatar-sm {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--pt-pink-500), var(--pt-rose-500));
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(233,30,140,0.35);
+}
+
+.patient-topbar-role {
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: var(--pt-r-pill);
+    background: linear-gradient(135deg, var(--pt-pink-500), var(--pt-rose-500));
+    color: #fff;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.patient-topbar-logout {
+    color: var(--pt-on-var);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.875rem;
+    border-radius: var(--pt-r-sm);
+    transition: all var(--pt-t-fast);
+    border: 1px solid transparent;
+}
+.patient-topbar-logout:hover {
+    background: var(--pt-pink-50);
+    color: var(--pt-rose-600);
+    border-color: var(--pt-pink-200);
+}
+
+/* ============================================================
+   SIDEBAR
+   ============================================================ */
+.patient-sidebar {
+    position: fixed;
+    top: var(--pt-topbar-h); left: 0; bottom: 0;
+    width: var(--pt-sidebar-w);
+    background: linear-gradient(180deg, var(--pt-sb-bg) 0%, var(--pt-sb-bg-mid) 50%, var(--pt-sb-bg-deep) 100%);
+    overflow-y: auto; overflow-x: hidden;
+    z-index: 1020;
+    transition: transform var(--pt-t-slow);
+    border-right: 1px solid var(--pt-sb-border);
+}
+
+.patient-sidebar::-webkit-scrollbar { width: 3px; }
+.patient-sidebar::-webkit-scrollbar-track { background: transparent; }
+.patient-sidebar::-webkit-scrollbar-thumb { background: rgba(255,128,179,0.25); border-radius: 3px; }
+
+.patient-sidebar::before {
+    content: '';
+    display: block;
+    height: 3px;
+    background: linear-gradient(90deg, var(--pt-pink-500), var(--pt-rose-500), transparent);
+    flex-shrink: 0;
+}
+
+/* Sidebar User Block */
+.patient-sidebar-user {
+    padding: 1.5rem 1.25rem 1.25rem;
+    text-align: center;
+    border-bottom: 1px solid var(--pt-sb-border);
+    background: linear-gradient(180deg, rgba(233,30,140,0.08) 0%, transparent 100%);
+}
+
+.patient-sidebar-avatar {
+    width: 62px; height: 62px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--pt-pink-400), var(--pt-pink-600));
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--pt-font);
+    font-weight: 900;
+    font-size: 1.4rem;
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+    box-shadow: 0 0 0 3px rgba(233,30,140,0.2), var(--pt-shadow-pink);
+}
+
+.patient-sidebar-name {
+    color: #f5e0ea;
+    font-weight: 700;
+    font-size: 0.9rem;
+    margin-bottom: 0.4rem;
+}
+
+.patient-sidebar-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.63rem;
+    font-weight: 700;
+    padding: 3px 12px;
+    border-radius: var(--pt-r-pill);
+    background: linear-gradient(135deg, var(--pt-pink-600), var(--pt-pink-500));
+    color: #fff;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+/* Sidebar Menu */
+.patient-sidebar-menu {
+    list-style: none;
+    padding: 0.75rem 0 1rem;
+    margin: 0;
+}
+
+.patient-sidebar-section {
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--pt-sb-muted);
+    padding: 1rem 1.25rem 0.4rem;
+    margin-top: 0.25rem;
+    list-style: none;
+}
+
+.patient-sidebar-menu li a {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 1.25rem;
+    color: var(--pt-sb-text);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-left: 3px solid transparent;
+    transition: all var(--pt-t-fast);
+    margin: 1px 0;
+}
+.patient-sidebar-menu li a i {
+    font-size: 1rem;
+    width: 20px;
+    text-align: center;
+    color: var(--pt-sb-muted);
+    transition: color var(--pt-t-fast);
+    flex-shrink: 0;
+}
+.patient-sidebar-menu li a:hover {
+    background: var(--pt-sb-hover);
+    color: #fff;
+    border-left-color: var(--pt-pink-400);
+    padding-left: 1.5rem;
+}
+.patient-sidebar-menu li a:hover i { color: var(--pt-sb-accent); }
+.patient-sidebar-menu li a.active {
+    background: var(--pt-sb-active);
+    color: var(--pt-sb-accent);
+    border-left-color: var(--pt-pink-500);
+    font-weight: 700;
+}
+.patient-sidebar-menu li a.active i { color: var(--pt-pink-300); }
+.pt-logout-link:hover { color: var(--pt-rose-500) !important; }
+
+/* Sidebar Backdrop (mobile) */
+.patient-sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1019;
+}
+.patient-sidebar-backdrop.show { display: block; }
+
+/* ============================================================
+   MAIN CONTENT
+   ============================================================ */
+.patient-main {
+    margin-left: var(--pt-sidebar-w);
+    margin-top: var(--pt-topbar-h);
+    padding: 2rem 2.25rem;
+    min-height: calc(100vh - var(--pt-topbar-h));
+    width: calc(100% - var(--pt-sidebar-w));
+    max-width: 100%;
+}
+
+/* ── Page Heading ── */
+.patient-main h2 {
+    font-size: 1.65rem;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    color: var(--pt-on-bg);
+}
+.patient-main h4, .patient-main h5 {
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+/* ── Cards ── */
+.card {
+    border: 1px solid var(--pt-outline-var) !important;
+    border-radius: var(--pt-r-lg) !important;
+    box-shadow: var(--pt-shadow-sm) !important;
+    background: var(--pt-surface);
+    transition: box-shadow var(--pt-t-normal), transform var(--pt-t-normal);
+}
+.card:hover {
+    box-shadow: var(--pt-shadow-md) !important;
+}
+.card.rounded-4 { border-radius: var(--pt-r-xl) !important; }
+.card-header {
+    background: var(--pt-surface-var) !important;
+    border-bottom: 1px solid var(--pt-outline-var) !important;
+    font-weight: 700;
+}
+
+/* ── Hero / Banner cards ── */
+.card.bg-primary.bg-gradient,
+.card.bg-primary {
+    background: linear-gradient(135deg, #be123c 0%, #e91e8c 80%, #ff4d94 100%) !important;
+    border: none !important;
+    box-shadow: var(--pt-shadow-lg) !important;
+}
+.card.bg-info.bg-gradient {
+    background: linear-gradient(135deg, #0e7490 0%, #0d9488 100%) !important;
+    border: none !important;
+    box-shadow: var(--pt-shadow-md) !important;
+}
+
+/* ── Quick-link cards (dashboard) ── */
+.quick-link-card {
+    background: var(--pt-surface) !important;
+    border: 1.5px solid var(--pt-outline-var) !important;
+    border-radius: var(--pt-r-md) !important;
+    box-shadow: var(--pt-shadow-xs) !important;
+    transition: all var(--pt-t-normal) !important;
+    cursor: pointer;
+}
+.quick-link-card:hover {
+    border-color: var(--pt-pink-400) !important;
+    box-shadow: 0 6px 20px rgba(233,30,140,0.15) !important;
+    transform: translateY(-3px) !important;
+}
+.quick-link-card h6 { font-weight: 700; color: var(--pt-on-surface); }
+.quick-link-card i { transition: transform var(--pt-t-fast); }
+.quick-link-card:hover i { transform: scale(1.15); }
+
+/* ── Buttons ── */
+.btn-primary {
+    background: linear-gradient(135deg, var(--pt-pink-600), var(--pt-pink-500)) !important;
+    border: none !important;
+    border-radius: var(--pt-r-md) !important;
+    font-weight: 600;
+    box-shadow: 0 3px 12px rgba(233,30,140,0.28);
+    transition: all var(--pt-t-fast) !important;
+    color: #fff !important;
+}
+.btn-primary:hover, .btn-primary:focus {
+    background: linear-gradient(135deg, var(--pt-pink-700), var(--pt-pink-600)) !important;
+    box-shadow: 0 6px 20px rgba(233,30,140,0.40) !important;
+    transform: translateY(-1px);
+    color: #fff !important;
+}
+.btn-primary:active { transform: translateY(0); }
+
+.btn-outline-primary {
+    color: var(--pt-pink-600) !important;
+    border-color: var(--pt-pink-400) !important;
+    border-radius: var(--pt-r-md) !important;
+    font-weight: 600;
+    transition: all var(--pt-t-fast) !important;
+}
+.btn-outline-primary:hover {
+    background: var(--pt-pink-600) !important;
+    border-color: var(--pt-pink-600) !important;
+    color: #fff !important;
+}
+
+.btn-outline-info {
+    color: #0e7490 !important;
+    border-radius: var(--pt-r-pill) !important;
+    font-weight: 600;
+    font-size: 0.82rem;
+    transition: all var(--pt-t-fast) !important;
+}
+.btn-outline-info:hover {
+    background: #0e7490 !important;
+    color: #fff !important;
+}
+
+.btn-outline-secondary { border-radius: var(--pt-r-md) !important; font-weight: 500; }
+.btn.rounded-pill      { border-radius: var(--pt-r-pill) !important; }
+.btn-sm                { font-size: 0.82rem; padding: 0.38rem 0.9rem; }
+
+/* ── Tables ── */
+.table {
+    --bs-table-hover-bg: var(--pt-pink-50);
+}
+.table thead th {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--pt-muted);
+    border-bottom: 2px solid var(--pt-outline-var);
+    padding: 0.9rem 1rem;
+    background: var(--pt-surface-var) !important;
+}
+.table tbody tr {
+    transition: background var(--pt-t-fast);
+    border-bottom: 1px solid var(--pt-outline-var);
+}
+.table tbody tr:hover { background: var(--pt-pink-50) !important; }
+.table tbody td { padding: 0.85rem 1rem; vertical-align: middle; }
+.table-light { background: var(--pt-surface-var) !important; }
+
+/* ── Badges ── */
+.badge {
+    border-radius: var(--pt-r-pill) !important;
+    font-weight: 600;
+    padding: 0.38em 0.8em;
+}
+.badge.bg-success  { background: linear-gradient(135deg, #16a34a, #15803d) !important; }
+.badge.bg-warning  { background: linear-gradient(135deg, #d97706, #b45309) !important; color:#fff !important; }
+.badge.bg-danger   { background: linear-gradient(135deg, var(--pt-rose-600), var(--pt-pink-600)) !important; }
+.badge.bg-primary  { background: linear-gradient(135deg, var(--pt-pink-600), var(--pt-pink-500)) !important; }
+.badge.bg-info     { background: linear-gradient(135deg, #0e7490, #0d9488) !important; }
+.badge.bg-secondary{ background: linear-gradient(135deg, #6b7280, #4b5563) !important; }
+.badge.bg-light    { background: var(--pt-surface-var) !important; color: var(--pt-on-surface) !important; border: 1px solid var(--pt-outline-var); }
+
+/* ── Alerts ── */
+.alert {
+    border: none !important;
+    border-radius: var(--pt-r-md) !important;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+.alert-success { background: #f0fdf4 !important; color: #166534 !important; border-left: 4px solid #22c55e !important; }
+.alert-danger  { background: #fff1f2 !important; color: #9f1239 !important; border-left: 4px solid var(--pt-rose-500) !important; }
+.alert-warning { background: #fffbeb !important; color: #92400e !important; border-left: 4px solid #f59e0b !important; }
+.alert-info    { background: #f0fdfa !important; color: #134e4a !important; border-left: 4px solid #2dd4bf !important; }
+
+/* ── Form Controls ── */
+.form-control, .form-select {
+    border-radius: var(--pt-r-sm) !important;
+    border: 1.5px solid var(--pt-outline-var) !important;
+    font-size: 0.925rem;
+    color: var(--pt-on-surface);
+    background: var(--pt-surface);
+    transition: border-color var(--pt-t-fast), box-shadow var(--pt-t-fast) !important;
+}
+.form-control:focus, .form-select:focus {
+    border-color: var(--pt-pink-400) !important;
+    box-shadow: 0 0 0 3px rgba(233,30,140,0.10) !important;
+}
+.form-label {
+    font-size: 0.865rem;
+    font-weight: 600;
+    color: var(--pt-on-surface);
+    margin-bottom: 0.4rem;
+}
+
+/* ── Notification items ── */
+.notif-item { border-left: 4px solid transparent; transition: background var(--pt-t-fast); }
+.notif-item.unread { border-left-color: var(--pt-pink-500) !important; background: var(--pt-pink-50) !important; }
+.notif-item:hover  { background: var(--pt-surface-var) !important; }
+.notif-icon { width: 42px; height: 42px; border-radius: 50%; display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0; }
+.notif-icon.bg-primary { background: linear-gradient(135deg, var(--pt-pink-600), var(--pt-pink-400)) !important; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--pt-pink-50); }
+::-webkit-scrollbar-thumb { background: var(--pt-pink-200); border-radius: var(--pt-r-pill); }
+::-webkit-scrollbar-thumb:hover { background: var(--pt-pink-400); }
+
+/* ── Slide-in animation ── */
+@keyframes pt-fade-up {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.patient-main .card { animation: pt-fade-up 0.3s ease both; }
+.patient-main .card:nth-child(2) { animation-delay: 0.05s; }
+.patient-main .card:nth-child(3) { animation-delay: 0.10s; }
+.patient-main .card:nth-child(4) { animation-delay: 0.15s; }
+
+/* ============================================================
+   RESPONSIVE — Mobile Sidebar
+   ============================================================ */
+@media (max-width: 992px) {
+    .patient-sidebar-toggle { display: flex; }
+    .patient-sidebar {
+        transform: translateX(calc(-1 * var(--pt-sidebar-w)));
+    }
+    .patient-sidebar.show {
+        transform: translateX(0);
+        box-shadow: var(--pt-shadow-xl);
+    }
+    .patient-main {
+        margin-left: 0;
+        width: 100%;
+        padding: 1.25rem 1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .patient-topbar { padding: 0 1rem; }
+    .patient-main   { padding: 1rem 0.75rem; }
+    .patient-main h2 { font-size: 1.35rem; }
+    .card { border-radius: var(--pt-r-md) !important; }
+    .table thead th { font-size: 0.72rem; }
+    .table tbody td { padding: 0.7rem 0.75rem; }
+}

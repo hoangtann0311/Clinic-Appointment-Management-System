@@ -146,47 +146,44 @@ public class PatientBookingService {
             }
         }
 
-        // 5. Đặt slot nguyên tử (BR: mỗi time-slot chỉ đặt được 1 lần).
-        //    Lưu ý: bookSlot nhận userId (KHÔNG phải patientId) vì
-        //    FK_time_slots_booked_by tham chiếu users.id.
-        TimeSlot slot = timeSlotService.bookSlot(slotId, userId, errors);
+        // 5. Kiểm tra slot tồn tại và hợp lệ
+        TimeSlot slot = timeSlotDAO.findById(slotId);
         if (slot == null) {
-            return null; // errors đã được TimeSlotService điền (VD: "Slot đã được đặt")
+            errors.put("slotId", "Khung giờ khám không tồn tại.");
+            return null;
+        }
+        if (!slot.isAvailable()) {
+            errors.put("slotId", "Khung giờ khám này đã bị người khác đặt.");
+            return null;
         }
 
-        // 6. Chống trường hợp hi hữu: slot ở quá khứ lọt qua UI (đề phòng)
+        // 6. Chống trường hợp đặt lịch vào thời gian đã qua
         LocalDate workDate = slot.getWorkDate().toLocalDate();
         LocalTime startTime = slot.getStartTime().toLocalTime();
         if (workDate.isBefore(LocalDate.now())
                 || (workDate.isEqual(LocalDate.now()) && startTime.isBefore(LocalTime.now()))) {
-            Map<String, String> releaseErrors = new HashMap<>();
-            timeSlotService.cancelSlot(slotId, userId, "Slot ở quá khứ — huỷ tự động", releaseErrors);
             errors.put("general", "Không thể đặt lịch vào thời điểm đã qua. Vui lòng chọn khung giờ khác.");
             return null;
         }
 
-        // 7. Dựng Appointment và lưu — nếu lưu thất bại, nhả slot lại (tránh kẹt BOOKED không có appointment)
-        Doctor doctor = doctorDAO.findDoctorById(slot.getDoctorId());
-        Patient patient = patientDAO.findById(patientId);
-
+        // 7. Thực hiện đặt slot và tạo appointment trong cùng một transaction
         String gestationalAge = AppointmentDAO.calculateGestationalAge(lmp, workDate);
-        String timeSlotStr = slot.getTimeLabel();
-
-        Appointment appointment = new Appointment(
-                0, patient, doctor, service, workDate, timeSlotStr,
-                symptoms.trim(), lmp, gestationalAge, false, "Confirmed"
+        boolean success = appointmentDAO.bookSlotAndCreateAppointment(
+                userId, patientId, slotId, serviceId, symptoms.trim(), lmp, gestationalAge, errors
         );
 
-        Appointment saved = appointmentDAO.createAppointment(appointment, slotId);
-
-        if (saved == null) {
-            Map<String, String> releaseErrors = new HashMap<>();
-            timeSlotService.cancelSlot(slotId, userId, "Lỗi tạo lịch hẹn — tự động nhả slot", releaseErrors);
-            errors.put("general", "Không thể tạo lịch hẹn. Vui lòng thử lại.");
+        if (!success) {
             return null;
         }
 
-        return saved;
+        // Truy vấn lịch hẹn vừa tạo để trả về đối tượng đầy đủ
+        List<Appointment> appts = appointmentDAO.getByPatientId(patientId);
+        for (Appointment a : appts) {
+            if (a.getSlotId() != null && a.getSlotId() == slotId) {
+                return a;
+            }
+        }
+        return null;
     }
 
     // ── Xem / huỷ lịch hẹn của bệnh nhân ────────────────────────────────
@@ -255,17 +252,11 @@ public class PatientBookingService {
             }
         }
 
-        appointmentDAO.updateStatus(appointmentId, "Cancelled");
-
-        // Giải phóng slot nếu lịch hẹn này được tạo qua hệ thống time_slots
-        Integer slotId = appointmentDAO.getSlotIdByAppointmentId(appointmentId);
-        if (slotId != null) {
-            Map<String, String> slotErrors = new HashMap<>();
-            timeSlotService.cancelSlot(slotId, userId, "Bệnh nhân huỷ lịch hẹn", slotErrors);
-            // Không chặn luồng chính nếu nhả slot thất bại — trạng thái appointment
-            // đã Cancelled là điều quan trọng nhất đối với bệnh nhân.
+        boolean success = appointmentDAO.cancelAppointmentAndReleaseSlot(appointmentId, userId, "Bệnh nhân huỷ lịch hẹn");
+        if (!success) {
+            errors.put("general", "Không thể huỷ lịch hẹn hoặc lịch hẹn đã hoàn thành/đang tiến hành.");
+            return false;
         }
-
         return true;
     }
 
@@ -309,32 +300,38 @@ public class PatientBookingService {
             }
         }
 
-        // Đặt slot mới
-        TimeSlot newSlot = timeSlotService.bookSlot(newSlotId, userId, errors);
+        // Kiểm tra slot mới tồn tại và hợp lệ
+        TimeSlot newSlot = timeSlotDAO.findById(newSlotId);
         if (newSlot == null) {
+            errors.put("slotId", "Khung giờ khám mới không tồn tại.");
+            return false;
+        }
+        if (!newSlot.isAvailable()) {
+            errors.put("slotId", "Khung giờ khám mới đã bị người khác đặt.");
+            return false;
+        }
+        LocalDate workDate = newSlot.getWorkDate().toLocalDate();
+        LocalTime startTime = newSlot.getStartTime().toLocalTime();
+        if (workDate.isBefore(LocalDate.now())
+                || (workDate.isEqual(LocalDate.now()) && startTime.isBefore(LocalTime.now()))) {
+            errors.put("general", "Không thể đổi lịch sang thời điểm đã qua. Vui lòng chọn khung giờ khác.");
             return false;
         }
 
-        // Giải phóng slot cũ
+        // Lấy slot cũ
         Integer oldSlotId = appointmentDAO.getSlotIdByAppointmentId(appointmentId);
-        if (oldSlotId != null) {
-            Map<String, String> releaseErrors = new HashMap<>();
-            timeSlotService.cancelSlot(oldSlotId, userId, "Bệnh nhân đổi lịch khám", releaseErrors);
+        if (oldSlotId == null) {
+            errors.put("general", "Lịch hẹn cũ không có liên kết khung giờ khám.");
+            return false;
         }
 
-        // Cập nhật lịch hẹn
-        appt.setAppointmentDate(newSlot.getWorkDate().toLocalDate());
-        appt.setTimeSlot(newSlot.getTimeLabel());
+        // Thực hiện đổi lịch nguyên tử trong transaction
+        boolean ok = appointmentDAO.rescheduleAppointmentTransaction(
+                appointmentId, oldSlotId, newSlotId, userId,
+                java.sql.Date.valueOf(workDate), java.sql.Time.valueOf(startTime), errors
+        );
 
-        String sql = "UPDATE appointments SET appointment_date = ?, time_slot = ?, slot_id = ? WHERE id = ?";
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setDate(1, java.sql.Date.valueOf(newSlot.getWorkDate().toLocalDate()));
-            ps.setTime(2, java.sql.Time.valueOf(newSlot.getStartTime().toLocalTime()));
-            ps.setInt(3, newSlotId);
-            ps.setInt(4, appointmentId);
-            ps.executeUpdate();
-            
+        if (ok) {
             // Log hành động
             com.clinic.dao.AuditLogDAO auditLogDAO = new com.clinic.dao.AuditLogDAO();
             auditLogDAO.logAction(
@@ -345,13 +342,7 @@ public class PatientBookingService {
                     String.valueOf(newSlotId)
             );
             return true;
-        } catch (Exception e) {
-            e.printStackTrace();
-            errors.put("general", "Lỗi database khi cập nhật lịch hẹn.");
-            // rollback slot mới
-            Map<String, String> releaseErrors = new HashMap<>();
-            timeSlotService.cancelSlot(newSlotId, userId, "Lỗi cập nhật lịch hẹn — nhả slot mới", releaseErrors);
-            return false;
         }
+        return false;
     }
 }
