@@ -125,7 +125,7 @@ public class AuthorizationFilter implements Filter {
         // ═══════════════════════════════════════════════════════════
         if (user.getStatus() == null || !"Active".equalsIgnoreCase(user.getStatus())) {
             session.invalidate();
-            logAccess(httpReq, user, path, "TỪ CHỐI", "TÀI KHOẢN KHÔNG HOẠT ĐỘNG");
+            logAccess(httpReq, user, path, "Từ chối", "Tài khoản không hoạt động");
             httpRes.sendRedirect(ctx + "/login");
             return;
         }
@@ -143,7 +143,7 @@ public class AuthorizationFilter implements Filter {
                 HttpSession newSession = httpReq.getSession(true);
                 newSession.setAttribute(AuthorizationConfig.SESSION_ERROR_MESSAGE,
                     "Quyền truy cập của bạn đã được cập nhật. Vui lòng đăng nhập lại.");
-                logAccess(httpReq, user, path, "TỪ CHỐI", "ĐỒNG BỘ PHIÊN THẤT BẠI");
+                logAccess(httpReq, user, path, "Từ chối", "Đồng bộ phiên thất bại");
                 httpRes.sendRedirect(ctx + "/login");
                 return;
             }
@@ -159,7 +159,7 @@ public class AuthorizationFilter implements Filter {
         // Mỗi role CHỈ được vào khu vực của mình
         // ═══════════════════════════════════════════════════════════
         if (!AuthorizationConfig.isInZone(roleId, path)) {
-            logAccess(httpReq, user, path, "TỪ CHỐI", "NGOÀI KHU VỰC CHO PHÉP");
+            logAccess(httpReq, user, path, "Từ chối", "Ngoài khu vực cho phép");
             send403(httpReq, httpRes, path,
                 "Bạn không có quyền truy cập khu vực này.",
                 "Role \"" + AuthorizationConfig.getRoleDisplayName(roleId)
@@ -175,7 +175,7 @@ public class AuthorizationFilter implements Filter {
 
         if (requiredPermission == null) {
             // Path KHÔNG có trong whitelist → DEFAULT DENY
-            logAccess(httpReq, user, path, "TỪ CHỐI", "KHÔNG CÓ TRONG DANH SÁCH CHO PHÉP");
+            logAccess(httpReq, user, path, "Từ chối", "Không có trong danh sách cho phép");
             send403(httpReq, httpRes, path,
                 "Trang này không tồn tại hoặc không được phép truy cập.",
                 "Đường dẫn \"" + path + "\" không có trong danh sách được phép.");
@@ -194,7 +194,7 @@ public class AuthorizationFilter implements Filter {
 
         if (!hasPermission) {
             // Không có permission → TỪ CHỐI
-            logAccess(httpReq, user, path, "TỪ CHỐI", "THIẾU QUYỀN:" + requiredPermission);
+            logAccess(httpReq, user, path, "Từ chối", "Thiếu quyền: " + requiredPermission);
             send403(httpReq, httpRes, path,
                 "Bạn không có quyền thực hiện thao tác này.",
                 "Yêu cầu quyền: <code>" + requiredPermission + "</code>.");
@@ -205,7 +205,7 @@ public class AuthorizationFilter implements Filter {
         // YÊU CẦU 6: Audit Log — truy cập THÀNH CÔNG vào critical path
         // ═══════════════════════════════════════════════════════════
         if (AuthorizationConfig.isCriticalPath(path)) {
-            logAccess(httpReq, user, path, "THÀNH CÔNG", null);
+            logAccess(httpReq, user, path, "Thành công", null);
         }
 
         // ── PASS — user được phép truy cập ──
@@ -382,7 +382,7 @@ public class AuthorizationFilter implements Filter {
     private void send403(HttpServletRequest req, HttpServletResponse res,
                          String path, String title, String detail) throws IOException {
         res.setStatus(HttpServletResponse.SC_FORBIDDEN);
-        req.setAttribute("errorTitle", title != null ? title : "Truy Cập Bị Từ Chối");
+        req.setAttribute("errorTitle", title != null ? title : "Truy cập bị từ chối");
         req.setAttribute("errorDetail", detail != null ? detail
             : "Bạn không có quyền truy cập \"" + path + "\".");
         req.setAttribute("deniedPath", path);
@@ -425,11 +425,11 @@ public class AuthorizationFilter implements Filter {
                            String result, String reason) {
         try {
             // Action label ngắn gọn để phân loại
-            String action = "TỪ CHỐI".equals(result)
-                ? "TRUY CẬP BỊ TỪ CHỐI"
-                : "TRUY CẬP THÀNH CÔNG";
+            String action = "Từ chối".equals(result)
+                ? "Truy cập bị từ chối"
+                : "Truy cập thành công";
 
-            // Detail chứa thông tin đầy đủ: [KẾT QUẢ] user (role) → path | Lý do
+            // Detail chứa thông tin đầy đủ: [Kết quả] user (role) → path | Lý do
             StringBuilder detail = new StringBuilder();
             detail.append("[").append(result).append("] ");
             detail.append(user.getEmail());

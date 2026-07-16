@@ -97,7 +97,7 @@ public class CsrfFilter implements Filter {
                 // Ghi audit log
                 try {
                     com.clinic.utils.AuditUtil.log(httpReq,
-                        "[BẢO MẬT] Xác thực token CSRF thất bại: " + path,
+                        "[Bảo mật] Xác thực token CSRF thất bại: " + path,
                         "security", null, null);
                 } catch (Exception e) { /* ignore */ }
 

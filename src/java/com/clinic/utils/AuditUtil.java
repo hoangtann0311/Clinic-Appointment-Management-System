@@ -267,6 +267,139 @@ public class AuditUtil {
         insert(userId, action, "ultrasound_images", null, newValue, ip);
     }
 
+    // ──────────────────────────────────────────────
+    // MEDICAL RECORD UPDATE — audit log chuyên biệt
+    // ──────────────────────────────────────────────
+
+    /**
+     * Ghi audit log khi Bác sĩ sửa bệnh án THÀNH CÔNG.
+     * <p>
+     * Lưu chi tiết từng trường thay đổi dưới dạng JSON,
+     * bao gồm cả Old Value và New Value để truy vết.
+     *
+     * @param request       HttpServletRequest (để lấy user + IP)
+     * @param recordId      ID của bệnh án
+     * @param appointmentId ID lịch hẹn liên quan
+     * @param patientName   tên bệnh nhân
+     * @param editor        User (Bác sĩ) thực hiện sửa
+     * @param oldValues     JSON string chứa các giá trị cũ
+     * @param newValues     JSON string chứa các giá trị mới
+     */
+    public static void logMedicalRecordUpdate(
+            jakarta.servlet.http.HttpServletRequest request,
+            int recordId, Integer appointmentId, String patientName,
+            com.clinic.model.User editor,
+            String oldValues, String newValues) {
+
+        Integer userId = null;
+        String ip = getClientIp(request);
+
+        try {
+            if (editor != null) {
+                userId = editor.getId();
+            }
+        } catch (Exception e) {
+            // bỏ qua
+        }
+
+        // Action mô tả bằng tiếng Việt
+        StringBuilder action = new StringBuilder("Sửa bệnh án #").append(recordId);
+        if (patientName != null && !patientName.isEmpty()) {
+            action.append(" — BN: ").append(patientName);
+        }
+        if (appointmentId != null) {
+            action.append(" — Lịch hẹn #").append(appointmentId);
+        }
+
+        // new_value JSON chứa kết quả + metadata
+        String newValue = buildMedicalRecordUpdateJson(
+                recordId, appointmentId, patientName,
+                editor, "SUCCESS", null, newValues);
+
+        insert(userId, action.toString(), "medical_records", oldValues, newValue, ip);
+    }
+
+    /**
+     * Ghi audit log khi Bác sĩ sửa bệnh án THẤT BẠI.
+     * <p>
+     * Ghi lại nguyên nhân thất bại để phục vụ kiểm tra.
+     * Các trường hợp: không có quyền (FORBIDDEN), lỗi DB, ...
+     *
+     * @param request       HttpServletRequest
+     * @param recordId      ID của bệnh án (0 nếu chưa xác định được)
+     * @param appointmentId ID lịch hẹn (có thể null)
+     * @param patientName   tên bệnh nhân (có thể null)
+     * @param editor        User thực hiện (có thể null)
+     * @param errorReason   nguyên nhân thất bại (VD: "Không có quyền: chỉ Doctor được sửa bệnh án")
+     */
+    public static void logMedicalRecordUpdateFailed(
+            jakarta.servlet.http.HttpServletRequest request,
+            int recordId, Integer appointmentId, String patientName,
+            com.clinic.model.User editor, String errorReason) {
+
+        Integer userId = null;
+        String ip = getClientIp(request);
+
+        try {
+            if (editor != null) {
+                userId = editor.getId();
+            }
+        } catch (Exception e) {
+            // bỏ qua
+        }
+
+        // Action mô tả thất bại
+        StringBuilder action = new StringBuilder("Sửa bệnh án THẤT BẠI");
+        if (recordId > 0) {
+            action.append(" #").append(recordId);
+        }
+        if (patientName != null && !patientName.isEmpty()) {
+            action.append(" — BN: ").append(patientName);
+        }
+
+        // new_value JSON chứa kết quả FAILED + nguyên nhân
+        String newValue = buildMedicalRecordUpdateJson(
+                recordId, appointmentId, patientName,
+                editor, "FAILED", errorReason, null);
+
+        insert(userId, action.toString(), "medical_records", null, newValue, ip);
+    }
+
+    /**
+     * Xây dựng chuỗi JSON cho audit log sửa bệnh án.
+     */
+    private static String buildMedicalRecordUpdateJson(
+            int recordId, Integer appointmentId, String patientName,
+            com.clinic.model.User editor, String result, String errorReason,
+            String changedFieldsJson) {
+
+        StringBuilder json = new StringBuilder("{");
+        json.append("\"result\":\"").append(result).append("\"");
+        json.append(",\"record_id\":").append(recordId);
+
+        if (appointmentId != null) {
+            json.append(",\"appointment_id\":").append(appointmentId);
+        }
+        if (patientName != null && !patientName.isEmpty()) {
+            json.append(",\"patient_name\":\"").append(escapeJson(patientName)).append("\"");
+        }
+        if (editor != null) {
+            json.append(",\"editor_id\":").append(editor.getId());
+            if (editor.getFullName() != null && !editor.getFullName().isEmpty()) {
+                json.append(",\"editor_name\":\"").append(escapeJson(editor.getFullName())).append("\"");
+            }
+        }
+        if (errorReason != null && !errorReason.isEmpty()) {
+            json.append(",\"error_reason\":\"").append(escapeJson(errorReason)).append("\"");
+        }
+        if (changedFieldsJson != null && !changedFieldsJson.isEmpty()) {
+            // changedFieldsJson đã là JSON object → nhúng trực tiếp
+            json.append(",\"changes\":").append(changedFieldsJson);
+        }
+        json.append("}");
+        return json.toString();
+    }
+
     /**
      * Xây dựng chuỗi JSON cho audit log ultrasound upload.
      * Định dạng có cấu trúc, dễ parse khi cần truy vết.

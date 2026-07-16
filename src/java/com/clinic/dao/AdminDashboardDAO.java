@@ -188,7 +188,7 @@ public class AdminDashboardDAO {
     /** Số lần truy cập bị từ chối hôm nay. */
     public int countAccessDeniedToday() {
         String sql = "SELECT COUNT(*) AS total FROM audit_logs "
-                   + "WHERE (action LIKE '%TRUY CẬP BỊ TỪ CHỐI%' OR action LIKE '%ACCESS_DENIED%') "
+                   + "WHERE (action LIKE N'%Truy cập bị từ chối%' OR action LIKE '%ACCESS_DENIED%') "
                    + "AND created_at >= CAST(GETDATE() AS DATE) "
                    + "AND created_at < DATEADD(DAY, 1, CAST(GETDATE() AS DATE))";
         return executeCount(sql);
@@ -197,7 +197,7 @@ public class AdminDashboardDAO {
     /** Số lần truy cập bị từ chối trong khoảng ngày. */
     public int countAccessDenied(LocalDate from, LocalDate to) {
         String sql = "SELECT COUNT(*) AS total FROM audit_logs "
-                   + "WHERE (action LIKE '%TRUY CẬP BỊ TỪ CHỐI%' OR action LIKE '%ACCESS_DENIED%') "
+                   + "WHERE (action LIKE N'%Truy cập bị từ chối%' OR action LIKE '%ACCESS_DENIED%') "
                    + "AND created_at >= ? AND created_at < ?";
         return executeCount(sql, from, to.plusDays(1));
     }
@@ -424,7 +424,7 @@ public class AdminDashboardDAO {
             "SELECT "
             + "CASE "
             + "  WHEN action LIKE N'%đăng nhập%' OR action LIKE '%LOGIN%' OR action LIKE '%login%' THEN N'Đăng Nhập' "
-            + "  WHEN action LIKE N'%TRUY CẬP BỊ TỪ CHỐI%' OR action LIKE '%ACCESS_DENIED%' THEN N'Truy Cập Bị Từ Chối' "
+            + "  WHEN action LIKE N'%Truy cập bị từ chối%' OR action LIKE '%ACCESS_DENIED%' THEN N'Truy cập bị từ chối' "
             + "  WHEN action LIKE N'%tạo%' OR action LIKE N'%thêm%' OR action LIKE '%CREATE%' "
             + "       OR action LIKE N'%đăng ký%' OR action LIKE '%INSERT%' THEN N'Tạo Mới' "
             + "  WHEN action LIKE N'%sửa%' OR action LIKE N'%cập nhật%' OR action LIKE '%UPDATE%' "
@@ -447,7 +447,7 @@ public class AdminDashboardDAO {
         sql.append("GROUP BY "
                 + "CASE "
                 + "  WHEN action LIKE N'%đăng nhập%' OR action LIKE '%LOGIN%' OR action LIKE '%login%' THEN N'Đăng Nhập' "
-                + "  WHEN action LIKE N'%TRUY CẬP BỊ TỪ CHỐI%' OR action LIKE '%ACCESS_DENIED%' THEN N'Truy Cập Bị Từ Chối' "
+                + "  WHEN action LIKE N'%Truy cập bị từ chối%' OR action LIKE '%ACCESS_DENIED%' THEN N'Truy cập bị từ chối' "
                 + "  WHEN action LIKE N'%tạo%' OR action LIKE N'%thêm%' OR action LIKE '%CREATE%' "
                 + "       OR action LIKE N'%đăng ký%' OR action LIKE '%INSERT%' THEN N'Tạo Mới' "
                 + "  WHEN action LIKE N'%sửa%' OR action LIKE N'%cập nhật%' OR action LIKE '%UPDATE%' "
@@ -471,7 +471,7 @@ public class AdminDashboardDAO {
         result.put("Phê Duyệt", 0);
         result.put("Xuất Báo Cáo", 0);
         result.put("Khóa/Mở Khóa", 0);
-        result.put("Truy Cập Bị Từ Chối", 0);
+        result.put("Truy cập bị từ chối", 0);
         result.put("Khác", 0);
 
         Connection conn = null;

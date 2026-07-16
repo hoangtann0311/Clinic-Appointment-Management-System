@@ -190,7 +190,7 @@ public class ManagerScheduleServlet extends HttpServlet {
                     : "ID " + scheduleId;
             AuditUtil.log(currentUser.getId(),
                     "Duyệt lịch trực: " + doctorInfo,
-                    "doctor_schedules", null, "ĐÃ DUYỆT", null);
+                    "doctor_schedules", null, "Đã duyệt", null);
 
             resp.sendRedirect(redirectUrl + "?success=approved&id=" + scheduleId);
         } else {
@@ -230,7 +230,7 @@ public class ManagerScheduleServlet extends HttpServlet {
                     ? ": " + rejectionReason.trim() : "";
             AuditUtil.log(currentUser.getId(),
                     "Từ chối lịch trực: " + doctorInfo + reasonNote,
-                    "doctor_schedules", null, "ĐÃ TỪ CHỐI", null);
+                    "doctor_schedules", null, "Đã từ chối", null);
 
             resp.sendRedirect(redirectUrl + "?success=rejected&id=" + scheduleId);
         } else {
@@ -270,7 +270,7 @@ public class ManagerScheduleServlet extends HttpServlet {
                     ? ": " + reason.trim() : "";
             AuditUtil.log(currentUser.getId(),
                     "Hủy lịch trực: " + doctorInfo + reasonNote,
-                    "doctor_schedules", null, "ĐÃ HUỶ", null);
+                    "doctor_schedules", null, "Đã huỷ", null);
 
             resp.sendRedirect(redirectUrl + "?success=cancelled&id=" + scheduleId);
         } else if (result.needsReassignment()) {
@@ -319,7 +319,7 @@ public class ManagerScheduleServlet extends HttpServlet {
                     ? ": " + reason.trim() : "";
             AuditUtil.log(currentUser.getId(),
                     "Hủy lịch trực (cưỡng chế): " + doctorInfo + reasonNote,
-                    "doctor_schedules", null, "ĐÃ HUỶ", null);
+                    "doctor_schedules", null, "Đã huỷ", null);
 
             resp.sendRedirect(redirectUrl + "?success=cancelled&id=" + scheduleId);
         } else if (result.needsReassignment()) {
