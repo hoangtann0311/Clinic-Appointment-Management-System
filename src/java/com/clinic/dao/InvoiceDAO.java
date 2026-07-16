@@ -215,6 +215,26 @@ public class InvoiceDAO {
         }
     }
 
+    public boolean submitPaymentDetails(int id, String paymentMethod, String transactionCode, String status) {
+        String sql = "UPDATE invoices SET payment_method = ?, transaction_code = ?, status = ? WHERE id = ? AND status <> 'Paid'";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, paymentMethod);
+            ps.setString(2, transactionCode);
+            ps.setString(3, status);
+            ps.setInt(4, id);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("[InvoiceDAO] submitPaymentDetails ERROR: " + e.getMessage());
+            return false;
+        } finally {
+            closeResources(conn, ps, null);
+        }
+    }
+
     public int insert(Invoice inv) {
         String sql = "INSERT INTO invoices (appointment_id, total_amount, status, transaction_code, invoice_type, payment_method, confirmed_by, confirmed_at, payment_note, created_at) "
                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";

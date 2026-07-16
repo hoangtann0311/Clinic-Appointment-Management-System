@@ -44,7 +44,7 @@ public class DoctorDAO {
      */
     public List<Doctor> getAllDoctors() {
         List<Doctor> list = new ArrayList<>();
-        String sql = "SELECT id, full_name, specialization, phone_number FROM doctors";
+        String sql = "SELECT id, full_name, specialization, phone_number, degree, experience_years, avatar_url FROM doctors";
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
@@ -82,7 +82,7 @@ public class DoctorDAO {
      * Tìm bác sĩ theo id (receptionist)
      */
     public Doctor findDoctorById(int id) {
-        String sql = "SELECT id, full_name, specialization, phone_number FROM doctors WHERE id = ?";
+        String sql = "SELECT id, full_name, specialization, phone_number, degree, experience_years, avatar_url FROM doctors WHERE id = ?";
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);
@@ -173,30 +173,16 @@ public class DoctorDAO {
         int id = rs.getInt("id");
         String fullName = rs.getString("full_name");
         String specialization = rs.getString("specialization");
-        
-        String degree = "Bác sĩ Sản phụ khoa";
-        int experienceYears = 5;
-        double price = 150000;
-        String avatar = "https://images.unsplash.com/photo-1622253692010-333f2da6031d?q=80&w=150&auto=format&fit=crop";
 
-        if (fullName != null) {
-            if (fullName.contains("Phạm Trung Hiếu")) {
-                degree = "Bác sĩ Trưởng khoa (CKII)";
-                experienceYears = 12;
-                price = 200000;
-                avatar = "https://images.unsplash.com/photo-1622253692010-333f2da6031d?q=80&w=150&auto=format&fit=crop";
-            } else if (fullName.contains("Nguyễn Thị Mai")) {
-                degree = "Thạc sĩ, Bác sĩ Nội trú";
-                experienceYears = 15;
-                price = 300000;
-                avatar = "https://images.unsplash.com/photo-1594824813573-246434de83fb?q=80&w=150&auto=format&fit=crop";
-            } else if (fullName.contains("Trần Văn Khoa")) {
-                degree = "Bác sĩ Chuyên khoa I";
-                experienceYears = 8;
-                price = 150000;
-                avatar = "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=150&auto=format&fit=crop";
-            }
-        }
+        String degree = rs.getString("degree");
+        if (degree == null || degree.isBlank()) degree = "Bác sĩ";
+
+        int experienceYears = rs.getInt("experience_years"); // 0 nếu NULL hoặc chưa cập nhật
+        String avatar = rs.getString("avatar_url"); // null nếu bác sĩ chưa upload ảnh — JSP tự hiện chữ cái đầu thay thế
+
+        // Lưu ý: bảng doctors không có cột giá khám — giá thuộc về dịch vụ (services.price),
+        // 1 bác sĩ có thể thực hiện nhiều dịch vụ với giá khác nhau. Để 0 thay vì bịa số liệu giả.
+        double price = 0;
 
         return new Doctor(id, fullName, specialization, degree, experienceYears, price, avatar);
     }

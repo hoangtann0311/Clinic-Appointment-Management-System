@@ -1,8 +1,12 @@
 package com.clinic.controller;
 
+import com.clinic.dao.NotificationDAO;
+import com.clinic.model.Appointment;
+import com.clinic.model.Notification;
 import com.clinic.model.User;
 import com.clinic.service.DashboardService;
 import com.clinic.service.MedicineService;
+import com.clinic.service.PatientBookingService;
 import com.clinic.service.ServiceService;
 import com.clinic.service.ServiceStatisticsService;
 import jakarta.servlet.ServletException;
@@ -16,7 +20,9 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Servlet xử lý các trang dashboard theo role.
@@ -97,6 +103,7 @@ public class DashboardServlet extends HttpServlet {
                 break;
             case 5: // Patient
             default:
+                loadPatientDashboardData(request, user.getId());
                 request.getRequestDispatcher("/views/home/dashboard.jsp").forward(request, response);
                 break;
         }
@@ -301,6 +308,52 @@ public class DashboardServlet extends HttpServlet {
 
         // ─── Cảnh báo hệ thống ───
         request.setAttribute("systemAlerts", dashboardService.getSystemAlerts());
+    }
+
+    /**
+     * Load dữ liệu dashboard cho Bệnh Nhân (roleId=5).
+     * Bao gồm: lịch hẹn sắp tới, top 3 thông báo gần đây, số thông báo chưa đọc.
+     */
+    private void loadPatientDashboardData(HttpServletRequest request, int userId) {
+        try {
+            // ─── Lịch hẹn của bệnh nhân ───
+            PatientBookingService bookingService = new PatientBookingService();
+            List<Appointment> allAppts = bookingService.getMyAppointments(userId);
+
+            // Lọc lịch hẹn sắp tới (Pending, Confirmed, Waiting, Emergency_SOS)
+            LocalDate today = LocalDate.now();
+            List<Appointment> upcoming = allAppts.stream()
+                .filter(a -> {
+                    String s = a.getStatus();
+                    return ("Pending".equals(s) || "Confirmed".equals(s)
+                            || "Waiting".equals(s) || "Emergency_SOS".equals(s))
+                        && (a.getAppointmentDate() != null
+                            && !a.getAppointmentDate().isBefore(today));
+                })
+                .sorted((a, b) -> {
+                    if (a.getAppointmentDate() == null) return 1;
+                    if (b.getAppointmentDate() == null) return -1;
+                    return a.getAppointmentDate().compareTo(b.getAppointmentDate());
+                })
+                .collect(Collectors.toList());
+
+            request.setAttribute("upcomingAppts", upcoming);
+            request.setAttribute("upcomingAppointment", upcoming.isEmpty() ? null : upcoming.get(0));
+
+            // ─── Thông báo gần đây (top 3) ───
+            NotificationDAO notifDAO = new NotificationDAO();
+            List<Notification> allNotifs = notifDAO.getByUserId(userId);
+            List<Notification> recentNotifs = allNotifs.size() > 3
+                ? allNotifs.subList(0, 3) : allNotifs;
+            request.setAttribute("recentNotifs", recentNotifs);
+            request.setAttribute("unreadNotifCount", notifDAO.countUnread(userId));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.setAttribute("upcomingAppts", java.util.List.of());
+            request.setAttribute("recentNotifs", java.util.List.of());
+            request.setAttribute("unreadNotifCount", 0);
+        }
     }
 
 

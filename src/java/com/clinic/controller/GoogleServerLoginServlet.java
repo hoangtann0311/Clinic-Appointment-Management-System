@@ -92,6 +92,15 @@ public class GoogleServerLoginServlet extends HttpServlet {
 
             // Tạo session
             HttpSession session = request.getSession(true);
+
+            // Nạp ảnh đại diện từ bảng vai trò cụ thể (hiện chỉ có doctors.avatar_url)
+            if (user.getRoleId() == 2) {
+                com.clinic.model.Doctor doctor = new com.clinic.dao.DoctorDAO().findByUserId(user.getId());
+                if (doctor != null) {
+                    user.setAvatarUrl(doctor.getAvatarUrl());
+                }
+            }
+
             session.setAttribute("user", user);
             session.setAttribute("roleId", user.getRoleId());
 

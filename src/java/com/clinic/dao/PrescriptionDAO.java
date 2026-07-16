@@ -24,12 +24,12 @@ public class PrescriptionDAO {
     public Prescription getByMedicalRecordId(int medicalRecordId) {
         String sql =
             "SELECT p.id, p.medical_record_id, p.prescription_code, p.status, p.created_at, " +
-            "       u.full_name AS patient_name, " +
+            "       pt.full_name AS patient_name, " +
             "       CONVERT(varchar, a.appointment_date, 23) AS appointment_date " +
             "FROM   prescriptions p " +
             "JOIN   medical_records mr ON p.medical_record_id = mr.id " +
             "JOIN   appointments a     ON mr.appointment_id = a.id " +
-            "JOIN   users u            ON a.patient_id = u.id " +
+            "JOIN   patients pt        ON a.patient_id = pt.id " +
             "WHERE  p.medical_record_id = ?";
 
         try (Connection conn = DatabaseConfig.getConnection();
@@ -53,12 +53,12 @@ public class PrescriptionDAO {
     public Prescription getById(int prescriptionId) {
         String sql =
             "SELECT p.id, p.medical_record_id, p.prescription_code, p.status, p.created_at, " +
-            "       u.full_name AS patient_name, " +
+            "       pt.full_name AS patient_name, " +
             "       CONVERT(varchar, a.appointment_date, 23) AS appointment_date " +
             "FROM   prescriptions p " +
             "JOIN   medical_records mr ON p.medical_record_id = mr.id " +
             "JOIN   appointments a     ON mr.appointment_id = a.id " +
-            "JOIN   users u            ON a.patient_id = u.id " +
+            "JOIN   patients pt        ON a.patient_id = pt.id " +
             "WHERE  p.id = ?";
 
         try (Connection conn = DatabaseConfig.getConnection();

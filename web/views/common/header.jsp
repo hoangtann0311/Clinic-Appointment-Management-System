@@ -46,6 +46,16 @@
             padding: 10px 24px;
             font-weight: 500;
         }
+        .form-control {
+            border-radius: 8px;
+            padding: 10px 14px;
+            border: 1px solid #dee2e6;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+        }
     </style>
 </head>
 <c:choose>
@@ -68,9 +78,21 @@
             </div>
             <div class="admin-topbar-right">
                 <div class="admin-topbar-user d-none d-md-flex">
-                    <div class="admin-avatar-sm">
-                        ${fn:substring(sessionScope.user.fullName, 0, 1)}
-                    </div>
+                    <c:choose>
+                        <c:when test="${not empty sessionScope.user.avatarUrl}">
+                            <img src="${sessionScope.user.avatarUrl}" alt="Avatar" class="admin-avatar-sm"
+                                 style="object-fit:cover;"
+                                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                            <div class="admin-avatar-sm" style="display:none;">
+                                ${fn:substring(sessionScope.user.fullName, 0, 1)}
+                            </div>
+                        </c:when>
+                        <c:otherwise>
+                            <div class="admin-avatar-sm">
+                                ${fn:substring(sessionScope.user.fullName, 0, 1)}
+                            </div>
+                        </c:otherwise>
+                    </c:choose>
                     <span>${sessionScope.user.fullName}</span>
                     <span class="admin-topbar-role">
                         <i class="bi bi-briefcase-fill me-1"></i>${sessionScope.user.roleId == 2 ? 'Bác Sĩ' : 'KTV Siêu Âm'}
@@ -119,9 +141,21 @@
         <!-- Sidebar -->
         <aside class="admin-sidebar" id="adminSidebar">
             <div class="admin-sidebar-user">
-                <div class="admin-sidebar-avatar">
-                    ${fn:substring(sessionScope.user.fullName, 0, 1)}
-                </div>
+                <c:choose>
+                    <c:when test="${not empty sessionScope.user.avatarUrl}">
+                        <img src="${sessionScope.user.avatarUrl}" alt="Avatar" class="admin-sidebar-avatar"
+                             style="object-fit:cover;"
+                             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                        <div class="admin-sidebar-avatar" style="display:none;">
+                            ${fn:substring(sessionScope.user.fullName, 0, 1)}
+                        </div>
+                    </c:when>
+                    <c:otherwise>
+                        <div class="admin-sidebar-avatar">
+                            ${fn:substring(sessionScope.user.fullName, 0, 1)}
+                        </div>
+                    </c:otherwise>
+                </c:choose>
                 <div class="admin-sidebar-name">${sessionScope.user.fullName}</div>
                 <span class="admin-sidebar-badge">
                     <i class="bi bi-person-badge-fill"></i>${sessionScope.user.roleId == 2 ? 'Bác Sĩ' : 'KTV Siêu Âm'}
@@ -219,6 +253,28 @@
 
         <!-- Main Content Wrapper -->
         <main class="admin-main" id="adminMain">
+
+        <%-- JS: Auto active sidebar link based on current URL --%>
+        <script>
+        (function() {
+            var path = window.location.pathname;
+            var links = document.querySelectorAll('.admin-sidebar-menu li a');
+            var bestMatch = null, bestLen = 0;
+            links.forEach(function(a) {
+                var href = a.getAttribute('href');
+                if (!href) return;
+                // Strip context path prefix if needed
+                var rel = href.split('?')[0];
+                if (path.endsWith(rel) || path.includes(rel)) {
+                    if (rel.length > bestLen) {
+                        bestLen = rel.length;
+                        bestMatch = a;
+                    }
+                }
+            });
+            if (bestMatch) bestMatch.classList.add('active');
+        })();
+        </script>
 
         <%-- JS thông báo (chỉ load cho bác sĩ) --%>
         <c:if test="${sessionScope.user.roleId == 2}">
@@ -374,6 +430,30 @@
                                 </a>
                             </li>
 
+                            <%-- Menu riêng cho Patient (roleId == 5) --%>
+                            <c:if test="${sessionScope.user.roleId == 5}">
+                                <li class="nav-item">
+                                    <a class="nav-link" href="${pageContext.request.contextPath}/patient/booking">
+                                        <i class="bi bi-calendar-plus me-1"></i>Đặt Lịch Khám
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="${pageContext.request.contextPath}/patient/appointments">
+                                        <i class="bi bi-calendar2-week me-1"></i>Lịch Hẹn Của Tôi
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="${pageContext.request.contextPath}/patient/medical-records">
+                                        <i class="bi bi-journal-medical me-1"></i>Hồ Sơ Khám Bệnh
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link position-relative" href="${pageContext.request.contextPath}/patient/notifications">
+                                        <i class="bi bi-bell me-1"></i>Thông Báo
+                                    </a>
+                                </li>
+                            </c:if>
+
                             <%-- Dropdown tài khoản --%>
                             <li class="nav-item dropdown">
                                 <a class="nav-link dropdown-toggle d-flex align-items-center" href="#"
@@ -393,13 +473,13 @@
                                     </li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li>
-                                        <a class="dropdown-item" href="#">
+                                        <a class="dropdown-item" href="${pageContext.request.contextPath}/patient/profile">
                                             <i class="bi bi-person me-2"></i>Hồ sơ cá nhân
                                         </a>
                                     </li>
                                     <li>
-                                        <a class="dropdown-item" href="#">
-                                            <i class="bi bi-gear me-2"></i>Cài đặt
+                                        <a class="dropdown-item" href="${pageContext.request.contextPath}/patient/notifications">
+                                            <i class="bi bi-bell me-2"></i>Thông báo
                                         </a>
                                     </li>
                                     <li><hr class="dropdown-divider"></li>

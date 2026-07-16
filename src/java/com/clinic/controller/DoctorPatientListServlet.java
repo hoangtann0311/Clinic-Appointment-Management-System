@@ -41,15 +41,16 @@ public class DoctorPatientListServlet extends HttpServlet {
 
         // Lấy danh sách bệnh nhân đã từng có appointment với bác sĩ này
         String sql =
-            "SELECT DISTINCT u.id, u.full_name, " +
+            "SELECT DISTINCT p.id, p.full_name, " +
             "  " + EncryptionUtil.decryptEmailSql("u.email") + " AS email, " +
-            "  " + EncryptionUtil.decryptPhoneSql("u.phone") + " AS phone, " +
-            "  (SELECT COUNT(*) FROM appointments a2 WHERE a2.patient_id = u.id AND a2.doctor_id = ?) AS total_visits, " +
-            "  (SELECT MAX(a3.appointment_date) FROM appointments a3 WHERE a3.patient_id = u.id AND a3.doctor_id = ?) AS last_visit " +
-            "FROM users u " +
-            "JOIN appointments a ON a.patient_id = u.id " +
+            "  p.phone_number AS phone, " +
+            "  (SELECT COUNT(*) FROM appointments a2 WHERE a2.patient_id = p.id AND a2.doctor_id = ?) AS total_visits, " +
+            "  (SELECT MAX(a3.appointment_date) FROM appointments a3 WHERE a3.patient_id = p.id AND a3.doctor_id = ?) AS last_visit " +
+            "FROM patients p " +
+            "JOIN appointments a ON a.patient_id = p.id " +
+            "LEFT JOIN users u ON p.user_id = u.id " +
             "WHERE a.doctor_id = ? " +
-            (hasKw ? "AND (u.full_name LIKE ? OR " + EncryptionUtil.decryptPhoneWhere("u.phone") + " LIKE ? OR " + EncryptionUtil.decryptEmailWhere("u.email") + " LIKE ?) " : "") +
+            (hasKw ? "AND (p.full_name LIKE ? OR p.phone_number LIKE ? OR " + EncryptionUtil.decryptEmailWhere("u.email") + " LIKE ?) " : "") +
             "ORDER BY last_visit DESC";
 
         List<PatientRow> patients = new ArrayList<>();
