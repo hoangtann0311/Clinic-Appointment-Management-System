@@ -24,6 +24,9 @@ public class User implements Serializable {
     private java.sql.Timestamp createdAt;
     // Transient — không map từ DB, dùng cho hiển thị dashboard
     private String roleName;
+    // Transient — ảnh đại diện lấy từ bảng vai trò cụ thể (VD: doctors.avatar_url),
+    // nạp khi đăng nhập hoặc khi cập nhật hồ sơ, dùng để hiển thị ở header/sidebar chung.
+    private String avatarUrl;
     // Soft delete flag
     private boolean deleted;
 
@@ -150,6 +153,14 @@ public class User implements Serializable {
 
     public void setRoleName(String roleName) {
         this.roleName = roleName;
+    }
+
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
     }
 
     public boolean isDeleted() {

@@ -237,6 +237,48 @@ public class InvoiceDAO {
         }
     }
 
+    public boolean submitPaymentDetails(int id, String paymentMethod, String transactionCode, String status) {
+        String sql = "UPDATE invoices SET payment_method = ?, transaction_code = ?, status = ? WHERE id = ? AND status <> 'Paid'";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, paymentMethod);
+            ps.setString(2, transactionCode);
+            ps.setString(3, status);
+            ps.setInt(4, id);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("[InvoiceDAO] submitPaymentDetails ERROR: " + e.getMessage());
+            return false;
+        } finally {
+            closeResources(conn, ps, null);
+        }
+    }
+
+    /**
+     * Cộng dồn thêm số tiền vào hóa đơn đã tồn tại.
+     * Dùng khi bác sĩ chỉ định thêm dịch vụ sau khi hóa đơn POST_EXAM đã được tạo.
+     */
+    public boolean addAmountToInvoice(int invoiceId, java.math.BigDecimal amount) {
+        String sql = "UPDATE invoices SET total_amount = total_amount + ? WHERE id = ? AND status <> 'Paid'";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setBigDecimal(1, amount);
+            ps.setInt(2, invoiceId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("[InvoiceDAO] addAmountToInvoice ERROR: " + e.getMessage());
+            return false;
+        } finally {
+            closeResources(conn, ps, null);
+        }
+    }
+
     public int insert(Invoice inv) {
         String sql = "INSERT INTO invoices (appointment_id, total_amount, status, transaction_code, invoice_type, payment_method, confirmed_by, confirmed_at, payment_note, created_at) "
                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";

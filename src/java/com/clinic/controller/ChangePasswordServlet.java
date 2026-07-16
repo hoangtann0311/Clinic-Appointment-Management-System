@@ -81,6 +81,12 @@ public class ChangePasswordServlet extends HttpServlet {
         AuditUtil.log(request, "Đổi mật khẩu", "users", null, null);
         session.setAttribute("successMessage",
                 "Đổi mật khẩu thành công! Vui lòng sử dụng mật khẩu mới cho lần đăng nhập sau.");
-        response.sendRedirect(request.getContextPath() + "/home");
+        
+        String redirectTo = request.getParameter("redirectTo");
+        if (redirectTo != null && !redirectTo.isBlank()) {
+            response.sendRedirect(redirectTo);
+        } else {
+            response.sendRedirect(request.getContextPath() + "/home");
+        }
     }
 }

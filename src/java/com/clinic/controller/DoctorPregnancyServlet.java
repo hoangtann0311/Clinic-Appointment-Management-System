@@ -304,8 +304,8 @@ public class DoctorPregnancyServlet extends HttpServlet {
 
     private AppointmentInfo loadAppointmentInfo(int apptId) {
         String sql =
-            "SELECT a.patient_id, a.doctor_id, a.pregnancy_id, a.last_menstrual_period, u.full_name " +
-            "FROM appointments a JOIN users u ON a.patient_id = u.id " +
+            "SELECT a.patient_id, a.doctor_id, a.pregnancy_id, a.last_menstrual_period, pt.full_name " +
+            "FROM appointments a JOIN patients pt ON a.patient_id = pt.id " +
             "WHERE a.id = ?";
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {

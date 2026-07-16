@@ -111,15 +111,26 @@ public class DoctorAppointmentServlet extends HttpServlet {
             String appointmentIdStr = request.getParameter("appointmentId");
             String newStatus        = request.getParameter("newStatus");
 
-            // Validate
-            java.util.List<String> allowed = java.util.Arrays.asList("pending", "confirmed", "completed", "cancelled");
-            if (appointmentIdStr == null || newStatus == null || !allowed.contains(newStatus.toLowerCase())) {
+            // Danh sách trạng thái hợp lệ theo BA §7.1 (bác sĩ không được chuyển trực tiếp sang Emergency_SOS)
+            java.util.List<String> allowed = java.util.Arrays.asList(
+                "Pending", "Confirmed", "Waiting", "InProgress",
+                "SUCCESS", "Cancelled", "NoShow"
+            );
+            // So sánh không phân biệt hoa thường để tránh lỗi nhập liệu
+            boolean validStatus = newStatus != null && allowed.stream()
+                    .anyMatch(s -> s.equalsIgnoreCase(newStatus));
+            // Tìm canonical form
+            String canonicalStatus = validStatus
+                    ? allowed.stream().filter(s -> s.equalsIgnoreCase(newStatus)).findFirst().orElse(newStatus)
+                    : null;
+
+            if (appointmentIdStr == null || !validStatus) {
                 response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Tham số không hợp lệ.");
                 return;
             }
 
             int appointmentId = Integer.parseInt(appointmentIdStr);
-            boolean ok = appointmentDAO.updateStatus(appointmentId, doctorId, newStatus);
+            boolean ok = appointmentDAO.updateStatus(appointmentId, doctorId, canonicalStatus);
 
             // Redirect lại trang hiện tại (giữ nguyên bộ lọc)
             String referer = request.getHeader("Referer");

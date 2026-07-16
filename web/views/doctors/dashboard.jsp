@@ -47,7 +47,7 @@
     <div class="col-6 col-md-3">
         <div class="card border-0 rounded-4 text-center p-3 h-100" style="background:#f0eaff;">
             <div class="fs-1 fw-bold" style="color:#7c3aed;">
-                <c:out value="${empty todayCounts['completed'] ? 0 : todayCounts['completed']}"/>
+                <c:out value="${empty todayCounts['success'] ? 0 : todayCounts['success']}"/>
             </div>
             <div class="small text-muted mt-1"><i class="bi bi-clipboard2-check me-1"></i>Hoàn thành</div>
         </div>
@@ -144,17 +144,32 @@
                                             </td>
                                             <td>
                                                 <c:choose>
-                                                    <c:when test="${appt.status == 'confirmed'}">
+                                                    <c:when test="${fn:toLowerCase(appt.status) == 'confirmed'}">
                                                         <span class="badge bg-success rounded-pill">Xác nhận</span>
                                                     </c:when>
-                                                    <c:when test="${appt.status == 'pending'}">
-                                                        <span class="badge bg-warning text-dark rounded-pill">Chờ</span>
+                                                    <c:when test="${fn:toLowerCase(appt.status) == 'pending'}">
+                                                        <span class="badge bg-warning text-dark rounded-pill">Chờ xác nhận</span>
                                                     </c:when>
-                                                    <c:when test="${appt.status == 'completed'}">
+                                                    <c:when test="${fn:toLowerCase(appt.status) == 'waiting'}">
+                                                        <span class="badge bg-info text-dark rounded-pill">Chờ khám</span>
+                                                    </c:when>
+                                                    <c:when test="${fn:toLowerCase(appt.status) == 'inprogress'}">
+                                                        <span class="badge bg-primary rounded-pill">Đang khám</span>
+                                                    </c:when>
+                                                    <c:when test="${fn:toLowerCase(appt.status) == 'success'}">
                                                         <span class="badge bg-secondary rounded-pill">Hoàn thành</span>
                                                     </c:when>
+                                                    <c:when test="${fn:toLowerCase(appt.status) == 'emergency_sos'}">
+                                                        <span class="badge bg-danger rounded-pill"><i class="bi bi-exclamation-triangle-fill me-1"></i>Cấp cứu</span>
+                                                    </c:when>
+                                                    <c:when test="${fn:toLowerCase(appt.status) == 'cancelled'}">
+                                                        <span class="badge bg-danger rounded-pill">Đã huỷ</span>
+                                                    </c:when>
+                                                    <c:when test="${fn:toLowerCase(appt.status) == 'noshow'}">
+                                                        <span class="badge bg-dark rounded-pill">Vắng mặt</span>
+                                                    </c:when>
                                                     <c:otherwise>
-                                                        <span class="badge bg-danger rounded-pill">Huỷ</span>
+                                                        <span class="badge bg-light text-dark rounded-pill border">${appt.status}</span>
                                                     </c:otherwise>
                                                 </c:choose>
                                             </td>

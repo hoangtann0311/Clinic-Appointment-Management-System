@@ -1,4 +1,4 @@
-<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+﻿<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ include file="../common/header.jsp" %>
 
@@ -125,16 +125,16 @@
                     <%-- ── Patient (roleId=5) ────────────────────────────── --%>
                     <c:if test="${user.roleId == 5}">
                         <div class="col-sm-6">
-                            <a href="${pageContext.request.contextPath}/patient/medical-records" class="text-decoration-none">
+                            <a href="#" class="text-decoration-none">
                                 <div class="quick-link-card p-3 rounded-3 border">
                                     <i class="bi bi-calendar-plus fs-4 text-primary"></i>
                                     <h6 class="mt-2 mb-1">Đặt Lịch Khám</h6>
-                                    <small class="text-muted">Xem hồ sơ & lịch hẹn</small>
+                                    <small class="text-muted">Đặt lịch hẹn mới</small>
                                 </div>
                             </a>
                         </div>
                         <div class="col-sm-6">
-                            <a href="${pageContext.request.contextPath}/patient/medical-records" class="text-decoration-none">
+                            <a href="#" class="text-decoration-none">
                                 <div class="quick-link-card p-3 rounded-3 border">
                                     <i class="bi bi-clock-history fs-4 text-info"></i>
                                     <h6 class="mt-2 mb-1">Lịch Sử Khám</h6>
@@ -143,11 +143,11 @@
                             </a>
                         </div>
                         <div class="col-sm-6">
-                            <a href="${pageContext.request.contextPath}/patient/medical-records" class="text-decoration-none">
+                            <a href="#" class="text-decoration-none">
                                 <div class="quick-link-card p-3 rounded-3 border">
                                     <i class="bi bi-file-earmark-medical fs-4 text-success"></i>
-                                    <h6 class="mt-2 mb-1">Kết Quả Xét Nghiệm & Hóa Đơn</h6>
-                                    <small class="text-muted">Xem kết quả cận lâm sàng & hóa đơn</small>
+                                    <h6 class="mt-2 mb-1">Kết Quả Xét Nghiệm</h6>
+                                    <small class="text-muted">Xem kết quả xét nghiệm</small>
                                 </div>
                             </a>
                         </div>

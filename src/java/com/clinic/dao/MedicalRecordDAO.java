@@ -27,7 +27,7 @@ public class MedicalRecordDAO {
         "  mr.cervical_dilation_cm, mr.cervical_effacement, mr.amniotic_fluid, mr.presentation_station, " +
         "  mr.edema, mr.proteinuria, mr.vaginal_bleeding, mr.uterine_contractions, mr.risk_flags_json, " +
         "  mr.treatment_plan, mr.next_appointment_date, mr.referred_to, " +
-        "  u.full_name AS patient_name, " +
+        "  pt.full_name AS patient_name, " +
         "  CONVERT(varchar, a.appointment_date, 23)          AS appointment_date, " +
         "  CONVERT(varchar, a.time_slot, 108)                AS time_slot, " +
         "  a.symptoms, " +
@@ -35,7 +35,7 @@ public class MedicalRecordDAO {
         "  a.pregnancy_id " +
         "FROM medical_records mr " +
         "JOIN appointments a ON mr.appointment_id = a.id " +
-        "JOIN users u        ON a.patient_id = u.id ";
+        "JOIN patients pt    ON a.patient_id = pt.id ";
 
     public MedicalRecord getByAppointmentId(int appointmentId) {
         try (Connection conn = DatabaseConfig.getConnection();
@@ -60,7 +60,7 @@ public class MedicalRecordDAO {
     public List<MedicalRecord> getByDoctorId(int doctorId, String keyword) {
         boolean hasKw = keyword != null && !keyword.isBlank();
         String sql = BASE_SELECT + "WHERE a.doctor_id = ? " +
-            (hasKw ? "AND (u.full_name LIKE ? OR mr.final_diagnosis LIKE ?) " : "") +
+            (hasKw ? "AND (pt.full_name LIKE ? OR mr.final_diagnosis LIKE ?) " : "") +
             "ORDER BY mr.created_at DESC";
 
         List<MedicalRecord> list = new ArrayList<>();

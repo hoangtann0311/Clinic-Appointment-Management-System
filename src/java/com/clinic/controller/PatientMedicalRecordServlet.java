@@ -62,8 +62,33 @@ public class PatientMedicalRecordServlet extends HttpServlet {
 
             Prescription prescription = prescriptionDAO.getByMedicalRecordId(recordId);
 
+            // Fetch general lab test orders and results
+            List<com.clinic.model.TestOrder> testOrders = new com.clinic.dao.TestOrderDAO().getByMedicalRecordId(recordId);
+
+            // Retrieve ultrasound orders, images, and AI findings
+            List<com.clinic.model.UltrasoundWaitingPatient> usOrders = new com.clinic.dao.UltrasoundOrderDAO().getByMedicalRecordId(recordId);
+            java.util.Map<Integer, List<com.clinic.model.UltrasoundImage>> orderImages = new java.util.HashMap<>();
+            java.util.Map<Integer, com.clinic.model.AiAnalysisResult> orderAiResults = new java.util.HashMap<>();
+            
+            com.clinic.dao.UltrasoundImageDAO imgDAO = new com.clinic.dao.UltrasoundImageDAO();
+            com.clinic.dao.AiAnalysisResultDAO aiDAO = new com.clinic.dao.AiAnalysisResultDAO();
+            
+            for (com.clinic.model.UltrasoundWaitingPatient order : usOrders) {
+                List<com.clinic.model.UltrasoundImage> images = imgDAO.getByTestOrderId(order.getOrderId());
+                orderImages.put(order.getOrderId(), images);
+                
+                com.clinic.model.AiAnalysisResult aiRes = aiDAO.getByTestOrderId(order.getOrderId());
+                if (aiRes != null) {
+                    orderAiResults.put(order.getOrderId(), aiRes);
+                }
+            }
+
             request.setAttribute("record",       record);
             request.setAttribute("prescription", prescription);
+            request.setAttribute("testOrders",   testOrders);
+            request.setAttribute("usOrders", usOrders);
+            request.setAttribute("orderImages", orderImages);
+            request.setAttribute("orderAiResults", orderAiResults);
             request.setAttribute("mode",         "detail");
             request.getRequestDispatcher("/views/admin/patient/medical_record_detail.jsp")
                    .forward(request, response);

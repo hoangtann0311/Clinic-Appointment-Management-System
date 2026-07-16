@@ -1,0 +1,3 @@
+Note: C:\Users\dangi\Clinic-Appointment-Management-System\src\java\com\clinic\controller\DashboardServlet.java uses or overrides a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+EXITCODE=0  

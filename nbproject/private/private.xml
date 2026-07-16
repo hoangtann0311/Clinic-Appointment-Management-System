@@ -3,9 +3,31 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/C:/Users/admin/IdeaProjects/SWP392-Project-Nhom-3/src/java/com/clinic/config/DatabaseConfig.java</file>
-            <file>file:/C:/Users/admin/IdeaProjects/SWP392-Project-Nhom-3/src/java/com/clinic/config/DBContext.java</file>
-            <file>file:/C:/Users/admin/IdeaProjects/SWP392-Project-Nhom-3/src/java/com/clinic/config/AppConfig.java</file>
+            <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/controller/DoctorPatientListServlet.java</file>
+            <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/dao/PatientDAO.java</file>
+            <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/controller/DoctorPatientHistoryServlet.java</file>
+            <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/controller/DoctorProfileServlet.java</file>
+            <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/config/DatabaseConfig.java</file>
+            <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/controller/MedicalRecordServlet.java</file>
+            <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/dao/MedicineCategoryDAO.java</file>
+            <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/dao/PregnancyDAO.java</file>
+            <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/controller/GoogleServerLoginServlet.java</file>
+            <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/config/DBContext.java</file>
+            <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/dao/MedicalRecordDAO.java</file>
+            <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/web/views/doctors/doctor_profile.jsp</file>
+            <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/dao/PrescriptionDAO.java</file>
+            <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/controller/DoctorPrescriptionListServlet.java</file>
+            <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/controller/LoginServlet.java</file>
+            <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/config/GoogleConfig.java</file>
+            <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/web/views/common/header.jsp</file>
+            <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/controller/DoctorAppointmentServlet.java</file>
+            <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/dao/AppointmentDAO.java</file>
+            <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/web/views/home/dashboard.jsp</file>
+            <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/controller/GoogleLoginServlet.java</file>
+            <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/web/views/doctors/appointment_list.jsp</file>
+            <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/controller/DoctorPregnancyServlet.java</file>
+            <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/dao/DoctorDAO.java</file>
+            <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/model/User.java</file>
         </group>
     </open-files>
 </project-private>

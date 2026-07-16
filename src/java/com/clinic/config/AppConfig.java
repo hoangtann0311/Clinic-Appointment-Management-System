@@ -76,4 +76,13 @@ public class AppConfig {
     public static long getMaxFileSize() {
         return getLong("ultrasound.maxFileSize", 10485760L); // 10MB
     }
+
+    // Avatar upload settings (dùng cho hồ sơ Bác sĩ, có thể tái sử dụng cho vai trò khác sau này)
+    public static String getAvatarUploadDirectory() {
+        return get("avatar.uploadDirectory", "uploads/avatars");
+    }
+
+    public static long getMaxAvatarFileSize() {
+        return getLong("avatar.maxFileSize", 5242880L); // 5MB
+    }
 }

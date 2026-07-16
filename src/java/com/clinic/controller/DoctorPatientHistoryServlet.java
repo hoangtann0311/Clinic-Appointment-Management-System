@@ -89,7 +89,7 @@ public class DoctorPatientHistoryServlet extends HttpServlet {
 
     private String getPatientName(int patientId) {
         try (Connection c = DatabaseConfig.getConnection();
-             PreparedStatement ps = c.prepareStatement("SELECT full_name FROM users WHERE id = ?")) {
+             PreparedStatement ps = c.prepareStatement("SELECT full_name FROM patients WHERE id = ?")) {
             ps.setInt(1, patientId);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) return rs.getString("full_name");

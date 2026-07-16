@@ -40,16 +40,16 @@ public class DoctorPrescriptionListServlet extends HttpServlet {
 
         String sql =
             "SELECT p.id, p.prescription_code, p.status, p.created_at, " +
-            "       u.full_name AS patient_name, u.id AS patient_id, " +
+            "       pt.full_name AS patient_name, pt.id AS patient_id, " +
             "       CONVERT(varchar, a.appointment_date, 23) AS appointment_date, " +
             "       mr.id AS record_id, mr.final_diagnosis, " +
             "       (SELECT COUNT(*) FROM prescription_items pi WHERE pi.prescription_id = p.id) AS item_count " +
             "FROM prescriptions p " +
             "JOIN medical_records mr ON p.medical_record_id = mr.id " +
             "JOIN appointments a ON mr.appointment_id = a.id " +
-            "JOIN users u ON a.patient_id = u.id " +
+            "JOIN patients pt ON a.patient_id = pt.id " +
             "WHERE a.doctor_id = ? " +
-            (hasKw ? "AND (u.full_name LIKE ? OR p.prescription_code LIKE ?) " : "") +
+            (hasKw ? "AND (pt.full_name LIKE ? OR p.prescription_code LIKE ?) " : "") +
             "ORDER BY p.created_at DESC";
 
         List<PrescriptionRow> rows = new ArrayList<>();

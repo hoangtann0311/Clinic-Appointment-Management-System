@@ -296,12 +296,17 @@ public class MedicalRecordServlet extends HttpServlet {
             mr.setId(finalRecordId);
             mr.setStatus(isDraft ? "draft" : "final");
             success = dao.update(mr);
+            // Khi cập nhật hồ sơ từ draft → final, cũng cập nhật trạng thái lịch hẹn
+            if (success && !isDraft) {
+                new AppointmentDAO().updateStatus(apptId, doctorId, "SUCCESS");
+            }
         } else {
             mr.setStatus(isDraft ? "draft" : "final");
             finalRecordId = dao.create(mr);
             success = finalRecordId > 0;
             if (success && !isDraft) {
-                new AppointmentDAO().updateStatus(apptId, doctorId, "completed");
+                // BA §7.1: khi bác sĩ hoàn thành khám → SUCCESS
+                new AppointmentDAO().updateStatus(apptId, doctorId, "SUCCESS");
             }
         }
 
@@ -431,13 +436,13 @@ public class MedicalRecordServlet extends HttpServlet {
         MedicalRecord mr = new MedicalRecord();
         mr.setAppointmentId(apptId);
         String sql =
-            "SELECT u.full_name AS patient_name, " +
+            "SELECT pt.full_name AS patient_name, " +
             "  CONVERT(varchar, a.appointment_date, 23) AS appointment_date, " +
             "  CONVERT(varchar, a.time_slot, 108) AS time_slot, " +
             "  a.symptoms, " +
             "  CONVERT(varchar, a.last_menstrual_period, 23) AS last_menstrual_period, " +
             "  a.pregnancy_id " +
-            "FROM appointments a JOIN users u ON a.patient_id = u.id WHERE a.id = ?";
+            "FROM appointments a JOIN patients pt ON a.patient_id = pt.id WHERE a.id = ?";
         try (Connection c = DatabaseConfig.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setInt(1, apptId);
