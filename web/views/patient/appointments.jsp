@@ -3,15 +3,21 @@
 <%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
 <%@ include file="../common/header.jsp" %>
 
-<div class="row mb-4 align-items-center">
-    <div class="col">
-        <h2 class="fw-bold"><i class="bi bi-calendar2-week text-primary me-2"></i>Lịch Hẹn Của Tôi</h2>
-        <p class="text-muted mb-0">Danh sách các lịch khám đã đặt.</p>
-    </div>
-    <div class="col-auto">
-        <a href="${pageContext.request.contextPath}/patient/booking" class="btn btn-primary">
-            <i class="bi bi-plus-circle me-1"></i>Đặt Lịch Mới
-        </a>
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 patient-hero-card rounded-4">
+            <div class="card-body p-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
+                <div>
+                    <h2 class="fw-bold mb-1"><i class="bi bi-calendar2-week me-2"></i>Lịch Hẹn Của Tôi</h2>
+                    <p class="mb-0 opacity-75">Danh sách các lịch khám đã đặt.</p>
+                </div>
+                <div>
+                    <a href="${pageContext.request.contextPath}/patient/booking" class="btn btn-light text-pink-theme fw-bold rounded-3">
+                        <i class="bi bi-plus-circle me-1"></i>Đặt Lịch Mới
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 

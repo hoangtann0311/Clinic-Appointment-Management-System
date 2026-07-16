@@ -4,23 +4,46 @@
 
 <div class="row mb-4">
     <div class="col-12">
-        <div class="card border-0 bg-primary bg-gradient text-white rounded-4">
-            <div class="card-body p-4 p-md-5">
-                <div class="d-flex align-items-center justify-content-between flex-wrap">
-                    <div>
-                        <h2 class="fw-bold mb-1">
-                            <i class="bi bi-hand-wave me-2"></i>Xin chào, ${user.fullName}!
-                        </h2>
-                        <p class="mb-0 opacity-75 fs-5">Chào mừng bạn đến với ${dashboardTitle}</p>
-                    </div>
-                    <div class="mt-3 mt-md-0">
-                        <span class="badge bg-light text-primary fs-6 px-3 py-2 rounded-pill">
-                            <i class="bi bi-person-badge me-1"></i>${roleName}
-                        </span>
+        <c:choose>
+            <c:when test="${user.roleId == 5}">
+                <div class="card border-0 patient-hero-card rounded-4">
+                    <div class="card-body p-4 p-md-5">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap">
+                            <div>
+                                <h2 class="fw-bold mb-1">
+                                    <i class="bi bi-hand-wave me-2"></i>Xin chào, ${user.fullName}!
+                                </h2>
+                                <p class="mb-0 opacity-75 fs-5">Chào mừng bạn đến với ${dashboardTitle}</p>
+                            </div>
+                            <div class="mt-3 mt-md-0">
+                                <span class="badge bg-light text-primary fs-6 px-3 py-2 rounded-pill">
+                                    <i class="bi bi-person-badge me-1"></i>${roleName}
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
+            </c:when>
+            <c:otherwise>
+                <div class="card border-0 bg-primary bg-gradient text-white rounded-4">
+                    <div class="card-body p-4 p-md-5">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap">
+                            <div>
+                                <h2 class="fw-bold mb-1">
+                                    <i class="bi bi-hand-wave me-2"></i>Xin chào, ${user.fullName}!
+                                </h2>
+                                <p class="mb-0 opacity-75 fs-5">Chào mừng bạn đến với ${dashboardTitle}</p>
+                            </div>
+                            <div class="mt-3 mt-md-0">
+                                <span class="badge bg-light text-primary fs-6 px-3 py-2 rounded-pill">
+                                    <i class="bi bi-person-badge me-1"></i>${roleName}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </c:otherwise>
+        </c:choose>
     </div>
 </div>
 

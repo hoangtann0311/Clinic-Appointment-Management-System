@@ -5,39 +5,50 @@
 <%@ include file="../common/header.jsp" %>
 
 <style>
-    .doctor-card { border: 1px solid #e5e7eb; }
+    .doctor-card { border: 1.5px solid var(--pt-outline, #f0dae5) !important; }
     .doctor-avatar-circle {
         width: 48px; height: 48px; border-radius: 50%;
-        background: #e7f0ff; color: #0d6efd;
+        background: var(--pt-pink-50, #fff0f6);
+        color: var(--pt-pink-600, #c2185b);
+        border: 1.5px solid var(--pt-pink-200, #ffb3d1);
         display: flex; align-items: center; justify-content: center;
         font-weight: 700; font-size: 1.1rem; flex-shrink: 0;
     }
-    .summary-card { position: sticky; top: 1rem; }
+    .summary-card { position: sticky; top: 5rem; }
     .slot-btn { min-width: 76px; }
-    .slot-btn.active { background: #0d6efd; color: #fff; border-color: #0d6efd; }
-    .slot-period-label { font-weight: 600; color: #6c757d; font-size: .85rem; }
-    .doctor-panel { display: none; border-top: 1px solid #eee; background: #fafbfc; }
-    .toggle-doctor-btn.expanded { background: #6c757d; border-color: #6c757d; }
+    .slot-btn.active {
+        background: var(--pt-pink-600, #c2185b) !important;
+        color: #fff !important;
+        border-color: var(--pt-pink-600, #c2185b) !important;
+        box-shadow: 0 3px 10px rgba(194,24,91,0.22);
+    }
+    .slot-period-label { font-weight: 700; color: var(--pt-muted, #8a5e74); font-size: .82rem; letter-spacing: .04em; text-transform: uppercase; }
+    .doctor-panel { display: none; border-top: 1.5px solid var(--pt-outline, #f0dae5); background: var(--pt-surface-var, #fff6fb); border-radius: 0 0 14px 14px; }
+    .toggle-doctor-btn.expanded { background: var(--pt-pink-600, #c2185b) !important; border-color: var(--pt-pink-600, #c2185b) !important; }
 </style>
 
 <div class="row mb-4">
     <div class="col-12">
-        <c:choose>
-            <c:when test="${not empty rescheduleId}">
-                <div class="d-flex align-items-center gap-3 mb-2">
-                    <h2 class="fw-bold mb-0"><i class="bi bi-arrow-repeat text-warning me-2"></i>Đổi Lịch Khám</h2>
-                    <span class="badge bg-warning text-dark fs-6">Chế độ đổi lịch</span>
-                </div>
-                <p class="text-muted mb-0">Chọn bác sĩ, ngày và khung giờ mới để đổi lịch hẹn <strong>#${rescheduleId}</strong>.</p>
-                <a href="${pageContext.request.contextPath}/patient/appointments" class="btn btn-sm btn-outline-secondary mt-2">
-                    <i class="bi bi-arrow-left me-1"></i>Quay lại danh sách
-                </a>
-            </c:when>
-            <c:otherwise>
-                <h2 class="fw-bold"><i class="bi bi-calendar-plus text-primary me-2"></i>Đặt Lịch Khám</h2>
-                <p class="text-muted mb-0">Tìm bác sĩ, chọn ngày và khung giờ phù hợp để đặt lịch khám cho chính bạn.</p>
-            </c:otherwise>
-        </c:choose>
+        <div class="card border-0 patient-hero-card rounded-4">
+            <div class="card-body p-4">
+                <c:choose>
+                    <c:when test="${not empty rescheduleId}">
+                        <div class="d-flex align-items-center gap-3 mb-1">
+                            <h2 class="fw-bold mb-0"><i class="bi bi-arrow-repeat me-2"></i>Đổi Lịch Khám</h2>
+                            <span class="badge bg-warning text-dark fs-6">Chế độ đổi lịch</span>
+                        </div>
+                        <p class="mb-0 opacity-75">Chọn bác sĩ, ngày và khung giờ mới để đổi lịch hẹn <strong>#${rescheduleId}</strong>.</p>
+                        <a href="${pageContext.request.contextPath}/patient/appointments" class="btn btn-sm btn-light text-pink-theme mt-2">
+                            <i class="bi bi-arrow-left me-1"></i>Quay lại danh sách
+                        </a>
+                    </c:when>
+                    <c:otherwise>
+                        <h2 class="fw-bold mb-1"><i class="bi bi-calendar-plus me-2"></i>Đặt Lịch Khám</h2>
+                        <p class="mb-0 opacity-75">Tìm bác sĩ, chọn ngày và khung giờ phù hợp để đặt lịch khám cho chính bạn.</p>
+                    </c:otherwise>
+                </c:choose>
+            </div>
+        </div>
     </div>
 </div>
 

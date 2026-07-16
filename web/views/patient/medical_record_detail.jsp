@@ -11,7 +11,7 @@
 
     <div class="row mb-4">
         <div class="col-12">
-            <div class="card border-0 bg-info bg-gradient text-white rounded-4">
+            <div class="card border-0 patient-hero-card rounded-4">
                 <div class="card-body p-4">
                     <h2 class="fw-bold mb-1">
                         <i class="bi bi-journal-medical me-2"></i>Hồ Sơ Bệnh Án Của Tôi
@@ -96,7 +96,7 @@
     <%-- Banner --%>
     <div class="row mb-4">
         <div class="col-12">
-            <div class="card border-0 bg-info bg-gradient text-white rounded-4">
+            <div class="card border-0 patient-hero-card rounded-4">
                 <div class="card-body p-4">
                     <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
                         <div>
@@ -109,7 +109,8 @@
                             </p>
                         </div>
                         <a href="${pageContext.request.contextPath}/patient/medical-records"
-                           class="btn btn-light btn-sm rounded-pill px-3">
+                           class="btn btn-sm rounded-pill px-3 fw-semibold"
+                           style="background: var(--pt-pink-50); color: var(--pt-pink-600); border: 1.5px solid var(--pt-pink-200);">
                             <i class="bi bi-arrow-left me-1"></i>Quay lại
                         </a>
                     </div>

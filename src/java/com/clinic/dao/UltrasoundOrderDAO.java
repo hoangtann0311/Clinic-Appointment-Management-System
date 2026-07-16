@@ -35,6 +35,20 @@ public class UltrasoundOrderDAO {
         + "OR LOWER(CONVERT(NVARCHAR(255), ISNULL(s.required_room_type, ''))) LIKE N'%siêu âm%'"
         + ")";
 
+    // BR-11: Chỉ hiển thị chỉ định siêu âm khi hóa đơn POST_EXAM đã Paid,
+    // ngoại trừ ca cấp cứu được bỏ qua điều kiện thanh toán (BR-07).
+    private static final String PAYMENT_GATE_CONDITION =
+        "("
+        + "ISNULL(a.is_emergency, 0) = 1 "
+        + "OR UPPER(ISNULL(a.status, '')) = 'EMERGENCY_SOS' "
+        + "OR EXISTS ("
+        + "  SELECT 1 FROM invoices inv "
+        + "  WHERE inv.appointment_id = a.id "
+        + "  AND UPPER(inv.invoice_type) = 'POST_EXAM' "
+        + "  AND UPPER(inv.status) = 'PAID'"
+        + ")"
+        + ")";
+
     public List<UltrasoundWaitingPatient> findWaiting(String sortBy, String sortDir) {
         String sql =
             "SELECT o.id AS order_id, o.medical_record_id, mr.appointment_id, "
@@ -51,7 +65,8 @@ public class UltrasoundOrderDAO {
             + "LEFT JOIN doctors d ON o.doctor_id = d.id "
             + "LEFT JOIN services s ON o.service_id = s.id "
             + "LEFT JOIN service_categories c ON s.category_id = c.id "
-            + "WHERE " + WAITING_CONDITION + " AND " + ULTRASOUND_SERVICE_CONDITION + " "
+            + "WHERE " + WAITING_CONDITION + " AND " + ULTRASOUND_SERVICE_CONDITION
+            + " AND " + PAYMENT_GATE_CONDITION + " "
             + "ORDER BY " + resolveSortColumn(sortBy) + " " + resolveSortDirection(sortDir)
             + ", o.id ASC";
 
@@ -80,9 +95,12 @@ public class UltrasoundOrderDAO {
         String sql =
             "SELECT COUNT(*) AS total "
             + "FROM test_orders o "
+            + "LEFT JOIN medical_records mr ON o.medical_record_id = mr.id "
+            + "LEFT JOIN appointments a ON mr.appointment_id = a.id "
             + "LEFT JOIN services s ON o.service_id = s.id "
             + "LEFT JOIN service_categories c ON s.category_id = c.id "
-            + "WHERE " + WAITING_CONDITION + " AND " + ULTRASOUND_SERVICE_CONDITION;
+            + "WHERE " + WAITING_CONDITION + " AND " + ULTRASOUND_SERVICE_CONDITION
+            + " AND " + PAYMENT_GATE_CONDITION;
 
         Connection conn = null;
         PreparedStatement ps = null;
@@ -227,6 +245,7 @@ public class UltrasoundOrderDAO {
             + "LEFT JOIN services s ON o.service_id = s.id "
             + "LEFT JOIN service_categories c ON s.category_id = c.id "
             + "WHERE " + ULTRASOUND_SERVICE_CONDITION
+            + " AND " + PAYMENT_GATE_CONDITION
         );
 
         List<Object> params = new ArrayList<>();
@@ -301,6 +320,7 @@ public class UltrasoundOrderDAO {
             + "LEFT JOIN services s ON o.service_id = s.id "
             + "LEFT JOIN service_categories c ON s.category_id = c.id "
             + "WHERE " + ULTRASOUND_SERVICE_CONDITION
+            + " AND " + PAYMENT_GATE_CONDITION
         );
 
         List<Object> params = new ArrayList<>();

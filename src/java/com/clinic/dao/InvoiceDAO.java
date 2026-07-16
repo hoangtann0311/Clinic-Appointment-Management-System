@@ -319,6 +319,121 @@ public class InvoiceDAO {
         return -1;
     }
 
+    /**
+     * Tạo mới hoặc cập nhật hóa đơn thuốc (PRESCRIPTION) cho một lịch hẹn.
+     * - Nếu đã tồn tại hóa đơn PRESCRIPTION chưa thanh toán → cập nhật totalAmount.
+     * - Nếu chưa có → tạo hóa đơn mới với status = 'Unpaid'.
+     * - Nếu đã Paid/DeclinedPurchase → không thay đổi (hóa đơn đã khóa).
+     *
+     * @param appointmentId ID của lịch hẹn
+     * @param totalAmount   Tổng tiền đơn thuốc
+     * @return ID của hóa đơn thuốc (mới tạo hoặc đã có), -1 nếu thất bại
+     */
+    public int upsertPrescriptionInvoice(int appointmentId, java.math.BigDecimal totalAmount) {
+        // Kiểm tra hóa đơn thuốc đã tồn tại chưa
+        String selectSql = "SELECT id, status FROM invoices WHERE appointment_id = ? AND UPPER(invoice_type) = 'PRESCRIPTION'";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(selectSql);
+            ps.setInt(1, appointmentId);
+            rs = ps.executeQuery();
+            if (rs.next()) {
+                int existingId = rs.getInt("id");
+                String existingStatus = rs.getString("status");
+                // Chỉ cập nhật nếu hóa đơn chưa được khóa (Paid hoặc DeclinedPurchase)
+                if (!"Paid".equalsIgnoreCase(existingStatus) && !"DeclinedPurchase".equalsIgnoreCase(existingStatus)) {
+                    closeResources(null, ps, rs);
+                    ps = conn.prepareStatement("UPDATE invoices SET total_amount = ? WHERE id = ?");
+                    ps.setBigDecimal(1, totalAmount);
+                    ps.setInt(2, existingId);
+                    ps.executeUpdate();
+                }
+                return existingId;
+            }
+        } catch (SQLException e) {
+            System.err.println("[InvoiceDAO] upsertPrescriptionInvoice SELECT ERROR: " + e.getMessage());
+        } finally {
+            closeResources(null, ps, rs);
+        }
+
+        // Chưa có → tạo mới
+        String insertSql = "INSERT INTO invoices (appointment_id, total_amount, status, invoice_type, created_at) VALUES (?, ?, 'Unpaid', 'PRESCRIPTION', GETDATE())";
+        try {
+            ps = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS);
+            ps.setInt(1, appointmentId);
+            ps.setBigDecimal(2, totalAmount);
+            ps.executeUpdate();
+            rs = ps.getGeneratedKeys();
+            if (rs.next()) return rs.getInt(1);
+        } catch (SQLException e) {
+            System.err.println("[InvoiceDAO] upsertPrescriptionInvoice INSERT ERROR: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return -1;
+    }
+
+    /**
+     * Đánh dấu hóa đơn thuốc là DeclinedPurchase (Bệnh nhân từ chối mua thuốc).
+     * Chỉ áp dụng cho hóa đơn loại PRESCRIPTION đang ở trạng thái Unpaid/PendingConfirmation.
+     *
+     * @param invoiceId   ID hóa đơn cần từ chối
+     * @param confirmedBy ID nhân viên xác nhận từ chối
+     * @return true nếu cập nhật thành công
+     */
+    public boolean declinePrescriptionInvoice(int invoiceId, int confirmedBy) {
+        String sql = "UPDATE invoices SET status = 'DeclinedPurchase', confirmed_by = ?, confirmed_at = GETDATE() "
+                   + "WHERE id = ? AND UPPER(invoice_type) = 'PRESCRIPTION' "
+                   + "AND status NOT IN ('Paid', 'DeclinedPurchase')";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setInt(1, confirmedBy);
+            ps.setInt(2, invoiceId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("[InvoiceDAO] declinePrescriptionInvoice ERROR: " + e.getMessage());
+            return false;
+        } finally {
+            closeResources(conn, ps, null);
+        }
+    }
+
+    /**
+     * Kiểm tra xem hóa đơn thuốc (PRESCRIPTION) của cuộc hẹn đã được thanh toán hoặc từ chối mua hay chưa (BR-31, BR-32).
+     * Nếu không có hóa đơn thuốc cho cuộc hẹn này, trả về true.
+     *
+     * @param appointmentId ID cuộc hẹn
+     * @return true nếu hóa đơn thuốc đã Paid/DeclinedPurchase hoặc không có hóa đơn thuốc.
+     */
+    public boolean isPrescriptionPaidOrDeclined(int appointmentId) {
+        String sql = "SELECT status FROM invoices WHERE appointment_id = ? AND UPPER(invoice_type) = 'PRESCRIPTION'";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setInt(1, appointmentId);
+            rs = ps.executeQuery();
+            if (rs.next()) {
+                String status = rs.getString("status");
+                return "Paid".equalsIgnoreCase(status) || "DeclinedPurchase".equalsIgnoreCase(status);
+            }
+        } catch (SQLException e) {
+            System.err.println("[InvoiceDAO] isPrescriptionPaidOrDeclined ERROR: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return true;
+    }
+
+
     private Invoice mapRow(ResultSet rs) throws SQLException {
         Invoice inv = new Invoice();
         inv.setId(rs.getInt("id"));

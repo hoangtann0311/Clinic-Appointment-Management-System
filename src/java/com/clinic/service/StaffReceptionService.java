@@ -897,4 +897,55 @@ public class StaffReceptionService {
 
         return success;
     }
+
+    /**
+     * Xử lý bệnh nhân từ chối mua thuốc (BR-27).
+     * Chỉ áp dụng cho hóa đơn loại PRESCRIPTION đang ở trạng thái chưa thanh toán.
+     * Khi từ chối: hóa đơn thuốc → DeclinedPurchase, đơn thuốc → cancelled.
+     *
+     * @param invoiceId   ID hóa đơn PRESCRIPTION cần từ chối
+     * @param confirmedBy ID nhân viên lễ tân thực hiện thao tác
+     * @return true nếu thành công
+     */
+    public boolean declinePrescriptionPurchase(int invoiceId, int confirmedBy) {
+        Invoice invoice = invoiceDAO.getById(invoiceId);
+        if (invoice == null) {
+            throw new IllegalArgumentException("Không tìm thấy hóa đơn.");
+        }
+        if (!"PRESCRIPTION".equalsIgnoreCase(invoice.getInvoiceType())) {
+            throw new IllegalArgumentException("Chỉ có thể từ chối hóa đơn thuốc (PRESCRIPTION).");
+        }
+        if ("Paid".equalsIgnoreCase(invoice.getStatus()) || "DeclinedPurchase".equalsIgnoreCase(invoice.getStatus())) {
+            throw new IllegalArgumentException("Hóa đơn thuốc này đã được xử lý (đã thanh toán hoặc đã từ chối trước đó).");
+        }
+
+        boolean success = invoiceDAO.declinePrescriptionInvoice(invoiceId, confirmedBy);
+
+        if (success) {
+            // Cập nhật trạng thái đơn thuốc liên kết thành cancelled
+            if (invoice.getAppointmentId() != null) {
+                try (Connection conn = com.clinic.config.DBContext.getConnection();
+                     java.sql.PreparedStatement ps = conn.prepareStatement(
+                         "UPDATE prescriptions SET status = 'cancelled' " +
+                         "WHERE medical_record_id IN (" +
+                         "  SELECT id FROM medical_records WHERE appointment_id = ?" +
+                         ") AND status NOT IN ('cancelled')")) {
+                    ps.setInt(1, invoice.getAppointmentId());
+                    ps.executeUpdate();
+                } catch (Exception e) {
+                    System.err.println("[StaffReceptionService] declinePrescriptionPurchase - update prescriptions error: " + e.getMessage());
+                }
+            }
+
+            auditLogDAO.logAction(
+                    "Bệnh nhân từ chối mua thuốc — hóa đơn PRESCRIPTION #" + invoiceId,
+                    "Staff",
+                    "invoices",
+                    invoice.getStatus(),
+                    "DeclinedPurchase"
+            );
+        }
+
+        return success;
+    }
 }

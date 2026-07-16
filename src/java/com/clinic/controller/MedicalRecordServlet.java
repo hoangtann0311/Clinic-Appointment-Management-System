@@ -2,6 +2,7 @@ package com.clinic.controller;
 
 import com.clinic.config.DatabaseConfig;
 import com.clinic.dao.AppointmentDAO;
+import com.clinic.dao.InvoiceDAO;
 import com.clinic.dao.MedicalRecordDAO;
 import com.clinic.dao.PrescriptionDAO;
 import com.clinic.dao.ServiceDAO;
@@ -40,6 +41,7 @@ public class MedicalRecordServlet extends HttpServlet {
     private final PrescriptionDAO prescriptionDAO = new PrescriptionDAO();
     private final TestOrderDAO testOrderDAO = new TestOrderDAO();
     private final ServiceDAO serviceDAO = new ServiceDAO();
+    private final InvoiceDAO invoiceDAO = new InvoiceDAO();
 
     // ── GET ─────────────────────────────────────────────────────────────────
 
@@ -324,6 +326,20 @@ public class MedicalRecordServlet extends HttpServlet {
             }
         }
 
+        // ── BR §4.8: Tự động tạo / cập nhật hóa đơn thuốc PRESCRIPTION khi hoàn thành khám ──
+        // Chỉ tạo khi bác sĩ lưu chính thức (không phải draft) và đơn có thuốc.
+        if (success && !isDraft && !prescriptionItems.isEmpty()) {
+            try {
+                java.math.BigDecimal totalMedAmount = calculatePrescriptionTotal(prescriptionItems);
+                if (totalMedAmount.compareTo(java.math.BigDecimal.ZERO) > 0) {
+                    invoiceDAO.upsertPrescriptionInvoice(apptId, totalMedAmount);
+                }
+            } catch (Exception ex) {
+                // Không để lỗi hóa đơn chặn luồng chính — log để theo dõi.
+                System.err.println("[MedicalRecordServlet] upsertPrescriptionInvoice failed: " + ex.getMessage());
+            }
+        }
+
 
 
         if (!success) {
@@ -457,4 +473,45 @@ public class MedicalRecordServlet extends HttpServlet {
         try { String v = req.getParameter(name); return (v != null && !v.isBlank()) ? Integer.parseInt(v) : null; }
         catch (NumberFormatException e) { return null; }
     }
-}
+
+    /**
+     * Tính tổng tiền đơn thuốc dựa trên số lượng × đơn giá trong bảng medicines.
+     * Truy vấn DB để lấy giá hiện tại của từng loại thuốc.
+     *
+     * @param items danh sách thuốc trong đơn
+     * @return tổng tiền BigDecimal (>= 0)
+     */
+    private java.math.BigDecimal calculatePrescriptionTotal(List<PrescriptionItem> items) {
+        if (items == null || items.isEmpty()) return java.math.BigDecimal.ZERO;
+
+        java.math.BigDecimal total = java.math.BigDecimal.ZERO;
+        StringBuilder placeholders = new StringBuilder();
+        java.util.Map<Integer, Integer> qtyMap = new java.util.LinkedHashMap<>();
+        for (PrescriptionItem item : items) {
+            int mid = item.getMedicineId();
+            if (!qtyMap.containsKey(mid)) {
+                if (placeholders.length() > 0) placeholders.append(',');
+                placeholders.append('?');
+            }
+            qtyMap.put(mid, qtyMap.getOrDefault(mid, 0) + item.getQuantity());
+        }
+
+        String sql = "SELECT id, price FROM medicines WHERE id IN (" + placeholders + ")";
+        try (java.sql.Connection conn = com.clinic.config.DatabaseConfig.getConnection();
+             java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            int idx = 1;
+            for (int mid : qtyMap.keySet()) ps.setInt(idx++, mid);
+            java.sql.ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                int mid = rs.getInt("id");
+                java.math.BigDecimal price = rs.getBigDecimal("price");
+                if (price != null && qtyMap.containsKey(mid)) {
+                    total = total.add(price.multiply(new java.math.BigDecimal(qtyMap.get(mid))));
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[MedicalRecordServlet] calculatePrescriptionTotal error: " + e.getMessage());
+        }
+        return total;
+    }
+}

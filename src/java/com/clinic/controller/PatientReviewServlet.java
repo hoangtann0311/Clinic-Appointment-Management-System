@@ -63,6 +63,12 @@ public class PatientReviewServlet extends HttpServlet {
                 return;
             }
 
+            // Payment check for prescription (BR-31, BR-32, 4.12)
+            if (!new com.clinic.dao.InvoiceDAO().isPrescriptionPaidOrDeclined(appointmentId)) {
+                response.sendRedirect(request.getContextPath() + "/patient/appointments?bookingError=ChuaThanhToanDonThuoc");
+                return;
+            }
+
             // Double review check
             if (reviewDAO.hasReviewed(appointmentId)) {
                 response.sendRedirect(request.getContextPath() + "/patient/appointments?bookingError=LichHenDaDuocDanhGia");

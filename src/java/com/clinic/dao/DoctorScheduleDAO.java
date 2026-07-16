@@ -606,20 +606,51 @@ public class DoctorScheduleDAO {
 
     public ApproveResult approveAtomic(int scheduleId, int approvedBy) {
         String sql = "UPDATE doctor_schedules SET status = 'APPROVED', is_approved = 1, approved_by = ?, approved_at = GETDATE(), updated_at = GETDATE() WHERE id = ? AND status = 'PENDING'";
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        Connection conn = null;
+        PreparedStatement ps = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            conn.setAutoCommit(false);
+
+            ps = conn.prepareStatement(sql);
             ps.setInt(1, approvedBy);
             ps.setInt(2, scheduleId);
             int rows = ps.executeUpdate();
             if (rows > 0) {
-                return new ApproveResult(true, 0, null, null);
-            } else {
-                return new ApproveResult(false, 0, "ALREADY_PROCESSED", "Lịch trực đã được xử lý hoặc không tồn tại.");
+                // Lấy thông tin schedule để sinh slots
+                String getSql = "SELECT doctor_id, work_date, start_time, end_time FROM doctor_schedules WHERE id = ?";
+                try (PreparedStatement getPs = conn.prepareStatement(getSql)) {
+                    getPs.setInt(1, scheduleId);
+                    try (ResultSet getRs = getPs.executeQuery()) {
+                        if (getRs.next()) {
+                            int doctorId = getRs.getInt("doctor_id");
+                            Date workDate = getRs.getDate("work_date");
+                            Time startTime = getRs.getTime("start_time");
+                            Time endTime = getRs.getTime("end_time");
+
+                            // Sinh slots trong cùng connection/transaction
+                            int slotsGenerated = new TimeSlotDAO().generateSlots(scheduleId, doctorId, workDate, startTime, endTime, conn);
+
+                            conn.commit();
+                            return new ApproveResult(true, slotsGenerated, null, null);
+                        }
+                    }
+                }
             }
+            if (conn != null) {
+                conn.rollback();
+            }
+            return new ApproveResult(false, 0, "ALREADY_PROCESSED", "Lịch trực đã được xử lý hoặc không tồn tại.");
         } catch (SQLException e) {
+            if (conn != null) {
+                try { conn.rollback(); } catch (SQLException ex) {}
+            }
             return new ApproveResult(false, 0, "SYSTEM_ERROR", e.getMessage());
+        } finally {
+            closeResources(conn, ps, null);
         }
     }
+
 
     public CancelScheduleResult cancelAtomic(int scheduleId, int cancelledBy, String reason, int something) {
         String sql = "UPDATE doctor_schedules SET status = 'CANCELLED', is_approved = 0, updated_at = GETDATE(), rejection_reason = ? WHERE id = ? AND status IN ('PENDING', 'APPROVED')";

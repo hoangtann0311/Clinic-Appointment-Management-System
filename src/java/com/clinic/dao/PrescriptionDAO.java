@@ -243,7 +243,7 @@ public class PrescriptionDAO {
             "       mc.category_name " +
             "FROM   medicines m " +
             "LEFT JOIN medicine_categories mc ON mc.id = m.category_id " +
-            "WHERE  m.is_active = 1 " +
+            "WHERE  m.is_active = 1 AND m.stock_quantity > 0 " +
             "ORDER BY mc.category_name, m.name";
         List<Medicine> list = new ArrayList<>();
         try (Connection conn = DatabaseConfig.getConnection();
@@ -277,7 +277,7 @@ public class PrescriptionDAO {
         for (int i = 0; i < medicineIds.size(); i++) {
             placeholders.append(i == 0 ? "?" : ",?");
         }
-        String sql = "SELECT COUNT(*) FROM medicines WHERE is_active = 1 AND id IN (" + placeholders + ")";
+        String sql = "SELECT COUNT(*) FROM medicines WHERE is_active = 1 AND stock_quantity > 0 AND id IN (" + placeholders + ")";
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             int idx = 1;

@@ -78,6 +78,7 @@ public class StaffPaymentServlet extends HttpServlet {
         }
 
         String invoiceIdStr = request.getParameter("invoiceId");
+        String action = request.getParameter("action");
         String paymentMethod = request.getParameter("paymentMethod");
         String transactionCode = request.getParameter("transactionCode");
         String paymentNote = request.getParameter("paymentNote");
@@ -99,12 +100,22 @@ public class StaffPaymentServlet extends HttpServlet {
 
         try {
             int invoiceId = Integer.parseInt(invoiceIdStr);
-            boolean success = receptionService.confirmPayment(invoiceId, paymentMethod, transactionCode, paymentNote, user.getId());
-            if (success) {
-                response.sendRedirect(request.getContextPath() + "/admin/reception/payments?success=confirmed" + suffix);
+            if ("decline".equalsIgnoreCase(action)) {
+                boolean success = receptionService.declinePrescriptionPurchase(invoiceId, user.getId());
+                if (success) {
+                    response.sendRedirect(request.getContextPath() + "/admin/reception/payments?success=declined" + suffix);
+                } else {
+                    response.sendRedirect(request.getContextPath() + "/admin/reception/payments?error=" 
+                            + java.net.URLEncoder.encode("Không thể từ chối thanh toán hóa đơn thuốc.", "UTF-8") + suffix);
+                }
             } else {
-                response.sendRedirect(request.getContextPath() + "/admin/reception/payments?error=" 
-                        + java.net.URLEncoder.encode("Không thể cập nhật trạng thái thanh toán hóa đơn.", "UTF-8") + suffix);
+                boolean success = receptionService.confirmPayment(invoiceId, paymentMethod, transactionCode, paymentNote, user.getId());
+                if (success) {
+                    response.sendRedirect(request.getContextPath() + "/admin/reception/payments?success=confirmed" + suffix);
+                } else {
+                    response.sendRedirect(request.getContextPath() + "/admin/reception/payments?error=" 
+                            + java.net.URLEncoder.encode("Không thể cập nhật trạng thái thanh toán hóa đơn.", "UTF-8") + suffix);
+                }
             }
         } catch (IllegalArgumentException e) {
             response.sendRedirect(request.getContextPath() + "/admin/reception/payments?error=" 
@@ -112,7 +123,7 @@ public class StaffPaymentServlet extends HttpServlet {
         } catch (Exception e) {
             e.printStackTrace();
             response.sendRedirect(request.getContextPath() + "/admin/reception/payments?error=" 
-                    + java.net.URLEncoder.encode("Lỗi hệ thống khi xác nhận thanh toán: " + e.getMessage(), "UTF-8") + suffix);
+                    + java.net.URLEncoder.encode("Lỗi hệ thống khi xử lý hóa đơn: " + e.getMessage(), "UTF-8") + suffix);
         }
     }
 }

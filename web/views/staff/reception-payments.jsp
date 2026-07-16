@@ -152,6 +152,7 @@
                             <option value="Unpaid" ${statusParam == 'Unpaid' ? 'selected' : ''}>Chưa thanh toán</option>
                             <option value="Paid" ${statusParam == 'Paid' ? 'selected' : ''}>Đã thanh toán</option>
                             <option value="PendingConfirmation" ${statusParam == 'PendingConfirmation' ? 'selected' : ''}>Chờ xác nhận</option>
+                            <option value="DeclinedPurchase" ${statusParam == 'DeclinedPurchase' ? 'selected' : ''}>Từ chối mua thuốc</option>
                             <option value="Cancelled" ${statusParam == 'Cancelled' ? 'selected' : ''}>Đã hủy</option>
                         </select>
                     </div>
@@ -161,6 +162,7 @@
                             <option value="">Tất cả loại</option>
                             <option value="PRE_EXAM" ${typeParam == 'PRE_EXAM' ? 'selected' : ''}>Trước khám (PRE_EXAM)</option>
                             <option value="POST_EXAM" ${typeParam == 'POST_EXAM' ? 'selected' : ''}>Sau khám (POST_EXAM)</option>
+                            <option value="PRESCRIPTION" ${typeParam == 'PRESCRIPTION' ? 'selected' : ''}>Đơn thuốc (PRESCRIPTION)</option>
                         </select>
                     </div>
                     <div class="col-md-2">
@@ -178,6 +180,15 @@
                 </form>
             </div>
         </div>
+
+        <!-- Alerts -->
+        <c:if test="${param.success == 'declined'}">
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i>
+                Đã xác nhận từ chối mua thuốc thành công! Trạng thái hóa đơn đã cập nhật thành Từ chối mua.
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        </c:if>
 
         <!-- Invoices List -->
         <div class="admin-card">
@@ -198,7 +209,7 @@
                                 <th>Ngày Khám</th>
                                 <th>Tổng Tiền</th>
                                 <th>Phân Loại</th>
-                                <th>Trạng Thái</th>
+                                <th>Trạng Thế</th>
                                 <th>Hành Động</th>
                             </tr>
                         </thead>
@@ -221,7 +232,14 @@
                                                 <small class="text-muted"><i class="bi bi-telephone me-1"></i><c:out value="${inv.patientPhone}"/></small>
                                             </td>
                                             <td>
-                                                <span class="badge bg-light text-dark fw-medium border"><c:out value="${inv.serviceName != null ? inv.serviceName : 'Phí khám thai tổng quát'}"/></span>
+                                                <c:choose>
+                                                    <c:when test="${inv.invoiceType == 'PRESCRIPTION'}">
+                                                        <span class="badge bg-success-subtle text-success fw-medium border">Hóa đơn thuốc tây</span>
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <span class="badge bg-light text-dark fw-medium border"><c:out value="${inv.serviceName != null ? inv.serviceName : 'Phí khám thai tổng quát'}"/></span>
+                                                    </c:otherwise>
+                                                </c:choose>
                                             </td>
                                             <td><c:out value="${inv.appointmentDate}"/></td>
                                             <td>
@@ -234,8 +252,11 @@
                                                     <c:when test="${inv.invoiceType == 'PRE_EXAM'}">
                                                         <span class="badge bg-info-subtle text-info border border-info-subtle">Trước khám</span>
                                                     </c:when>
+                                                    <c:when test="${inv.invoiceType == 'PRESCRIPTION'}">
+                                                        <span class="badge bg-success-subtle text-success border border-success-subtle">Đơn thuốc</span>
+                                                    </c:when>
                                                     <c:otherwise>
-                                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Sau khám / Chỉ định</span>
+                                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Chỉ định sau khám</span>
                                                     </c:otherwise>
                                                 </c:choose>
                                             </td>
@@ -255,6 +276,11 @@
                                                             <i class="bi bi-clock-history"></i> Chờ xác nhận
                                                         </span>
                                                     </c:when>
+                                                    <c:when test="${inv.status == 'DeclinedPurchase'}">
+                                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle d-flex align-items-center gap-1 w-fit" title="Sản phụ từ chối mua thuốc tại phòng khám">
+                                                            <i class="bi bi-x-circle-fill"></i> Từ chối mua thuốc
+                                                        </span>
+                                                    </c:when>
                                                     <c:when test="${inv.status == 'Cancelled'}">
                                                         <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle d-flex align-items-center gap-1 w-fit">
                                                             <i class="bi bi-x-circle"></i> Đã hủy
@@ -270,10 +296,18 @@
                                             <td>
                                                 <c:choose>
                                                     <c:when test="${inv.status == 'Unpaid' || inv.status == 'PendingConfirmation'}">
-                                                        <button type="button" class="btn btn-sm btn-outline-success fw-bold d-inline-flex align-items-center gap-1"
-                                                                onclick="openPaymentModal(${inv.id}, '${inv.patientName}', ${inv.totalAmount}, '${inv.invoiceType}')">
-                                                            <i class="bi bi-credit-card"></i> Xác nhận Paid
-                                                        </button>
+                                                        <div class="d-flex gap-1">
+                                                            <button type="button" class="btn btn-sm btn-outline-success fw-bold d-inline-flex align-items-center gap-1"
+                                                                    onclick="openPaymentModal(${inv.id}, '${inv.patientName}', ${inv.totalAmount}, '${inv.invoiceType}')">
+                                                                <i class="bi bi-credit-card"></i> Xác nhận Paid
+                                                            </button>
+                                                            <c:if test="${inv.invoiceType == 'PRESCRIPTION'}">
+                                                                <button type="button" class="btn btn-sm btn-outline-danger fw-bold d-inline-flex align-items-center gap-1"
+                                                                        onclick="confirmDecline(${inv.id}, '${inv.patientName}')">
+                                                                    <i class="bi bi-x-circle"></i> Từ chối
+                                                                </button>
+                                                            </c:if>
+                                                        </div>
                                                     </c:when>
                                                     <c:otherwise>
                                                         <button class="btn btn-sm btn-light border text-muted disabled" disabled>
@@ -452,6 +486,26 @@
         txCodeInput.classList.remove('is-invalid');
         return true;
     }
+
+    function confirmDecline(invoiceId, patientName) {
+        if (confirm("Xác nhận sản phụ '" + patientName + "' từ chối mua đơn thuốc này? Trạng thái hóa đơn sẽ chuyển thành 'Từ chối mua thuốc' và đơn thuốc sẽ bị Hủy.")) {
+            document.getElementById('declineInvoiceId').value = invoiceId;
+            document.getElementById('declineForm').submit();
+        }
+    }
 </script>
+
+<!-- Hidden Form for Decline Purchase -->
+<form id="declineForm" method="POST" action="${pageContext.request.contextPath}/admin/reception/payments" style="display:none;">
+    <input type="hidden" name="invoiceId" id="declineInvoiceId">
+    <input type="hidden" name="action" value="decline">
+    <input type="hidden" name="search" value="${searchParam}">
+    <input type="hidden" name="status" value="${statusParam}">
+    <input type="hidden" name="type" value="${typeParam}">
+    <input type="hidden" name="date" value="${dateParam}">
+    <input type="hidden" name="page" value="${currentPage}">
+</form>
+
 </body>
 </html>
+

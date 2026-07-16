@@ -452,7 +452,7 @@
             <c:when test="${not empty sosAppointments}">
                 var hasActiveSos = true;
                 var patientName = "${fn:escapeXml(sosAppointments[0].patientName)}";
-                var patientPhone = "${fn:escapeXml(sosAppointments[0].patientPhone)}";
+                var patientPhone = "${fn:escapeXml(not empty sosAppointments[0].patient ? sosAppointments[0].patient.phone : '')}";
                 var sosId = ${sosAppointments[0].id};
             </c:when>
             <c:otherwise>
