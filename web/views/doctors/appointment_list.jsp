@@ -57,7 +57,7 @@
     <div class="col-6 col-md-3">
         <div class="card border-0 rounded-4 h-100 text-center p-3" style="background:#f0eaff;">
             <div class="fs-1 fw-bold" style="color:#7c3aed;">
-                <c:out value="${empty todayCounts['completed'] ? 0 : todayCounts['completed']}"/>
+                <c:out value="${empty todayCounts['success'] ? 0 : todayCounts['success']}"/>
             </div>
             <div class="small text-muted mt-1"><i class="bi bi-clipboard2-check me-1"></i>Hoàn thành</div>
         </div>
@@ -100,10 +100,14 @@
                 <label class="form-label small fw-medium text-muted">Trạng thái</label>
                 <select name="status" class="form-select rounded-3">
                     <option value="">Tất cả</option>
-                    <option value="pending"   ${statusFilter == 'pending'   ? 'selected' : ''}>Chờ xác nhận</option>
-                    <option value="confirmed" ${statusFilter == 'confirmed' ? 'selected' : ''}>Đã xác nhận</option>
-                    <option value="completed" ${statusFilter == 'completed' ? 'selected' : ''}>Hoàn thành</option>
-                    <option value="cancelled" ${statusFilter == 'cancelled' ? 'selected' : ''}>Đã huỷ</option>
+                    <option value="Pending"        ${fn:toLowerCase(statusFilter) == 'pending'        ? 'selected' : ''}>Chờ xác nhận</option>
+                    <option value="Confirmed"      ${fn:toLowerCase(statusFilter) == 'confirmed'      ? 'selected' : ''}>Đã xác nhận</option>
+                    <option value="Waiting"        ${fn:toLowerCase(statusFilter) == 'waiting'        ? 'selected' : ''}>Chờ khám</option>
+                    <option value="InProgress"     ${fn:toLowerCase(statusFilter) == 'inprogress'     ? 'selected' : ''}>Đang khám</option>
+                    <option value="SUCCESS"        ${fn:toLowerCase(statusFilter) == 'success'        ? 'selected' : ''}>Hoàn thành</option>
+                    <option value="Emergency_SOS"  ${fn:toLowerCase(statusFilter) == 'emergency_sos'  ? 'selected' : ''}>Cấp cứu</option>
+                    <option value="Cancelled"      ${fn:toLowerCase(statusFilter) == 'cancelled'      ? 'selected' : ''}>Đã huỷ</option>
+                    <option value="NoShow"         ${fn:toLowerCase(statusFilter) == 'noshow'         ? 'selected' : ''}>Vắng mặt</option>
                 </select>
             </div>
             <div class="col-md-2 d-flex gap-2">
@@ -229,11 +233,14 @@
                                             <input type="hidden" name="appointmentId" value="${appt.id}"/>
                                             <select name="newStatus"
                                                     onchange="this.form.submit()"
-                                                    class="status-dropdown status-${appt.status}">
-                                                <option value="pending"   <c:if test="${appt.status == 'pending'}">selected</c:if>>⏳ Chờ xác nhận</option>
-                                                <option value="confirmed" <c:if test="${appt.status == 'confirmed'}">selected</c:if>>✅ Đã xác nhận</option>
-                                                <option value="completed" <c:if test="${appt.status == 'completed'}">selected</c:if>>📋 Hoàn thành</option>
-                                                <option value="cancelled" <c:if test="${appt.status == 'cancelled'}">selected</c:if>>❌ Đã huỷ</option>
+                                                    class="status-dropdown status-${fn:toLowerCase(appt.status)}">
+                                                <option value="Pending"       <c:if test="${fn:toLowerCase(appt.status) == 'pending'}">selected</c:if>>⏳ Chờ xác nhận</option>
+                                                <option value="Confirmed"     <c:if test="${fn:toLowerCase(appt.status) == 'confirmed'}">selected</c:if>>✅ Đã xác nhận</option>
+                                                <option value="Waiting"       <c:if test="${fn:toLowerCase(appt.status) == 'waiting'}">selected</c:if>>🕐 Chờ khám</option>
+                                                <option value="InProgress"    <c:if test="${fn:toLowerCase(appt.status) == 'inprogress'}">selected</c:if>>🩺 Đang khám</option>
+                                                <option value="SUCCESS"       <c:if test="${fn:toLowerCase(appt.status) == 'success'}">selected</c:if>>📋 Hoàn thành</option>
+                                                <option value="Cancelled"     <c:if test="${fn:toLowerCase(appt.status) == 'cancelled'}">selected</c:if>>❌ Đã huỷ</option>
+                                                <option value="NoShow"        <c:if test="${fn:toLowerCase(appt.status) == 'noshow'}">selected</c:if>>🚫 Vắng mặt</option>
                                             </select>
                                         </form>
                                     </td>
@@ -258,7 +265,7 @@
 
 
 <style>
-/* ── Dropdown trạng thái ─────────────────────────────── */
+/* ── Dropdown trạng thái ─────────────────────────── */
 .status-dropdown {
     appearance: auto;
     -webkit-appearance: auto;
@@ -269,15 +276,20 @@
     font-weight: 600;
     cursor: pointer;
     outline: none;
-    min-width: 150px;
+    min-width: 160px;
     transition: box-shadow .15s;
 }
 .status-dropdown:hover  { box-shadow: 0 0 0 3px rgba(0,0,0,.12); }
 .status-dropdown:focus  { box-shadow: 0 0 0 3px rgba(66,153,225,.5); }
 
-.status-pending   { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
-.status-confirmed { background: #d1fae5; color: #065f46; border-color: #6ee7b7; }
-.status-completed { background: #ede9fe; color: #5b21b6; border-color: #c4b5fd; }
-.status-cancelled { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+/* BA §7.1 canonical statuses */
+.status-pending       { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+.status-confirmed     { background: #d1fae5; color: #065f46; border-color: #6ee7b7; }
+.status-waiting       { background: #e0f2fe; color: #075985; border-color: #7dd3fc; }
+.status-inprogress    { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
+.status-success       { background: #ede9fe; color: #5b21b6; border-color: #c4b5fd; }
+.status-cancelled     { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+.status-noshow        { background: #f3f4f6; color: #374151; border-color: #9ca3af; }
+.status-emergency_sos { background: #ffe4e6; color: #9f1239; border-color: #fda4af; }
 </style>
 <%@ include file="../common/footer.jsp" %>

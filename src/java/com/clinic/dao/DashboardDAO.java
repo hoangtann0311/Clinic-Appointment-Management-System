@@ -49,7 +49,7 @@ public class DashboardDAO {
     public int countWaitingPatients() {
         String sql = "SELECT COUNT(*) AS total FROM appointments "
                    + "WHERE appointment_date = CAST(GETDATE() AS DATE) "
-                   + "AND status IN ('waiting', 'confirmed', 'in_progress')";
+                   + "AND LOWER(status) IN ('waiting', 'confirmed', 'inprogress', 'in_progress', 'emergency_sos')";
         return executeCount(sql);
     }
 
@@ -214,7 +214,7 @@ public class DashboardDAO {
                    + "  d.id AS doctor_id, "
                    + "  d.full_name AS doctor_name, "
                    + "  ISNULL(d.specialization, N'Chưa cập nhật') AS specialization, "
-                   + "  (SELECT COUNT(*) FROM appointments a2 WHERE a2.doctor_id = d.id AND a2.status = 'completed') AS total_patients, "
+                   + "  (SELECT COUNT(*) FROM appointments a2 WHERE a2.doctor_id = d.id AND LOWER(a2.status) IN ('completed', 'success')) AS total_patients, "
                    + "  (SELECT COUNT(*) FROM appointments a3 WHERE a3.doctor_id = d.id "
                    + "     AND a3.appointment_date = CAST(GETDATE() AS DATE)) AS appointments_today, "
                    + "  ISNULL((SELECT SUM(i.total_amount) FROM invoices i "

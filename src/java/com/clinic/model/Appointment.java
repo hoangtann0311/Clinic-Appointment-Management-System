@@ -126,6 +126,12 @@ public class Appointment {
     }
     public void setPatientName(String patientName) { this.patientName = patientName; }
 
+    /** Trả về tên bác sĩ — dùng cho EL: ${appointment.doctorName} */
+    public String getDoctorName() {
+        if (doctor != null) return doctor.getFullName();
+        return null;
+    }
+
     public String getServiceName() {
         if (service != null) return service.getName();
         return serviceName;

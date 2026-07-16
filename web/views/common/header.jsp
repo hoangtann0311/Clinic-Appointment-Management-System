@@ -448,6 +448,11 @@
                                     </a>
                                 </li>
                                 <li class="nav-item">
+                                    <a class="nav-link" href="${pageContext.request.contextPath}/patient/pregnancy">
+                                        <i class="bi bi-heart-pulse-fill text-danger me-1"></i>Theo Dõi Thai Kỳ
+                                    </a>
+                                </li>
+                                <li class="nav-item">
                                     <a class="nav-link position-relative" href="${pageContext.request.contextPath}/patient/notifications">
                                         <i class="bi bi-bell me-1"></i>Thông Báo
                                     </a>

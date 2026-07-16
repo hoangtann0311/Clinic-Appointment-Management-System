@@ -45,6 +45,7 @@ C:\Users\dangi\Clinic-Appointment-Management-System\src\java\com\clinic\controll
 C:\Users\dangi\Clinic-Appointment-Management-System\src\java\com\clinic\controller\PatientMedicalRecordServlet.java
 C:\Users\dangi\Clinic-Appointment-Management-System\src\java\com\clinic\controller\PatientNotificationServlet.java
 C:\Users\dangi\Clinic-Appointment-Management-System\src\java\com\clinic\controller\PatientPaymentServlet.java
+C:\Users\dangi\Clinic-Appointment-Management-System\src\java\com\clinic\controller\PatientPregnancyServlet.java
 C:\Users\dangi\Clinic-Appointment-Management-System\src\java\com\clinic\controller\PatientProfileServlet.java
 C:\Users\dangi\Clinic-Appointment-Management-System\src\java\com\clinic\controller\PatientReviewServlet.java
 C:\Users\dangi\Clinic-Appointment-Management-System\src\java\com\clinic\controller\PatientSlotApiServlet.java

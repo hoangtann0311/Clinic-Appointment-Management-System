@@ -117,6 +117,13 @@ public class NotificationHelper {
         return null;
     }
 
+    // ── Loại 6: Báo động khẩn cấp SOS từ bệnh nhân ───────────────────────────
+    public static void sosAlert(int doctorUserId, String patientName, String queueNum, String symptoms) {
+        dao.create(doctorUserId,
+            "🚨 Báo động khẩn cấp SOS (Hàng đợi: " + queueNum + ")",
+            "Bệnh nhân " + patientName + " đã kích hoạt SOS khẩn cấp! Triệu chứng: " + symptoms + ". Vui lòng chuẩn bị tiếp nhận khám.");
+    }
+
     /**
      * Kiểm tra và tạo nhắc nhở cho các hồ sơ draft chờ > 24h.
      * Gọi mỗi khi bác sĩ vào dashboard.

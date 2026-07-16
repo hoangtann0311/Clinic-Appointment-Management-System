@@ -39,7 +39,12 @@
                 <i class="bi bi-credit-card-2-front-fill"></i>
             </div>
             <div>
-                <h2 class="fw-bold mb-0">Thanh Toán Hóa Đơn</h2>
+                <h2 class="fw-bold mb-0">
+                    <c:choose>
+                        <c:when test="${invoiceType == 'POST_EXAM'}">Thanh Toán Dịch Vụ Phát Sinh / Đơn Thuốc</c:when>
+                        <c:otherwise>Thanh Toán Hóa Đơn Lâm Sàng</c:otherwise>
+                    </c:choose>
+                </h2>
                 <p class="text-muted mb-0 small">Lịch hẹn #${appointment.id} — ${appointment.appointmentDate}</p>
             </div>
         </div>
@@ -196,10 +201,19 @@
                                     <%-- Panel chuyển khoản --%>
                                     <div id="bankPanel" style="display:none;">
                                         <div class="qr-box mb-3">
-                                            <div class="fw-bold mb-2"><i class="bi bi-qr-code me-2"></i>Thông tin chuyển khoản</div>
-                                            <table class="table table-sm mb-2 text-start">
-                                                <tr><td class="text-muted">Ngân hàng</td><td><strong>Vietcombank</strong></td></tr>
-                                                <tr><td class="text-muted">Số tài khoản</td><td><strong>1234567890</strong></td></tr>
+                                            <div class="fw-bold mb-3"><i class="bi bi-qr-code-scan me-2 text-primary"></i>Quét Mã QR Thanh Toán</div>
+                                            
+                                            <div class="text-center mb-3">
+                                                <img src="https://img.vietqr.io/image/mb-0967629020-compact2.png?amount=${invoice.totalAmount.longValue()}&addInfo=CAMSHD${appointment.id}&accountName=PHONG%20KHAM%20SAN%20PHU" 
+                                                     alt="VietQR Code" 
+                                                     class="img-fluid border rounded-3 p-2 bg-white"
+                                                     style="max-width: 220px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+                                                <div class="form-text text-muted mt-2">Sử dụng ứng dụng ngân hàng quét mã để tự động điền thông tin</div>
+                                            </div>
+
+                                            <table class="table table-sm mb-0 text-start">
+                                                <tr><td class="text-muted">Ngân hàng</td><td><strong>MB Bank (Ngân hàng Quân đội)</strong></td></tr>
+                                                <tr><td class="text-muted">Số tài khoản</td><td><strong>0967629020</strong></td></tr>
                                                 <tr><td class="text-muted">Chủ tài khoản</td><td><strong>PHONG KHAM SAN PHU</strong></td></tr>
                                                 <tr><td class="text-muted">Số tiền</td>
                                                     <td><strong class="text-success"><fmt:formatNumber value="${invoice.totalAmount}" pattern="#,###"/>đ</strong></td></tr>
@@ -233,12 +247,12 @@
         </div>
 
         <%-- Hóa đơn sau khám (POST_EXAM) nếu có --%>
-        <c:if test="${not empty postInvoice}">
-            <div class="card mt-4">
-                <div class="card-header fw-bold bg-light border-0">
-                    <i class="bi bi-receipt-cutoff me-2 text-success"></i>Hóa Đơn Sau Khám (POST_EXAM)
+        <c:if test="${not empty postInvoice && invoiceType == 'PRE_EXAM'}">
+            <div class="card mt-4 border border-success border-opacity-25">
+                <div class="card-header fw-bold bg-light border-0 text-success">
+                    <i class="bi bi-receipt-cutoff me-2"></i>Hóa Đơn Sau Khám (Dịch Vụ Phát Sinh / Đơn Thuốc)
                 </div>
-                <div class="card-body d-flex align-items-center justify-content-between">
+                <div class="card-body d-flex align-items-center justify-content-between flex-wrap gap-2">
                     <div>
                         Số tiền: <strong class="text-success">
                             <fmt:formatNumber value="${postInvoice.totalAmount}" pattern="#,###"/>đ
@@ -248,11 +262,54 @@
                             <c:when test="${postInvoice.status == 'Paid'}">
                                 <span class="badge bg-success">Đã thanh toán</span>
                             </c:when>
+                            <c:when test="${postInvoice.status == 'PendingConfirmation'}">
+                                <span class="badge bg-warning text-dark">Chờ xác nhận</span>
+                            </c:when>
                             <c:otherwise>
-                                <span class="badge bg-warning text-dark">${postInvoice.status}</span>
+                                <span class="badge bg-danger">Chưa thanh toán</span>
                             </c:otherwise>
                         </c:choose>
                     </div>
+                    <c:if test="${postInvoice.status == 'Unpaid'}">
+                        <a href="${pageContext.request.contextPath}/patient/payment?appointmentId=${appointment.id}&type=POST_EXAM"
+                           class="btn btn-sm btn-success rounded-pill px-3 fw-semibold">
+                            <i class="bi bi-wallet2 me-1"></i>Thanh toán hóa đơn sau khám
+                        </a>
+                    </c:if>
+                </div>
+            </div>
+        </c:if>
+
+        <%-- Hóa đơn lâm sàng (PRE_EXAM) nếu đang ở trang POST_EXAM --%>
+        <c:if test="${not empty preInvoice && invoiceType == 'POST_EXAM'}">
+            <div class="card mt-4 border border-primary border-opacity-25">
+                <div class="card-header fw-bold bg-light border-0 text-primary">
+                    <i class="bi bi-receipt me-2"></i>Hóa Đơn Lâm Sàng (Phí Khám Ban Đầu)
+                </div>
+                <div class="card-body d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div>
+                        Số tiền: <strong class="text-primary">
+                            <fmt:formatNumber value="${preInvoice.totalAmount}" pattern="#,###"/>đ
+                        </strong>
+                        &nbsp;|&nbsp; Trạng thái:
+                        <c:choose>
+                            <c:when test="${preInvoice.status == 'Paid'}">
+                                <span class="badge bg-success">Đã thanh toán</span>
+                            </c:when>
+                            <c:when test="${preInvoice.status == 'PendingConfirmation'}">
+                                <span class="badge bg-warning text-dark">Chờ xác nhận</span>
+                            </c:when>
+                            <c:otherwise>
+                                <span class="badge bg-danger">Chưa thanh toán</span>
+                            </c:otherwise>
+                        </c:choose>
+                    </div>
+                    <c:if test="${preInvoice.status == 'Unpaid'}">
+                        <a href="${pageContext.request.contextPath}/patient/payment?appointmentId=${appointment.id}&type=PRE_EXAM"
+                           class="btn btn-sm btn-primary rounded-pill px-3 fw-semibold">
+                            <i class="bi bi-wallet2 me-1"></i>Thanh toán hóa đơn lâm sàng
+                        </a>
+                    </c:if>
                 </div>
             </div>
         </c:if>

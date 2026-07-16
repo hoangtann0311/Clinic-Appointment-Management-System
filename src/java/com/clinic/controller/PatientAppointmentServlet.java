@@ -84,27 +84,53 @@ public class PatientAppointmentServlet extends HttpServlet {
         } else if ("sos".equals(action)) {
             try {
                 int appointmentId = Integer.parseInt(request.getParameter("appointmentId"));
-                
+
+                // Triệu chứng bệnh nhân mô tả trong modal
+                String sosSymptoms = request.getParameter("symptoms");
+                if (sosSymptoms == null || sosSymptoms.isBlank()) {
+                    sosSymptoms = "Bệnh nhân báo động khẩn cấp SOS.";
+                }
+
                 // Get next SOS number
                 int nextSosNum = appointmentDAO.getNextSosQueueNumber(java.time.LocalDate.now());
                 String queueNum = "SOS-" + String.format("%02d", nextSosNum);
-                
+
                 boolean ok = appointmentDAO.activateEmergencySosForAppointment(appointmentId, queueNum);
-                
+
+                // Cập nhật triệu chứng vào lịch hẹn
+                if (ok) {
+                    appointmentDAO.updateSymptoms(appointmentId, sosSymptoms);
+                    
+                    // Gửi thông báo khẩn cấp cho bác sĩ phụ trách
+                    try {
+                        String[] apptInfo = com.clinic.utils.NotificationHelper.getApptInfo(appointmentId);
+                        if (apptInfo != null) {
+                            String patientName = apptInfo[0];
+                            int doctorUserId = Integer.parseInt(apptInfo[3]);
+                            com.clinic.utils.NotificationHelper.sosAlert(doctorUserId, patientName, queueNum, sosSymptoms);
+                        }
+                    } catch (Exception e) {
+                        System.err.println("[PatientAppointmentServlet] Gửi thông báo SOS thất bại: " + e.getMessage());
+                    }
+                }
+
                 HttpSession session = request.getSession();
                 if (ok) {
-                    session.setAttribute("bookingSuccess", "Báo động khẩn cấp SOS đã được kích hoạt thành công! Bác sĩ đang được điều phối.");
-                    
+                    session.setAttribute("bookingSuccess",
+                            "Báo động khẩn cấp SOS đã được kích hoạt! Số thứ tự ưu tiên: "
+                            + queueNum + ". Vui lòng giữ bình tĩnh, bác sĩ đang được điều phối.");
+
                     // Log action
                     new com.clinic.dao.AuditLogDAO().logAction(
-                            "Bệnh nhân kích hoạt SOS cho lịch hẹn #" + appointmentId,
+                            "Bệnh nhân kích hoạt SOS cho lịch hẹn #" + appointmentId
+                                    + " | Triệu chứng: " + sosSymptoms,
                             "Patient",
                             "appointments",
                             "Confirmed",
                             "Emergency_SOS"
                     );
                 } else {
-                    session.setAttribute("bookingError", "Không thể kích hoạt SOS cho lịch hẹn này.");
+                    session.setAttribute("bookingError", "Không thể kích hoạt SOS cho lịch hẹn này. Vui lòng thử lại.");
                 }
             } catch (NumberFormatException e) {
                 request.getSession().setAttribute("bookingError", "Mã lịch hẹn không hợp lệ.");

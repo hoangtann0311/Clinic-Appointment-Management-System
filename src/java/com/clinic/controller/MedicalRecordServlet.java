@@ -296,12 +296,17 @@ public class MedicalRecordServlet extends HttpServlet {
             mr.setId(finalRecordId);
             mr.setStatus(isDraft ? "draft" : "final");
             success = dao.update(mr);
+            // Khi cập nhật hồ sơ từ draft → final, cũng cập nhật trạng thái lịch hẹn
+            if (success && !isDraft) {
+                new AppointmentDAO().updateStatus(apptId, doctorId, "SUCCESS");
+            }
         } else {
             mr.setStatus(isDraft ? "draft" : "final");
             finalRecordId = dao.create(mr);
             success = finalRecordId > 0;
             if (success && !isDraft) {
-                new AppointmentDAO().updateStatus(apptId, doctorId, "completed");
+                // BA §7.1: khi bác sĩ hoàn thành khám → SUCCESS
+                new AppointmentDAO().updateStatus(apptId, doctorId, "SUCCESS");
             }
         }
 

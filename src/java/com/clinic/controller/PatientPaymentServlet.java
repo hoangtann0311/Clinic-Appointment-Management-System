@@ -52,29 +52,61 @@ public class PatientPaymentServlet extends HttpServlet {
                 return;
             }
 
-            // Retrieve or create PRE_EXAM invoice
-            Invoice invoice = invoiceDAO.getByAppointmentIdAndType(appointmentId, "PRE_EXAM");
-            if (invoice == null) {
-                invoice = new Invoice();
-                invoice.setAppointmentId(appointmentId);
-                double price = appt.getService() != null ? appt.getService().getPrice() : 250000;
-                invoice.setTotalAmount(BigDecimal.valueOf(price));
-                invoice.setStatus("Unpaid");
-                invoice.setInvoiceType("PRE_EXAM");
-                invoice.setCreatedAt(new Timestamp(System.currentTimeMillis()));
-                
-                int invoiceId = invoiceDAO.insert(invoice);
-                if (invoiceId > 0) {
-                    invoice = invoiceDAO.getById(invoiceId);
+            String typeParam = request.getParameter("type");
+            String invoiceType = "PRE_EXAM";
+            
+            Invoice preCheck = invoiceDAO.getByAppointmentIdAndType(appointmentId, "PRE_EXAM");
+            Invoice postCheck = invoiceDAO.getByAppointmentIdAndType(appointmentId, "POST_EXAM");
+            
+            if (typeParam != null) {
+                invoiceType = ("POST_EXAM".equalsIgnoreCase(typeParam)) ? "POST_EXAM" : "PRE_EXAM";
+            } else {
+                // Tự động chuyển sang POST_EXAM nếu lâm sàng đã thanh toán nhưng cận lâm sàng/thuốc chưa thanh toán
+                if (preCheck != null && "Paid".equalsIgnoreCase(preCheck.getStatus()) 
+                        && postCheck != null && !"Paid".equalsIgnoreCase(postCheck.getStatus())) {
+                    invoiceType = "POST_EXAM";
                 }
             }
 
-            // Load POST_EXAM invoice if exists (for display)
-            Invoice postInvoice = invoiceDAO.getByAppointmentIdAndType(appointmentId, "POST_EXAM");
+            // Retrieve or create invoice
+            Invoice invoice = invoiceDAO.getByAppointmentIdAndType(appointmentId, invoiceType);
+            if (invoice == null) {
+                if ("PRE_EXAM".equals(invoiceType)) {
+                    invoice = new Invoice();
+                    invoice.setAppointmentId(appointmentId);
+                    double price = appt.getService() != null ? appt.getService().getPrice() : 250000;
+                    invoice.setTotalAmount(BigDecimal.valueOf(price));
+                    invoice.setStatus("Unpaid");
+                    invoice.setInvoiceType("PRE_EXAM");
+                    invoice.setCreatedAt(new Timestamp(System.currentTimeMillis()));
+                    
+                    int invoiceId = invoiceDAO.insert(invoice);
+                    if (invoiceId > 0) {
+                        invoice = invoiceDAO.getById(invoiceId);
+                    }
+                } else {
+                    // For POST_EXAM, do not auto-create
+                    response.sendRedirect(request.getContextPath() + "/patient/appointments?bookingError=ChuaCoHoaDonSauKham");
+                    return;
+                }
+            }
+
+            // Load the other invoice for view references
+            Invoice preInvoice = null;
+            Invoice postInvoice = null;
+            if ("PRE_EXAM".equals(invoiceType)) {
+                preInvoice = invoice;
+                postInvoice = invoiceDAO.getByAppointmentIdAndType(appointmentId, "POST_EXAM");
+            } else {
+                preInvoice = invoiceDAO.getByAppointmentIdAndType(appointmentId, "PRE_EXAM");
+                postInvoice = invoice;
+            }
 
             request.setAttribute("appointment", appt);
-            request.setAttribute("invoice", invoice);
+            request.setAttribute("invoice", invoice); // Active invoice to be paid
+            request.setAttribute("preInvoice", preInvoice);
             request.setAttribute("postInvoice", postInvoice);
+            request.setAttribute("invoiceType", invoiceType);
             request.setAttribute("success", request.getParameter("success"));
             request.setAttribute("error", request.getParameter("error"));
 

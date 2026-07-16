@@ -8,8 +8,6 @@
             <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/controller/DoctorPatientHistoryServlet.java</file>
             <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/controller/DoctorProfileServlet.java</file>
             <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/config/DatabaseConfig.java</file>
-            <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/config/AppConfig.java</file>
-            <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/controller/PatientAppointmentServlet.java</file>
             <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/controller/MedicalRecordServlet.java</file>
             <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/dao/MedicineCategoryDAO.java</file>
             <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/dao/PregnancyDAO.java</file>
@@ -25,13 +23,10 @@
             <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/controller/DoctorAppointmentServlet.java</file>
             <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/dao/AppointmentDAO.java</file>
             <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/web/views/home/dashboard.jsp</file>
-            <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/controller/PatientBookingServlet.java</file>
-            <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/service/PatientBookingService.java</file>
             <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/controller/GoogleLoginServlet.java</file>
             <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/web/views/doctors/appointment_list.jsp</file>
             <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/controller/DoctorPregnancyServlet.java</file>
             <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/dao/DoctorDAO.java</file>
-            <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/web/views/patient/booking.jsp</file>
             <file>file:/C:/Users/dangi/Clinic-Appointment-Management-System/src/java/com/clinic/model/User.java</file>
         </group>
     </open-files>

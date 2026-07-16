@@ -293,6 +293,20 @@ public class AppointmentDAO {
         }
     }
 
+    /** Cập nhật triệu chứng cho lịch hẹn (dùng khi bệnh nhân nhập thêm mô tả lúc kích hoạt SOS). */
+    public boolean updateSymptoms(int appointmentId, String symptoms) {
+        String sql = "UPDATE appointments SET symptoms = ? WHERE id = ?";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, symptoms);
+            ps.setInt(2, appointmentId);
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
     public int getNextSosQueueNumber(LocalDate appointmentDate) {
         String sql = "SELECT ISNULL(MAX(CAST(SUBSTRING(queue_number, 5, 10) AS INT)), 0) + 1 " +
                 "FROM appointments " +
@@ -514,7 +528,14 @@ public class AppointmentDAO {
             ps.setDate(2, Date.valueOf(date != null ? date : LocalDate.now()));
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
-                result.put(rs.getString("status"), rs.getInt("cnt"));
+                String status = rs.getString("status");
+                if (status != null) {
+                    status = status.toLowerCase();
+                    if ("completed".equals(status)) {
+                        status = "success";
+                    }
+                    result.put(status, result.getOrDefault(status, 0) + rs.getInt("cnt"));
+                }
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -526,7 +547,9 @@ public class AppointmentDAO {
         String sql = "UPDATE appointments SET status = ? WHERE id = ? AND doctor_id = ?";
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, newStatus.toLowerCase());
+            // Preserve exact case per BA spec: Pending, Confirmed, Waiting,
+            // Emergency_SOS, InProgress, SUCCESS, Cancelled, NoShow
+            ps.setString(1, newStatus);
             ps.setInt(2, appointmentId);
             ps.setInt(3, doctorId);
             return ps.executeUpdate() > 0;

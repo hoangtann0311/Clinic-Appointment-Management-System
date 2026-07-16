@@ -58,6 +58,13 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 </c:if>
+<c:if test="${not empty sessionScope.successMessage}">
+    <div class="alert alert-success rounded-3 mb-4 alert-dismissible fade show">
+        <i class="bi bi-check-circle-fill me-2"></i>${sessionScope.successMessage}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <c:remove var="successMessage" scope="session"/>
+</c:if>
 <c:if test="${not empty error}">
     <div class="alert alert-danger rounded-3 mb-4">
         <i class="bi bi-exclamation-triangle me-2"></i>${error}
@@ -173,6 +180,120 @@
     </div>
 </div>
 
+<%-- ── Card Đổi Mật Khẩu ───────────────────────────────────────────── --%>
+<div class="card admin-card fade-in-up mt-4">
+    <div class="card-header">
+        <h5><i class="bi bi-shield-lock"></i>Bảo Mật Tài Khoản</h5>
+    </div>
+    <div class="card-body" style="padding: 1.5rem !important;">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+                <p class="mb-1 fw-medium">Mật khẩu đăng nhập</p>
+                <p class="text-muted small mb-0">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Nên đổi mật khẩu định kỳ để bảo vệ tài khoản.
+                    Mật khẩu mới phải có ít nhất 6 ký tự.
+                </p>
+            </div>
+            <button type="button" class="btn btn-outline-warning rounded-pill px-4 fw-semibold"
+                    data-bs-toggle="modal" data-bs-target="#changePasswordModal">
+                <i class="bi bi-key me-1"></i>Đổi Mật Khẩu
+            </button>
+        </div>
+    </div>
+</div>
+
+<%-- ── Modal Đổi Mật Khẩu ─────────────────────────────────────────── --%>
+<div class="modal fade" id="changePasswordModal" tabindex="-1"
+     aria-labelledby="changePasswordModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-0"
+                 style="background:linear-gradient(135deg,#7c3aed,#6d28d9);border-radius:1rem 1rem 0 0;">
+                <h5 class="modal-title fw-bold text-white" id="changePasswordModalLabel">
+                    <i class="bi bi-shield-lock-fill me-2"></i>Đổi Mật Khẩu
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="${pageContext.request.contextPath}/change-password"
+                  id="changePasswordForm" novalidate>
+                <div class="modal-body p-4">
+
+                    <%-- Flash lỗi từ server --%>
+                    <c:if test="${not empty pwError}">
+                        <div class="alert alert-danger small py-2">
+                            <i class="bi bi-exclamation-triangle me-1"></i>${pwError}
+                        </div>
+                    </c:if>
+
+                    <div class="mb-3">
+                        <label for="oldPassword" class="form-label fw-semibold">
+                            Mật khẩu hiện tại <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <input type="password" id="oldPassword" name="oldPassword"
+                                   class="form-control" placeholder="Nhập mật khẩu hiện tại"
+                                   required autocomplete="current-password">
+                            <button class="btn btn-outline-secondary" type="button"
+                                    onclick="togglePw('oldPassword',this)"
+                                    title="Hiện/ẩn mật khẩu">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="newPassword" class="form-label fw-semibold">
+                            Mật khẩu mới <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <input type="password" id="newPassword" name="newPassword"
+                                   class="form-control" placeholder="Tối thiểu 6 ký tự"
+                                   required minlength="6" autocomplete="new-password">
+                            <button class="btn btn-outline-secondary" type="button"
+                                    onclick="togglePw('newPassword',this)"
+                                    title="Hiện/ẩn mật khẩu">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="confirmPassword" class="form-label fw-semibold">
+                            Xác nhận mật khẩu mới <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <input type="password" id="confirmPassword" name="confirmPassword"
+                                   class="form-control" placeholder="Nhập lại mật khẩu mới"
+                                   required minlength="6" autocomplete="new-password">
+                            <button class="btn btn-outline-secondary" type="button"
+                                    onclick="togglePw('confirmPassword',this)"
+                                    title="Hiện/ẩn mật khẩu">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                        <div id="confirmFeedback" class="form-text text-danger d-none">
+                            Mật khẩu xác nhận không khớp.
+                        </div>
+                    </div>
+
+                    <%-- Redirect về profile sau khi đổi thành công --%>
+                    <input type="hidden" name="redirectTo"
+                           value="${pageContext.request.contextPath}/doctor/profile">
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill"
+                            data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary rounded-pill fw-semibold px-4"
+                            id="submitPwBtn">
+                        <i class="bi bi-check-circle me-1"></i>Xác nhận đổi mật khẩu
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
   function previewAvatarFile(input) {
     var img = document.getElementById('avatarPreviewImg');
@@ -205,6 +326,58 @@
     if (phone && !/^[0-9+\-\s]{7,15}$/.test(phone)) {
       e.preventDefault();
       alert('Số điện thoại không hợp lệ.');
+    }
+  });
+
+  // Toggle hiển thị mật khẩu
+  function togglePw(inputId, btn) {
+    var input = document.getElementById(inputId);
+    var icon = btn.querySelector('i');
+    if (input.type === 'password') {
+      input.type = 'text';
+      icon.classList.remove('bi-eye');
+      icon.classList.add('bi-eye-slash');
+    } else {
+      input.type = 'password';
+      icon.classList.remove('bi-eye-slash');
+      icon.classList.add('bi-eye');
+    }
+  }
+
+  // Validate form đổi mật khẩu
+  document.getElementById('changePasswordForm').addEventListener('submit', function(e) {
+    var oldPw = document.getElementById('oldPassword').value;
+    var newPw = document.getElementById('newPassword').value;
+    var confirmPw = document.getElementById('confirmPassword').value;
+
+    var hasLetter = /[A-Za-z]/;
+    var hasDigit = /\d/;
+    var hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/;
+
+    if (oldPw === '') {
+      alert('Vui lòng nhập mật khẩu hiện tại.');
+      e.preventDefault();
+      return;
+    }
+    if (newPw.length < 6) {
+      alert('Mật khẩu mới phải có ít nhất 6 ký tự.');
+      e.preventDefault();
+      return;
+    }
+    if (!hasLetter.test(newPw) || !hasDigit.test(newPw) || !hasSpecial.test(newPw)) {
+      alert('Mật khẩu phải chứa ít nhất 1 chữ cái, 1 chữ số và 1 ký tự đặc biệt (VD: !@#$%).');
+      e.preventDefault();
+      return;
+    }
+    if (newPw === oldPw) {
+      alert('Mật khẩu mới không được trùng với mật khẩu hiện tại.');
+      e.preventDefault();
+      return;
+    }
+    if (confirmPw !== newPw) {
+      alert('Mật khẩu xác nhận không khớp.');
+      e.preventDefault();
+      return;
     }
   });
 </script>
