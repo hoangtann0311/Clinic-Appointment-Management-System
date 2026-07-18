@@ -1,6 +1,5 @@
 package com.clinic.controller;
 
-import com.clinic.model.User;
 import com.clinic.utils.AuditUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -34,14 +33,8 @@ public class LogoutServlet extends HttpServlet {
             throws IOException {
 
         HttpSession session = request.getSession(false);
-        boolean wasAdmin = false;
-
         if (session != null) {
             // Lấy thông tin user trước khi hủy session để ghi audit log
-            Object userObj = session.getAttribute("user");
-            User user = (userObj instanceof User) ? (User) userObj : null;
-            wasAdmin = (user != null) && user.getRoleId() == 1;
-
             // Ghi audit log ĐĂNG XUẤT trước khi hủy session
             AuditUtil.log(request, "Đăng xuất", "users", null, null);
 
@@ -49,10 +42,7 @@ public class LogoutServlet extends HttpServlet {
         }
 
         // Chuyển về trang login phù hợp: Admin → /admin/login, còn lại → /login
-        if (wasAdmin) {
-            response.sendRedirect(request.getContextPath() + "/admin/login");
-        } else {
-            response.sendRedirect(request.getContextPath() + "/login");
-        }
+        // All roles return to the common login page.
+        response.sendRedirect(request.getContextPath() + "/login");
     }
 }

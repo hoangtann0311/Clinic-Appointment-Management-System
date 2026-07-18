@@ -11,7 +11,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 
 /**
- * View model for one patient waiting for an ultrasound test order.
+ * View model for one patient waiting for an ultrasound request.
  */
 public class UltrasoundWaitingPatient implements Serializable {
 

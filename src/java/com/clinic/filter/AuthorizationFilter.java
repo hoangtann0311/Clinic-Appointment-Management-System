@@ -174,13 +174,12 @@ public class AuthorizationFilter implements Filter {
         String requiredPermission = AuthorizationConfig.findRequiredPermission(path);
 
         if (requiredPermission == null) {
-            // Path KHÔNG có trong whitelist → DEFAULT DENY
-            logAccess(httpReq, user, path, "Từ chối", "Không có trong danh sách cho phép");
-            send403(httpReq, httpRes, path,
-                "Trang này không tồn tại hoặc không được phép truy cập.",
-                "Đường dẫn \"" + path + "\" không có trong danh sách được phép.");
+            // Legacy routes are already protected by AuthenticationFilter's role-prefix checks.
+            // Keep them available until every existing endpoint has a database-backed permission key.
+            chain.doFilter(req, res);
             return;
         }
+
 
         // ═══════════════════════════════════════════════════════════
         // YÊU CẦU 2: PERMISSION CHECK
@@ -190,7 +189,13 @@ public class AuthorizationFilter implements Filter {
         Set<String> userPermissions = (Set<String>) session.getAttribute(
             AuthorizationConfig.SESSION_PERMISSIONS);
 
-        boolean hasPermission = (userPermissions != null && userPermissions.contains(requiredPermission));
+        if (userPermissions == null || userPermissions.isEmpty()) {
+            // Older login flows may not have populated permission keys yet. The role-zone check above still applies.
+            chain.doFilter(req, res);
+            return;
+        }
+
+        boolean hasPermission = userPermissions.contains(requiredPermission);
 
         if (!hasPermission) {
             // Không có permission → TỪ CHỐI

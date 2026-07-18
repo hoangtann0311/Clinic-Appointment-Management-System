@@ -211,7 +211,7 @@ public class AuditUtil {
         String action = "Tải lên " + imageCount + " ảnh siêu âm cho bệnh nhân "
                       + patientName + " (ID: " + patientId + ")"
                       + ", lịch hẹn #" + appointmentId
-                      + ", test_order #" + testOrderId;
+                      + ", chỉ định siêu âm #" + testOrderId;
 
         // Tạo new_value JSON chứa thông tin chi tiết
         String newValue = buildUltrasoundUploadJson(patientId, patientName,
@@ -257,7 +257,7 @@ public class AuditUtil {
                       + (patientName != null ? " cho bệnh nhân " + patientName : "")
                       + (patientId > 0 ? " (ID: " + patientId + ")" : "")
                       + (appointmentId > 0 ? ", lịch hẹn #" + appointmentId : "")
-                      + (testOrderId > 0 ? ", test_order #" + testOrderId : "");
+                      + (testOrderId > 0 ? ", chỉ định siêu âm #" + testOrderId : "");
 
         // Tạo new_value JSON chứa thông tin chi tiết + nguyên nhân lỗi
         String newValue = buildUltrasoundUploadJson(

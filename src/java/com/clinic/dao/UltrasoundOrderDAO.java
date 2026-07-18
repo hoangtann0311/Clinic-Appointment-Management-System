@@ -215,8 +215,8 @@ public class UltrasoundOrderDAO {
                 rs = ps.getGeneratedKeys();
                 if (rs.next()) {
                     int orderId = rs.getInt(1);
-                    // Gửi thông báo cho bệnh nhân đi siêu âm/xét nghiệm
-                    com.clinic.utils.NotificationHelper.notifyPatientForTest(medicalRecordId, serviceId);
+                    // Gửi thông báo cho bệnh nhân đi siêu âm
+                    com.clinic.utils.NotificationHelper.notifyPatientForUltrasound(medicalRecordId, serviceId);
                     return orderId;
                 }
             }

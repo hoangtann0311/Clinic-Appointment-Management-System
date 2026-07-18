@@ -1,4 +1,4 @@
-package controller;
+package com.clinic.controller;
 
 import com.clinic.dao.ReportDAO.DoctorPerformanceReport;
 import com.clinic.dao.ReportDAO.ReportSummary;

@@ -534,8 +534,7 @@
                                                 <c:when test="${tbl eq 'access_control'}"><i class="bi bi-shield-lock-fill"></i> Kiểm soát truy cập</c:when>
                                                 <c:when test="${tbl eq 'security'}"><i class="bi bi-shield-exclamation"></i> Bảo mật</c:when>
                                                 <c:when test="${tbl eq 'audit_logs'}"><i class="bi bi-journal-text"></i> Nhật ký</c:when>
-                                                <c:when test="${tbl eq 'test_orders'}"><i class="bi bi-clipboard-check"></i> Phiếu xét nghiệm</c:when>
-                                                <c:when test="${tbl eq 'lab_results'}"><i class="bi bi-file-earmark-bar-graph"></i> Kết quả xét nghiệm</c:when>
+                                                <c:when test="${tbl eq 'test_orders'}"><i class="bi bi-clipboard-check"></i> Chỉ định siêu âm</c:when>
                                                 <c:when test="${tbl eq 'ai_analysis_results'}"><i class="bi bi-cpu"></i> Kết quả AI</c:when>
                                                 <c:when test="${tbl eq 'pregnancies'}"><i class="bi bi-heart-pulse"></i> Thai kỳ</c:when>
                                                 <c:when test="${tbl eq 'sonographers'}"><i class="bi bi-person-workspace"></i> KTV siêu âm</c:when>

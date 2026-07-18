@@ -17,11 +17,12 @@ import java.sql.SQLException;
  */
 public class DatabaseConfig {
 
-    private static final String DATABASE_NAME = "ObstetricsClinicDB";
+    // Local settings can be supplied with JVM properties or environment variables.
+    private static final String DATABASE_NAME = getSetting("DB_NAME", "ObstetricsClinicDB");
 
     // SQL Server Authentication credentials (chỉ dùng khi Windows Auth thất bại)
-    private static final String DB_USER = "sa";
-    private static final String DB_PASSWORD = "sa";
+    private static final String DB_USER = getSetting("DB_USER", "sa");
+    private static final String DB_PASSWORD = getSetting("DB_PASSWORD", "");
 
     // Danh sách các URL kết nối sẽ thử lần lượt
     private static final String[] CONNECTION_URLS = {
@@ -68,6 +69,15 @@ public class DatabaseConfig {
 
     private static String activeUrl = null;
     private static boolean useSqlAuth = false;
+
+    private static String getSetting(String name, String defaultValue) {
+        String property = System.getProperty(name);
+        if (property != null && !property.isBlank()) {
+            return property;
+        }
+        String environment = System.getenv(name);
+        return environment != null && !environment.isBlank() ? environment : defaultValue;
+    }
 
     static {
         try {

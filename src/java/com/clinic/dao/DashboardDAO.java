@@ -85,6 +85,151 @@ public class DashboardDAO {
         return executeSum(sql);
     }
 
+    // Range and all-time variants used by the Manager dashboard; queries use existing schema only.
+    public int countUsers(LocalDate from, LocalDate to) {
+        return executeCount("SELECT COUNT(*) AS total FROM users WHERE created_at >= ? AND created_at < DATEADD(DAY, 1, ?)", from, to);
+    }
+
+    public int countDoctors(LocalDate from, LocalDate to) {
+        return executeCount("SELECT COUNT(*) AS total FROM users WHERE role_id = 2 AND created_at >= ? AND created_at < DATEADD(DAY, 1, ?)", from, to);
+    }
+
+    public int countPatients(LocalDate from, LocalDate to) {
+        return executeCount("SELECT COUNT(*) AS total FROM users WHERE role_id = 5 AND created_at >= ? AND created_at < DATEADD(DAY, 1, ?)", from, to);
+    }
+
+    public int countAppointmentsAll() {
+        return executeCount("SELECT COUNT(*) AS total FROM appointments");
+    }
+
+    public int countAppointments(LocalDate from, LocalDate to) {
+        return executeCount("SELECT COUNT(*) AS total FROM appointments WHERE appointment_date >= ? AND appointment_date <= ?", from, to);
+    }
+
+    public int countWaitingPatientsAll() {
+        return executeCount("SELECT COUNT(*) AS total FROM appointments WHERE LOWER(status) IN ('waiting', 'confirmed', 'in_progress', 'emergency_sos')");
+    }
+
+    public int countWaitingPatients(LocalDate from, LocalDate to) {
+        return executeCount("SELECT COUNT(*) AS total FROM appointments WHERE appointment_date >= ? AND appointment_date <= ? AND LOWER(status) IN ('waiting', 'confirmed', 'in_progress', 'emergency_sos')", from, to);
+    }
+
+    public int countDoctorsWorkingAll() {
+        return executeCount("SELECT COUNT(DISTINCT doctor_id) AS total FROM doctor_schedules WHERE is_approved = 1");
+    }
+
+    public int countDoctorsWorking(LocalDate date) {
+        return executeCount("SELECT COUNT(DISTINCT doctor_id) AS total FROM doctor_schedules WHERE work_date = ? AND is_approved = 1", date);
+    }
+
+    public int countUltrasoundAll() {
+        return executeCount("SELECT COUNT(*) AS total FROM appointments a INNER JOIN services s ON a.service_id = s.id WHERE LOWER(s.service_name) LIKE N'%siêu âm%' OR LOWER(s.service_name) LIKE '%ultrasound%'");
+    }
+
+    public int countUltrasound(LocalDate from, LocalDate to) {
+        return executeCount("SELECT COUNT(*) AS total FROM appointments a INNER JOIN services s ON a.service_id = s.id WHERE a.appointment_date >= ? AND a.appointment_date <= ? AND (LOWER(s.service_name) LIKE N'%siêu âm%' OR LOWER(s.service_name) LIKE '%ultrasound%')", from, to);
+    }
+
+    public double sumRevenueAll() {
+        return executeSum("SELECT ISNULL(SUM(total_amount), 0) AS total FROM invoices WHERE LOWER(status) = 'paid'");
+    }
+
+    public double sumRevenue(LocalDate from, LocalDate to) {
+        return executeSum("SELECT ISNULL(SUM(i.total_amount), 0) AS total FROM invoices i INNER JOIN appointments a ON i.appointment_id = a.id WHERE a.appointment_date >= ? AND a.appointment_date <= ? AND LOWER(i.status) = 'paid'", from, to);
+    }
+    public int countEmergencyToday() {
+        return executeCount("SELECT COUNT(*) AS total FROM appointments WHERE appointment_date = CAST(GETDATE() AS DATE) AND LOWER(status) = 'emergency_sos'");
+    }
+
+    public int countEmergencyAll() {
+        return executeCount("SELECT COUNT(*) AS total FROM appointments WHERE LOWER(status) = 'emergency_sos'");
+    }
+
+    public int countEmergency(LocalDate from, LocalDate to) {
+        return executeCount("SELECT COUNT(*) AS total FROM appointments WHERE appointment_date >= ? AND appointment_date <= ? AND LOWER(status) = 'emergency_sos'", from, to);
+    }
+
+    public int countCancelledToday() {
+        return executeCount("SELECT COUNT(*) AS total FROM appointments WHERE appointment_date = CAST(GETDATE() AS DATE) AND LOWER(status) = 'cancelled'");
+    }
+
+    public int countCancelledAll() {
+        return executeCount("SELECT COUNT(*) AS total FROM appointments WHERE LOWER(status) = 'cancelled'");
+    }
+
+    public int countCancelled(LocalDate from, LocalDate to) {
+        return executeCount("SELECT COUNT(*) AS total FROM appointments WHERE appointment_date >= ? AND appointment_date <= ? AND LOWER(status) = 'cancelled'", from, to);
+    }
+
+    public int countSuccessfulCasesToday() {
+        return executeCount("SELECT COUNT(DISTINCT a.id) AS total FROM appointments a INNER JOIN invoices i ON i.appointment_id = a.id WHERE a.appointment_date = CAST(GETDATE() AS DATE) AND LOWER(a.status) = 'completed' AND LOWER(i.status) = 'paid'");
+    }
+
+    public int countSuccessfulCasesAll() {
+        return executeCount("SELECT COUNT(DISTINCT a.id) AS total FROM appointments a INNER JOIN invoices i ON i.appointment_id = a.id WHERE LOWER(a.status) = 'completed' AND LOWER(i.status) = 'paid'");
+    }
+
+    public int countSuccessfulCases(LocalDate from, LocalDate to) {
+        return executeCount("SELECT COUNT(DISTINCT a.id) AS total FROM appointments a INNER JOIN invoices i ON i.appointment_id = a.id WHERE a.appointment_date >= ? AND a.appointment_date <= ? AND LOWER(a.status) = 'completed' AND LOWER(i.status) = 'paid'", from, to);
+    }
+
+    public Map<String, Integer> getAppointmentsChart(LocalDate from, LocalDate to) {
+        Map<String, Integer> result = new LinkedHashMap<>();
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM");
+        for (LocalDate date = from; !date.isAfter(to); date = date.plusDays(1)) {
+            result.put(date.format(fmt), 0);
+        }
+
+        String sql = "SELECT appointment_date, COUNT(*) AS cnt FROM appointments "
+                   + "WHERE appointment_date >= ? AND appointment_date <= ? "
+                   + "GROUP BY appointment_date ORDER BY appointment_date";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setDate(1, java.sql.Date.valueOf(from));
+            ps.setDate(2, java.sql.Date.valueOf(to));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    java.sql.Date date = rs.getDate("appointment_date");
+                    if (date != null) {
+                        result.put(date.toLocalDate().format(fmt), rs.getInt("cnt"));
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("DashboardDAO: getAppointmentsChart failed - " + e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Double> getRevenueChart(LocalDate endDate) {
+        Map<String, Double> result = new LinkedHashMap<>();
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MM/yyyy");
+        LocalDate startDate = endDate.minusMonths(11).withDayOfMonth(1);
+        for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusMonths(1)) {
+            result.put(date.format(fmt), 0.0);
+        }
+
+        String sql = "SELECT YEAR(a.appointment_date) AS yr, MONTH(a.appointment_date) AS mth, "
+                   + "ISNULL(SUM(i.total_amount), 0) AS total FROM invoices i "
+                   + "INNER JOIN appointments a ON i.appointment_id = a.id "
+                   + "WHERE LOWER(i.status) = 'paid' AND a.appointment_date >= ? AND a.appointment_date <= ? "
+                   + "GROUP BY YEAR(a.appointment_date), MONTH(a.appointment_date) ORDER BY yr, mth";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setDate(1, java.sql.Date.valueOf(startDate));
+            ps.setDate(2, java.sql.Date.valueOf(endDate));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    result.put(String.format("%02d/%d", rs.getInt("mth"), rs.getInt("yr")), rs.getDouble("total"));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("DashboardDAO: getRevenueChart failed - " + e.getMessage());
+        }
+        return result;
+    }
+
+
     // ──────────────────────────────────────────────
     // CHARTS DATA
     // ──────────────────────────────────────────────
@@ -189,6 +334,10 @@ public class DashboardDAO {
         private String specialization;
         private int totalPatients;
         private int appointmentsToday;
+        private int completedCases;
+        private int cancelledCases;
+        private int emergencyCases;
+        private int totalAppointments;
         private double revenueGenerated;
 
         public int getDoctorId() { return doctorId; }
@@ -201,6 +350,15 @@ public class DashboardDAO {
         public void setTotalPatients(int totalPatients) { this.totalPatients = totalPatients; }
         public int getAppointmentsToday() { return appointmentsToday; }
         public void setAppointmentsToday(int appointmentsToday) { this.appointmentsToday = appointmentsToday; }
+        public int getCompletedCases() { return completedCases; }
+        public void setCompletedCases(int completedCases) { this.completedCases = completedCases; }
+        public int getCancelledCases() { return cancelledCases; }
+        public void setCancelledCases(int cancelledCases) { this.cancelledCases = cancelledCases; }
+        public int getEmergencyCases() { return emergencyCases; }
+        public void setEmergencyCases(int emergencyCases) { this.emergencyCases = emergencyCases; }
+        public int getTotalAppointments() { return totalAppointments; }
+        public void setTotalAppointments(int totalAppointments) { this.totalAppointments = totalAppointments; }
+        public double getCompletionRate() { return totalAppointments == 0 ? 0.0 : completedCases * 100.0 / totalAppointments; }
         public double getRevenueGenerated() { return revenueGenerated; }
         public void setRevenueGenerated(double revenueGenerated) { this.revenueGenerated = revenueGenerated; }
     }
@@ -247,6 +405,46 @@ public class DashboardDAO {
         }
         return list;
     }
+    public List<DoctorPerformance> getDoctorPerformance(LocalDate from, LocalDate to) {
+        String sql = "SELECT d.id AS doctor_id, d.full_name AS doctor_name, "
+                   + "ISNULL(d.specialization, N'Chưa cập nhật') AS specialization, "
+                   + "(SELECT COUNT(*) FROM appointments a WHERE a.doctor_id = d.id AND a.appointment_date >= ? AND a.appointment_date <= ? AND LOWER(a.status) = 'completed') AS completed_cases, "
+                   + "(SELECT COUNT(*) FROM appointments a WHERE a.doctor_id = d.id AND a.appointment_date >= ? AND a.appointment_date <= ? AND LOWER(a.status) = 'cancelled') AS cancelled_cases, "
+                   + "(SELECT COUNT(*) FROM appointments a WHERE a.doctor_id = d.id AND a.appointment_date >= ? AND a.appointment_date <= ? AND LOWER(a.status) = 'emergency_sos') AS emergency_cases, "
+                   + "(SELECT COUNT(*) FROM appointments a WHERE a.doctor_id = d.id AND a.appointment_date >= ? AND a.appointment_date <= ?) AS total_appointments, "
+                   + "ISNULL((SELECT SUM(i.total_amount) FROM invoices i INNER JOIN appointments a ON i.appointment_id = a.id "
+                   + "WHERE a.doctor_id = d.id AND a.appointment_date >= ? AND a.appointment_date <= ? AND LOWER(i.status) = 'paid'), 0) AS revenue "
+                   + "FROM doctors d ORDER BY completed_cases DESC, total_appointments DESC";
+
+        List<DoctorPerformance> list = new ArrayList<>();
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            for (int index = 1; index <= 10; index += 2) {
+                ps.setDate(index, java.sql.Date.valueOf(from));
+                ps.setDate(index + 1, java.sql.Date.valueOf(to));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    DoctorPerformance dp = new DoctorPerformance();
+                    dp.doctorId = rs.getInt("doctor_id");
+                    dp.doctorName = rs.getString("doctor_name");
+                    dp.specialization = rs.getString("specialization");
+                    dp.completedCases = rs.getInt("completed_cases");
+                    dp.cancelledCases = rs.getInt("cancelled_cases");
+                    dp.emergencyCases = rs.getInt("emergency_cases");
+                    dp.totalAppointments = rs.getInt("total_appointments");
+                    dp.totalPatients = dp.completedCases;
+                    dp.appointmentsToday = dp.totalAppointments;
+                    dp.revenueGenerated = rs.getDouble("revenue");
+                    list.add(dp);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("DashboardDAO: getDoctorPerformance(range) failed - " + e.getMessage());
+        }
+        return list;
+    }
+
 
     // ──────────────────────────────────────────────
     // LỊCH LÀM VIỆC HÔM NAY
@@ -330,6 +528,39 @@ public class DashboardDAO {
         }
         return list;
     }
+    public List<TodaySchedule> getSchedules(LocalDate date) {
+        String sql = "SELECT ds.id AS schedule_id, d.full_name AS doctor_name, "
+                   + "ISNULL(d.specialization, N'Chưa cập nhật') AS specialization, "
+                   + "FORMAT(ds.start_time, 'HH:mm') AS start_time, FORMAT(ds.end_time, 'HH:mm') AS end_time, "
+                   + "ds.max_slots, ds.is_approved, "
+                   + "(SELECT COUNT(*) FROM appointments a WHERE a.doctor_id = ds.doctor_id AND a.appointment_date = ds.work_date) AS booked_slots "
+                   + "FROM doctor_schedules ds INNER JOIN doctors d ON ds.doctor_id = d.id "
+                   + "WHERE ds.work_date = ? ORDER BY ds.start_time";
+
+        List<TodaySchedule> list = new ArrayList<>();
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setDate(1, java.sql.Date.valueOf(date));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    TodaySchedule schedule = new TodaySchedule();
+                    schedule.scheduleId = rs.getInt("schedule_id");
+                    schedule.doctorName = rs.getString("doctor_name");
+                    schedule.specialization = rs.getString("specialization");
+                    schedule.startTime = rs.getString("start_time");
+                    schedule.endTime = rs.getString("end_time");
+                    schedule.maxSlots = rs.getInt("max_slots");
+                    schedule.bookedSlots = rs.getInt("booked_slots");
+                    schedule.isApproved = rs.getBoolean("is_approved");
+                    list.add(schedule);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("DashboardDAO: getSchedules failed - " + e.getMessage());
+        }
+        return list;
+    }
+
 
     // ──────────────────────────────────────────────
     // THỐNG KÊ DỊCH VỤ SIÊU ÂM
@@ -395,6 +626,36 @@ public class DashboardDAO {
         }
         return list;
     }
+    public List<UltrasoundStat> getUltrasoundStats(LocalDate from, LocalDate to) {
+        String sql = "SELECT s.service_name, ISNULL(s.price, 0) AS price, "
+                   + "(SELECT COUNT(*) FROM appointments a WHERE a.service_id = s.id AND a.appointment_date >= ? AND a.appointment_date <= ?) AS total_cases, "
+                   + "(SELECT COUNT(*) FROM appointments a WHERE a.service_id = s.id AND a.appointment_date >= ? AND a.appointment_date <= ?) AS cases_today "
+                   + "FROM services s WHERE LOWER(s.service_name) LIKE N'%siêu âm%' OR LOWER(s.service_name) LIKE '%ultrasound%' "
+                   + "ORDER BY total_cases DESC";
+
+        List<UltrasoundStat> list = new ArrayList<>();
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setDate(1, java.sql.Date.valueOf(from));
+            ps.setDate(2, java.sql.Date.valueOf(to));
+            ps.setDate(3, java.sql.Date.valueOf(from));
+            ps.setDate(4, java.sql.Date.valueOf(to));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    UltrasoundStat stat = new UltrasoundStat();
+                    stat.serviceName = rs.getString("service_name");
+                    stat.totalCases = rs.getInt("total_cases");
+                    stat.casesToday = rs.getInt("cases_today");
+                    stat.price = rs.getDouble("price");
+                    list.add(stat);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("DashboardDAO: getUltrasoundStats(range) failed - " + e.getMessage());
+        }
+        return list;
+    }
+
 
     // ──────────────────────────────────────────────
     // BỆNH NHÂN MỚI (Patient role, recent)
@@ -465,6 +726,35 @@ public class DashboardDAO {
         }
         return list;
     }
+    public List<RecentPatient> getRecentPatients(int limit, LocalDate from, LocalDate to) {
+        String sql = "SELECT TOP (?) id, full_name, email, phone, created_at FROM users "
+                   + "WHERE role_id = 5 AND created_at >= ? AND created_at < DATEADD(DAY, 1, ?) "
+                   + "ORDER BY created_at DESC, id DESC";
+        List<RecentPatient> list = new ArrayList<>();
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, limit);
+            ps.setDate(2, java.sql.Date.valueOf(from));
+            ps.setDate(3, java.sql.Date.valueOf(to));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    RecentPatient patient = new RecentPatient();
+                    patient.id = rs.getInt("id");
+                    patient.fullName = rs.getString("full_name");
+                    patient.email = rs.getString("email");
+                    patient.phone = rs.getString("phone");
+                    java.sql.Timestamp createdAt = rs.getTimestamp("created_at");
+                    patient.createdAt = createdAt == null ? "—"
+                            : createdAt.toLocalDateTime().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+                    list.add(patient);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("DashboardDAO: getRecentPatients(range) failed - " + e.getMessage());
+        }
+        return list;
+    }
+
 
     private List<RecentPatient> getRecentPatientsFallback(int limit) {
         String sql = "SELECT TOP (?) id, full_name, email, phone "
@@ -564,6 +854,37 @@ public class DashboardDAO {
         }
         return list;
     }
+    public List<AuditLogEntry> getRecentAuditLogs(int limit, LocalDate from, LocalDate to) {
+        String sql = "SELECT TOP (?) al.id, al.action, al.table_name, al.created_at, "
+                   + "ISNULL(u.full_name, 'System') AS user_name "
+                   + "FROM audit_logs al LEFT JOIN users u ON al.user_id = u.id "
+                   + "WHERE al.created_at >= ? AND al.created_at < DATEADD(DAY, 1, ?) "
+                   + "ORDER BY al.created_at DESC, al.id DESC";
+        List<AuditLogEntry> list = new ArrayList<>();
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, limit);
+            ps.setDate(2, java.sql.Date.valueOf(from));
+            ps.setDate(3, java.sql.Date.valueOf(to));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    AuditLogEntry entry = new AuditLogEntry();
+                    entry.id = rs.getInt("id");
+                    entry.userName = rs.getString("user_name");
+                    entry.action = rs.getString("action");
+                    entry.tableName = rs.getString("table_name");
+                    java.sql.Timestamp createdAt = rs.getTimestamp("created_at");
+                    entry.createdAt = createdAt == null ? "—"
+                            : createdAt.toLocalDateTime().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+                    list.add(entry);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("DashboardDAO: getRecentAuditLogs(range) failed - " + e.getMessage());
+        }
+        return list;
+    }
+
 
     // ──────────────────────────────────────────────
     // CẢNH BÁO (Alerts)
@@ -652,10 +973,78 @@ public class DashboardDAO {
 
         return alerts;
     }
+    public List<Alert> getSystemAlerts(LocalDate from, LocalDate to) {
+        List<Alert> alerts = new ArrayList<>();
+
+        int pending = executeCount("SELECT COUNT(*) AS total FROM appointments WHERE appointment_date >= ? AND appointment_date <= ? AND LOWER(status) = 'pending'", from, to);
+        if (pending > 0) {
+            Alert alert = new Alert();
+            alert.type = "warning";
+            alert.icon = "bi-exclamation-triangle-fill";
+            alert.title = "Lịch hẹn chờ xác nhận";
+            alert.message = "Có " + pending + " lịch hẹn đang chờ xác nhận trong khoảng đã chọn.";
+            alert.count = pending;
+            alerts.add(alert);
+        }
+
+        int unpaid = executeCount("SELECT COUNT(*) AS total FROM invoices i INNER JOIN appointments a ON i.appointment_id = a.id WHERE a.appointment_date >= ? AND a.appointment_date <= ? AND LOWER(i.status) IN ('pending', 'unpaid')", from, to);
+        if (unpaid > 0) {
+            Alert alert = new Alert();
+            alert.type = "danger";
+            alert.icon = "bi-cash-stack";
+            alert.title = "Hóa đơn chưa thanh toán";
+            alert.message = "Có " + unpaid + " hóa đơn chưa thanh toán trong khoảng đã chọn.";
+            alert.count = unpaid;
+            alerts.add(alert);
+        }
+
+        int emergency = countEmergency(from, to);
+        if (emergency > 0) {
+            Alert alert = new Alert();
+            alert.type = "warning";
+            alert.icon = "bi-activity";
+            alert.title = "Ca cấp cứu";
+            alert.message = "Có " + emergency + " ca cấp cứu trong khoảng đã chọn.";
+            alert.count = emergency;
+            alerts.add(alert);
+        }
+        return alerts;
+    }
+
 
     // ──────────────────────────────────────────────
     // HELPER METHODS
     // ──────────────────────────────────────────────
+
+    private int executeCount(String sql, LocalDate... dates) {
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            for (int index = 0; index < dates.length; index++) {
+                ps.setDate(index + 1, java.sql.Date.valueOf(dates[index]));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt("total") : 0;
+            }
+        } catch (SQLException e) {
+            System.err.println("DashboardDAO executeCount: " + e.getMessage());
+            return 0;
+        }
+    }
+
+    private double executeSum(String sql, LocalDate... dates) {
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            for (int index = 0; index < dates.length; index++) {
+                ps.setDate(index + 1, java.sql.Date.valueOf(dates[index]));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getDouble("total") : 0.0;
+            }
+        } catch (SQLException e) {
+            System.err.println("DashboardDAO executeSum: " + e.getMessage());
+            return 0.0;
+        }
+    }
 
     private int executeCount(String sql) {
         Connection conn = null;

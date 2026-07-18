@@ -210,52 +210,6 @@
                 </div>
             </div>
 
-            <%-- ══════════ Kết Quả Xét Nghiệm ══════════ --%>
-            <c:if test="${not empty testOrders}">
-                <div class="card mt-3 border-0 shadow-sm">
-                    <div class="card-header bg-transparent border-0 fw-bold py-3">
-                        <i class="bi bi-flask text-success me-2"></i>Kết Quả Xét Nghiệm Lâm Sàng
-                    </div>
-                    <div class="card-body pt-0">
-                        <c:forEach var="test" items="${testOrders}" varStatus="loop">
-                            <div class="${!loop.first ? 'border-top pt-3 mt-3' : ''}">
-                                <div class="d-flex align-items-center justify-content-between mb-2">
-                                    <span class="fw-semibold">
-                                        <i class="bi bi-file-earmark-medical me-1 text-success"></i>
-                                        ${test.serviceName} 
-                                        <c:if test="${test.requiresFasting}">
-                                            <span class="badge bg-warning text-dark ms-1" style="font-size: 0.75rem;">Yêu cầu nhịn ăn</span>
-                                        </c:if>
-                                    </span>
-                                    <span>
-                                        <c:choose>
-                                            <c:when test="${test.status == 'completed'}">
-                                                <span class="badge bg-success">Đã có kết quả</span>
-                                            </c:when>
-                                            <c:when test="${test.status == 'cancelled'}">
-                                                <span class="badge bg-secondary">Đã huỷ</span>
-                                            </c:when>
-                                            <c:otherwise>
-                                                <span class="badge bg-warning text-dark">Chờ lấy mẫu/kết quả</span>
-                                            </c:otherwise>
-                                        </c:choose>
-                                    </span>
-                                </div>
-                                <div class="row g-3 small">
-                                    <div class="col-md-6">
-                                        <span class="text-muted">Mã xét nghiệm:</span> <code>${test.serviceCode}</code>
-                                    </div>
-                                    <div class="col-md-6 text-md-end">
-                                        <span class="text-muted">Ngày chỉ định:</span> ${test.createdAt}
-                                    </div>
-                                </div>
-
-
-                            </div>
-                        </c:forEach>
-                    </div>
-                </div>
-            </c:if>
 
             <%-- ══════════ Kết Quả Siêu Âm & AI ══════════ --%>
             <c:if test="${not empty usOrders}">

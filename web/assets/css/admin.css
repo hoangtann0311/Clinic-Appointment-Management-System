@@ -1101,7 +1101,7 @@ body.admin-login-page {
     background-color: var(--pink-50) !important;
 }
 
-/* Medical Record / Lab Orders detail cards border override */
+/* Medical Record / Ultrasound Orders detail cards border override */
 .card-accent-primary {
     border-left: 4px solid var(--pink-600) !important;
 }

@@ -1,8 +1,14 @@
-package controller;
+package com.clinic.controller;
 
-import com.clinic.dao.DashboardDAO;
+import com.clinic.dao.NotificationDAO;
+import com.clinic.dao.ReportDAO;
+import com.clinic.model.Appointment;
+import com.clinic.model.Notification;
 import com.clinic.model.User;
+import com.clinic.service.AdminDashboardService;
 import com.clinic.service.DashboardService;
+import com.clinic.service.PatientBookingService;
+import com.clinic.service.ReportService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -14,7 +20,9 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Servlet xử lý các trang dashboard theo role.
@@ -26,7 +34,6 @@ import java.util.Map;
  */
 @WebServlet(urlPatterns = {
     "/admin/dashboard",
-    "/doctor/dashboard",
     "/manager/dashboard",
     "/staff/dashboard",
     "/home",
@@ -68,22 +75,41 @@ public class DashboardServlet extends HttpServlet {
                 today.format(DateTimeFormatter.ofPattern("dd 'tháng' MM, yyyy")));
 
         // Route đến dashboard JSP tương ứng với role
-        String targetJsp;
+        String path = request.getRequestURI().substring(request.getContextPath().length());
+
         switch (roleId) {
-            case 1: // Admin → giao diện admin riêng với sidebar layout
+            case 1:
+                if (!"/admin/dashboard".equals(path)) {
+                    response.sendRedirect(request.getContextPath() + "/admin/dashboard");
+                    return;
+                }
                 loadAdminDashboardData(request);
-                targetJsp = "/views/admin/dashboard.jsp";
+                request.getRequestDispatcher("/views/admin/dashboard.jsp").forward(request, response);
                 break;
-            case 3: // Manager → giao diện manager với theme Teal/Emerald
+            case 2:
+                response.sendRedirect(request.getContextPath() + "/doctor/dashboard");
+                break;
+            case 3:
+                if (!"/manager/dashboard".equals(path)) {
+                    response.sendRedirect(request.getContextPath() + "/manager/dashboard");
+                    return;
+                }
                 loadManagerDashboardData(request);
-                targetJsp = "/views/manager/dashboard.jsp";
+                request.getRequestDispatcher("/views/manager/dashboard.jsp").forward(request, response);
                 break;
-            default: // Các role khác giữ nguyên giao diện chung
-                targetJsp = "/views/home/dashboard.jsp";
+            case 4:
+                response.sendRedirect(request.getContextPath() + "/admin/reception");
+                break;
+            case 6:
+                loadSonographerDashboardData(request);
+                request.getRequestDispatcher("/views/sonographer/dashboard.jsp").forward(request, response);
+                break;
+            case 5:
+            default:
+                loadPatientDashboardData(request, user.getId());
+                request.getRequestDispatcher("/views/home/dashboard.jsp").forward(request, response);
                 break;
         }
-
-        request.getRequestDispatcher(targetJsp).forward(request, response);
     }
 
     /**
@@ -119,6 +145,11 @@ public class DashboardServlet extends HttpServlet {
         }
 
         // Nếu không có tham số, mặc định là hôm nay
+        if (dateFrom != null && dateTo != null && dateFrom.isAfter(dateTo)) {
+            LocalDate swap = dateFrom;
+            dateFrom = dateTo;
+            dateTo = swap;
+        }
         boolean isCustomRange = (dateFrom != null || dateTo != null);
         if (!isCustomRange) {
             dateFrom = today;
@@ -200,6 +231,97 @@ public class DashboardServlet extends HttpServlet {
             request.setAttribute("dateRangeLabel",
                     dateFrom.format(dateFmt) + " → " + dateTo.format(dateFmt));
         }
+        DashboardService dashboardService = new DashboardService();
+        ReportService reportService = new ReportService();
+
+        int totalPatients = isCustomRange
+                ? dashboardService.getTotalPatients(dateFrom, dateTo)
+                : dashboardService.getTotalPatients();
+        int totalAppointments = isCustomRange
+                ? dashboardService.getTotalAppointments(dateFrom, dateTo)
+                : dashboardService.getTotalAppointments();
+        int waitingPatients = isCustomRange
+                ? dashboardService.getWaitingPatients(dateFrom, dateTo)
+                : dashboardService.getWaitingPatients();
+        int doctorsWorking = isCustomRange
+                ? dashboardService.getDoctorsWorking(dateTo)
+                : dashboardService.getDoctorsWorkingToday();
+        int ultrasoundCases = isCustomRange
+                ? dashboardService.getUltrasound(dateFrom, dateTo)
+                : dashboardService.getUltrasoundAll();
+        double revenueRaw = isCustomRange
+                ? dashboardService.getRevenueRaw(dateFrom, dateTo)
+                : dashboardService.getRevenueAllRaw();
+        int emergencyCases = isCustomRange
+                ? dashboardService.getEmergencyCases(dateFrom, dateTo)
+                : dashboardService.getEmergencyCasesAll();
+        int completedCases = isCustomRange
+                ? dashboardService.getSuccessfulCases(dateFrom, dateTo)
+                : dashboardService.getSuccessfulCasesAll();
+        int cancelledCount = isCustomRange
+                ? dashboardService.getCancelled(dateFrom, dateTo)
+                : dashboardService.getCancelledAll();
+        int newPatients = isCustomRange
+                ? dashboardService.getTotalPatients(dateFrom, dateTo)
+                : dashboardService.getTotalPatients(today, today);
+
+        double completionRate = totalAppointments == 0 ? 0.0 : completedCases * 100.0 / totalAppointments;
+        double cancellationRate = totalAppointments == 0 ? 0.0 : cancelledCount * 100.0 / totalAppointments;
+        double emergencyRate = totalAppointments == 0 ? 0.0 : emergencyCases * 100.0 / totalAppointments;
+
+        request.setAttribute("totalPatients", totalPatients);
+        request.setAttribute("totalAppointments", totalAppointments);
+        request.setAttribute("waitingPatients", waitingPatients);
+        request.setAttribute("doctorsWorking", doctorsWorking);
+        request.setAttribute("ultrasoundCases", ultrasoundCases);
+        request.setAttribute("revenue", DashboardService.formatCurrency(revenueRaw));
+        request.setAttribute("emergencyCases", emergencyCases);
+        request.setAttribute("completedCases", completedCases);
+        request.setAttribute("completionRate", String.format("%.1f%%", completionRate));
+        request.setAttribute("newPatients", newPatients);
+        request.setAttribute("cancelledCount", cancelledCount);
+        request.setAttribute("cancellationRate", String.format("%.1f%%", cancellationRate));
+        request.setAttribute("emergencyRate", String.format("%.1f%%", emergencyRate));
+
+        Map<String, Integer> appointmentChart = isCustomRange
+                ? dashboardService.getAppointmentsChartData(dateFrom, dateTo)
+                : dashboardService.getAppointmentsChartData();
+        request.setAttribute("apptChartLabels", appointmentChart.keySet());
+        request.setAttribute("apptChartValues", appointmentChart.values());
+        request.setAttribute("hasApptData", appointmentChart.values().stream().anyMatch(value -> value > 0));
+
+        List<ReportDAO.StatusBreakdown> statusBreakdown = isCustomRange
+                ? reportService.getStatusBreakdown(dateFrom, dateTo)
+                : reportService.getStatusBreakdown();
+        request.setAttribute("statusBreakdown", statusBreakdown);
+
+        Map<String, Double> revenueChart = isCustomRange
+                ? reportService.getDailyRevenue(dateFrom, dateTo)
+                : statsService.getRevenueLast7Days();
+        request.setAttribute("mgrRevenueChartLabels", revenueChart.keySet());
+        request.setAttribute("mgrRevenueChartValues", revenueChart.values());
+
+        Map<String, Double> revenue12Months = dashboardService.getRevenueChartData(dateTo);
+        request.setAttribute("mgrRevenue12MonthsLabels", revenue12Months.keySet());
+        request.setAttribute("mgrRevenue12MonthsValues", revenue12Months.values());
+
+        LocalDate dashboardHistoryStart = LocalDate.of(2000, 1, 1);
+        request.setAttribute("doctorPerformance", isCustomRange
+                ? dashboardService.getDoctorPerformance(dateFrom, dateTo)
+                : dashboardService.getDoctorPerformance(dashboardHistoryStart, today));
+        request.setAttribute("todaySchedules", isCustomRange
+                ? dashboardService.getSchedules(dateTo)
+                : dashboardService.getTodaySchedules());
+        request.setAttribute("ultrasoundStats", isCustomRange
+                ? dashboardService.getUltrasoundStats(dateFrom, dateTo)
+                : dashboardService.getUltrasoundStats());
+        request.setAttribute("recentPatients", isCustomRange
+                ? dashboardService.getRecentPatients(8, dateFrom, dateTo)
+                : dashboardService.getRecentPatients(8));
+        request.setAttribute("operationalAlerts", isCustomRange
+                ? dashboardService.getSystemAlerts(dateFrom, dateTo)
+                : dashboardService.getSystemAlerts());
+
     }
 
     /** Tính ngày bắt đầu của khoảng trước đó (so sánh tăng trưởng). */
@@ -218,49 +340,192 @@ public class DashboardServlet extends HttpServlet {
      * Gọi DashboardService để lấy số liệu thực từ database.
      */
     private void loadAdminDashboardData(HttpServletRequest request) {
-        DashboardService dashboardService = new DashboardService();
+        AdminDashboardService adminDashboardService = new AdminDashboardService();
+        LocalDate today = LocalDate.now();
+        LocalDate dateFrom = parseDashboardDate(request.getParameter("dateFrom"));
+        LocalDate dateTo = parseDashboardDate(request.getParameter("dateTo"));
 
-        // ─── 6 KPI Cards ───
-        request.setAttribute("totalPatients", dashboardService.getTotalPatients());
-        request.setAttribute("totalAppointmentsToday", dashboardService.getTotalAppointmentsToday());
-        request.setAttribute("waitingPatients", dashboardService.getWaitingPatients());
-        request.setAttribute("doctorsWorkingToday", dashboardService.getDoctorsWorkingToday());
-        request.setAttribute("ultrasoundToday", dashboardService.getUltrasoundToday());
-        request.setAttribute("revenueToday", dashboardService.getRevenueToday());
+        if (dateFrom != null && dateFrom.isAfter(today)) {
+            dateFrom = today;
+        }
+        if (dateTo != null && dateTo.isAfter(today)) {
+            dateTo = today;
+        }
+        if (dateFrom != null && dateTo != null && dateFrom.isAfter(dateTo)) {
+            LocalDate swap = dateFrom;
+            dateFrom = dateTo;
+            dateTo = swap;
+        }
 
-        // Tổng số users + doctors (legacy KPI)
-        request.setAttribute("totalUsers", dashboardService.getTotalUsers());
-        request.setAttribute("totalDoctors", dashboardService.getTotalDoctors());
+        boolean isCustomRange = dateFrom != null || dateTo != null;
+        if (dateFrom == null) {
+            dateFrom = today;
+        }
+        if (dateTo == null) {
+            dateTo = today;
+        }
 
-        // ─── Biểu đồ lịch hẹn 7 ngày ───
-        Map<String, Integer> apptChart = dashboardService.getAppointmentsChartData();
-        request.setAttribute("apptChartLabels", apptChart.keySet());
-        request.setAttribute("apptChartValues", apptChart.values());
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        String dateRangeLabel = dateFrom.equals(dateTo)
+                ? "Ngày " + dateFrom.format(dateFormatter)
+                : dateFrom.format(dateFormatter) + " → " + dateTo.format(dateFormatter);
 
-        // ─── Biểu đồ doanh thu 12 tháng ───
-        Map<String, Double> revenueChart = dashboardService.getRevenueChartData();
-        request.setAttribute("revenueChartLabels", revenueChart.keySet());
-        request.setAttribute("revenueChartValues", revenueChart.values());
+        request.setAttribute("today", today);
+        request.setAttribute("dateFrom", dateFrom);
+        request.setAttribute("dateTo", dateTo);
+        request.setAttribute("isCustomRange", isCustomRange);
+        request.setAttribute("dateRangeLabel", dateRangeLabel);
+        request.setAttribute("subtitleDisplay", isCustomRange ? dateRangeLabel : "Hôm nay");
 
-        // ─── Bảng hiệu suất bác sĩ ───
-        request.setAttribute("doctorPerformance", dashboardService.getDoctorPerformance());
+        request.setAttribute("totalAccounts", isCustomRange
+                ? adminDashboardService.getTotalAccounts(dateFrom, dateTo)
+                : adminDashboardService.getTotalAccounts());
+        request.setAttribute("activeAccounts", isCustomRange
+                ? adminDashboardService.getActiveAccounts(dateFrom, dateTo)
+                : adminDashboardService.getActiveAccounts());
+        request.setAttribute("lockedAccounts", isCustomRange
+                ? adminDashboardService.getLockedAccounts(dateFrom, dateTo)
+                : adminDashboardService.getLockedAccounts());
+        request.setAttribute("unverifiedAccounts", isCustomRange
+                ? adminDashboardService.getUnverifiedAccounts(dateFrom, dateTo)
+                : adminDashboardService.getUnverifiedAccounts());
+        request.setAttribute("totalRoles", isCustomRange
+                ? adminDashboardService.getTotalRoles(dateFrom, dateTo)
+                : adminDashboardService.getTotalRoles());
+        request.setAttribute("totalPermissions", isCustomRange
+                ? adminDashboardService.getTotalPermissions(dateFrom, dateTo)
+                : adminDashboardService.getTotalPermissions());
+        request.setAttribute("loginsToday", isCustomRange
+                ? adminDashboardService.getLogins(dateFrom, dateTo)
+                : adminDashboardService.getLoginsToday());
+        request.setAttribute("auditLogsToday", isCustomRange
+                ? adminDashboardService.getAuditLogs(dateFrom, dateTo)
+                : adminDashboardService.getAuditLogsToday());
+        request.setAttribute("accessDeniedToday", isCustomRange
+                ? adminDashboardService.getAccessDenied(dateFrom, dateTo)
+                : adminDashboardService.getAccessDeniedToday());
 
-        // ─── Lịch làm việc hôm nay ───
-        request.setAttribute("todaySchedules", dashboardService.getTodaySchedules());
+        Map<String, Integer> loginTrend = isCustomRange
+                ? adminDashboardService.getLoginTrend(dateFrom, dateTo)
+                : adminDashboardService.getLoginTrend7Days();
+        Map<String, Integer> accountGrowth = isCustomRange
+                ? adminDashboardService.getAccountGrowthChart(dateTo)
+                : adminDashboardService.getAccountGrowth12Months();
+        Map<String, Integer> roleDistribution = isCustomRange
+                ? adminDashboardService.getRoleDistribution(dateFrom, dateTo)
+                : adminDashboardService.getRoleDistribution();
+        Map<String, Integer> auditClassification = isCustomRange
+                ? adminDashboardService.getAuditLogClassification(dateFrom, dateTo)
+                : adminDashboardService.getAuditLogClassification();
 
-        // ─── Thống kê dịch vụ siêu âm ───
-        request.setAttribute("ultrasoundStats", dashboardService.getUltrasoundStats());
+        request.setAttribute("loginTrendLabels", loginTrend.keySet());
+        request.setAttribute("loginTrendValues", loginTrend.values());
+        request.setAttribute("accountGrowthLabels", accountGrowth.keySet());
+        request.setAttribute("accountGrowthValues", accountGrowth.values());
+        request.setAttribute("roleDistributionLabels", roleDistribution.keySet());
+        request.setAttribute("roleDistributionValues", roleDistribution.values());
+        request.setAttribute("auditClassLabels", auditClassification.keySet());
+        request.setAttribute("auditClassValues", auditClassification.values());
+        request.setAttribute("hasLoginTrendData", loginTrend.values().stream().anyMatch(value -> value > 0));
+        request.setAttribute("hasAccountGrowthData", accountGrowth.values().stream().anyMatch(value -> value > 0));
+        request.setAttribute("hasRoleDistData", roleDistribution.values().stream().anyMatch(value -> value > 0));
+        request.setAttribute("hasAuditClassData", auditClassification.values().stream().anyMatch(value -> value > 0));
 
-        // ─── Bệnh nhân mới đăng ký ───
-        request.setAttribute("recentPatients", dashboardService.getRecentPatients(8));
-
-        // ─── Người dùng mới nhất (legacy table) ───
-        request.setAttribute("recentUsers", dashboardService.getRecentUsers(5));
-
-        // ─── Nhật ký hệ thống ───
-        request.setAttribute("recentAuditLogs", dashboardService.getRecentAuditLogs(10));
-
-        // ─── Cảnh báo hệ thống ───
-        request.setAttribute("systemAlerts", dashboardService.getSystemAlerts());
+        request.setAttribute("recentUsers", isCustomRange
+                ? adminDashboardService.getRecentUsers(10, dateFrom, dateTo)
+                : adminDashboardService.getRecentUsers(10));
+        request.setAttribute("recentAuditLogs", isCustomRange
+                ? adminDashboardService.getRecentAuditLogs(10, dateFrom, dateTo)
+                : adminDashboardService.getRecentAuditLogs(10));
+        request.setAttribute("systemAlerts", isCustomRange
+                ? adminDashboardService.getSystemAlerts(dateFrom, dateTo)
+                : adminDashboardService.getSystemAlerts());
     }
+
+    private LocalDate parseDashboardDate(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(value);
+        } catch (RuntimeException ignored) {
+            return null;
+        }
+    }
+    private void loadSonographerDashboardData(HttpServletRequest request) {
+        com.clinic.service.UltrasoundOrderService orderService = new com.clinic.service.UltrasoundOrderService();
+
+        String dateParameter = request.getParameter("date");
+        LocalDate selectedDate = parseDashboardDate(dateParameter);
+        if (selectedDate == null) {
+            selectedDate = LocalDate.now();
+        }
+
+        String filterDate = selectedDate.toString();
+        int pending = orderService.countOrders(null, "Pending", filterDate, null);
+        int inProgress = orderService.countOrders(null, "InProgress", filterDate, null);
+        int uploaded = orderService.countOrders(null, "Uploaded", filterDate, null);
+        int analyzing = orderService.countOrders(null, "Analyzing", filterDate, null);
+        int completed = orderService.countOrders(null, "Completed", filterDate, null)
+                + orderService.countOrders(null, "confirmed", filterDate, null);
+        int emergency = orderService.countOrders(null, null, filterDate, true);
+
+        List<com.clinic.model.UltrasoundWaitingPatient> recentOrders =
+                orderService.getOrders(1, 10, null, null, filterDate, null, "createdAt", "desc");
+
+        request.setAttribute("totalPending", pending);
+        request.setAttribute("totalInProgress", inProgress);
+        request.setAttribute("totalUploaded", uploaded);
+        request.setAttribute("totalAnalyzing", analyzing);
+        request.setAttribute("totalCompletedToday", completed);
+        request.setAttribute("totalEmergencyToday", emergency);
+        request.setAttribute("recentOrders", recentOrders);
+        request.setAttribute("selectedDate", filterDate);
+        request.setAttribute("displayDate",
+                selectedDate.format(DateTimeFormatter.ofPattern("dd 'tháng' MM, yyyy")));
+        request.setAttribute("currentDisplayDate", LocalDate.now().toString());
+    }
+
+    private void loadPatientDashboardData(HttpServletRequest request, int userId) {
+        try {
+            PatientBookingService bookingService = new PatientBookingService();
+            List<Appointment> appointments = bookingService.getMyAppointments(userId);
+            LocalDate today = LocalDate.now();
+
+            List<Appointment> upcoming = appointments.stream()
+                    .filter(appointment -> {
+                        String status = appointment.getStatus();
+                        return ("Pending".equals(status) || "Confirmed".equals(status)
+                                || "Waiting".equals(status) || "Emergency_SOS".equals(status))
+                                && appointment.getAppointmentDate() != null
+                                && !appointment.getAppointmentDate().isBefore(today);
+                    })
+                    .sorted((left, right) -> {
+                        if (left.getAppointmentDate() == null) {
+                            return 1;
+                        }
+                        if (right.getAppointmentDate() == null) {
+                            return -1;
+                        }
+                        return left.getAppointmentDate().compareTo(right.getAppointmentDate());
+                    })
+                    .collect(Collectors.toList());
+
+            NotificationDAO notificationDAO = new NotificationDAO();
+            List<Notification> notifications = notificationDAO.getByUserId(userId);
+            List<Notification> recentNotifications = notifications.size() > 3
+                    ? notifications.subList(0, 3) : notifications;
+
+            request.setAttribute("upcomingAppts", upcoming);
+            request.setAttribute("upcomingAppointment", upcoming.isEmpty() ? null : upcoming.get(0));
+            request.setAttribute("recentNotifs", recentNotifications);
+            request.setAttribute("unreadNotifCount", notificationDAO.countUnread(userId));
+        } catch (Exception e) {
+            request.setAttribute("upcomingAppts", List.of());
+            request.setAttribute("upcomingAppointment", null);
+            request.setAttribute("recentNotifs", List.of());
+            request.setAttribute("unreadNotifCount", 0);
+        }
+    }
+
 }

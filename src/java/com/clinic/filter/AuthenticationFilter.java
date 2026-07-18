@@ -96,18 +96,35 @@ public class AuthenticationFilter implements Filter {
         // Quản lý biểu giá (dịch vụ + thuốc)
         Map.entry("/admin/pricing/", "service.view"),
         Map.entry("/admin/pricing", "service.view"),
-        // Bác sĩ (dự phòng cho các module tương lai)
-        Map.entry("/doctor/medical-records/", "medical_record.view"),
+        // Bác sĩ
+        Map.entry("/doctor/appointments", "appointment.view"),
+        Map.entry("/doctor/appointments/", "appointment.view"),
+        Map.entry("/doctor/medical-records", "medical_record.edit"),
+        Map.entry("/doctor/medical-records/", "medical_record.edit"),
+        Map.entry("/doctor/prescriptions", "prescription.view"),
         Map.entry("/doctor/prescriptions/", "prescription.view"),
+        Map.entry("/doctor/prescriptions-list", "prescription.view"),
+        Map.entry("/doctor/prescriptions-list/", "prescription.view"),
+        Map.entry("/doctor/patients", "appointment.view"),
+        Map.entry("/doctor/patients/", "appointment.view"),
+        Map.entry("/doctor/profile", "user.view"),
+        Map.entry("/doctor/profile/", "user.view"),
+        Map.entry("/doctor/schedules", "appointment.view"),
+        Map.entry("/doctor/schedules/", "appointment.view"),
+        Map.entry("/doctor/patient-history", "medical_record.view"),
+        Map.entry("/doctor/pregnancy", "medical_record.view"),
+        Map.entry("/doctor/results", "ultrasound.view"),
+        Map.entry("/doctor/ultrasound-request/create", "medical_record.edit"),
+        Map.entry("/doctor/notifications", "user.view"),
         // Nhân viên
         Map.entry("/staff/appointments/", "appointment.view"),
         Map.entry("/staff/payments/", "payment.view"),
-        // Dashboard (tất cả role đều có quyền xem nếu có report.view_dashboard)
+        // Dashboard
         Map.entry("/admin/dashboard", "report.view_dashboard"),
         Map.entry("/doctor/dashboard", "report.view_dashboard"),
         Map.entry("/manager/dashboard", "report.view_dashboard"),
         Map.entry("/staff/dashboard", "report.view_dashboard"),
-        Map.entry("/sonographer/dashboard", "report.view_dashboard"),
+        Map.entry("/sonographer/dashboard", "ultrasound.view"),
         // Manager — quản lý biểu giá, dịch vụ, thuốc
         Map.entry("/manager/pricing/", "service.view"),
         Map.entry("/manager/pricing", "service.view"),
@@ -122,7 +139,28 @@ public class AuthenticationFilter implements Filter {
         Map.entry("/manager/time-slots", "schedule.view"),
         // Manager — thống kê dịch vụ
         Map.entry("/manager/statistics/", "service.view"),
-        Map.entry("/manager/statistics", "service.view")
+        Map.entry("/manager/statistics", "service.view"),
+        // Sonographer
+        Map.entry("/sonographer/waiting-list", "ultrasound.view"),
+        Map.entry("/sonographer/waiting-list/", "ultrasound.view"),
+        Map.entry("/sonographer/detail", "ultrasound.view"),
+        Map.entry("/sonographer/upload", "ultrasound.upload_image"),
+        Map.entry("/sonographer/upload/", "ultrasound.upload_image"),
+        Map.entry("/sonographer/analyze", "ultrasound.perform"),
+        Map.entry("/sonographer/ai-model", "ultrasound.view"),
+        // Patient
+        Map.entry("/home", "appointment.view"),
+        Map.entry("/patient/appointments", "appointment.view"),
+        Map.entry("/patient/appointments/", "appointment.view"),
+        Map.entry("/patient/booking", "appointment.create"),
+        Map.entry("/patient/booking/", "appointment.create"),
+        Map.entry("/patient/booking/slots", "appointment.create"),
+        Map.entry("/patient/medical-records", "medical_record.view"),
+        Map.entry("/patient/payment", "payment.view"),
+        Map.entry("/patient/pregnancy", "medical_record.view"),
+        Map.entry("/patient/profile", "appointment.view"),
+        Map.entry("/patient/review", "appointment.view"),
+        Map.entry("/patient/notifications", "appointment.view")
     );
 
     @Override
@@ -263,7 +301,10 @@ public class AuthenticationFilter implements Filter {
      */
     private String getRequiredPermission(String path) {
         for (Map.Entry<String, String> entry : PERMISSION_REQUIRED.entrySet()) {
-            if (path.equals(entry.getKey()) || path.startsWith(entry.getKey())) {
+            String key = entry.getKey();
+            if (path.equals(key)
+                    || (key.endsWith("/") && path.startsWith(key))
+                    || (!key.endsWith("/") && path.startsWith(key + "/"))) {
                 return entry.getValue();
             }
         }

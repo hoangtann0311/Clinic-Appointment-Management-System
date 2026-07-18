@@ -60,7 +60,7 @@ public class NotificationHelper {
             " có dấu hiệu cần theo dõi: " + flags + ". Vui lòng xem lại.");
     }
 
-    // ── Loại 6: Báo bệnh nhân đi thực hiện cận lâm sàng (Siêu âm/Xét nghiệm) ────
+    // ── Loại 6: Báo bệnh nhân đi thực hiện siêu âm ────
     public static int getPatientUserIdByRecord(int medicalRecordId) {
         try (Connection c = DatabaseConfig.getConnection();
              PreparedStatement ps = c.prepareStatement(
@@ -84,7 +84,7 @@ public class NotificationHelper {
         return "Dịch vụ chỉ định";
     }
 
-    public static void notifyPatientForTest(int medicalRecordId, int serviceId) {
+    public static void notifyPatientForUltrasound(int medicalRecordId, int serviceId) {
         int patientId = getPatientUserIdByRecord(medicalRecordId);
         String serviceName = getServiceName(serviceId);
         if (patientId > 0) {

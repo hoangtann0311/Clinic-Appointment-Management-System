@@ -307,7 +307,7 @@
                     </button>
                     <div id="faq1" class="collapse show" data-bs-parent="#faq">
                         <div class="faq-body">
-                            Mẹ chỉ cần bấm nút "Đăng ký ngay" để tạo tài khoản bệnh nhân, điền số điện thoại, sau đó chọn mốc khám, dịch vụ siêu âm hoặc xét nghiệm, chọn bác sĩ và thời gian mong muốn. Hệ thống sẽ ngay lập tức xếp lịch và thông báo mã lịch hẹn tới mẹ qua SMS/Zalo.
+                            Mẹ chỉ cần bấm nút "Đăng ký ngay" để tạo tài khoản bệnh nhân, điền số điện thoại, sau đó chọn mốc khám, dịch vụ siêu âm, chọn bác sĩ và thời gian mong muốn. Hệ thống sẽ ngay lập tức xếp lịch và thông báo mã lịch hẹn tới mẹ qua SMS/Zalo.
                         </div>
                     </div>
                 </div>

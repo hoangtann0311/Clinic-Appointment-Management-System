@@ -53,20 +53,27 @@ public final class AuthorizationConfig {
      * Export paths (/export/*) được phép cho Admin và Manager.
      */
     public static boolean isInZone(int roleId, String path) {
-        // Shared paths: export endpoints cho Admin & Manager
-        if (path.startsWith("/export/") && (roleId == ROLE_ADMIN || roleId == ROLE_MANAGER)) {
+        if (roleId == ROLE_ADMIN) {
+            return true;
+        }
+
+        if (path.startsWith("/export/") && roleId == ROLE_MANAGER) {
+            return true;
+        }
+
+        if (roleId == ROLE_STAFF && path.startsWith("/admin/reception")) {
             return true;
         }
 
         String zone = ROLE_ZONES.get(roleId);
-        if (zone == null) return false;
+        if (zone == null) {
+            return false;
+        }
 
-        // Patient: cho phép /home và /patient/*
         if (roleId == ROLE_PATIENT) {
             return path.equals("/home") || path.startsWith("/patient/");
         }
 
-        // Các role khác: phải bắt đầu bằng zone prefix
         return path.startsWith(zone);
     }
 
@@ -101,6 +108,8 @@ public final class AuthorizationConfig {
         Map.entry("/manager/services/",     "service.view"),
         Map.entry("/manager/medicines",     "medicine.view"),
         Map.entry("/manager/medicines/",    "medicine.view"),
+        Map.entry("/manager/pricing",       "service.view"),
+        Map.entry("/manager/pricing/",      "service.view"),
         Map.entry("/manager/schedules",     "schedule.view"),
         Map.entry("/manager/schedules/",    "schedule.view"),
         Map.entry("/manager/time-slots",    "schedule.view"),
@@ -113,10 +122,25 @@ public final class AuthorizationConfig {
 
         // ──────────── DOCTOR ZONE (/doctor/*) ────────────
         Map.entry("/doctor/dashboard",         "report.view_dashboard"),
+        Map.entry("/doctor/appointments",      "appointment.view"),
+        Map.entry("/doctor/appointments/",     "appointment.view"),
         Map.entry("/doctor/medical-records",   "medical_record.edit"),
         Map.entry("/doctor/medical-records/",  "medical_record.edit"),
         Map.entry("/doctor/prescriptions",     "prescription.view"),
         Map.entry("/doctor/prescriptions/",    "prescription.view"),
+        Map.entry("/doctor/prescriptions-list", "prescription.view"),
+        Map.entry("/doctor/prescriptions-list/","prescription.view"),
+        Map.entry("/doctor/patients",           "appointment.view"),
+        Map.entry("/doctor/patients/",          "appointment.view"),
+        Map.entry("/doctor/profile",            "user.view"),
+        Map.entry("/doctor/profile/",           "user.view"),
+        Map.entry("/doctor/schedules",          "appointment.view"),
+        Map.entry("/doctor/schedules/",         "appointment.view"),
+        Map.entry("/doctor/patient-history",    "medical_record.view"),
+        Map.entry("/doctor/pregnancy",          "medical_record.view"),
+        Map.entry("/doctor/results",            "ultrasound.view"),
+        Map.entry("/doctor/ultrasound-request/create", "medical_record.edit"),
+        Map.entry("/doctor/notifications",      "user.view"),
 
         // ──────────── STAFF ZONE (/staff/*) ────────────
         Map.entry("/staff/dashboard",      "report.view_dashboard"),
@@ -127,17 +151,31 @@ public final class AuthorizationConfig {
 
         // ──────────── SONOGRAPHER ZONE (/sonographer/*) ────────────
         Map.entry("/sonographer/dashboard", "ultrasound.view"),
-        Map.entry("/sonographer/upload",    "ultrasound.upload"),
-        Map.entry("/sonographer/upload/",   "ultrasound.upload"),
+        Map.entry("/sonographer/waiting-list", "ultrasound.view"),
+        Map.entry("/sonographer/waiting-list/", "ultrasound.view"),
+        Map.entry("/sonographer/detail", "ultrasound.view"),
+        Map.entry("/sonographer/upload", "ultrasound.upload_image"),
+        Map.entry("/sonographer/upload/", "ultrasound.upload_image"),
+        Map.entry("/sonographer/analyze", "ultrasound.perform"),
+        Map.entry("/sonographer/ai-model", "ultrasound.view"),
 
         // ──────────── DOCTOR ZONE (tiếp) ────────────
         Map.entry("/doctor/upload",         "ultrasound.upload"),
         Map.entry("/doctor/upload/",        "ultrasound.upload"),
 
         // ──────────── PATIENT ZONE (/home, /patient/*) ────────────
-        Map.entry("/home",                   "report.view_dashboard"),
+        Map.entry("/home",                   "appointment.view"),
         Map.entry("/patient/appointments",   "appointment.view"),
-        Map.entry("/patient/appointments/",  "appointment.view")
+        Map.entry("/patient/appointments/",  "appointment.view"),
+        Map.entry("/patient/booking",        "appointment.create"),
+        Map.entry("/patient/booking/",       "appointment.create"),
+        Map.entry("/patient/booking/slots",  "appointment.create"),
+        Map.entry("/patient/medical-records", "medical_record.view"),
+        Map.entry("/patient/payment",        "payment.view"),
+        Map.entry("/patient/pregnancy",      "medical_record.view"),
+        Map.entry("/patient/profile",        "appointment.view"),
+        Map.entry("/patient/review",         "appointment.view"),
+        Map.entry("/patient/notifications",  "appointment.view")
     );
 
     // ═══════════════════════════════════════════════════════════

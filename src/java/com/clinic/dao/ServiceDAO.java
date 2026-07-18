@@ -699,7 +699,7 @@ public class ServiceDAO {
 
     /**
      * Lấy danh sách dịch vụ active theo category_id.
-     * Dùng để load danh sách xét nghiệm (categoryId=3) cho bác sĩ chỉ định.
+     * Dùng để tải danh sách dịch vụ theo danh mục.
      */
     public List<Service> findByCategoryId(int categoryId) {
         String sql =

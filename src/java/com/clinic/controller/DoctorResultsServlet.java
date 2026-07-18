@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Bác sĩ xem kết quả xét nghiệm và siêu âm của 1 hồ sơ bệnh án.
+ * Bác sĩ xem kết quả siêu âm của một hồ sơ bệnh án.
  *
  * GET /doctor/results?recordId=X
  */
@@ -45,8 +45,6 @@ public class DoctorResultsServlet extends HttpServlet {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "recordId không hợp lệ."); return;
         }
 
-        // Load kết quả xét nghiệm
-        List<Map<String,Object>> labResults    = loadLabResults(recordId);
         // Load kết quả siêu âm
         List<Map<String,Object>> ultrasoundResults = loadUltrasoundResults(recordId);
         // Load thông tin hồ sơ (tên BN, ngày khám)
@@ -54,7 +52,6 @@ public class DoctorResultsServlet extends HttpServlet {
 
         req.setAttribute("recordId",          recordId);
         req.setAttribute("recordInfo",         recordInfo);
-        req.setAttribute("labResults",         labResults);
         req.setAttribute("ultrasoundResults",  ultrasoundResults);
         req.setAttribute("doctorName",         user.getFullName());
         req.getRequestDispatcher("/views/doctors/doctor_results.jsp").forward(req, resp);
@@ -107,10 +104,6 @@ public class DoctorResultsServlet extends HttpServlet {
         } else {
             resp.sendRedirect(req.getContextPath() + "/doctor/results?recordId=" + recordId + "&error=confirmFailed&orderId=" + orderId);
         }
-    }
-
-    private List<Map<String,Object>> loadLabResults(int recordId) {
-        return new ArrayList<>();
     }
 
     // ── Kết quả siêu âm ─────────────────────────────────────────────────────

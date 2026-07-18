@@ -41,8 +41,7 @@ public class AuditLogService {
         TABLE_NAME_LABELS.put("security", "Bảo Mật");
         TABLE_NAME_LABELS.put("reports", "Báo Cáo");
         TABLE_NAME_LABELS.put("audit_logs", "Nhật Ký Hệ Thống");
-        TABLE_NAME_LABELS.put("test_orders", "Phiếu Xét Nghiệm");
-        TABLE_NAME_LABELS.put("lab_results", "Kết Quả Xét Nghiệm");
+        TABLE_NAME_LABELS.put("test_orders", "Chỉ Định Siêu Âm");
         TABLE_NAME_LABELS.put("ai_analysis_results", "Kết Quả AI");
         TABLE_NAME_LABELS.put("pregnancies", "Thai Kỳ");
         TABLE_NAME_LABELS.put("sonographers", "Kỹ Thuật Viên Siêu Âm");

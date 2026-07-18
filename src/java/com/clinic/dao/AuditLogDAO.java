@@ -294,7 +294,7 @@ public class AuditLogDAO {
 
     /**
      * Lấy tất cả vai trò từ bảng roles — dùng cho filter dropdown "Vai trò".
-     * Trả về đầy đủ 7 role (Admin, Doctor, Manager, Staff, Patient, Sonographer, Lab Technician).
+     * Trả về các role hiện có để dùng cho bộ lọc.
      */
     public List<AuditLog> getAllRoles() {
         String sql = "SELECT id, role_name FROM roles ORDER BY id";

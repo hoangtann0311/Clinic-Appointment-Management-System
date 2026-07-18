@@ -123,15 +123,6 @@
                                 </div>
                             </a>
                         </div>
-                        <div class="col-sm-6">
-                            <a href="#" class="text-decoration-none">
-                                <div class="quick-link-card p-3 rounded-3 border">
-                                    <i class="bi bi-file-earmark-medical fs-4 text-success"></i>
-                                    <h6 class="mt-2 mb-1">Kết Quả Xét Nghiệm</h6>
-                                    <small class="text-muted">Xem kết quả xét nghiệm</small>
-                                </div>
-                            </a>
-                        </div>
                     </c:if>
 
                     <%-- Manager (roleId=3) --%>

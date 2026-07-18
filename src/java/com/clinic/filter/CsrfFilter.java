@@ -81,8 +81,8 @@ public class CsrfFilter implements Filter {
         }
 
         // ── Đối với state-changing methods, kiểm tra token ──
-        if ("POST".equals(method) || "PUT".equals(method) || "DELETE".equals(method)
-                || "PATCH".equals(method)) {
+        if (isCsrfProtectedPath(path) && ("POST".equals(method) || "PUT".equals(method)
+                || "DELETE".equals(method) || "PATCH".equals(method))) {
 
             String requestToken = httpReq.getParameter(CSRF_PARAM_NAME);
             if (requestToken == null) {
@@ -134,6 +134,17 @@ public class CsrfFilter implements Filter {
      * Chuẩn hóa path để loại bỏ path parameters (như ;jsessionid=...)
      * mà Tomcat có thể chèn vào URL khi dùng URL rewriting.
      */
+    private boolean isCsrfProtectedPath(String path) {
+        return path.startsWith("/admin/users")
+                || path.startsWith("/admin/roles")
+                || path.startsWith("/admin/services")
+                || path.startsWith("/admin/medicines")
+                || path.startsWith("/admin/pricing")
+                || path.startsWith("/manager/services")
+                || path.startsWith("/manager/medicines")
+                || path.startsWith("/manager/schedules")
+                || path.startsWith("/manager/time-slots");
+    }
     private String normalizePath(String rawPath) {
         if (rawPath == null || rawPath.isEmpty()) {
             return rawPath;

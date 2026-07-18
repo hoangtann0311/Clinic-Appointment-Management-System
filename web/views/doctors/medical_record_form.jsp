@@ -85,6 +85,10 @@
           <div class="text-center py-5">
             <i class="bi bi-journal-x text-muted" style="font-size:3rem;"></i>
             <p class="text-muted mt-3">Chưa có hồ sơ bệnh án nào.</p>
+            <a href="${pageContext.request.contextPath}/doctor/appointments"
+               class="btn btn-outline-success rounded-pill px-4">
+              <i class="bi bi-calendar-check me-1"></i>Xem lịch hẹn để tạo bệnh án
+            </a>
           </div>
         </c:when>
         <c:otherwise>
@@ -546,7 +550,7 @@
                   <i class="bi bi-clipboard-check me-1 text-primary"></i>Hướng xử trí & Kế hoạch điều trị
                 </label>
                 <textarea name="treatmentPlan" class="form-control" rows="5"
-                          placeholder="Thuốc, chỉ định xét nghiệm, chỉ định siêu âm, lời khuyên cho mẹ…">${record.treatmentPlan}</textarea>
+                          placeholder="Thuốc, chỉ định siêu âm, lời khuyên cho mẹ…">${record.treatmentPlan}</textarea>
               </div>
 
               <%-- ═══ Kê đơn thuốc ngay tại đây (cùng lưu với hồ sơ) ═══ --%>

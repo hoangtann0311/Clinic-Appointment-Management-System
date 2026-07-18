@@ -819,9 +819,6 @@
                                     <option value="Phòng Siêu âm 2" ${formData.requiredRoomType eq 'Phòng Siêu âm 2' ? 'selected' : ''}>🩻 Phòng Siêu âm 2</option>
                                     <option value="Phòng Siêu âm 3" ${formData.requiredRoomType eq 'Phòng Siêu âm 3' ? 'selected' : ''}>🩻 Phòng Siêu âm 3</option>
                                 </optgroup>
-                                <optgroup label="Phòng Xét nghiệm">
-                                    <option value="Phòng Xét nghiệm" ${formData.requiredRoomType eq 'Phòng Xét nghiệm' ? 'selected' : ''}>🔬 Phòng Xét nghiệm</option>
-                                </optgroup>
                                 <optgroup label="Phòng Thủ thuật">
                                     <option value="Phòng Thủ thuật" ${formData.requiredRoomType eq 'Phòng Thủ thuật' ? 'selected' : ''}>🏨 Phòng Thủ thuật</option>
                                 </optgroup>
@@ -851,12 +848,6 @@
                                            value="Chẩn đoán hình ảnh" onchange="updateSpecialtiesValue('add')"
                                            ${not empty formData.allowedSpecialties and formData.allowedSpecialties.contains('Chẩn đoán hình ảnh') ? 'checked' : ''}>
                                     <label class="form-check-label small" for="addSpecCDHA">Chẩn đoán hình ảnh</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input type="checkbox" class="form-check-input specialty-checkbox" id="addSpecXN"
-                                           value="Xét nghiệm" onchange="updateSpecialtiesValue('add')"
-                                           ${not empty formData.allowedSpecialties and formData.allowedSpecialties.contains('Xét nghiệm') ? 'checked' : ''}>
-                                    <label class="form-check-label small" for="addSpecXN">Xét nghiệm</label>
                                 </div>
                                 <div class="form-check form-check-inline">
                                     <input type="checkbox" class="form-check-input specialty-checkbox" id="addSpecKHHGD"
@@ -1031,9 +1022,6 @@
                                     <option value="Phòng Siêu âm 2">🩻 Phòng Siêu âm 2</option>
                                     <option value="Phòng Siêu âm 3">🩻 Phòng Siêu âm 3</option>
                                 </optgroup>
-                                <optgroup label="Phòng Xét nghiệm">
-                                    <option value="Phòng Xét nghiệm">🔬 Phòng Xét nghiệm</option>
-                                </optgroup>
                                 <optgroup label="Phòng Thủ thuật">
                                     <option value="Phòng Thủ thuật">🏨 Phòng Thủ thuật</option>
                                 </optgroup>
@@ -1060,11 +1048,6 @@
                                     <input type="checkbox" class="form-check-input specialty-checkbox" id="editSpecCDHA"
                                            value="Chẩn đoán hình ảnh" onchange="updateSpecialtiesValue('edit')">
                                     <label class="form-check-label small" for="editSpecCDHA">Chẩn đoán hình ảnh</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input type="checkbox" class="form-check-input specialty-checkbox" id="editSpecXN"
-                                           value="Xét nghiệm" onchange="updateSpecialtiesValue('edit')">
-                                    <label class="form-check-label small" for="editSpecXN">Xét nghiệm</label>
                                 </div>
                                 <div class="form-check form-check-inline">
                                     <input type="checkbox" class="form-check-input specialty-checkbox" id="editSpecKHHGD"

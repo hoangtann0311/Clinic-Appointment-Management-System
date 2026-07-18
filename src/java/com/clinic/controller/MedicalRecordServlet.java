@@ -6,7 +6,6 @@ import com.clinic.dao.InvoiceDAO;
 import com.clinic.dao.MedicalRecordDAO;
 import com.clinic.dao.PrescriptionDAO;
 import com.clinic.dao.ServiceDAO;
-import com.clinic.dao.TestOrderDAO;
 import com.clinic.model.MedicalRecord;
 import com.clinic.model.Prescription;
 import com.clinic.model.PrescriptionItem;
@@ -39,7 +38,6 @@ public class MedicalRecordServlet extends HttpServlet {
 
     private final MedicalRecordDAO dao = new MedicalRecordDAO();
     private final PrescriptionDAO prescriptionDAO = new PrescriptionDAO();
-    private final TestOrderDAO testOrderDAO = new TestOrderDAO();
     private final ServiceDAO serviceDAO = new ServiceDAO();
     private final InvoiceDAO invoiceDAO = new InvoiceDAO();
 
@@ -81,9 +79,6 @@ public class MedicalRecordServlet extends HttpServlet {
             req.setAttribute("prescription", prescription);
             req.setAttribute("medicines",    prescriptionDAO.getAllMedicines());
             req.setAttribute("ultrasoundServices", serviceDAO.findByCategoryId(2));
-            if (record.getId() > 0) {
-                req.setAttribute("testOrders", testOrderDAO.getByMedicalRecordId(record.getId()));
-            }
             req.getRequestDispatcher("/views/doctors/medical_record_form.jsp").forward(req, resp);
 
         } else {
@@ -421,7 +416,6 @@ public class MedicalRecordServlet extends HttpServlet {
         req.setAttribute("mode",              "form");
         req.setAttribute("prescription",      prescription);
         req.setAttribute("medicines",         prescriptionDAO.getAllMedicines());
-        req.setAttribute("labServices",        serviceDAO.findByCategoryId(3));
         req.setAttribute("ultrasoundServices", serviceDAO.findByCategoryId(2));
         req.setAttribute("errorMessage",      msg);
         req.getRequestDispatcher("/views/doctors/medical_record_form.jsp").forward(req, resp);
@@ -514,4 +508,4 @@ public class MedicalRecordServlet extends HttpServlet {
         }
         return total;
     }
-}
+}

@@ -65,9 +65,6 @@ public class PatientMedicalRecordServlet extends HttpServlet {
 
             Prescription prescription = prescriptionDAO.getByMedicalRecordId(recordId);
 
-            // Fetch general lab test orders and results
-            List<com.clinic.model.TestOrder> testOrders = new com.clinic.dao.TestOrderDAO().getByMedicalRecordId(recordId);
-
             // Retrieve ultrasound orders, images, and AI findings
             List<com.clinic.model.UltrasoundWaitingPatient> usOrders = new com.clinic.dao.UltrasoundOrderDAO().getByMedicalRecordId(recordId);
             java.util.Map<Integer, List<com.clinic.model.UltrasoundImage>> orderImages = new java.util.HashMap<>();
@@ -88,7 +85,6 @@ public class PatientMedicalRecordServlet extends HttpServlet {
 
             request.setAttribute("record",       record);
             request.setAttribute("prescription", prescription);
-            request.setAttribute("testOrders",   testOrders);
             request.setAttribute("usOrders", usOrders);
             request.setAttribute("orderImages", orderImages);
             request.setAttribute("orderAiResults", orderAiResults);

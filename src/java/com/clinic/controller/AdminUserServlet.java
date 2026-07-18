@@ -19,7 +19,7 @@ import java.util.*;
  * Tích hợp toàn bộ tính năng:
  *   - Danh sách user (phân trang + tìm kiếm + lọc role/status)
  *   - Tab filter nhanh: Tất cả | Nhân sự | Bệnh nhân
- *   - Stat cards (Tổng, Doctor, Manager, Staff, Sonographer, Lab Technician)
+ *   - Stat cards (Tổng, Doctor, Manager, Staff, Sonographer)
  *   - CRUD: Tạo / Sửa / Xoá mềm / Khôi phục
  *   - Khoá / Mở khoá tài khoản (toggle Active ↔ Locked)
  *   - Reset mật khẩu (admin side)
