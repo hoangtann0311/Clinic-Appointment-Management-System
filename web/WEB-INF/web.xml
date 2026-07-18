@@ -50,7 +50,43 @@
         <description>Google OAuth 2.0 Client Secret (chỉ dùng cho server-side flow)</description>
     </context-param>
 
+    <!-- ============================================================
+         FILTER ORDER
+         ============================================================
+         Tất cả filter dùng annotation @WebFilter, Tomcat thực thi
+         theo thứ tự alphabetical của TÊN LỚP (class name).
+
+         THỨ TỰ THỰC THI (Tomcat default — alphabetical):
+         1. AuthenticationFilter — Kiểm tra đăng nhập + Active status
+         2. AuthorizationFilter  — RBAC + Permission Check + Audit Log
+         3. CsrfFilter          — Bảo vệ CSRF cho POST/PUT/DELETE
+         4. EncodingFilter      — UTF-8 encoding
+         5. SecurityHeadersFilter — Security headers (XSS, clickjack, etc.)
+
+         LUỒNG XỬ LÝ ĐẦY ĐỦ:
+         Request
+         ├─ SecurityHeadersFilter: Set security headers
+         ├─ EncodingFilter:       UTF-8 → pass
+         ├─ CsrfFilter:           GET → tạo token | POST → validate token
+         ├─ AuthenticationFilter: Public path? → pass
+         │                        | No session? → redirect /login
+         │                        | Not Active? → invalidate + redirect
+         │                        | OK → pass
+         └─ AuthorizationFilter:  Public path? → pass
+                                  | Zone check → Role trong zone?
+                                  | Whitelist check → URL có trong whitelist?
+                                  | Permission check → Có permission key?
+                                  | Session sync → Reload nếu role thay đổi
+                                  | Audit Log → Ghi log truy cập
+                                  | Default Deny → 403
+                                  | OK → Controller
+    -->
+
     <!-- Error pages -->
+    <error-page>
+        <error-code>403</error-code>
+        <location>/views/errors/403.jsp</location>
+    </error-page>
     <error-page>
         <error-code>404</error-code>
         <location>/views/errors/404.jsp</location>

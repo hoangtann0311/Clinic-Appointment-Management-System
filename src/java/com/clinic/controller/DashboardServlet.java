@@ -1,14 +1,8 @@
-package com.clinic.controller;
+package controller;
 
-import com.clinic.dao.NotificationDAO;
-import com.clinic.model.Appointment;
-import com.clinic.model.Notification;
+import com.clinic.dao.DashboardDAO;
 import com.clinic.model.User;
 import com.clinic.service.DashboardService;
-import com.clinic.service.MedicineService;
-import com.clinic.service.PatientBookingService;
-import com.clinic.service.ServiceService;
-import com.clinic.service.ServiceStatisticsService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -20,17 +14,19 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Servlet xử lý các trang dashboard theo role.
  * Hiển thị dashboard tương ứng cho từng vai trò người dùng.
+ *
+ * Admin Dashboard: đầy đủ 6 KPI cards, biểu đồ lịch hẹn & doanh thu,
+ * bảng hiệu suất bác sĩ, lịch làm việc, thống kê siêu âm,
+ * bệnh nhân mới, nhật ký hệ thống và cảnh báo.
  */
-// Force IDE compiler reload: Resolved mapping conflict
 @WebServlet(urlPatterns = {
     "/admin/dashboard",
+    "/doctor/dashboard",
     "/manager/dashboard",
     "/staff/dashboard",
     "/home",
@@ -71,42 +67,23 @@ public class DashboardServlet extends HttpServlet {
         request.setAttribute("todayDisplay",
                 today.format(DateTimeFormatter.ofPattern("dd 'tháng' MM, yyyy")));
 
-        String path = request.getRequestURI().substring(request.getContextPath().length());
-
-        // Chuyển hướng / forward theo role
+        // Route đến dashboard JSP tương ứng với role
+        String targetJsp;
         switch (roleId) {
-            case 1: // Admin
-                if (!"/admin/dashboard".equals(path)) {
-                    response.sendRedirect(request.getContextPath() + "/admin/dashboard");
-                    return;
-                }
+            case 1: // Admin → giao diện admin riêng với sidebar layout
                 loadAdminDashboardData(request);
-                request.getRequestDispatcher("/views/admin/dashboard.jsp").forward(request, response);
+                targetJsp = "/views/admin/dashboard.jsp";
                 break;
-            case 2: // Doctor
-                response.sendRedirect(request.getContextPath() + "/doctor/dashboard");
-                break;
-            case 3: // Manager
-                if (!"/manager/dashboard".equals(path)) {
-                    response.sendRedirect(request.getContextPath() + "/manager/dashboard");
-                    return;
-                }
+            case 3: // Manager → giao diện manager với theme Teal/Emerald
                 loadManagerDashboardData(request);
-                request.getRequestDispatcher("/views/manager/dashboard.jsp").forward(request, response);
+                targetJsp = "/views/manager/dashboard.jsp";
                 break;
-            case 4: // Staff
-                response.sendRedirect(request.getContextPath() + "/admin/reception");
-                break;
-            case 6: // Sonographer
-                loadSonographerDashboardData(request);
-                request.getRequestDispatcher("/views/sonographer/dashboard.jsp").forward(request, response);
-                break;
-            case 5: // Patient
-            default:
-                loadPatientDashboardData(request, user.getId());
-                request.getRequestDispatcher("/views/home/dashboard.jsp").forward(request, response);
+            default: // Các role khác giữ nguyên giao diện chung
+                targetJsp = "/views/home/dashboard.jsp";
                 break;
         }
+
+        request.getRequestDispatcher(targetJsp).forward(request, response);
     }
 
     /**
@@ -236,51 +213,6 @@ public class DashboardServlet extends HttpServlet {
         return from.minusDays(1);
     }
 
-    private void loadSonographerDashboardData(HttpServletRequest request) {
-        com.clinic.service.UltrasoundOrderService orderService = new com.clinic.service.UltrasoundOrderService();
-        
-        // Nhận tham số date từ request
-        String dateParam = request.getParameter("date");
-        LocalDate selectedDate;
-        if (dateParam != null && !dateParam.trim().isEmpty()) {
-            try {
-                selectedDate = LocalDate.parse(dateParam.trim());
-            } catch (Exception e) {
-                selectedDate = LocalDate.now();
-            }
-        } else {
-            selectedDate = LocalDate.now();
-        }
-        
-        String filterDateStr = selectedDate.toString();
-        
-        int pending = orderService.countOrders(null, "Pending", filterDateStr, null);
-        int inProgress = orderService.countOrders(null, "InProgress", filterDateStr, null);
-        int uploaded = orderService.countOrders(null, "Uploaded", filterDateStr, null);
-        int analyzing = orderService.countOrders(null, "Analyzing", filterDateStr, null);
-        int completed = orderService.countOrders(null, "Completed", filterDateStr, null)
-                      + orderService.countOrders(null, "confirmed", filterDateStr, null);
-        int emergency = orderService.countOrders(null, null, filterDateStr, true);
-        
-        java.util.List<com.clinic.model.UltrasoundWaitingPatient> recentOrders = orderService.getOrders(1, 10, null, null, filterDateStr, null, "createdAt", "desc");
-        
-        // Định dạng ngày tiếng Việt hiển thị
-        DateTimeFormatter displayFmt = DateTimeFormatter.ofPattern("dd 'tháng' MM, yyyy");
-        String displayDate = selectedDate.format(displayFmt);
-        
-        request.setAttribute("totalPending", pending);
-        request.setAttribute("totalInProgress", inProgress);
-        request.setAttribute("totalUploaded", uploaded);
-        request.setAttribute("totalAnalyzing", analyzing);
-        request.setAttribute("totalCompletedToday", completed);
-        request.setAttribute("totalEmergencyToday", emergency);
-        request.setAttribute("recentOrders", recentOrders);
-        
-        request.setAttribute("selectedDate", filterDateStr);
-        request.setAttribute("displayDate", displayDate);
-        request.setAttribute("currentDisplayDate", LocalDate.now().toString());
-    }
-
     /**
      * Load toàn bộ dữ liệu thống kê cho Admin Dashboard.
      * Gọi DashboardService để lấy số liệu thực từ database.
@@ -331,52 +263,4 @@ public class DashboardServlet extends HttpServlet {
         // ─── Cảnh báo hệ thống ───
         request.setAttribute("systemAlerts", dashboardService.getSystemAlerts());
     }
-
-    /**
-     * Load dữ liệu dashboard cho Bệnh Nhân (roleId=5).
-     * Bao gồm: lịch hẹn sắp tới, top 3 thông báo gần đây, số thông báo chưa đọc.
-     */
-    private void loadPatientDashboardData(HttpServletRequest request, int userId) {
-        try {
-            // ─── Lịch hẹn của bệnh nhân ───
-            PatientBookingService bookingService = new PatientBookingService();
-            List<Appointment> allAppts = bookingService.getMyAppointments(userId);
-
-            // Lọc lịch hẹn sắp tới (Pending, Confirmed, Waiting, Emergency_SOS)
-            LocalDate today = LocalDate.now();
-            List<Appointment> upcoming = allAppts.stream()
-                .filter(a -> {
-                    String s = a.getStatus();
-                    return ("Pending".equals(s) || "Confirmed".equals(s)
-                            || "Waiting".equals(s) || "Emergency_SOS".equals(s))
-                        && (a.getAppointmentDate() != null
-                            && !a.getAppointmentDate().isBefore(today));
-                })
-                .sorted((a, b) -> {
-                    if (a.getAppointmentDate() == null) return 1;
-                    if (b.getAppointmentDate() == null) return -1;
-                    return a.getAppointmentDate().compareTo(b.getAppointmentDate());
-                })
-                .collect(Collectors.toList());
-
-            request.setAttribute("upcomingAppts", upcoming);
-            request.setAttribute("upcomingAppointment", upcoming.isEmpty() ? null : upcoming.get(0));
-
-            // ─── Thông báo gần đây (top 3) ───
-            NotificationDAO notifDAO = new NotificationDAO();
-            List<Notification> allNotifs = notifDAO.getByUserId(userId);
-            List<Notification> recentNotifs = allNotifs.size() > 3
-                ? allNotifs.subList(0, 3) : allNotifs;
-            request.setAttribute("recentNotifs", recentNotifs);
-            request.setAttribute("unreadNotifCount", notifDAO.countUnread(userId));
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            request.setAttribute("upcomingAppts", java.util.List.of());
-            request.setAttribute("recentNotifs", java.util.List.of());
-            request.setAttribute("unreadNotifCount", 0);
-        }
-    }
-
-
 }

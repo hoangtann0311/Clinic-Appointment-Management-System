@@ -243,13 +243,22 @@
                                         </td>
                                         <td>
                                             <div class="d-flex gap-1">
-                                                <button class="btn btn-sm btn-outline-secondary btn-action"
-                                                        onclick="openEditModal('${med.id}','${fn:escapeXml(med.medicineCode)}','${fn:escapeXml(med.name)}','${fn:escapeXml(med.description)}','${fn:escapeXml(med.dosage)}','${fn:escapeXml(med.unit)}','${med.price}','${med.stockQuantity}','${med.active}')"
+                                                <button class="btn btn-sm btn-outline-secondary btn-action edit-med-btn"
+                                                        data-id="${med.id}"
+                                                        data-code="${fn:escapeXml(med.medicineCode)}"
+                                                        data-name="${fn:escapeXml(med.name)}"
+                                                        data-desc="${fn:escapeXml(med.description)}"
+                                                        data-dosage="${fn:escapeXml(med.dosage)}"
+                                                        data-unit="${fn:escapeXml(med.unit)}"
+                                                        data-price="${med.price}"
+                                                        data-stock="${med.stockQuantity}"
+                                                        data-active="${med.active}"
                                                         title="Sửa">
                                                     <i class="bi bi-pencil-square"></i>
                                                 </button>
                                                 <c:if test="${med.active}">
                                                     <form method="post" action="${pageContext.request.contextPath}/admin/medicines/" style="display:inline;">
+                                                        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                                         <input type="hidden" name="action" value="deactivate">
                                                         <input type="hidden" name="id" value="${med.id}">
                                                         <button type="submit" class="btn btn-sm btn-outline-warning btn-action"
@@ -317,6 +326,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form method="post" action="${pageContext.request.contextPath}/admin/medicines/">
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                 <input type="hidden" name="action" value="create">
                 <div class="modal-body">
                     <div class="row g-3">
@@ -389,13 +399,20 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form method="post" action="${pageContext.request.contextPath}/admin/medicines/">
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                 <input type="hidden" name="action" value="edit">
                 <input type="hidden" name="id" id="editMedicineId">
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Mã thuốc <span class="text-danger">*</span></label>
-                            <input type="text" name="medicineCode" id="editMedicineCode" class="form-control" required maxlength="50">
+                            <label class="form-label fw-semibold">Mã thuốc 🔒</label>
+                            <input type="text" id="editMedicineCode"
+                                   class="form-control text-uppercase" readonly disabled
+                                   style="font-family:'Courier New',monospace;letter-spacing:0.05em;background:#f5f5f5;color:#757575;cursor:not-allowed;">
+                            <input type="hidden" name="medicineCode" id="editMedicineCodeHidden">
+                            <div class="form-text" style="font-size:0.68rem;">
+                                <i class="bi bi-lock-fill"></i> Mã định danh — không thể thay đổi sau khi tạo
+                            </div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Tên thuốc <span class="text-danger">*</span></label>
@@ -458,9 +475,21 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
     }
 })();
 
+// ═══════════════════════════════════════════════════════════
+//  Xử lý click nút Sửa qua data-attributes (tránh lỗi escape)
+// ═══════════════════════════════════════════════════════════
+document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.edit-med-btn');
+    if (!btn) return;
+    e.preventDefault();
+    var d = btn.dataset;
+    openEditModal(d.id, d.code, d.name, d.desc, d.dosage, d.unit, d.price, d.stock, d.active);
+});
+
 function openEditModal(id, code, name, desc, dosage, unit, price, stock, isActive) {
     document.getElementById('editMedicineId').value = id;
     document.getElementById('editMedicineCode').value = code || '';
+    document.getElementById('editMedicineCodeHidden').value = code || '';
     document.getElementById('editName').value = name || '';
     document.getElementById('editDesc').value = desc || '';
     document.getElementById('editDosage').value = dosage || '';

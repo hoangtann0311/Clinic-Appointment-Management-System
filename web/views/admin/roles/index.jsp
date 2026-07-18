@@ -267,6 +267,7 @@ body.admin-body { font-family: var(--font-body); background: var(--c-bg); color:
 
             <%-- Permission Form --%>
             <form method="post" action="${pageContext.request.contextPath}/admin/roles/" id="permForm_${role.id}">
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                 <input type="hidden" name="action" value="updatePermissions">
                 <input type="hidden" name="roleId" value="${role.id}">
 

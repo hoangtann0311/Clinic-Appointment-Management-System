@@ -23,7 +23,7 @@ public class AuditLog implements Serializable {
 
     // ── Transient fields (không map từ DB, dùng để hiển thị) ──
     private String userName;          // tên người thực hiện (JOIN từ users)
-    private String roleName;          // tên vai trò (JOIN từ roles)
+    private String roleName;          // tên vai trò (JOIN từ roles) — có thể là tiếng Anh ("Admin") hoặc tiếng Việt
     private String actionType;        // phân loại từ action: CREATE, UPDATE, DELETE, LOGIN...
 
     public AuditLog() {
@@ -114,8 +114,31 @@ public class AuditLog implements Serializable {
     }
 
     /**
+     * Trả về tên vai trò hiển thị bằng tiếng Việt.
+     * Nếu DB đã lưu tiếng Việt thì giữ nguyên, nếu tiếng Anh thì map sang tiếng Việt.
+     */
+    public String getRoleNameDisplay() {
+        if (roleName == null) return "—";
+        // Nếu đã là tiếng Việt thì trả về nguyên bản
+        if (roleName.contains(" quản") || roleName.contains("bác sĩ") || roleName.contains("bệnh nhân")
+                || roleName.contains("viên") || roleName.contains("Quản")) {
+            return roleName;
+        }
+        // Map từ tiếng Anh sang tiếng Việt
+        switch (roleName) {
+            case "Admin":       return "Quản trị viên";
+            case "Doctor":      return "Bác sĩ";
+            case "Manager":     return "Quản lý";
+            case "Staff":       return "Nhân viên";
+            case "Patient":     return "Bệnh nhân";
+            case "Sonographer": return "Kỹ thuật viên siêu âm";
+            default:            return roleName;
+        }
+    }
+
+    /**
      * Tự động suy đoán actionType từ nội dung action.
-     * Dùng để hiển thị badge màu tương ứng.
+     * Giá trị trả về là mã tiếng Anh, dùng cho CSS class (badge-create, badge-update...).
      */
     public String getActionType() {
         if (actionType != null) return actionType;
@@ -154,6 +177,27 @@ public class AuditLog implements Serializable {
             return "SECURITY";
         }
         return "OTHER";
+    }
+
+    /**
+     * Trả về tên hiển thị tiếng Việt cho loại hành động.
+     * Dùng để hiển thị text trên badge (VD: "Tạo mới" thay vì "CREATE").
+     */
+    public String getActionTypeDisplay() {
+        String type = getActionType();
+        switch (type) {
+            case "CREATE":   return "Tạo mới";
+            case "UPDATE":   return "Cập nhật";
+            case "DELETE":   return "Xoá";
+            case "LOGIN":    return "Đăng nhập";
+            case "LOGOUT":   return "Đăng xuất";
+            case "EXPORT":   return "Xuất dữ liệu";
+            case "APPROVE":  return "Phê duyệt";
+            case "TOGGLE":   return "Chuyển đổi";
+            case "SECURITY": return "Bảo mật";
+            case "OTHER":    return "Khác";
+            default:         return "Không rõ";
+        }
     }
 
     public void setActionType(String actionType) {

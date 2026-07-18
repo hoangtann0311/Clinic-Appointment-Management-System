@@ -259,6 +259,28 @@
             .kpi-grid { grid-template-columns: repeat(2, 1fr); }
             .page-header-gradient { flex-direction: column; text-align: center; }
         }
+
+        /* ── Validation Styles ── */
+        .was-validated .form-control:invalid,
+        .form-control.is-invalid {
+            border-color: #c62828 !important;
+            box-shadow: 0 0 0 0.18rem rgba(198,40,40,0.15) !important;
+        }
+        .was-validated .form-control:valid,
+        .form-control.is-valid {
+            border-color: #2e7d32 !important;
+            box-shadow: 0 0 0 0.18rem rgba(46,125,50,0.12) !important;
+        }
+        .invalid-feedback {
+            display: none;
+            font-size: 0.72rem;
+            color: #c62828;
+            margin-top: 0.2rem;
+        }
+        .is-invalid ~ .invalid-feedback,
+        .was-validated .form-control:invalid ~ .invalid-feedback {
+            display: block;
+        }
     </style>
 </head>
 <body class="admin-body">
@@ -548,6 +570,7 @@
                                                 <i class="bi bi-pencil-square"></i>
                                             </button>
                                             <form method="post" action="${pageContext.request.contextPath}/manager/services/" style="display:inline;">
+                                                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                                 <input type="hidden" name="action" value="toggle">
                                                 <input type="hidden" name="id" value="${svc.id}">
                                                 <button type="submit" class="action-btn ${svc.active ? 'btn-warn' : ''}"
@@ -652,91 +675,226 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="post" action="${pageContext.request.contextPath}/manager/services/">
+            <form method="post" action="${pageContext.request.contextPath}/manager/services/"
+                  id="addServiceForm" novalidate onsubmit="return validateAddService()">
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                 <input type="hidden" name="action" value="create">
                 <div class="modal-body">
+                    <!-- Server-side general error -->
+                    <c:if test="${not empty errors.general}">
+                        <div class="alert alert-danger d-flex align-items-center gap-2 mb-3" style="font-size:0.8rem;padding:0.5rem 0.75rem;border-radius:var(--r-sm);">
+                            <i class="bi bi-exclamation-triangle-fill"></i>${errors.general}
+                        </div>
+                    </c:if>
+
                     <%-- Thông tin cơ bản --%>
                     <div class="form-section-title"><i class="bi bi-info-circle me-1"></i>Thông tin cơ bản</div>
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">
                             <label class="form-label fw-semibold small">Mã dịch vụ <span class="text-danger">*</span></label>
-                            <input type="text" name="serviceCode" class="form-control form-control-sm" required maxlength="50"
-                                   placeholder="VD: SVC-SIEU-AM-4D" value="${formData.serviceCode}">
+                            <input type="text" name="serviceCode" id="addServiceCode"
+                                   class="form-control form-control-sm text-uppercase" required
+                                   minlength="3" maxlength="30"
+                                   pattern="[A-Z0-9][A-Z0-9_\-]{2,29}"
+                                   placeholder="VD: SVC-SIEU-AM-4D"
+                                   value="${fn:escapeXml(formData.serviceCode)}"
+                                   oninput="clearFieldError('serviceCode')"
+                                   style="font-family:'Courier New',monospace;letter-spacing:0.05em;">
+                            <div class="invalid-feedback" id="err-serviceCode"></div>
+                            <div class="form-text" style="font-size:0.68rem;">Chữ IN HOA, số, gạch ngang (-), gạch dưới (_). 3-30 ký tự. Không khoảng trắng.</div>
                             <c:if test="${not empty errors.serviceCode}">
                                 <div class="text-danger mt-1" style="font-size:0.72rem;"><i class="bi bi-exclamation-circle me-1"></i>${errors.serviceCode}</div>
                             </c:if>
                         </div>
                         <div class="col-md-8">
                             <label class="form-label fw-semibold small">Tên dịch vụ <span class="text-danger">*</span></label>
-                            <input type="text" name="serviceName" class="form-control form-control-sm" required maxlength="100"
-                                   placeholder="VD: Siêu âm 4D thai kỳ" value="${formData.serviceName}">
+                            <input type="text" name="serviceName" id="addServiceName"
+                                   class="form-control form-control-sm" required
+                                   minlength="2" maxlength="100"
+                                   placeholder="VD: Siêu âm 4D thai kỳ"
+                                   value="${fn:escapeXml(formData.serviceName)}"
+                                   oninput="clearFieldError('serviceName')">
+                            <div class="invalid-feedback" id="err-serviceName"></div>
+                            <div class="form-text" style="font-size:0.68rem;">Tên rõ ràng, dễ hiểu, từ 2-100 ký tự. Không được chỉ gồm chữ số.</div>
                             <c:if test="${not empty errors.serviceName}">
                                 <div class="text-danger mt-1" style="font-size:0.72rem;"><i class="bi bi-exclamation-circle me-1"></i>${errors.serviceName}</div>
                             </c:if>
                         </div>
                         <div class="col-12">
                             <label class="form-label fw-semibold small">Mô tả dịch vụ</label>
-                            <textarea name="description" class="form-control form-control-sm" rows="2" maxlength="500"
-                                      placeholder="Mô tả chi tiết về dịch vụ, quy trình thực hiện...">${formData.description}</textarea>
+                            <textarea name="description" id="addDescription"
+                                      class="form-control form-control-sm" rows="2" maxlength="500"
+                                      placeholder="Mô tả chi tiết về dịch vụ, quy trình thực hiện, đối tượng áp dụng..."
+                                      oninput="updateCharCount('addDescription','descCount',500)">${fn:escapeXml(formData.description)}</textarea>
+                            <div class="d-flex justify-content-between">
+                                <div class="invalid-feedback d-block" id="err-description"></div>
+                                <small class="text-muted" id="descCount" style="font-size:0.68rem;">0/500</small>
+                            </div>
                         </div>
                     </div>
 
-                    <%-- Giá & thời gian --%>
-                    <div class="form-section-title"><i class="bi bi-cash-coin me-1"></i>Giá &amp; Thời gian</div>
+                    <%-- Giá & thời gian & nhóm --%>
+                    <div class="form-section-title"><i class="bi bi-cash-coin me-1"></i>Giá &amp; Thời gian &amp; Nhóm</div>
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">
                             <label class="form-label fw-semibold small">Đơn giá (VNĐ) <span class="text-danger">*</span></label>
                             <div class="input-group input-group-sm">
                                 <span class="input-group-text fw-bold">₫</span>
-                                <input type="number" name="price" class="form-control" required min="50000" step="1000"
-                                       placeholder="VD: 500000" value="${formData.price}">
+                                <input type="text" name="price" id="addPrice"
+                                       class="form-control" required
+                                       placeholder="VD: 500000"
+                                       value="${formData.price}"
+                                       oninput="formatPriceInput(this);clearFieldError('price')"
+                                       onkeypress="return onlyDigits(event)"
+                                       autocomplete="off">
                             </div>
+                            <div class="invalid-feedback" id="err-price"></div>
+                            <div class="form-text" style="font-size:0.68rem;">Số nguyên dương, từ 50.000đ đến 100.000.000đ</div>
                             <c:if test="${not empty errors.price}">
                                 <div class="text-danger mt-1" style="font-size:0.72rem;"><i class="bi bi-exclamation-circle me-1"></i>${errors.price}</div>
                             </c:if>
-                            <div class="form-text" style="font-size:0.68rem;">Tối thiểu 50.000 VNĐ</div>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold small">Thời gian (phút)</label>
-                            <input type="number" name="durationMins" class="form-control form-control-sm" min="0"
-                                   placeholder="VD: 30" value="${formData.durationMins}">
+                            <label class="form-label fw-semibold small">Thời gian (phút) <span class="text-danger">*</span></label>
+                            <input type="text" name="durationMins" id="addDurationMins"
+                                   class="form-control form-control-sm" required
+                                   list="durationSuggestions"
+                                   placeholder="VD: 30"
+                                   value="${formData.durationMins}"
+                                   oninput="clearFieldError('durationMins')"
+                                   onkeypress="return onlyDigits(event)"
+                                   autocomplete="off">
+                            <datalist id="durationSuggestions">
+                                <option value="5">
+                                <option value="10">
+                                <option value="15">
+                                <option value="20">
+                                <option value="30">
+                                <option value="45">
+                                <option value="60">
+                                <option value="90">
+                                <option value="120">
+                            </datalist>
+                            <div class="invalid-feedback" id="err-durationMins"></div>
+                            <div class="form-text" style="font-size:0.68rem;">Tối thiểu 5 phút, tối đa 480 phút (8 giờ).<br>Gợi ý: 5, 10, 15, 20, 30, 45, 60, 90 phút.</div>
+                            <c:if test="${not empty errors.durationMins}">
+                                <div class="text-danger mt-1" style="font-size:0.72rem;"><i class="bi bi-exclamation-circle me-1"></i>${errors.durationMins}</div>
+                            </c:if>
                         </div>
                         <div class="col-md-5">
-                            <label class="form-label fw-semibold small">Nhóm dịch vụ</label>
-                            <select name="categoryId" class="form-select form-select-sm">
-                                <option value="">-- Chọn nhóm --</option>
+                            <label class="form-label fw-semibold small">Nhóm dịch vụ <span class="text-danger">*</span></label>
+                            <select name="categoryId" id="addCategoryId" class="form-select form-select-sm" required
+                                    onchange="clearFieldError('categoryId')">
+                                <option value="">-- Chọn nhóm dịch vụ --</option>
                                 <c:forEach var="cat" items="${categories}">
                                     <option value="${cat.id}" ${formData.categoryId eq cat.id.toString() ? 'selected' : ''}>
-                                        ${fn:escapeXml(cat.categoryName)}
+                                        <c:choose>
+                                            <c:when test="${not empty cat.icon}">${fn:escapeXml(cat.icon)} ${fn:escapeXml(cat.categoryName)}</c:when>
+                                            <c:otherwise>📋 ${fn:escapeXml(cat.categoryName)}</c:otherwise>
+                                        </c:choose>
                                     </option>
                                 </c:forEach>
                             </select>
+                            <div class="invalid-feedback" id="err-categoryId"></div>
+                            <c:if test="${not empty errors.categoryId}">
+                                <div class="text-danger mt-1" style="font-size:0.72rem;"><i class="bi bi-exclamation-circle me-1"></i>${errors.categoryId}</div>
+                            </c:if>
+                        </div>
+                    </div>
+
+                    <%-- Phòng & Chuyên khoa --%>
+                    <div class="form-section-title"><i class="bi bi-geo-alt me-1"></i>Phòng thực hiện &amp; Chuyên khoa</div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-5">
+                            <label class="form-label fw-semibold small">Phòng thực hiện</label>
+                            <select name="requiredRoomType" id="addRoomType" class="form-select form-select-sm"
+                                    onchange="clearFieldError('requiredRoomType')">
+                                <option value="">-- Chọn phòng (không bắt buộc) --</option>
+                                <optgroup label="Phòng Khám">
+                                    <option value="Phòng Khám số 1" ${formData.requiredRoomType eq 'Phòng Khám số 1' ? 'selected' : ''}>🏥 Phòng Khám số 1</option>
+                                    <option value="Phòng Khám số 2" ${formData.requiredRoomType eq 'Phòng Khám số 2' ? 'selected' : ''}>🏥 Phòng Khám số 2</option>
+                                </optgroup>
+                                <optgroup label="Phòng Siêu âm">
+                                    <option value="Phòng Siêu âm 1" ${formData.requiredRoomType eq 'Phòng Siêu âm 1' ? 'selected' : ''}>🩻 Phòng Siêu âm 1</option>
+                                    <option value="Phòng Siêu âm 2" ${formData.requiredRoomType eq 'Phòng Siêu âm 2' ? 'selected' : ''}>🩻 Phòng Siêu âm 2</option>
+                                    <option value="Phòng Siêu âm 3" ${formData.requiredRoomType eq 'Phòng Siêu âm 3' ? 'selected' : ''}>🩻 Phòng Siêu âm 3</option>
+                                </optgroup>
+                                <optgroup label="Phòng Xét nghiệm">
+                                    <option value="Phòng Xét nghiệm" ${formData.requiredRoomType eq 'Phòng Xét nghiệm' ? 'selected' : ''}>🔬 Phòng Xét nghiệm</option>
+                                </optgroup>
+                                <optgroup label="Phòng Thủ thuật">
+                                    <option value="Phòng Thủ thuật" ${formData.requiredRoomType eq 'Phòng Thủ thuật' ? 'selected' : ''}>🏨 Phòng Thủ thuật</option>
+                                </optgroup>
+                            </select>
+                            <div class="invalid-feedback" id="err-requiredRoomType"></div>
+                            <c:if test="${not empty errors.requiredRoomType}">
+                                <div class="text-danger mt-1" style="font-size:0.72rem;"><i class="bi bi-exclamation-circle me-1"></i>${errors.requiredRoomType}</div>
+                            </c:if>
+                        </div>
+                        <div class="col-md-7">
+                            <label class="form-label fw-semibold small">Chuyên khoa áp dụng <span class="text-muted">(chọn nhiều)</span></label>
+                            <div class="d-flex flex-wrap gap-2" style="padding-top:0.35rem;" id="addSpecialtiesGroup">
+                                <div class="form-check form-check-inline">
+                                    <input type="checkbox" class="form-check-input specialty-checkbox" id="addSpecSan"
+                                           value="Sản khoa" onchange="updateSpecialtiesValue('add')"
+                                           ${not empty formData.allowedSpecialties and formData.allowedSpecialties.contains('Sản khoa') ? 'checked' : ''}>
+                                    <label class="form-check-label small" for="addSpecSan">Sản khoa</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input type="checkbox" class="form-check-input specialty-checkbox" id="addSpecPhu"
+                                           value="Phụ khoa" onchange="updateSpecialtiesValue('add')"
+                                           ${not empty formData.allowedSpecialties and formData.allowedSpecialties.contains('Phụ khoa') ? 'checked' : ''}>
+                                    <label class="form-check-label small" for="addSpecPhu">Phụ khoa</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input type="checkbox" class="form-check-input specialty-checkbox" id="addSpecCDHA"
+                                           value="Chẩn đoán hình ảnh" onchange="updateSpecialtiesValue('add')"
+                                           ${not empty formData.allowedSpecialties and formData.allowedSpecialties.contains('Chẩn đoán hình ảnh') ? 'checked' : ''}>
+                                    <label class="form-check-label small" for="addSpecCDHA">Chẩn đoán hình ảnh</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input type="checkbox" class="form-check-input specialty-checkbox" id="addSpecXN"
+                                           value="Xét nghiệm" onchange="updateSpecialtiesValue('add')"
+                                           ${not empty formData.allowedSpecialties and formData.allowedSpecialties.contains('Xét nghiệm') ? 'checked' : ''}>
+                                    <label class="form-check-label small" for="addSpecXN">Xét nghiệm</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input type="checkbox" class="form-check-input specialty-checkbox" id="addSpecKHHGD"
+                                           value="Kế hoạch hóa gia đình" onchange="updateSpecialtiesValue('add')"
+                                           ${not empty formData.allowedSpecialties and formData.allowedSpecialties.contains('Kế hoạch hóa gia đình') ? 'checked' : ''}>
+                                    <label class="form-check-label small" for="addSpecKHHGD">KHHGĐ</label>
+                                </div>
+                            </div>
+                            <input type="hidden" name="allowedSpecialties" id="addSpecialtiesHidden" value="${fn:escapeXml(formData.allowedSpecialties)}">
+                            <div class="invalid-feedback d-block" id="err-allowedSpecialties"></div>
+                            <c:if test="${not empty errors.allowedSpecialties}">
+                                <div class="text-danger mt-1" style="font-size:0.72rem;"><i class="bi bi-exclamation-circle me-1"></i>${errors.allowedSpecialties}</div>
+                            </c:if>
                         </div>
                     </div>
 
                     <%-- Yêu cầu đặc biệt --%>
-                    <div class="form-section-title"><i class="bi bi-exclamation-diamond me-1"></i>Yêu cầu đặc biệt</div>
+                    <div class="form-section-title"><i class="bi bi-exclamation-diamond me-1"></i>Yêu cầu đặc biệt trước khi thực hiện</div>
                     <div class="row g-3">
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold small">Phòng yêu cầu</label>
-                            <input type="text" name="requiredRoomType" class="form-control form-control-sm" maxlength="50"
-                                   placeholder="VD: Phòng Siêu âm 3" value="${formData.requiredRoomType}">
-                        </div>
-                        <div class="col-md-5">
-                            <label class="form-label fw-semibold small">Chuyên khoa áp dụng</label>
-                            <input type="text" name="allowedSpecialties" class="form-control form-control-sm" maxlength="255"
-                                   placeholder="VD: Sản khoa, Chẩn đoán hình ảnh" value="${formData.allowedSpecialties}">
-                        </div>
-                        <div class="col-md-3 d-flex align-items-end gap-3 pb-1">
-                            <div class="form-check">
-                                <input type="checkbox" name="requiresFasting" class="form-check-input" id="createFasting"
-                                       ${formData.containsKey('requiresFasting') ? 'checked' : ''}>
-                                <label class="form-check-label small" for="createFasting">Nhịn ăn</label>
-                            </div>
-                            <div class="form-check">
-                                <input type="checkbox" name="requiresFullBladder" class="form-check-input" id="createBladder"
-                                       ${formData.containsKey('requiresFullBladder') ? 'checked' : ''}>
-                                <label class="form-check-label small" for="createBladder">Đầy bàng quang</label>
+                        <div class="col-12">
+                            <div class="d-flex gap-4 align-items-center">
+                                <div class="form-check">
+                                    <input type="checkbox" name="requiresFasting" class="form-check-input" id="createFasting"
+                                           ${formData.containsKey('requiresFasting') ? 'checked' : ''}>
+                                    <label class="form-check-label small fw-semibold" for="createFasting">
+                                        🍽️ Nhịn ăn trước khi thực hiện
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input type="checkbox" name="requiresFullBladder" class="form-check-input" id="createBladder"
+                                           ${formData.containsKey('requiresFullBladder') ? 'checked' : ''}>
+                                    <label class="form-check-label small fw-semibold" for="createBladder">
+                                        💧 Đầy bàng quang trước khi thực hiện
+                                    </label>
+                                </div>
+                                <div style="font-size:0.68rem;color:var(--c-muted);">
+                                    <i class="bi bi-info-circle"></i> Thông tin này sẽ hiển thị cho bệnh nhân khi đặt lịch
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -766,75 +924,172 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="post" action="${pageContext.request.contextPath}/manager/services/">
+            <form method="post" action="${pageContext.request.contextPath}/manager/services/"
+                  id="editServiceForm" novalidate onsubmit="return validateEditService()">
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                 <input type="hidden" name="action" value="edit">
                 <input type="hidden" name="id" id="editServiceId">
                 <div class="modal-body">
+                    <!-- Server-side general error -->
+                    <c:if test="${not empty errors.general}">
+                        <div class="alert alert-danger d-flex align-items-center gap-2 mb-3" style="font-size:0.8rem;padding:0.5rem 0.75rem;border-radius:var(--r-sm);">
+                            <i class="bi bi-exclamation-triangle-fill"></i>${errors.general}
+                        </div>
+                    </c:if>
+
                     <div class="form-section-title"><i class="bi bi-info-circle me-1"></i>Thông tin cơ bản</div>
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">
-                            <label class="form-label fw-semibold small">Mã dịch vụ <span class="text-danger">*</span></label>
-                            <input type="text" name="serviceCode" id="editServiceCode" class="form-control form-control-sm" required maxlength="50">
+                            <label class="form-label fw-semibold small">Mã dịch vụ 🔒</label>
+                            <input type="text" id="editServiceCode"
+                                   class="form-control form-control-sm text-uppercase" readonly disabled
+                                   style="font-family:'Courier New',monospace;letter-spacing:0.05em;background:#f5f5f5;color:#757575;cursor:not-allowed;">
+                            <div class="form-text" style="font-size:0.68rem;">
+                                <i class="bi bi-lock-fill"></i> Mã định danh — không thể thay đổi sau khi tạo
+                            </div>
                         </div>
                         <div class="col-md-8">
                             <label class="form-label fw-semibold small">Tên dịch vụ <span class="text-danger">*</span></label>
-                            <input type="text" name="serviceName" id="editServiceName" class="form-control form-control-sm" required maxlength="100">
+                            <input type="text" name="serviceName" id="editServiceName"
+                                   class="form-control form-control-sm" required
+                                   minlength="2" maxlength="100">
+                            <div class="invalid-feedback" id="editErr-serviceName"></div>
+                            <c:if test="${not empty errors.serviceName}">
+                                <div class="text-danger mt-1" style="font-size:0.72rem;"><i class="bi bi-exclamation-circle me-1"></i>${errors.serviceName}</div>
+                            </c:if>
                         </div>
                         <div class="col-12">
                             <label class="form-label fw-semibold small">Mô tả</label>
-                            <textarea name="description" id="editDescription" class="form-control form-control-sm" rows="2" maxlength="500"></textarea>
+                            <textarea name="description" id="editDescription"
+                                      class="form-control form-control-sm" rows="2" maxlength="500"></textarea>
+                            <div class="invalid-feedback d-block" id="editErr-description"></div>
+                            <c:if test="${not empty errors.description}">
+                                <div class="text-danger mt-1" style="font-size:0.72rem;"><i class="bi bi-exclamation-circle me-1"></i>${errors.description}</div>
+                            </c:if>
                         </div>
                     </div>
 
-                    <div class="form-section-title"><i class="bi bi-cash-coin me-1"></i>Giá &amp; Thời gian</div>
+                    <div class="form-section-title"><i class="bi bi-cash-coin me-1"></i>Giá &amp; Thời gian &amp; Nhóm</div>
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">
                             <label class="form-label fw-semibold small">Đơn giá (VNĐ) <span class="text-danger">*</span></label>
                             <div class="input-group input-group-sm">
                                 <span class="input-group-text fw-bold">₫</span>
-                                <input type="number" name="price" id="editPrice" class="form-control" required min="50000" step="1000">
+                                <input type="text" name="price" id="editPrice"
+                                       class="form-control" required
+                                       placeholder="VD: 500000"
+                                       oninput="formatPriceInput(this)"
+                                       onkeypress="return onlyDigits(event)"
+                                       autocomplete="off">
                             </div>
+                            <div class="invalid-feedback" id="editErr-price"></div>
+                            <div class="form-text" style="font-size:0.68rem;">Số nguyên dương, từ 50.000đ đến 100.000.000đ</div>
                             <c:if test="${not empty errors.price}">
                                 <div class="text-danger mt-1" style="font-size:0.72rem;"><i class="bi bi-exclamation-circle me-1"></i>${errors.price}</div>
                             </c:if>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold small">Thời gian (phút)</label>
-                            <input type="number" name="durationMins" id="editDurationMins" class="form-control form-control-sm" min="0">
+                            <label class="form-label fw-semibold small">Thời gian (phút) <span class="text-danger">*</span></label>
+                            <input type="text" name="durationMins" id="editDurationMins"
+                                   class="form-control form-control-sm" required
+                                   list="durationSuggestions"
+                                   onkeypress="return onlyDigits(event)"
+                                   autocomplete="off">
+                            <div class="invalid-feedback" id="editErr-durationMins"></div>
+                            <div class="form-text" style="font-size:0.68rem;">Tối thiểu 5 phút, tối đa 480 phút</div>
+                            <c:if test="${not empty errors.durationMins}">
+                                <div class="text-danger mt-1" style="font-size:0.72rem;"><i class="bi bi-exclamation-circle me-1"></i>${errors.durationMins}</div>
+                            </c:if>
                         </div>
                         <div class="col-md-5">
-                            <label class="form-label fw-semibold small">Nhóm dịch vụ</label>
-                            <select name="categoryId" id="editCategoryId" class="form-select form-select-sm">
-                                <option value="">-- Chọn nhóm --</option>
+                            <label class="form-label fw-semibold small">Nhóm dịch vụ <span class="text-danger">*</span></label>
+                            <select name="categoryId" id="editCategoryId" class="form-select form-select-sm" required>
+                                <option value="">-- Chọn nhóm dịch vụ --</option>
                                 <c:forEach var="cat" items="${categories}">
                                     <option value="${cat.id}">${fn:escapeXml(cat.categoryName)}</option>
                                 </c:forEach>
                             </select>
+                            <div class="invalid-feedback" id="editErr-categoryId"></div>
+                            <c:if test="${not empty errors.categoryId}">
+                                <div class="text-danger mt-1" style="font-size:0.72rem;"><i class="bi bi-exclamation-circle me-1"></i>${errors.categoryId}</div>
+                            </c:if>
                         </div>
                     </div>
 
-                    <div class="form-section-title"><i class="bi bi-exclamation-diamond me-1"></i>Yêu cầu đặc biệt &amp; Trạng thái</div>
+                    <div class="form-section-title"><i class="bi bi-geo-alt me-1"></i>Phòng &amp; Chuyên khoa &amp; Trạng thái</div>
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">
-                            <label class="form-label fw-semibold small">Phòng yêu cầu</label>
-                            <input type="text" name="requiredRoomType" id="editRoomType" class="form-control form-control-sm" maxlength="50">
+                            <label class="form-label fw-semibold small">Phòng thực hiện</label>
+                            <select name="requiredRoomType" id="editRoomType" class="form-select form-select-sm">
+                                <option value="">-- Chọn phòng --</option>
+                                <optgroup label="Phòng Khám">
+                                    <option value="Phòng Khám số 1">🏥 Phòng Khám số 1</option>
+                                    <option value="Phòng Khám số 2">🏥 Phòng Khám số 2</option>
+                                </optgroup>
+                                <optgroup label="Phòng Siêu âm">
+                                    <option value="Phòng Siêu âm 1">🩻 Phòng Siêu âm 1</option>
+                                    <option value="Phòng Siêu âm 2">🩻 Phòng Siêu âm 2</option>
+                                    <option value="Phòng Siêu âm 3">🩻 Phòng Siêu âm 3</option>
+                                </optgroup>
+                                <optgroup label="Phòng Xét nghiệm">
+                                    <option value="Phòng Xét nghiệm">🔬 Phòng Xét nghiệm</option>
+                                </optgroup>
+                                <optgroup label="Phòng Thủ thuật">
+                                    <option value="Phòng Thủ thuật">🏨 Phòng Thủ thuật</option>
+                                </optgroup>
+                            </select>
+                            <div class="invalid-feedback" id="editErr-requiredRoomType"></div>
+                            <c:if test="${not empty errors.requiredRoomType}">
+                                <div class="text-danger mt-1" style="font-size:0.72rem;"><i class="bi bi-exclamation-circle me-1"></i>${errors.requiredRoomType}</div>
+                            </c:if>
                         </div>
                         <div class="col-md-5">
-                            <label class="form-label fw-semibold small">Chuyên khoa</label>
-                            <input type="text" name="allowedSpecialties" id="editSpecialties" class="form-control form-control-sm" maxlength="255">
+                            <label class="form-label fw-semibold small">Chuyên khoa <span class="text-muted">(chọn nhiều)</span></label>
+                            <div class="d-flex flex-wrap gap-2" style="padding-top:0.35rem;" id="editSpecialtiesGroup">
+                                <div class="form-check form-check-inline">
+                                    <input type="checkbox" class="form-check-input specialty-checkbox" id="editSpecSan"
+                                           value="Sản khoa" onchange="updateSpecialtiesValue('edit')">
+                                    <label class="form-check-label small" for="editSpecSan">Sản khoa</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input type="checkbox" class="form-check-input specialty-checkbox" id="editSpecPhu"
+                                           value="Phụ khoa" onchange="updateSpecialtiesValue('edit')">
+                                    <label class="form-check-label small" for="editSpecPhu">Phụ khoa</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input type="checkbox" class="form-check-input specialty-checkbox" id="editSpecCDHA"
+                                           value="Chẩn đoán hình ảnh" onchange="updateSpecialtiesValue('edit')">
+                                    <label class="form-check-label small" for="editSpecCDHA">Chẩn đoán hình ảnh</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input type="checkbox" class="form-check-input specialty-checkbox" id="editSpecXN"
+                                           value="Xét nghiệm" onchange="updateSpecialtiesValue('edit')">
+                                    <label class="form-check-label small" for="editSpecXN">Xét nghiệm</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input type="checkbox" class="form-check-input specialty-checkbox" id="editSpecKHHGD"
+                                           value="Kế hoạch hóa gia đình" onchange="updateSpecialtiesValue('edit')">
+                                    <label class="form-check-label small" for="editSpecKHHGD">KHHGĐ</label>
+                                </div>
+                            </div>
+                            <input type="hidden" name="allowedSpecialties" id="editSpecialtiesHidden" value="">
+                            <div class="invalid-feedback d-block" id="editErr-allowedSpecialties"></div>
+                            <c:if test="${not empty errors.allowedSpecialties}">
+                                <div class="text-danger mt-1" style="font-size:0.72rem;"><i class="bi bi-exclamation-circle me-1"></i>${errors.allowedSpecialties}</div>
+                            </c:if>
                         </div>
                         <div class="col-md-3 d-flex flex-column gap-2">
                             <div class="form-check">
                                 <input type="checkbox" name="isActive" class="form-check-input" id="editIsActive">
-                                <label class="form-check-label small fw-semibold" for="editIsActive">Hoạt động</label>
+                                <label class="form-check-label small fw-semibold" for="editIsActive">🟢 Hoạt động</label>
                             </div>
                             <div class="form-check">
                                 <input type="checkbox" name="requiresFasting" class="form-check-input" id="editFasting">
-                                <label class="form-check-label small" for="editFasting">Nhịn ăn</label>
+                                <label class="form-check-label small" for="editFasting">🍽️ Nhịn ăn</label>
                             </div>
                             <div class="form-check">
                                 <input type="checkbox" name="requiresFullBladder" class="form-check-input" id="editBladder">
-                                <label class="form-check-label small" for="editBladder">Đầy bàng quang</label>
+                                <label class="form-check-label small" for="editBladder">💧 Đầy bàng quang</label>
                             </div>
                         </div>
                     </div>
@@ -846,8 +1101,12 @@
                     </div>
                     <div class="mt-2">
                         <label class="form-label fw-semibold small">Lý do thay đổi giá <span class="text-muted">(nếu có)</span></label>
-                        <input type="text" name="changeReason" id="editChangeReason" class="form-control form-control-sm" maxlength="500"
+                        <input type="text" name="changeReason" id="editChangeReason"
+                               class="form-control form-control-sm" maxlength="500"
                                placeholder="VD: Điều chỉnh theo chính sách giá mới của phòng khám">
+                        <c:if test="${not empty errors.changeReason}">
+                            <div class="text-danger mt-1" style="font-size:0.72rem;"><i class="bi bi-exclamation-circle me-1"></i>${errors.changeReason}</div>
+                        </c:if>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -883,27 +1142,415 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
     }
 })();
 
-// Open Edit Modal
+// ──────────────────────────────────────────────
+//  Utility Functions
+// ──────────────────────────────────────────────
+
+/** Định dạng số tiền VNĐ */
+function formatVND(amount) {
+    return new Intl.NumberFormat('vi-VN').format(amount);
+}
+
+/** Chỉ cho phép nhập chữ số (dùng onkeypress) */
+function onlyDigits(event) {
+    var charCode = event.which ? event.which : event.keyCode;
+    if (charCode > 31 && (charCode < 48 || charCode > 57)) return false;
+    return true;
+}
+
+/** Auto-format giá tiền khi nhập */
+function formatPriceInput(el) {
+    var raw = el.value.replace(/[^0-9]/g, '');
+    if (raw) {
+        el.value = parseInt(raw, 10).toLocaleString('vi-VN');
+    }
+}
+
+/** Lấy giá trị số nguyên từ input đã format */
+function getPriceRaw(el) {
+    return parseInt(el.value.replace(/[^0-9]/g, ''), 10) || 0;
+}
+
+/** Xoá lỗi field khi user sửa */
+function clearFieldError(fieldName) {
+    var el = document.getElementById('add' + fieldName.charAt(0).toUpperCase() + fieldName.slice(1));
+    if (el) el.classList.remove('is-invalid');
+    var errEl = document.getElementById('err-' + fieldName);
+    if (errEl) errEl.textContent = '';
+}
+
+/** Cập nhật bộ đếm ký tự */
+function updateCharCount(textareaId, counterId, maxLen) {
+    var ta = document.getElementById(textareaId);
+    var counter = document.getElementById(counterId);
+    if (ta && counter) {
+        var len = ta.value.length;
+        counter.textContent = len + '/' + maxLen;
+        counter.style.color = len > maxLen ? '#c62828' : '';
+    }
+}
+
+/** Gộp giá trị các checkbox chuyên khoa thành chuỗi, lưu vào hidden input */
+function updateSpecialtiesValue(prefix) {
+    var checkboxes = document.querySelectorAll('#' + prefix + 'SpecialtiesGroup input[type="checkbox"]');
+    var values = [];
+    for (var i = 0; i < checkboxes.length; i++) {
+        if (checkboxes[i].checked) values.push(checkboxes[i].value);
+    }
+    var hidden = document.getElementById(prefix + 'SpecialtiesHidden');
+    if (hidden) hidden.value = values.join(', ');
+}
+
+/** Set trạng thái checkbox chuyên khoa từ chuỗi */
+function setSpecialtiesFromString(prefix, str) {
+    if (!str) return;
+    var values = str.split(',').map(function(v) { return v.trim(); });
+    var checkboxes = document.querySelectorAll('#' + prefix + 'SpecialtiesGroup input[type="checkbox"]');
+    for (var i = 0; i < checkboxes.length; i++) {
+        checkboxes[i].checked = values.indexOf(checkboxes[i].value) >= 0;
+    }
+    updateSpecialtiesValue(prefix);
+}
+
+function showFieldError(inputEl, errEl, message) {
+    if (inputEl) inputEl.classList.add('is-invalid');
+    if (errEl) errEl.textContent = message;
+}
+
+function clearOneError(inputEl, errEl) {
+    if (inputEl) inputEl.classList.remove('is-invalid');
+    if (errEl) errEl.textContent = '';
+}
+
+// ──────────────────────────────────────────────
+//  Validate Form Thêm Dịch Vụ (client-side)
+// ──────────────────────────────────────────────
+function validateAddService() {
+    var valid = true;
+    var ONLY_DIGITS = /^\d+$/;
+    var ONLY_SPECIAL = /^[\s!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]+$/;
+    var CODEMAX = 30;
+
+    // ── Mã dịch vụ (3-30, chữ hoa, số, gạch ngang, gạch dưới) ──
+    var codeEl = document.getElementById('addServiceCode');
+    var codeErr = document.getElementById('err-serviceCode');
+    var code = (codeEl.value || '').trim();
+    var codeRegex = new RegExp('^[A-Z0-9][A-Z0-9_\\-]{2,' + (CODEMAX - 1) + '}$');
+    if (!code) {
+        showFieldError(codeEl, codeErr, 'Mã dịch vụ không được để trống.');
+        valid = false;
+    } else if (code.indexOf(' ') >= 0) {
+        showFieldError(codeEl, codeErr, 'Mã dịch vụ không được chứa khoảng trắng.');
+        valid = false;
+    } else if (code.length < 3) {
+        showFieldError(codeEl, codeErr, 'Mã dịch vụ phải có ít nhất 3 ký tự.');
+        valid = false;
+    } else if (code.length > CODEMAX) {
+        showFieldError(codeEl, codeErr, 'Mã dịch vụ không được vượt quá ' + CODEMAX + ' ký tự.');
+        valid = false;
+    } else if (!codeRegex.test(code)) {
+        showFieldError(codeEl, codeErr, 'Mã dịch vụ chỉ được chứa chữ IN HOA, số, gạch ngang (-) và gạch dưới (_).');
+        valid = false;
+    } else {
+        clearOneError(codeEl, codeErr);
+    }
+
+    // ── Tên dịch vụ (2-100, không được chỉ gồm số hoặc KTB) ──
+    var nameEl = document.getElementById('addServiceName');
+    var nameErr = document.getElementById('err-serviceName');
+    var name = (nameEl.value || '').trim();
+    if (!name) {
+        showFieldError(nameEl, nameErr, 'Tên dịch vụ không được để trống.');
+        valid = false;
+    } else if (name.length < 2) {
+        showFieldError(nameEl, nameErr, 'Tên dịch vụ phải có ít nhất 2 ký tự.');
+        valid = false;
+    } else if (name.length > 100) {
+        showFieldError(nameEl, nameErr, 'Tên dịch vụ không được vượt quá 100 ký tự.');
+        valid = false;
+    } else if (ONLY_DIGITS.test(name)) {
+        showFieldError(nameEl, nameErr, 'Tên dịch vụ không được chỉ bao gồm chữ số.');
+        valid = false;
+    } else if (ONLY_SPECIAL.test(name)) {
+        showFieldError(nameEl, nameErr, 'Tên dịch vụ không được chỉ bao gồm ký tự đặc biệt.');
+        valid = false;
+    } else {
+        clearOneError(nameEl, nameErr);
+    }
+
+    // ── Nhóm dịch vụ (bắt buộc) ──
+    var catEl = document.getElementById('addCategoryId');
+    var catErr = document.getElementById('err-categoryId');
+    if (!catEl.value) {
+        showFieldError(catEl, catErr, 'Vui lòng chọn nhóm dịch vụ.');
+        valid = false;
+    } else {
+        clearOneError(catEl, catErr);
+    }
+
+    // ── Đơn giá (bắt buộc, số nguyên, 50k-100tr) ──
+    var priceEl = document.getElementById('addPrice');
+    var priceErr = document.getElementById('err-price');
+    var priceVal = getPriceRaw(priceEl);
+    if (!priceEl.value.trim()) {
+        showFieldError(priceEl, priceErr, 'Đơn giá không được để trống.');
+        valid = false;
+    } else if (isNaN(priceVal) || priceVal <= 0) {
+        showFieldError(priceEl, priceErr, 'Đơn giá không hợp lệ. Vui lòng chỉ nhập số nguyên dương.');
+        valid = false;
+    } else if (priceVal < 50000) {
+        showFieldError(priceEl, priceErr, 'Đơn giá phải lớn hơn hoặc bằng ' + formatVND(50000) + ' VNĐ.');
+        valid = false;
+    } else if (priceVal > 100000000) {
+        showFieldError(priceEl, priceErr, 'Đơn giá không được vượt quá ' + formatVND(100000000) + ' VNĐ.');
+        valid = false;
+    } else {
+        clearOneError(priceEl, priceErr);
+    }
+
+    // ── Thời gian (bắt buộc, 5-480 phút) ──
+    var durEl = document.getElementById('addDurationMins');
+    var durErr = document.getElementById('err-durationMins');
+    var durVal = (durEl.value || '').trim();
+    if (!durVal) {
+        showFieldError(durEl, durErr, 'Thời gian thực hiện không được để trống.');
+        valid = false;
+    } else {
+        var durNum = parseInt(durVal, 10);
+        if (isNaN(durNum)) {
+            showFieldError(durEl, durErr, 'Thời gian không hợp lệ. Vui lòng nhập số nguyên (VD: 30).');
+            valid = false;
+        } else if (durNum < 5) {
+            showFieldError(durEl, durErr, 'Thời gian thực hiện tối thiểu là 5 phút.');
+            valid = false;
+        } else if (durNum > 480) {
+            showFieldError(durEl, durErr, 'Thời gian thực hiện không được vượt quá 480 phút (8 giờ).');
+            valid = false;
+        } else {
+            clearOneError(durEl, durErr);
+        }
+    }
+
+    // ── Mô tả (optional, max 500) ──
+    var descEl = document.getElementById('addDescription');
+    var descErr = document.getElementById('err-description');
+    if (descEl && descEl.value.length > 500) {
+        showFieldError(descEl, descErr, 'Mô tả không được vượt quá 500 ký tự.');
+        valid = false;
+    } else {
+        clearOneError(descEl, descErr);
+    }
+
+    // ── Chuyên khoa (optional) ──
+    updateSpecialtiesValue('add');
+    var specHidden = document.getElementById('addSpecialtiesHidden');
+    var specErr = document.getElementById('err-allowedSpecialties');
+    if (specHidden && specHidden.value.length > 255) {
+        showFieldError(specHidden, specErr, 'Chuyên khoa áp dụng không được vượt quá 255 ký tự.');
+        valid = false;
+    } else {
+        clearOneError(specHidden, specErr);
+    }
+
+    if (!valid) {
+        var firstError = document.querySelector('#addServiceForm .is-invalid');
+        if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+        // Chuẩn hóa giá về số nguyên trước khi submit (bỏ định dạng .000)
+        var addPriceEl = document.getElementById('addPrice');
+        if (addPriceEl) addPriceEl.value = getPriceRaw(addPriceEl);
+    }
+
+    return valid;
+}
+
+// ──────────────────────────────────────────────
+//  Validate Form Sửa Dịch Vụ (client-side)
+// ──────────────────────────────────────────────
+function validateEditService() {
+    var valid = true;
+    var ONLY_DIGITS = /^\d+$/;
+    var ONLY_SPECIAL = /^[\s!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]+$/;
+
+    // ── Tên dịch vụ ──
+    var nameEl = document.getElementById('editServiceName');
+    var nameErr = document.getElementById('editErr-serviceName');
+    var name = (nameEl.value || '').trim();
+    if (!name) {
+        showFieldError(nameEl, nameErr, 'Tên dịch vụ không được để trống.');
+        valid = false;
+    } else if (name.length < 2) {
+        showFieldError(nameEl, nameErr, 'Tên dịch vụ phải có ít nhất 2 ký tự.');
+        valid = false;
+    } else if (name.length > 100) {
+        showFieldError(nameEl, nameErr, 'Tên dịch vụ không được vượt quá 100 ký tự.');
+        valid = false;
+    } else if (ONLY_DIGITS.test(name)) {
+        showFieldError(nameEl, nameErr, 'Tên dịch vụ không được chỉ bao gồm chữ số.');
+        valid = false;
+    } else if (ONLY_SPECIAL.test(name)) {
+        showFieldError(nameEl, nameErr, 'Tên dịch vụ không được chỉ bao gồm ký tự đặc biệt.');
+        valid = false;
+    } else {
+        clearOneError(nameEl, nameErr);
+    }
+
+    // ── Nhóm dịch vụ (bắt buộc) ──
+    var catEl = document.getElementById('editCategoryId');
+    var catErr = document.getElementById('editErr-categoryId');
+    if (!catEl.value) {
+        showFieldError(catEl, catErr, 'Vui lòng chọn nhóm dịch vụ.');
+        valid = false;
+    } else {
+        clearOneError(catEl, catErr);
+    }
+
+    // ── Đơn giá ──
+    var priceEl = document.getElementById('editPrice');
+    var priceErr = document.getElementById('editErr-price');
+    var priceVal = getPriceRaw(priceEl);
+    if (!priceEl.value.trim()) {
+        showFieldError(priceEl, priceErr, 'Đơn giá không được để trống.');
+        valid = false;
+    } else if (isNaN(priceVal) || priceVal <= 0) {
+        showFieldError(priceEl, priceErr, 'Đơn giá không hợp lệ. Vui lòng chỉ nhập số nguyên dương.');
+        valid = false;
+    } else if (priceVal < 50000) {
+        showFieldError(priceEl, priceErr, 'Đơn giá phải lớn hơn hoặc bằng ' + formatVND(50000) + ' VNĐ.');
+        valid = false;
+    } else if (priceVal > 100000000) {
+        showFieldError(priceEl, priceErr, 'Đơn giá không được vượt quá ' + formatVND(100000000) + ' VNĐ.');
+        valid = false;
+    } else {
+        clearOneError(priceEl, priceErr);
+    }
+
+    // ── Thời gian (bắt buộc, 5-480) ──
+    var durEl = document.getElementById('editDurationMins');
+    var durErr = document.getElementById('editErr-durationMins');
+    var durVal = (durEl.value || '').trim();
+    if (!durVal) {
+        showFieldError(durEl, durErr, 'Thời gian thực hiện không được để trống.');
+        valid = false;
+    } else {
+        var durNum = parseInt(durVal, 10);
+        if (isNaN(durNum)) {
+            showFieldError(durEl, durErr, 'Thời gian không hợp lệ. Vui lòng nhập số nguyên.');
+            valid = false;
+        } else if (durNum < 5) {
+            showFieldError(durEl, durErr, 'Thời gian thực hiện tối thiểu là 5 phút.');
+            valid = false;
+        } else if (durNum > 480) {
+            showFieldError(durEl, durErr, 'Thời gian thực hiện không được vượt quá 480 phút (8 giờ).');
+            valid = false;
+        } else {
+            clearOneError(durEl, durErr);
+        }
+    }
+
+    // ── Mô tả ──
+    var descEl = document.getElementById('editDescription');
+    var descErr = document.getElementById('editErr-description');
+    if (descEl && descEl.value.length > 500) {
+        showFieldError(descEl, descErr, 'Mô tả không được vượt quá 500 ký tự.');
+        valid = false;
+    } else {
+        clearOneError(descEl, descErr);
+    }
+
+    // ── Chuyên khoa ──
+    updateSpecialtiesValue('edit');
+    var specHidden = document.getElementById('editSpecialtiesHidden');
+    var specErr = document.getElementById('editErr-allowedSpecialties');
+    if (specHidden && specHidden.value.length > 255) {
+        showFieldError(specHidden, specErr, 'Chuyên khoa áp dụng không được vượt quá 255 ký tự.');
+        valid = false;
+    } else {
+        clearOneError(specHidden, specErr);
+    }
+
+    if (!valid) {
+        var firstError = document.querySelector('#editServiceForm .is-invalid');
+        if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+        // Chuẩn hóa giá về số nguyên trước khi submit (bỏ định dạng .000)
+        var editPriceEl = document.getElementById('editPrice');
+        if (editPriceEl) editPriceEl.value = getPriceRaw(editPriceEl);
+    }
+
+    return valid;
+}
+
+// ──────────────────────────────────────────────
+//  Modal Events
+// ──────────────────────────────────────────────
+(function() {
+    var addModal = document.getElementById('addServiceModal');
+    if (addModal) {
+        addModal.addEventListener('shown.bs.modal', function() {
+            updateCharCount('addDescription', 'descCount', 500);
+            var form = document.getElementById('addServiceForm');
+            if (form) {
+                var invalids = form.querySelectorAll('.is-invalid');
+                for (var i = 0; i < invalids.length; i++) invalids[i].classList.remove('is-invalid');
+                var errDivs = form.querySelectorAll('.invalid-feedback');
+                for (var j = 0; j < errDivs.length; j++) errDivs[j].textContent = '';
+            }
+        });
+    }
+
+    var editModal = document.getElementById('editServiceModal');
+    if (editModal) {
+        editModal.addEventListener('shown.bs.modal', function() {
+            var form = document.getElementById('editServiceForm');
+            if (form) {
+                var invalids = form.querySelectorAll('.is-invalid');
+                for (var i = 0; i < invalids.length; i++) invalids[i].classList.remove('is-invalid');
+            }
+        });
+    }
+})();
+
+// ──────────────────────────────────────────────
+//  Open Edit Modal (updated: room dropdown + specialties checkboxes)
+// ──────────────────────────────────────────────
 function openEditModal(id, code, name, desc, price, duration, fasting, bladder, room, specialties, catId, isActive) {
     document.getElementById('editServiceId').value = id;
+    // Mã dịch vụ: readonly, hiển thị nhưng không cho sửa
     document.getElementById('editServiceCode').value = code || '';
     document.getElementById('editServiceName').value = name || '';
     document.getElementById('editDescription').value = desc || '';
-    document.getElementById('editPrice').value = price || '50000';
+    // Đơn giá: hiển thị có format
+    var priceEl = document.getElementById('editPrice');
+    priceEl.value = price ? parseInt(price, 10).toLocaleString('vi-VN') : '';
     document.getElementById('editDurationMins').value = duration || '';
-    document.getElementById('editRoomType').value = room || '';
-    document.getElementById('editSpecialties').value = specialties || '';
     document.getElementById('editChangeReason').value = '';
-    // Set category select
-    var catSelect = document.getElementById('editCategoryId');
-    if (catSelect && catId) {
-        for (var i = 0; i < catSelect.options.length; i++) {
-            if (catSelect.options[i].value === catId) {
-                catSelect.options[i].selected = true;
+
+    // Phòng thực hiện: set dropdown
+    var roomSelect = document.getElementById('editRoomType');
+    if (roomSelect && room) {
+        for (var i = 0; i < roomSelect.options.length; i++) {
+            if (roomSelect.options[i].value === room) {
+                roomSelect.options[i].selected = true;
                 break;
             }
         }
     }
+
+    // Chuyên khoa: set checkboxes
+    setSpecialtiesFromString('edit', specialties || '');
+
+    // Nhóm dịch vụ
+    var catSelect = document.getElementById('editCategoryId');
+    if (catSelect && catId) {
+        for (var k = 0; k < catSelect.options.length; k++) {
+            if (catSelect.options[k].value === catId) {
+                catSelect.options[k].selected = true;
+                break;
+            }
+        }
+    }
+
     document.getElementById('editFasting').checked = fasting === 'true';
     document.getElementById('editBladder').checked = bladder === 'true';
     document.getElementById('editIsActive').checked = isActive === 'true';
@@ -920,11 +1567,25 @@ function openEditModal(id, code, name, desc, price, duration, fasting, bladder, 
         document.getElementById('editServiceCode').value = '${fn:escapeXml(formData.serviceCode)}';
         document.getElementById('editServiceName').value = '${fn:escapeXml(formData.serviceName)}';
         document.getElementById('editDescription').value = '${fn:escapeXml(formData.description)}';
-        document.getElementById('editPrice').value = '${formData.price}';
+        // Format giá
+        var priceVal = '${formData.price}';
+        document.getElementById('editPrice').value = priceVal ? parseInt(priceVal, 10).toLocaleString('vi-VN') : '';
         document.getElementById('editDurationMins').value = '${formData.durationMins}';
-        document.getElementById('editRoomType').value = '${fn:escapeXml(formData.requiredRoomType)}';
-        document.getElementById('editSpecialties').value = '${fn:escapeXml(formData.allowedSpecialties)}';
         document.getElementById('editChangeReason').value = '${fn:escapeXml(formData.changeReason)}';
+        // Phòng: set dropdown
+        var roomVal = '${fn:escapeXml(formData.requiredRoomType)}';
+        var roomSelect = document.getElementById('editRoomType');
+        if (roomSelect && roomVal) {
+            for (var r = 0; r < roomSelect.options.length; r++) {
+                if (roomSelect.options[r].value === roomVal) {
+                    roomSelect.options[r].selected = true;
+                    break;
+                }
+            }
+        }
+        // Chuyên khoa: set checkboxes
+        setSpecialtiesFromString('edit', '${fn:escapeXml(formData.allowedSpecialties)}');
+        // Nhóm
         var catSel = document.getElementById('editCategoryId');
         if (catSel && '${formData.categoryId}') {
             for (var i = 0; i < catSel.options.length; i++) {

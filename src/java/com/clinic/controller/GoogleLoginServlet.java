@@ -76,6 +76,15 @@ public class GoogleLoginServlet extends HttpServlet {
             session.setAttribute("user", user);
             session.setAttribute("roleId", user.getRoleId());
 
+            // Nạp permissions vào session
+            try {
+                com.clinic.service.RoleService rs = new com.clinic.service.RoleService();
+                java.util.Set<String> perms = rs.getPermissionKeysByUserId(user.getId());
+                session.setAttribute("userPermissions", perms);
+            } catch (Exception ex) {
+                session.setAttribute("userPermissions", java.util.Collections.emptySet());
+            }
+
             // Ghi audit log
             AuditUtil.log(null, "Đăng nhập Google: " + user.getEmail(), "users",
                     null, "roleId=" + user.getRoleId(), request.getRemoteAddr());

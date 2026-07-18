@@ -101,6 +101,11 @@ public class AdminRoleServlet extends HttpServlet {
                     String roleName = r != null ? r.getRoleName() : ("#" + roleId);
                     AuditUtil.log(req, "Cập nhật phân quyền cho vai trò: " + roleName, "roles",
                             null, "permissions_count=" + permissionIds.size());
+
+                    // Bump global permissions version để AuthorizationFilter
+                    // phát hiện thay đổi và reload permissions cho các session đang hoạt động
+                    com.clinic.filter.AuthorizationFilter.bumpPermissionsVersion();
+
                     resp.sendRedirect(redirectBase + "?success=updated&tab=" + roleId);
                 } else {
                     resp.sendRedirect(redirectBase + "?error=Cập+nhật+phân+quyền+thất+bại&tab=" + roleId);

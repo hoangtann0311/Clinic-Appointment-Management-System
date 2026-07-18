@@ -1,7 +1,6 @@
 package com.clinic.dao;
 
 import com.clinic.config.DatabaseConfig;
-import com.clinic.utils.EncryptionUtil;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -49,7 +48,7 @@ public class DashboardDAO {
     public int countWaitingPatients() {
         String sql = "SELECT COUNT(*) AS total FROM appointments "
                    + "WHERE appointment_date = CAST(GETDATE() AS DATE) "
-                   + "AND LOWER(status) IN ('waiting', 'confirmed', 'inprogress', 'in_progress', 'emergency_sos')";
+                   + "AND status IN ('waiting', 'confirmed', 'in_progress')";
         return executeCount(sql);
     }
 
@@ -214,7 +213,7 @@ public class DashboardDAO {
                    + "  d.id AS doctor_id, "
                    + "  d.full_name AS doctor_name, "
                    + "  ISNULL(d.specialization, N'Chưa cập nhật') AS specialization, "
-                   + "  (SELECT COUNT(*) FROM appointments a2 WHERE a2.doctor_id = d.id AND LOWER(a2.status) IN ('completed', 'success')) AS total_patients, "
+                   + "  (SELECT COUNT(*) FROM appointments a2 WHERE a2.doctor_id = d.id AND a2.status = 'completed') AS total_patients, "
                    + "  (SELECT COUNT(*) FROM appointments a3 WHERE a3.doctor_id = d.id "
                    + "     AND a3.appointment_date = CAST(GETDATE() AS DATE)) AS appointments_today, "
                    + "  ISNULL((SELECT SUM(i.total_amount) FROM invoices i "
@@ -427,10 +426,7 @@ public class DashboardDAO {
      * Lấy danh sách bệnh nhân mới đăng ký gần đây (role_id = 5).
      */
     public List<RecentPatient> getRecentPatients(int limit) {
-        String sql = "SELECT TOP (?) id, full_name, "
-                   + EncryptionUtil.decryptEmailSql("email") + " AS email, "
-                   + EncryptionUtil.decryptPhoneSql("phone") + " AS phone, "
-                   + "created_at "
+        String sql = "SELECT TOP (?) id, full_name, email, phone, created_at "
                    + "FROM users WHERE role_id = 5 "
                    + "ORDER BY id DESC";
 
@@ -471,9 +467,7 @@ public class DashboardDAO {
     }
 
     private List<RecentPatient> getRecentPatientsFallback(int limit) {
-        String sql = "SELECT TOP (?) id, full_name, "
-                   + EncryptionUtil.decryptEmailSql("email") + " AS email, "
-                   + EncryptionUtil.decryptPhoneSql("phone") + " AS phone "
+        String sql = "SELECT TOP (?) id, full_name, email, phone "
                    + "FROM users WHERE role_id = 5 ORDER BY id DESC";
         List<RecentPatient> list = new ArrayList<>();
         Connection conn = null;

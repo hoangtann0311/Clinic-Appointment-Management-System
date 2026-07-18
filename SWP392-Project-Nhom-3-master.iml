@@ -28,6 +28,7 @@
       <sourceFolder url="file://$MODULE_DIR$/src/java" isTestSource="false" packagePrefix="com.clinic" />
     </content>
     <orderEntry type="inheritedJdk" />
+    <orderEntry type="library" scope="PROVIDED" name="Tomcat 10.1.17" level="application_server_libraries" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module-library" exported="">
       <library>

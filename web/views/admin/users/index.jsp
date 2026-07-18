@@ -546,6 +546,7 @@
                                                 <c:choose>
                                                     <c:when test="${u.status eq 'Locked'}">
                                                         <form method="post" action="${pageContext.request.contextPath}/admin/users/" style="display:inline;">
+                                                            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                                             <input type="hidden" name="action" value="toggleStatus">
                                                             <input type="hidden" name="userId" value="${u.id}">
                                                             <input type="hidden" name="newStatus" value="Active">
@@ -561,6 +562,7 @@
                                                     </c:when>
                                                     <c:otherwise>
                                                         <form method="post" action="${pageContext.request.contextPath}/admin/users/" style="display:inline;">
+                                                            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                                             <input type="hidden" name="action" value="toggleStatus">
                                                             <input type="hidden" name="userId" value="${u.id}">
                                                             <input type="hidden" name="newStatus" value="Locked">
@@ -649,6 +651,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form method="post" action="${pageContext.request.contextPath}/admin/users/" autocomplete="off" novalidate>
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                 <input type="hidden" name="action" value="create">
                 <c:if test="${not empty roleGroup}"><input type="hidden" name="roleGroup" value="${roleGroup}"></c:if>
                 <div class="modal-body">
@@ -757,6 +760,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form method="post" action="${pageContext.request.contextPath}/admin/users/" novalidate>
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                 <input type="hidden" name="action" value="edit">
                 <input type="hidden" name="userId" id="editUserId" value="${editUserId}">
                 <c:if test="${not empty roleGroup}"><input type="hidden" name="roleGroup" value="${roleGroup}"></c:if>
@@ -859,7 +863,10 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="post" action="${pageContext.request.contextPath}/admin/users/">
+            <form method="post" action="${pageContext.request.contextPath}/admin/users/"
+                  id="resetPasswordForm" autocomplete="off" novalidate
+                  onsubmit="return validateResetPassword()">
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                 <input type="hidden" name="action" value="resetPassword">
                 <input type="hidden" name="userId" id="resetPwdUserId">
                 <c:if test="${not empty roleGroup}"><input type="hidden" name="roleGroup" value="${roleGroup}"></c:if>
@@ -867,31 +874,70 @@
                 <c:if test="${not empty statusFilter}"><input type="hidden" name="status" value="${statusFilter}"></c:if>
                 <c:if test="${not empty search}"><input type="hidden" name="search" value="${fn:escapeXml(search)}"></c:if>
                 <div class="modal-body">
+                    <%-- Error summary từ server --%>
+                    <c:if test="${not empty resetPwdErrors}">
+                        <div class="alert alert-danger py-2 mb-3 d-flex align-items-center gap-2" style="font-size:0.85rem;">
+                            <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+                            <span>${resetPwdErrors}</span>
+                        </div>
+                    </c:if>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Người dùng</label>
                         <input type="text" id="resetPwdName" class="form-control" readonly
                                style="background:var(--pink-50);font-weight:600;">
                     </div>
-                    <div class="mb-2">
-                        <label class="form-label fw-semibold">Mật khẩu mới <span class="text-danger">*</span></label>
+                    <%-- Mật khẩu mới --%>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            Mật khẩu mới <span class="text-danger">*</span>
+                        </label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-shield-lock-fill"></i></span>
-                            <input type="password" name="newPassword" class="form-control" required minlength="6"
-                                   placeholder="Ít nhất 6 ký tự" id="newPasswordField">
-                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('newPasswordField', this)" tabindex="-1">
+                            <input type="password" name="newPassword" class="form-control"
+                                   placeholder="6-50 ký tự, gồm chữ, số và ký tự đặc biệt"
+                                   id="newPasswordField" maxlength="50"
+                                   oninput="checkPasswordStrength()" onkeyup="checkPasswordMatchLive()">
+                            <button class="btn btn-outline-secondary" type="button"
+                                    onclick="togglePassword('newPasswordField', this)" tabindex="-1">
                                 <i class="bi bi-eye-fill"></i>
                             </button>
                         </div>
+                        <%-- Thanh độ mạnh mật khẩu --%>
+                        <div class="progress mt-1" style="height:4px;" id="pwdStrengthProgress">
+                            <div id="pwdStrengthBar" class="progress-bar bg-danger" role="progressbar"
+                                 style="width:0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <div style="font-size:0.68rem;margin-top:2px;" id="pwdStrengthText" class="text-muted"></div>
+                        <%-- Error inline --%>
+                        <div id="newPasswordError" class="invalid-feedback" style="font-size:0.75rem;"></div>
                         <small class="text-muted" style="font-size:0.72rem;">
-                            <i class="bi bi-info-circle me-1"></i>Mật khẩu phải có ít nhất 6 ký tự.
+                            <i class="bi bi-info-circle me-1"></i>6-50 ký tự, phải có chữ cái, chữ số và ký tự đặc biệt (!@#$%...).
                         </small>
+                    </div>
+                    <%-- Xác nhận mật khẩu --%>
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold">
+                            Xác nhận mật khẩu <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-shield-check"></i></span>
+                            <input type="password" name="confirmPassword" class="form-control"
+                                   placeholder="Nhập lại mật khẩu mới"
+                                   id="confirmPasswordField" maxlength="50"
+                                   onkeyup="checkPasswordMatchLive()">
+                            <button class="btn btn-outline-secondary" type="button"
+                                    onclick="togglePassword('confirmPasswordField', this)" tabindex="-1">
+                                <i class="bi bi-eye-fill"></i>
+                            </button>
+                        </div>
+                        <div id="confirmPasswordError" class="invalid-feedback" style="font-size:0.75rem;"></div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
                         <i class="bi bi-x-circle me-1"></i>Huỷ
                     </button>
-                    <button type="submit" class="btn btn-primary-pink" onclick="return confirm('Xác nhận đặt lại mật khẩu cho người dùng này?')">
+                    <button type="submit" class="btn btn-primary-pink" id="resetPwdSubmitBtn">
                         <i class="bi bi-check-lg me-1"></i>Đặt Lại Mật Khẩu
                     </button>
                 </div>
@@ -938,13 +984,176 @@ function openEditModal(id, fullName, email, phone, roleId, status) {
 function openResetPwdModal(id, fullName) {
     document.getElementById('resetPwdUserId').value = id;
     document.getElementById('resetPwdName').value = fullName;
-    // Reset password field
+    // Reset all fields
     var pwdField = document.getElementById('newPasswordField');
-    if (pwdField) {
-        pwdField.value = '';
-        pwdField.type = 'password';
-    }
+    var confirmField = document.getElementById('confirmPasswordField');
+    if (pwdField) { pwdField.value = ''; pwdField.type = 'password'; pwdField.classList.remove('is-invalid'); }
+    if (confirmField) { confirmField.value = ''; confirmField.type = 'password'; confirmField.classList.remove('is-invalid'); }
+    // Reset error displays
+    var newPwdErr = document.getElementById('newPasswordError');
+    var confirmPwdErr = document.getElementById('confirmPasswordError');
+    if (newPwdErr) { newPwdErr.style.display = 'none'; newPwdErr.textContent = ''; }
+    if (confirmPwdErr) { confirmPwdErr.style.display = 'none'; confirmPwdErr.textContent = ''; }
+    // Reset strength bar
+    var bar = document.getElementById('pwdStrengthBar');
+    var text = document.getElementById('pwdStrengthText');
+    if (bar) { bar.style.width = '0%'; bar.className = 'progress-bar bg-danger'; }
+    if (text) { text.textContent = ''; text.className = 'text-muted'; }
+    // Reset submit button
+    var btn = document.getElementById('resetPwdSubmitBtn');
+    if (btn) btn.disabled = false;
+
     new bootstrap.Modal(document.getElementById('resetPasswordModal')).show();
+}
+
+// ── Validate password strength (real-time) ──
+function checkPasswordStrength() {
+    var pwd = document.getElementById('newPasswordField').value;
+    var bar = document.getElementById('pwdStrengthBar');
+    var text = document.getElementById('pwdStrengthText');
+    if (!bar || !text) return;
+
+    var hasLetter = /[a-zA-Z]/.test(pwd);
+    var hasDigit = /[0-9]/.test(pwd);
+    var hasSpecial = /[^a-zA-Z0-9]/.test(pwd);
+    var hasMinLength = pwd.length >= 6;
+    var hasGoodLength = pwd.length >= 10;
+
+    // Score: mỗi yêu cầu bắt buộc = 1 sao, bonus thêm length/special
+    var score = 0;
+    if (hasMinLength) score++;
+    if (hasLetter) score++;
+    if (hasDigit) score++;
+    if (hasSpecial) score++;
+    if (hasGoodLength) score++;
+
+    var pct = score * 20;
+    bar.style.width = pct + '%';
+
+    // Thiếu yêu cầu bắt buộc → danger
+    if (!hasMinLength || !hasLetter || !hasDigit || !hasSpecial) {
+        var missing = [];
+        if (!hasMinLength) missing.push('≥6 ký tự');
+        if (!hasLetter) missing.push('chữ cái');
+        if (!hasDigit) missing.push('chữ số');
+        if (!hasSpecial) missing.push('ký tự đặc biệt');
+        bar.className = 'progress-bar bg-danger';
+        text.textContent = 'Thiếu: ' + missing.join(', ');
+        text.className = 'text-danger';
+    } else if (score <= 3) {
+        bar.className = 'progress-bar bg-warning';
+        text.textContent = 'Yếu — nên dùng mật khẩu dài hơn';
+        text.className = 'text-warning';
+    } else if (score <= 4) {
+        bar.className = 'progress-bar bg-info';
+        text.textContent = 'Trung bình — có thể dùng thêm';
+        text.className = 'text-info';
+    } else {
+        bar.className = 'progress-bar bg-success';
+        text.textContent = 'Mật khẩu mạnh';
+        text.className = 'text-success';
+    }
+}
+
+// ── Check confirm password match (real-time) ──
+function checkPasswordMatchLive() {
+    var pwd = document.getElementById('newPasswordField').value;
+    var confirm = document.getElementById('confirmPasswordField').value;
+    var errEl = document.getElementById('confirmPasswordError');
+    var field = document.getElementById('confirmPasswordField');
+    if (!errEl || !field) return;
+
+    if (confirm.length > 0 && pwd !== confirm) {
+        field.classList.add('is-invalid');
+        errEl.textContent = 'Mật khẩu xác nhận không khớp.';
+        errEl.style.display = 'block';
+    } else if (confirm.length > 0 && pwd === confirm) {
+        field.classList.remove('is-invalid');
+        field.classList.add('is-valid');
+        errEl.style.display = 'none';
+    } else {
+        field.classList.remove('is-invalid', 'is-valid');
+        errEl.style.display = 'none';
+    }
+}
+
+// ── Validate toàn bộ form reset password (khi submit) ──
+function validateResetPassword() {
+    var pwd = document.getElementById('newPasswordField').value.trim();
+    var confirm = document.getElementById('confirmPasswordField').value.trim();
+    var valid = true;
+
+    // Reset previous errors
+    var pwdField = document.getElementById('newPasswordField');
+    var confirmField = document.getElementById('confirmPasswordField');
+    var pwdErr = document.getElementById('newPasswordError');
+    var confirmErr = document.getElementById('confirmPasswordError');
+    pwdField.classList.remove('is-invalid');
+    confirmField.classList.remove('is-invalid', 'is-valid');
+    if (pwdErr) { pwdErr.style.display = 'none'; }
+    if (confirmErr) { confirmErr.style.display = 'none'; }
+
+    // 1. Validate password không rỗng
+    if (pwd.length === 0) {
+        pwdField.classList.add('is-invalid');
+        if (pwdErr) { pwdErr.textContent = 'Vui lòng nhập mật khẩu mới.'; pwdErr.style.display = 'block'; }
+        valid = false;
+    }
+    // 2. Validate độ dài tối thiểu
+    else if (pwd.length < 6) {
+        pwdField.classList.add('is-invalid');
+        if (pwdErr) { pwdErr.textContent = 'Mật khẩu phải có ít nhất 6 ký tự.'; pwdErr.style.display = 'block'; }
+        valid = false;
+    }
+    // 3. Validate độ dài tối đa
+    else if (pwd.length > 50) {
+        pwdField.classList.add('is-invalid');
+        if (pwdErr) { pwdErr.textContent = 'Mật khẩu không được vượt quá 50 ký tự.'; pwdErr.style.display = 'block'; }
+        valid = false;
+    }
+    // 4. Validate phải có chữ cái
+    else if (!/[a-zA-Z]/.test(pwd)) {
+        pwdField.classList.add('is-invalid');
+        if (pwdErr) { pwdErr.textContent = 'Mật khẩu phải có ít nhất 1 chữ cái (a-z, A-Z).'; pwdErr.style.display = 'block'; }
+        valid = false;
+    }
+    // 5. Validate phải có chữ số
+    else if (!/[0-9]/.test(pwd)) {
+        pwdField.classList.add('is-invalid');
+        if (pwdErr) { pwdErr.textContent = 'Mật khẩu phải có ít nhất 1 chữ số (0-9).'; pwdErr.style.display = 'block'; }
+        valid = false;
+    }
+    // 6. Validate phải có ký tự đặc biệt
+    else if (!/[^a-zA-Z0-9]/.test(pwd)) {
+        pwdField.classList.add('is-invalid');
+        if (pwdErr) { pwdErr.textContent = 'Mật khẩu phải có ít nhất 1 ký tự đặc biệt (!@#$%^&*...).'; pwdErr.style.display = 'block'; }
+        valid = false;
+    }
+
+    // 4. Validate confirm password
+    if (confirm.length === 0) {
+        confirmField.classList.add('is-invalid');
+        if (confirmErr) { confirmErr.textContent = 'Vui lòng xác nhận mật khẩu mới.'; confirmErr.style.display = 'block'; }
+        valid = false;
+    } else if (pwd !== confirm) {
+        confirmField.classList.add('is-invalid');
+        if (confirmErr) { confirmErr.textContent = 'Mật khẩu xác nhận không khớp.'; confirmErr.style.display = 'block'; }
+        valid = false;
+    }
+
+    if (!valid) {
+        // Scroll đến lỗi đầu tiên
+        if (pwdField.classList.contains('is-invalid')) {
+            pwdField.focus();
+        } else if (confirmField.classList.contains('is-invalid')) {
+            confirmField.focus();
+        }
+        return false;
+    }
+
+    // Xác nhận lần cuối
+    return confirm('Bạn có chắc chắn muốn đặt lại mật khẩu cho người dùng này?\n\n'
+        + 'Hành động này không thể hoàn tác. Người dùng sẽ phải đăng nhập bằng mật khẩu mới.');
 }
 
 // ── Toggle password visibility ──
@@ -974,6 +1183,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // Auto-open edit modal nếu validation fail
     <c:if test="${showEditModal}">
         new bootstrap.Modal(document.getElementById('editUserModal')).show();
+    </c:if>
+    // Auto-open reset password modal nếu validation fail
+    <c:if test="${showResetPwdModal}">
+        // Set lại giá trị modal từ server attributes
+        var resetUserId = '${resetPwdUserId}';
+        var resetUserName = '${fn:escapeXml(resetPwdUserName)}';
+        if (resetUserId) document.getElementById('resetPwdUserId').value = resetUserId;
+        if (resetUserName) document.getElementById('resetPwdName').value = resetUserName;
+        new bootstrap.Modal(document.getElementById('resetPasswordModal')).show();
     </c:if>
 });
 </script>

@@ -143,8 +143,12 @@ public class ServiceStatisticsDAO {
      * Top N dịch vụ có lượt sử dụng cao nhất trong khoảng ngày [from, to].
      */
     public List<ServiceStatDetail> getTopServicesByUsageDateRange(int limit, LocalDate from, LocalDate to) {
+        // Bọc subquery để lọc bỏ service có usage_today = 0 trong khoảng ngày.
+        // Đồng nhất với getDoctorPerformance(range) và getUltrasoundStats(range):
+        //   nếu khoảng ngày không có dữ liệu → trả về list rỗng.
         String sql =
-            "SELECT TOP (?) "
+            "SELECT * FROM ("
+            + "SELECT TOP (?) "
             + "  s.id AS service_id, "
             + "  s.service_code, "
             + "  s.service_name, "
@@ -167,7 +171,8 @@ public class ServiceStatisticsDAO {
             + "  GROUP BY a.service_id "
             + ") usage_stats ON usage_stats.service_id = s.id "
             + "WHERE s.is_active = 1 "
-            + "ORDER BY usage_today DESC";
+            + "ORDER BY usage_today DESC"
+            + ") filtered WHERE usage_today > 0";
 
         List<ServiceStatDetail> list = new ArrayList<>();
         Connection conn = null;
@@ -458,6 +463,13 @@ public class ServiceStatisticsDAO {
      * Trả về Map<ngày (dd/MM), doanh thu>.
      */
     public Map<String, Double> getRevenueLast7Days() {
+        return getRevenueLast7Days(LocalDate.now());
+    }
+
+    /**
+     * Doanh thu dịch vụ 7 ngày, kết thúc tại endDate.
+     */
+    public Map<String, Double> getRevenueLast7Days(LocalDate endDate) {
         String sql =
             "SELECT a.appointment_date, ISNULL(SUM(ii.subtotal), 0) AS total "
             + "FROM invoice_items ii "
@@ -465,16 +477,16 @@ public class ServiceStatisticsDAO {
             + "INNER JOIN appointments a ON i.appointment_id = a.id "
             + "WHERE ii.item_type = 'service' "
             + "AND i.status = 'paid' "
-            + "AND a.appointment_date >= DATEADD(DAY, -6, CAST(GETDATE() AS DATE)) "
-            + "AND a.appointment_date <= CAST(GETDATE() AS DATE) "
+            + "AND a.appointment_date >= ? "
+            + "AND a.appointment_date <= ? "
             + "GROUP BY a.appointment_date "
             + "ORDER BY a.appointment_date";
 
+        LocalDate startDate = endDate.minusDays(6);
         Map<String, Double> result = new LinkedHashMap<>();
-        LocalDate today = LocalDate.now();
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM");
-        for (int i = 6; i >= 0; i--) {
-            result.put(today.minusDays(i).format(fmt), 0.0);
+        for (LocalDate d = startDate; !d.isAfter(endDate); d = d.plusDays(1)) {
+            result.put(d.format(fmt), 0.0);
         }
 
         Connection conn = null;
@@ -483,6 +495,8 @@ public class ServiceStatisticsDAO {
         try {
             conn = DatabaseConfig.getConnection();
             ps = conn.prepareStatement(sql);
+            ps.setDate(1, java.sql.Date.valueOf(startDate));
+            ps.setDate(2, java.sql.Date.valueOf(endDate));
             rs = ps.executeQuery();
             while (rs.next()) {
                 java.sql.Date date = rs.getDate("appointment_date");
@@ -549,6 +563,13 @@ public class ServiceStatisticsDAO {
      * Trả về Map<tháng (MM/yyyy), doanh thu>.
      */
     public Map<String, Double> getRevenueLast12Months() {
+        return getRevenueLast12Months(LocalDate.now());
+    }
+
+    /**
+     * Doanh thu dịch vụ 12 tháng, kết thúc tại endDate.
+     */
+    public Map<String, Double> getRevenueLast12Months(LocalDate endDate) {
         String sql =
             "SELECT YEAR(a.appointment_date) AS yr, MONTH(a.appointment_date) AS mth, "
             + "ISNULL(SUM(ii.subtotal), 0) AS total "
@@ -557,15 +578,16 @@ public class ServiceStatisticsDAO {
             + "INNER JOIN appointments a ON i.appointment_id = a.id "
             + "WHERE ii.item_type = 'service' "
             + "AND i.status = 'paid' "
-            + "AND a.appointment_date >= DATEADD(MONTH, -11, DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1)) "
+            + "AND a.appointment_date >= ? "
+            + "AND a.appointment_date <= ? "
             + "GROUP BY YEAR(a.appointment_date), MONTH(a.appointment_date) "
             + "ORDER BY yr, mth";
 
+        LocalDate startMonth = endDate.minusMonths(11).withDayOfMonth(1);
         Map<String, Double> result = new LinkedHashMap<>();
-        LocalDate now = LocalDate.now();
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MM/yyyy");
-        for (int i = 11; i >= 0; i--) {
-            result.put(now.minusMonths(i).format(fmt), 0.0);
+        for (LocalDate d = startMonth; !d.isAfter(endDate); d = d.plusMonths(1)) {
+            result.put(d.format(fmt), 0.0);
         }
 
         Connection conn = null;
@@ -574,6 +596,8 @@ public class ServiceStatisticsDAO {
         try {
             conn = DatabaseConfig.getConnection();
             ps = conn.prepareStatement(sql);
+            ps.setDate(1, java.sql.Date.valueOf(startMonth));
+            ps.setDate(2, java.sql.Date.valueOf(endDate));
             rs = ps.executeQuery();
             while (rs.next()) {
                 int yr = rs.getInt("yr");
