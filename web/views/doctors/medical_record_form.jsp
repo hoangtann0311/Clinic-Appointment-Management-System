@@ -182,6 +182,31 @@
     </div>
   </c:if>
 
+  <c:if test="${param.reorderConflict == '1'}">
+    <div class="alert alert-warning rounded-3 mb-3" role="alert">
+      <div class="d-flex gap-2 align-items-start">
+        <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+        <div class="flex-grow-1">
+          <strong>Đã có chỉ định siêu âm đang xử lý cho ${param.conflictServiceName}.</strong>
+          <div class="small mb-2">Nếu cần chỉ định lại, hãy nêu rõ lý do lâm sàng. Hệ thống sẽ lưu lý do và tạo một yêu cầu mới.</div>
+          <form method="post" action="${pageContext.request.contextPath}/doctor/ultrasound-request/create" class="row g-2 align-items-end">
+            <input type="hidden" name="apptId" value="${param.apptId}">
+            <input type="hidden" name="serviceId" value="${param.conflictServiceId}">
+            <input type="hidden" name="force" value="1">
+            <div class="col-md-9">
+              <label class="form-label small mb-1" for="reorderReason">Lý do chỉ định lại</label>
+              <input id="reorderReason" class="form-control" name="reorderReason" required maxlength="1000"
+                     placeholder="Ví dụ: cần đánh giá lại do triệu chứng thay đổi">
+            </div>
+            <div class="col-md-3 d-grid">
+              <button type="submit" class="btn btn-warning"><i class="bi bi-arrow-repeat me-1"></i>Chỉ định lại</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </c:if>
+
   <%-- Banner --%>
   <div class="card border-0 rounded-4 text-white mb-4" style="background:linear-gradient(135deg,#1a6b3c,#28a745);">
     <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">

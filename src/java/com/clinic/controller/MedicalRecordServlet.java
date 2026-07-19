@@ -327,7 +327,7 @@ public class MedicalRecordServlet extends HttpServlet {
             try {
                 java.math.BigDecimal totalMedAmount = calculatePrescriptionTotal(prescriptionItems);
                 if (totalMedAmount.compareTo(java.math.BigDecimal.ZERO) > 0) {
-                    invoiceDAO.upsertPrescriptionInvoice(apptId, totalMedAmount);
+                    handlePrescriptionInvoice(apptId, totalMedAmount);
                 }
             } catch (Exception ex) {
                 // Không để lỗi hóa đơn chặn luồng chính — log để theo dõi.
@@ -507,5 +507,42 @@ public class MedicalRecordServlet extends HttpServlet {
             System.err.println("[MedicalRecordServlet] calculatePrescriptionTotal error: " + e.getMessage());
         }
         return total;
+    }
+
+    /**
+     * Keeps an already paid/declined prescription invoice immutable. If the
+     * prescription is increased afterwards, only the difference becomes a new
+     * unpaid invoice; otherwise the current unpaid invoice is updated in place.
+     */
+    private void handlePrescriptionInvoice(int appointmentId, java.math.BigDecimal newTotal) {
+        if (newTotal == null) {
+            newTotal = java.math.BigDecimal.ZERO;
+        }
+
+        com.clinic.model.Invoice existing = invoiceDAO.getByAppointmentIdAndType(appointmentId, "PRESCRIPTION");
+        if (existing == null) {
+            invoiceDAO.upsertPrescriptionInvoice(appointmentId, newTotal);
+            return;
+        }
+
+        String status = existing.getStatus() == null ? "" : existing.getStatus();
+        if ("Paid".equalsIgnoreCase(status) || "DeclinedPurchase".equalsIgnoreCase(status)) {
+            java.math.BigDecimal oldTotal = existing.getTotalAmount() == null
+                    ? java.math.BigDecimal.ZERO : existing.getTotalAmount();
+            java.math.BigDecimal difference = newTotal.subtract(oldTotal);
+            if (difference.compareTo(java.math.BigDecimal.ZERO) <= 0) {
+                return;
+            }
+            com.clinic.model.Invoice newInvoice = new com.clinic.model.Invoice();
+            newInvoice.setAppointmentId(appointmentId);
+            newInvoice.setTotalAmount(difference);
+            newInvoice.setStatus("Unpaid");
+            newInvoice.setInvoiceType("PRESCRIPTION");
+            newInvoice.setCreatedAt(new java.sql.Timestamp(System.currentTimeMillis()));
+            invoiceDAO.insert(newInvoice);
+            return;
+        }
+
+        invoiceDAO.upsertPrescriptionInvoice(appointmentId, newTotal);
     }
 }

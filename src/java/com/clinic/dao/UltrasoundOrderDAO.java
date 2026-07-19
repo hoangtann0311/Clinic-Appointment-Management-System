@@ -199,7 +199,15 @@ public class UltrasoundOrderDAO {
     }
 
     public int insert(int medicalRecordId, int doctorId, int serviceId, String status) {
-        String sql = "INSERT INTO test_orders (medical_record_id, doctor_id, service_id, status, created_at) VALUES (?, ?, ?, ?, GETDATE())";
+        return insert(medicalRecordId, doctorId, serviceId, status, null);
+    }
+
+    /**
+     * Creates an ultrasound order.  A reason is recorded only when the doctor
+     * explicitly re-orders a service that already has an active order.
+     */
+    public int insert(int medicalRecordId, int doctorId, int serviceId, String status, String reorderReason) {
+        String sql = "INSERT INTO test_orders (medical_record_id, doctor_id, service_id, status, reorder_reason, created_at) VALUES (?, ?, ?, ?, ?, GETDATE())";
         Connection conn = null;
         PreparedStatement ps = null;
         ResultSet rs = null;
@@ -210,6 +218,7 @@ public class UltrasoundOrderDAO {
             ps.setInt(2, doctorId);
             ps.setInt(3, serviceId);
             ps.setString(4, status);
+            ps.setString(5, reorderReason);
             int rows = ps.executeUpdate();
             if (rows > 0) {
                 rs = ps.getGeneratedKeys();
@@ -226,6 +235,37 @@ public class UltrasoundOrderDAO {
             closeResources(conn, ps, rs);
         }
         return -1;
+    }
+
+    /**
+     * Finds an unfinished order for the same medical record and service.
+     * Completed, cancelled and doctor-confirmed orders may be ordered again.
+     */
+    public UltrasoundWaitingPatient findActiveOrder(int medicalRecordId, int serviceId) {
+        String sql = "SELECT TOP 1 o.id AS order_id, o.medical_record_id, o.service_id, o.status, o.created_at "
+                + "FROM test_orders o "
+                + "WHERE o.medical_record_id = ? AND o.service_id = ? "
+                + "AND UPPER(LTRIM(RTRIM(ISNULL(o.status, '')))) NOT IN ('COMPLETED', 'CANCELLED', 'CONFIRMED') "
+                + "ORDER BY o.id DESC";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, medicalRecordId);
+            ps.setInt(2, serviceId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) {
+                    return null;
+                }
+                UltrasoundWaitingPatient order = new UltrasoundWaitingPatient();
+                order.setOrderId(rs.getInt("order_id"));
+                order.setMedicalRecordId(rs.getInt("medical_record_id"));
+                order.setServiceId(rs.getInt("service_id"));
+                order.setStatus(rs.getString("status"));
+                order.setCreatedAt(rs.getTimestamp("created_at"));
+                return order;
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Lỗi database khi kiểm tra chỉ định siêu âm đang xử lý", e);
+        }
     }
 
     public List<UltrasoundWaitingPatient> findAll(int offset, int pageSize, String search, String statusFilter, String dateFilter, Boolean isEmergency, String sortBy, String sortDir) {

@@ -27,6 +27,9 @@ import java.util.regex.Pattern;
  */
 public class UltrasoundOrderService {
 
+    /** Returned when the same ultrasound service already has an active order. */
+    public static final int ACTIVE_ORDER_EXISTS = -2;
+
     private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
         "appointmentDate",
         "patientName",
@@ -89,7 +92,25 @@ public class UltrasoundOrderService {
      * Tạo chỉ định siêu âm mới (được gọi từ Doctor)
      */
     public int createUltrasoundRequest(int medicalRecordId, int doctorId, int serviceId) {
-        return ultrasoundOrderDAO.insert(medicalRecordId, doctorId, serviceId, "Pending");
+        return createUltrasoundRequest(medicalRecordId, doctorId, serviceId, false, null);
+    }
+
+    /**
+     * Prevents accidental duplicate ultrasound orders. A doctor can intentionally
+     * re-order an active service only after supplying a clinical reason.
+     */
+    public int createUltrasoundRequest(int medicalRecordId, int doctorId, int serviceId,
+                                       boolean forceReorder, String reorderReason) {
+        UltrasoundWaitingPatient activeOrder = ultrasoundOrderDAO.findActiveOrder(medicalRecordId, serviceId);
+        if (activeOrder != null && !forceReorder) {
+            return ACTIVE_ORDER_EXISTS;
+        }
+        String reason = reorderReason == null ? null : reorderReason.trim();
+        if (activeOrder != null && (reason == null || reason.isEmpty())) {
+            throw new IllegalArgumentException("Cần nêu lý do khi chỉ định lại dịch vụ siêu âm đang xử lý.");
+        }
+        return ultrasoundOrderDAO.insert(medicalRecordId, doctorId, serviceId, "Pending",
+                activeOrder == null ? null : reason);
     }
 
     /**

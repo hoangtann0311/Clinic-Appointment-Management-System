@@ -19,6 +19,8 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Servlet xử lý yêu cầu tạo chỉ định siêu âm của Bác sĩ.
@@ -33,6 +35,12 @@ public class DoctorUltrasoundRequestServlet extends HttpServlet {
     private final DoctorDAO doctorDAO = new DoctorDAO();
 
     @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED, "Method Not Allowed");
+    }
+
+    @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
@@ -44,15 +52,23 @@ public class DoctorUltrasoundRequestServlet extends HttpServlet {
 
         String apptIdStr = request.getParameter("apptId");
         String serviceIdStr = request.getParameter("serviceId");
+        boolean forceReorder = "1".equals(request.getParameter("force"))
+                || "true".equalsIgnoreCase(request.getParameter("force"));
+        String reorderReason = request.getParameter("reorderReason");
 
-        if (apptIdStr == null || serviceIdStr == null) {
+        if (apptIdStr == null || apptIdStr.trim().isEmpty()
+                || serviceIdStr == null || serviceIdStr.trim().isEmpty()) {
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Thiếu tham số apptId hoặc serviceId.");
             return;
         }
 
         try {
-            int apptId = Integer.parseInt(apptIdStr);
-            int serviceId = Integer.parseInt(serviceIdStr);
+            int apptId = Integer.parseInt(apptIdStr.trim());
+            int serviceId = Integer.parseInt(serviceIdStr.trim());
+            if (apptId <= 0 || serviceId <= 0) {
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "apptId và serviceId phải là số dương.");
+                return;
+            }
 
             // test_orders.doctor_id references the doctors profile ID, not users.id.
             Doctor doctor = doctorDAO.findByUserId(user.getId());
@@ -80,7 +96,16 @@ public class DoctorUltrasoundRequestServlet extends HttpServlet {
             }
 
             // 2. Tạo chỉ định siêu âm trong test_orders
-            int orderId = orderService.createUltrasoundRequest(recordId, doctor.getId(), serviceId);
+            int orderId = orderService.createUltrasoundRequest(recordId, doctor.getId(), serviceId,
+                    forceReorder, reorderReason);
+            if (orderId == UltrasoundOrderService.ACTIVE_ORDER_EXISTS) {
+                ServiceItem existingService = serviceDAO.findServiceById(serviceId);
+                String serviceName = existingService != null ? existingService.getServiceName() : "dịch vụ đã chọn";
+                response.sendRedirect(request.getContextPath() + "/doctor/medical-records?apptId=" + apptId
+                        + "&reorderConflict=1&conflictServiceId=" + serviceId
+                        + "&conflictServiceName=" + URLEncoder.encode(serviceName, StandardCharsets.UTF_8));
+                return;
+            }
             if (orderId <= 0) {
                 throw new Exception("Không thể tạo yêu cầu siêu âm.");
             }
