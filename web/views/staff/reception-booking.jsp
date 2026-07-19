@@ -242,7 +242,7 @@
                                 <option value="10:40 - 11:00" ${param.timeSlot == '10:40 - 11:00' ? 'selected' : ''}>10:40 - 11:00 (Còn trống)</option>
                             </select>
 
-                            <small class="text-muted mt-1 d-block">Mỗi slot khám kéo dài mặc định 20 phút.</small>
+                            <small class="text-muted mt-1 d-block">Mỗi slot khám không dài mặc định 20 phút.</small>
                         </div>
                         <div class="col-md-4 cams-form-group">
                             <label class="cams-form-label">Tổng chi phí tạm tính</label>
@@ -602,7 +602,5 @@
         if (e.key === 'Escape') closeSidebar();
     });
 </script>
-
-<%@ include file="../common/standalone-footer.jsp" %>
 </body>
 </html>

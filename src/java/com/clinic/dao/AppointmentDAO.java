@@ -440,6 +440,123 @@ public class AppointmentDAO {
         }
     }
 
+    /**
+     * Gọi khi bệnh nhân vừa gửi thông tin thanh toán (invoice chuyển sang PendingConfirmation),
+     * tức là bệnh nhân đã "kịp" trong thời gian giữ chỗ 15 phút — chốt slot thành
+     * WAITING_VERIFICATION (không còn bị background job tự nhả nữa), chờ Staff duyệt/từ chối.
+     *
+     * <p>Lưu ý: KHÔNG chuyển thẳng sang BOOKED ở bước này — BOOKED chỉ dành cho slot đã
+     * được Staff duyệt thanh toán (xem {@link #finalizeBookingAfterPaymentApproved(int)}).
+     * Nhờ vậy giao diện đặt lịch của bệnh nhân khác có thể phân biệt rõ "đang chờ duyệt"
+     * và "đã đặt hẳn", thay vì hiển thị nhầm là đã kín ngay khi mới gửi thanh toán.
+     */
+    public void finalizeHoldOnPaymentSubmit(int appointmentId) {
+        String sql =
+            "UPDATE time_slots SET status = 'WAITING_VERIFICATION', held_until = NULL, updated_at = GETDATE() " +
+            "WHERE id = (SELECT slot_id FROM appointments WHERE id = ?) AND status = 'HELD'";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, appointmentId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Gọi khi Staff DUYỆT thanh toán trước khám (PRE_EXAM) — chốt slot từ
+     * WAITING_VERIFICATION (hoặc vẫn đang HELD, trường hợp Staff xác nhận thanh toán
+     * trực tiếp — ví dụ tiền mặt tại quầy — trước khi bệnh nhân kịp gửi minh chứng qua
+     * trang thanh toán) thành BOOKED chính thức. Nếu chỉ khớp 'WAITING_VERIFICATION',
+     * slot sẽ bị kẹt mãi ở HELD trong tình huống Staff duyệt trực tiếp, khiến bệnh nhân
+     * vẫn thấy thông báo "chưa thanh toán, giữ chỗ 15 phút" dù đã được xác nhận.
+     * Xem {@link com.clinic.service.StaffReceptionService#confirmPayment}.
+     */
+    public void finalizeBookingAfterPaymentApproved(int appointmentId) {
+        String sql =
+            "UPDATE time_slots SET status = 'BOOKED', held_until = NULL, updated_at = GETDATE() " +
+            "WHERE id = (SELECT slot_id FROM appointments WHERE id = ?) AND status IN ('WAITING_VERIFICATION', 'HELD')";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, appointmentId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Staff TỪ CHỐI thanh toán: huỷ lịch hẹn (nếu đang Pending) và nhả slot về AVAILABLE
+     * để người khác có thể đặt lại. Gọi từ StaffReceptionService.rejectPayment().
+     */
+    public void rejectAppointmentAfterPaymentRejected(int appointmentId) {
+        Connection conn = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement cancelAppt = conn.prepareStatement(
+                    "UPDATE appointments SET status = 'Cancelled' WHERE id = ? AND status IN ('Pending','Confirmed')")) {
+                cancelAppt.setInt(1, appointmentId);
+                cancelAppt.executeUpdate();
+            }
+
+            try (PreparedStatement releaseSlot = conn.prepareStatement(
+                    "UPDATE time_slots SET status = 'AVAILABLE', booked_by = NULL, booked_at = NULL, held_until = NULL, updated_at = GETDATE() " +
+                    "WHERE id = (SELECT slot_id FROM appointments WHERE id = ?)")) {
+                releaseSlot.setInt(1, appointmentId);
+                releaseSlot.executeUpdate();
+            }
+
+            conn.commit();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            if (conn != null) { try { conn.rollback(); } catch (SQLException ex) {} }
+        } finally {
+            if (conn != null) {
+                try { conn.setAutoCommit(true); } catch (SQLException e) {}
+                DatabaseConfig.closeConnection(conn);
+            }
+        }
+    }
+
+    /**
+     * Quét toàn bộ slot đang HELD nhưng đã hết hạn giữ chỗ (15 phút) mà bệnh nhân
+     * chưa gửi thông tin thanh toán — tự huỷ appointment 'Pending' tương ứng và
+     * nhả slot về AVAILABLE. Được gọi định kỳ bởi SlotHoldExpiryListener.
+     *
+     * @return số lượng slot đã được nhả (để log).
+     */
+    public int releaseExpiredHolds() {
+        int released = 0;
+        String selectSql =
+            "SELECT id FROM time_slots WHERE status = 'HELD' AND held_until IS NOT NULL AND held_until < GETDATE()";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement selectPs = conn.prepareStatement(selectSql);
+             ResultSet rs = selectPs.executeQuery()) {
+
+            List<Integer> expiredSlotIds = new java.util.ArrayList<>();
+            while (rs.next()) expiredSlotIds.add(rs.getInt("id"));
+
+            for (int slotId : expiredSlotIds) {
+                try (PreparedStatement cancelAppt = conn.prepareStatement(
+                        "UPDATE appointments SET status = 'Cancelled' WHERE slot_id = ? AND status = 'Pending'")) {
+                    cancelAppt.setInt(1, slotId);
+                    cancelAppt.executeUpdate();
+                }
+                try (PreparedStatement releaseSlot = conn.prepareStatement(
+                        "UPDATE time_slots SET status = 'AVAILABLE', booked_by = NULL, booked_at = NULL, held_until = NULL, updated_at = GETDATE() " +
+                        "WHERE id = ? AND status = 'HELD'")) {
+                    releaseSlot.setInt(1, slotId);
+                    released += releaseSlot.executeUpdate();
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return released;
+    }
+
 
     // --- Doctor / origin/dungdi methods ---
 
@@ -455,6 +572,7 @@ public class AppointmentDAO {
             "LEFT JOIN users  u  ON pt.user_id   = u.id " +
             "WHERE  a.doctor_id = ? " +
             "  AND  a.appointment_date = ? " +
+            "  AND  a.status <> 'Pending' " + // ẩn lịch hẹn chưa được Staff xác nhận thanh toán
             "ORDER  BY a.time_slot ASC";
 
         return query(sql, ps -> {
@@ -477,6 +595,7 @@ public class AppointmentDAO {
             "LEFT JOIN users  u  ON pt.user_id   = u.id " +
             "WHERE  a.doctor_id = ? " +
             "  AND  a.appointment_date BETWEEN ? AND ? " +
+            "  AND  a.status <> 'Pending' " + // ẩn lịch hẹn chưa được Staff xác nhận thanh toán
             (filterStatus ? "  AND  LOWER(a.status) = LOWER(?) " : "") +
             "ORDER  BY a.appointment_date ASC, a.time_slot ASC";
 
@@ -505,6 +624,7 @@ public class AppointmentDAO {
             "JOIN   patients  pt ON a.patient_id = pt.id " +
             "LEFT JOIN users  u  ON pt.user_id   = u.id " +
             "WHERE  a.doctor_id = ? " +
+            "  AND  a.status <> 'Pending' " + // ẩn lịch hẹn chưa được Staff xác nhận thanh toán
             (filterStatus ? "  AND  LOWER(a.status) = LOWER(?) " : "") +
             "ORDER  BY a.appointment_date DESC, a.time_slot ASC";
 
@@ -519,6 +639,7 @@ public class AppointmentDAO {
             "SELECT LOWER(status) AS status, COUNT(*) AS cnt " +
             "FROM   appointments " +
             "WHERE  doctor_id = ? AND appointment_date = ? " +
+            "  AND  status <> 'Pending' " + // đồng bộ với danh sách: ẩn lịch chưa được Staff xác nhận thanh toán
             "GROUP  BY LOWER(status)";
 
         Map<String, Integer> result = new LinkedHashMap<>();
@@ -587,25 +708,21 @@ public class AppointmentDAO {
             
             String degree = "Bác sĩ Sản phụ khoa";
             int experienceYears = 5;
-            double price = 150000;
             String avatar = "https://images.unsplash.com/photo-1622253692010-333f2da6031d?q=80&w=150&auto=format&fit=crop";
 
             if (docName != null) {
                 if (docName.contains("Phạm Trung Hiếu")) {
                     degree = "Bác sĩ Trưởng khoa (CKII)";
                     experienceYears = 12;
-                    price = 200000;
                 } else if (docName.contains("Nguyễn Thị Mai")) {
                     degree = "Thạc sĩ, Bác sĩ Nội trú";
                     experienceYears = 15;
-                    price = 300000;
                 } else if (docName.contains("Trần Văn Khoa")) {
                     degree = "Bác sĩ Chuyên khoa I";
                     experienceYears = 8;
-                    price = 150000;
                 }
             }
-            doctor = new Doctor(doctorId, docName, spec, degree, experienceYears, price, avatar);
+            doctor = new Doctor(doctorId, docName, spec, degree, experienceYears, avatar);
         }
 
         int serviceId = rs.getInt("service_id");
@@ -758,22 +875,27 @@ public class AppointmentDAO {
         return a;
     }
 
-    public boolean bookSlotAndCreateAppointment(int userId, int patientId, int slotId, int serviceId, String symptoms, LocalDate lmp, String gestationalAge, java.util.Map<String, String> errors) {
+    public boolean bookSlotAndCreateAppointment(int userId, int patientId, int slotId, int[] serviceIds, double basePrice, String symptoms, LocalDate lmp, String gestationalAge, java.util.Map<String, String> errors) {
         Connection conn = null;
         PreparedStatement updateSlotPs = null;
         PreparedStatement selectSlotPs = null;
         PreparedStatement insertApptPs = null;
+        PreparedStatement insertInvoicePs = null;
+        PreparedStatement insertAddonPs = null;
         ResultSet rs = null;
         try {
             conn = DatabaseConfig.getConnection();
             conn.setAutoCommit(false);
             conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
 
-            // 1. Conditional Update on slot
+            // 1. Conditional Update on slot — GIỮ CHỖ TẠM THỜI 15 PHÚT (chưa BOOKED hẳn).
+            // Slot sẽ được nhả tự động nếu bệnh nhân không gửi thông tin thanh toán kịp
+            // (xem SlotHoldExpiryListener + AppointmentDAO.releaseExpiredHolds()).
             String updateSlotSql = "UPDATE time_slots SET "
-                    + "status = 'BOOKED', "
+                    + "status = 'HELD', "
                     + "booked_by = ?, "
                     + "booked_at = GETDATE(), "
+                    + "held_until = DATEADD(MINUTE, 15, GETDATE()), "
                     + "updated_at = GETDATE() "
                     + "WHERE id = ? AND status = 'AVAILABLE'";
             updateSlotPs = conn.prepareStatement(updateSlotSql);
@@ -800,11 +922,36 @@ public class AppointmentDAO {
             int doctorId = rs.getInt("doctor_id");
             Date workDate = rs.getDate("work_date");
             Time startTime = rs.getTime("start_time");
+            rs.close();
+            rs = null;
+            selectSlotPs.close();
+            selectSlotPs = null;
 
-            // 3. Create appointment
+            // 3. Tính tổng dịch vụ bổ sung (tuỳ chọn — bệnh nhân có thể không chọn cái nào)
+            double addonTotal = 0;
+            java.util.Map<Integer, Double> addonPrices = new java.util.LinkedHashMap<>();
+            if (serviceIds != null && serviceIds.length > 0) {
+                String selectServiceSql = "SELECT price FROM services WHERE id = ?";
+                try (PreparedStatement selectServicePs = conn.prepareStatement(selectServiceSql)) {
+                    for (int sid : serviceIds) {
+                        selectServicePs.setInt(1, sid);
+                        try (ResultSet srs = selectServicePs.executeQuery()) {
+                            if (srs.next()) {
+                                double p = srs.getDouble("price");
+                                addonPrices.put(sid, p);
+                                addonTotal += p;
+                            }
+                        }
+                    }
+                }
+            }
+            double totalAmount = basePrice + addonTotal;
+
+            // 4. Tạo lịch hẹn ở trạng thái Pending (trả tiền trước — staff duyệt thanh toán mới Confirmed).
+            // service_id giờ có thể NULL — dịch vụ bổ sung được lưu riêng ở bảng appointment_services.
             String insertApptSql = "INSERT INTO appointments (patient_id, doctor_id, appointment_date, booking_source, symptoms, "
-                    + "last_menstrual_period, is_emergency, status, service_id, time_slot, slot_id) "
-                    + "VALUES (?, ?, ?, 'WEB', ?, ?, 0, 'Confirmed', ?, ?, ?)";
+                    + "last_menstrual_period, is_emergency, status, service_id, time_slot, slot_id, base_fee) "
+                    + "VALUES (?, ?, ?, 'WEB', ?, ?, 0, 'Pending', NULL, ?, ?, ?)";
             insertApptPs = conn.prepareStatement(insertApptSql, Statement.RETURN_GENERATED_KEYS);
             insertApptPs.setInt(1, patientId);
             insertApptPs.setInt(2, doctorId);
@@ -815,12 +962,46 @@ public class AppointmentDAO {
             } else {
                 insertApptPs.setNull(5, java.sql.Types.DATE);
             }
-            insertApptPs.setInt(6, serviceId);
-            insertApptPs.setTime(7, startTime);
-            insertApptPs.setInt(8, slotId);
-            
+            insertApptPs.setTime(6, startTime);
+            insertApptPs.setInt(7, slotId);
+            insertApptPs.setDouble(8, basePrice);
+
             insertApptPs.executeUpdate();
-            
+
+            int appointmentId = 0;
+            rs = insertApptPs.getGeneratedKeys();
+            if (rs.next()) {
+                appointmentId = rs.getInt(1);
+            }
+            if (appointmentId <= 0) {
+                conn.rollback();
+                errors.put("general", "Không thể tạo lịch hẹn.");
+                return false;
+            }
+            rs.close();
+            rs = null;
+
+            // 5. Lưu các dịch vụ bổ sung đã chọn (nếu có) vào bảng appointment_services
+            if (!addonPrices.isEmpty()) {
+                String insertAddonSql = "INSERT INTO appointment_services (appointment_id, service_id, price) VALUES (?, ?, ?)";
+                insertAddonPs = conn.prepareStatement(insertAddonSql);
+                for (java.util.Map.Entry<Integer, Double> e : addonPrices.entrySet()) {
+                    insertAddonPs.setInt(1, appointmentId);
+                    insertAddonPs.setInt(2, e.getKey());
+                    insertAddonPs.setDouble(3, e.getValue());
+                    insertAddonPs.addBatch();
+                }
+                insertAddonPs.executeBatch();
+            }
+
+            // 6. Tạo hóa đơn PRE_EXAM (trả trước dùng sau) = phí khám bác sĩ + tổng dịch vụ bổ sung
+            String insertInvoiceSql = "INSERT INTO invoices (appointment_id, total_amount, status, invoice_type, created_at) "
+                    + "VALUES (?, ?, 'Unpaid', 'PRE_EXAM', GETDATE())";
+            insertInvoicePs = conn.prepareStatement(insertInvoiceSql);
+            insertInvoicePs.setInt(1, appointmentId);
+            insertInvoicePs.setDouble(2, totalAmount);
+            insertInvoicePs.executeUpdate();
+
             conn.commit();
             return true;
         } catch (SQLException e) {
@@ -835,6 +1016,8 @@ public class AppointmentDAO {
             if (updateSlotPs != null) { try { updateSlotPs.close(); } catch (SQLException e) {} }
             if (selectSlotPs != null) { try { selectSlotPs.close(); } catch (SQLException e) {} }
             if (insertApptPs != null) { try { insertApptPs.close(); } catch (SQLException e) {} }
+            if (insertAddonPs != null) { try { insertAddonPs.close(); } catch (SQLException e) {} }
+            if (insertInvoicePs != null) { try { insertInvoicePs.close(); } catch (SQLException e) {} }
             if (conn != null) {
                 try { conn.setAutoCommit(true); } catch (SQLException e) {}
                 DatabaseConfig.closeConnection(conn);

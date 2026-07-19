@@ -22,6 +22,7 @@ public class Invoice implements Serializable {
     private Timestamp confirmedAt;
     private String paymentNote;
     private Timestamp createdAt;
+    private String proofImagePath; // Ảnh minh chứng chuyển khoản do bệnh nhân tải lên
 
     // Transient fields for UI display
     private String patientName;
@@ -73,6 +74,9 @@ public class Invoice implements Serializable {
     public void setTransactionCode(String transactionCode) {
         this.transactionCode = transactionCode;
     }
+
+    public String getProofImagePath() { return proofImagePath; }
+    public void setProofImagePath(String proofImagePath) { this.proofImagePath = proofImagePath; }
 
     public String getInvoiceType() {
         return invoiceType;

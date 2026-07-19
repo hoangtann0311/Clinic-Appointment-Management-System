@@ -21,6 +21,8 @@ public class DatabaseConfig {
 
     // SQL Server Authentication credentials (chỉ dùng khi Windows Auth thất bại)
     private static final String DB_USER = getSetting("DB_USER", "sa");
+    // Keep the repository password-free. Each member sets only this fallback locally,
+    // or supplies DB_PASSWORD as an environment variable.
     private static final String DB_PASSWORD = getSetting("DB_PASSWORD", "");
 
     // Danh sách các URL kết nối sẽ thử lần lượt

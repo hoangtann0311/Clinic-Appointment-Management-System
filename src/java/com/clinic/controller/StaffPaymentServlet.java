@@ -1,6 +1,7 @@
 package com.clinic.controller;
 
 import com.clinic.model.Invoice;
+import com.clinic.model.PrescriptionItem;
 import com.clinic.model.User;
 import com.clinic.service.StaffReceptionService;
 
@@ -11,7 +12,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Servlet quản lý và xác nhận thanh toán (Staff / Lễ tân)
@@ -52,6 +55,38 @@ public class StaffPaymentServlet extends HttpServlet {
         int totalPages = (int) Math.ceil((double) totalInvoices / PAGE_SIZE);
         if (totalPages <= 0) totalPages = 1;
 
+        Map<Integer, String> prescriptionItemsJson = new HashMap<>();
+        for (Invoice inv : invoices) {
+            if ("PRESCRIPTION".equalsIgnoreCase(inv.getInvoiceType())) {
+                try {
+                    com.clinic.dao.MedicalRecordDAO recordDAO = new com.clinic.dao.MedicalRecordDAO();
+                    com.clinic.model.MedicalRecord record = recordDAO.getByAppointmentId(inv.getAppointmentId());
+                    if (record != null && record.getId() > 0) {
+                        com.clinic.dao.PrescriptionDAO prescriptionDAO = new com.clinic.dao.PrescriptionDAO();
+                        com.clinic.model.Prescription prescription = prescriptionDAO.getByMedicalRecordId(record.getId());
+                        if (prescription != null && prescription.getId() > 0) {
+                            List<PrescriptionItem> items = prescriptionDAO.getItemsByPrescriptionId(prescription.getId());
+                            StringBuilder json = new StringBuilder("[");
+                            for (int i = 0; i < items.size(); i++) {
+                                PrescriptionItem item = items.get(i);
+                                if (i > 0) json.append(",");
+                                json.append("{")
+                                    .append("\"name\":\"").append(escapeJson(item.getMedicineName() != null ? item.getMedicineName() : "")).append("\",")
+                                    .append("\"unit\":\"").append(escapeJson(item.getMedicineUnit() != null ? item.getMedicineUnit() : "")).append("\",")
+                                    .append("\"quantity\":").append(item.getQuantity()).append(",")
+                                    .append("\"price\":").append(item.getPrice() != null ? item.getPrice() : 0)
+                                    .append("}");
+                            }
+                            json.append("]");
+                            prescriptionItemsJson.put(inv.getId(), json.toString());
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println("[StaffPaymentServlet] load prescription items failed for invoice " + inv.getId() + ": " + e.getMessage());
+                }
+            }
+        }
+
         request.setAttribute("invoices", invoices);
         request.setAttribute("currentPage", page);
         request.setAttribute("totalPages", totalPages);
@@ -60,6 +95,7 @@ public class StaffPaymentServlet extends HttpServlet {
         request.setAttribute("statusParam", status);
         request.setAttribute("typeParam", type);
         request.setAttribute("dateParam", date);
+        request.setAttribute("prescriptionItemsJson", prescriptionItemsJson);
 
         // Sidebar stats
         request.setAttribute("currentDisplayDate", java.time.LocalDate.now().toString());
@@ -125,5 +161,14 @@ public class StaffPaymentServlet extends HttpServlet {
             response.sendRedirect(request.getContextPath() + "/admin/reception/payments?error=" 
                     + java.net.URLEncoder.encode("Lỗi hệ thống khi xử lý hóa đơn: " + e.getMessage(), "UTF-8") + suffix);
         }
+    }
+
+    private String escapeJson(String s) {
+        if (s == null) return "";
+        return s.replace("\\", "\\\\")
+               .replace("\"", "\\\"")
+               .replace("\n", "\\n")
+               .replace("\r", "\\r")
+               .replace("\t", "\\t");
     }
 }

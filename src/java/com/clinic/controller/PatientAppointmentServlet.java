@@ -1,6 +1,7 @@
 package com.clinic.controller;
 
 import com.clinic.model.Appointment;
+import com.clinic.model.Invoice;
 import com.clinic.model.User;
 import com.clinic.service.PatientBookingService;
 
@@ -38,6 +39,22 @@ public class PatientAppointmentServlet extends HttpServlet {
 
         List<Appointment> appointments = bookingService.getMyAppointments(user.getId());
         request.setAttribute("appointments", appointments);
+
+        // Load invoices for payment status display
+        Map<Integer, Invoice> postExamInvoices = new HashMap<>();
+        Map<Integer, Invoice> prescriptionInvoices = new HashMap<>();
+        for (Appointment apt : appointments) {
+            Invoice postInv = new com.clinic.dao.InvoiceDAO().getByAppointmentIdAndType(apt.getId(), "POST_EXAM");
+            if (postInv != null && !"Paid".equalsIgnoreCase(postInv.getStatus()) && !"PendingConfirmation".equalsIgnoreCase(postInv.getStatus())) {
+                postExamInvoices.put(apt.getId(), postInv);
+            }
+            Invoice rxInv = new com.clinic.dao.InvoiceDAO().getByAppointmentIdAndType(apt.getId(), "PRESCRIPTION");
+            if (rxInv != null && !"Paid".equalsIgnoreCase(rxInv.getStatus()) && !"PendingConfirmation".equalsIgnoreCase(rxInv.getStatus()) && !"DeclinedPurchase".equalsIgnoreCase(rxInv.getStatus())) {
+                prescriptionInvoices.put(apt.getId(), rxInv);
+            }
+        }
+        request.setAttribute("postExamInvoices", postExamInvoices);
+        request.setAttribute("prescriptionInvoices", prescriptionInvoices);
 
         HttpSession session = request.getSession(false);
         if (session != null && session.getAttribute("bookingSuccess") != null) {

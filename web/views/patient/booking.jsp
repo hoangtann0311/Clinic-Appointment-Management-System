@@ -23,6 +23,15 @@
         box-shadow: 0 3px 10px rgba(194,24,91,0.22);
     }
     .slot-period-label { font-weight: 700; color: var(--pt-muted, #8a5e74); font-size: .82rem; letter-spacing: .04em; text-transform: uppercase; }
+    .slot-btn.slot-locked {
+        min-width: 76px;
+        background: var(--pt-surface-var, #f4f4f6) !important;
+        color: #9a9aa2 !important;
+        border-color: #e2e2e6 !important;
+        cursor: pointer;
+        opacity: .85;
+    }
+    .slot-btn.slot-locked:hover { background: #ebebef !important; }
     .doctor-panel { display: none; border-top: 1.5px solid var(--pt-outline, #f0dae5); background: var(--pt-surface-var, #fff6fb); border-radius: 0 0 14px 14px; }
     .toggle-doctor-btn.expanded { background: var(--pt-pink-600, #c2185b) !important; border-color: var(--pt-pink-600, #c2185b) !important; }
 </style>
@@ -106,6 +115,10 @@
                                     <i class="bi bi-award me-1"></i>${d.experienceYears} năm kinh nghiệm
                                 </div>
                             </c:if>
+                            <div class="small fw-bold mt-1 doctor-price-range" id="price-range-${d.id}"
+                                 style="color: var(--bs-primary, #d6336c); min-height: 1.1em;">
+                                <span class="spinner-border spinner-border-sm" style="width:0.7rem;height:0.7rem;"></span>
+                            </div>
                         </div>
                         <button type="button"
                                 class="btn btn-sm btn-primary toggle-doctor-btn"
@@ -164,19 +177,32 @@
 
                     <%-- Ẩn dịch vụ & triệu chứng khi đang đổi lịch (chỉ cần chọn slot mới) --%>
                     <c:if test="${empty rescheduleId}">
+                        <ul class="list-unstyled small mb-3">
+                            <li class="d-flex justify-content-between py-1 border-bottom">
+                                <span class="text-muted">Phí khám bác sĩ</span>
+                                <strong id="summaryBasePrice">—</strong>
+                            </li>
+                        </ul>
+
                         <div class="mb-3">
-                            <label class="form-label fw-semibold small">Dịch vụ khám <span class="text-danger">*</span></label>
-                            <select name="serviceId" class="form-select form-select-sm" required>
-                                <option value="">-- Chọn dịch vụ --</option>
-                                <c:forEach var="s" items="${services}">
-                                    <option value="${s.id}">
+                            <label class="form-label fw-semibold small d-block">Dịch vụ bổ sung <span class="text-muted fw-normal">(tuỳ chọn)</span></label>
+                            <c:forEach var="s" items="${services}">
+                                <div class="form-check">
+                                    <input class="form-check-input addon-service-checkbox" type="checkbox"
+                                           name="serviceIds" value="${s.id}" data-price="${s.price}" id="svc_${s.id}">
+                                    <label class="form-check-label small" for="svc_${s.id}">
                                         ${s.serviceName} (<fmt:formatNumber value="${s.price}" pattern="#,###"/>đ)
-                                    </option>
-                                </c:forEach>
-                            </select>
-                            <c:if test="${not empty errors.serviceId}">
-                                <div class="text-danger small mt-1">${errors.serviceId}</div>
+                                    </label>
+                                </div>
+                            </c:forEach>
+                            <c:if test="${not empty errors.serviceIds}">
+                                <div class="text-danger small mt-1">${errors.serviceIds}</div>
                             </c:if>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center py-2 px-2 mb-3 rounded-3" style="background:#fff0f5;">
+                            <span class="fw-semibold small">Tổng tiền</span>
+                            <strong id="summaryTotalPrice" class="fs-5" style="color:#d6336c;">0đ</strong>
                         </div>
 
                         <div class="mb-3">
@@ -275,7 +301,7 @@
         contentEl.style.display = 'none';
         contentEl.innerHTML = '';
 
-        fetch(contextPath + '/patient/booking/slots?doctorId=' + doctorId + '&date=' + date)
+        fetch(contextPath + '/patient/booking/slots?doctorId=' + doctorId + '&date=' + date + '&all=1')
             .then(function (res) { return res.json(); })
             .then(function (slots) {
                 loadingEl.style.display = 'none';
@@ -307,31 +333,117 @@
             html += '<div class="slot-period-label mb-2"><i class="bi bi-moon me-1"></i>Chiều</div>';
             html += '<div class="d-flex flex-wrap gap-2">' + afternoon.map(s => slotButtonHtml(s)).join('') + '</div>';
         }
+        html += '<div class="slot-notice mt-3" style="display:none;"></div>';
         container.innerHTML = html;
 
-        container.querySelectorAll('.slot-btn').forEach(function (btn) {
+        container.querySelectorAll('.slot-btn:not(.slot-locked)').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 container.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('active'));
                 this.classList.add('active');
-                selectSlot(this.dataset.slotId, this.dataset.label, doctorName, date);
+                hideSlotNotice(container);
+                // Giá khám = giá riêng của khung giờ này (theo ngày/giờ cụ thể); nếu chưa set thì 0 -> "Liên hệ"
+                const slotPrice = (this.dataset.price && this.dataset.price !== 'null' && this.dataset.price !== '')
+                    ? parseFloat(this.dataset.price) : 0;
+                selectSlot(this.dataset.slotId, this.dataset.label, doctorName, date, slotPrice);
+            });
+        });
+
+        container.querySelectorAll('.slot-btn.slot-locked').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const mine = this.dataset.mine === 'true';
+                showSlotNotice(container, this.dataset.status, this.textContent.trim(), mine);
             });
         });
     }
 
+    // Nhãn hiển thị khi khung giờ bị khóa — theo đúng trạng thái thật của slot.
+    // Nếu chính bệnh nhân đang đăng nhập là người giữ/đặt khung giờ đó thì ghi rõ
+    // "Bạn đã..." thay vì nói chung chung như đang bị người khác chiếm mất.
+    function slotStatusText(status, mine) {
+        if (mine) {
+            switch (status) {
+                case 'HELD': return 'Bạn chưa thanh toán khung giờ này, vui lòng hoàn tất thanh toán trong thời gian giữ chỗ (15 phút).';
+                case 'WAITING_VERIFICATION': return 'Bạn đã thanh toán khung giờ này, đang chờ xác nhận.';
+                case 'BOOKED': return 'Bạn đã đặt thành công khung giờ này.';
+                default: return 'Khung giờ này thuộc về bạn nhưng hiện không thể chọn lại.';
+            }
+        }
+        switch (status) {
+            case 'HELD': return 'Khung giờ này đang được một bệnh nhân khác giữ chỗ, vui lòng chọn khung giờ khác.';
+            case 'WAITING_VERIFICATION': return 'Khung giờ này đã có bệnh nhân khác gửi thanh toán và đang chờ lễ tân xác nhận, vui lòng chọn khung giờ khác.';
+            case 'BOOKED': return 'Khung giờ này đã được đặt kín, vui lòng chọn khung giờ khác.';
+            default: return 'Khung giờ này hiện không thể đặt, vui lòng chọn khung giờ khác.';
+        }
+    }
+
+    // Hiện thông báo NGAY BÊN DƯỚI lưới khung giờ của bác sĩ đang mở, khi bệnh nhân
+    // bấm vào 1 khung giờ đang bị khóa — thay vì chỉ dựa vào màu sắc.
+    function showSlotNotice(container, status, time, mine) {
+        const notice = container.querySelector('.slot-notice');
+        if (!notice) return;
+        notice.innerHTML = '<div class="alert ' + (mine ? 'alert-info' : 'alert-warning') + ' d-flex align-items-center gap-2 mb-0 py-2 px-3 small">' +
+            '<i class="bi bi-lock-fill"></i>' +
+            '<span><strong>' + time + '</strong> — ' + slotStatusText(status, mine) + '</span>' +
+            '</div>';
+        notice.style.display = 'block';
+    }
+
+    function hideSlotNotice(container) {
+        const notice = container.querySelector('.slot-notice');
+        if (notice) notice.style.display = 'none';
+    }
+
     function slotButtonHtml(s) {
+        // available === false (mọi trạng thái khác AVAILABLE) -> vẫn hiển thị khung giờ,
+        // nhưng bấm vào sẽ hiện thông báo giải thích lý do thay vì cho chọn.
+        if (s.available === false) {
+            return '<button type="button" class="btn btn-outline-secondary btn-sm slot-btn slot-locked" '
+                 + 'data-status="' + s.status + '" data-mine="' + (s.mine === true) + '">'
+                 + s.time
+                 + '</button>';
+        }
         return '<button type="button" class="btn btn-outline-primary btn-sm slot-btn" '
-             + 'data-slot-id="' + s.id + '" data-label="' + s.label + '">' + s.time + '</button>';
+             + 'data-slot-id="' + s.id + '" data-label="' + s.label + '" data-price="' + (s.price !== null ? s.price : '') + '">'
+             + s.time
+             + '</button>';
     }
 
     // ── Cập nhật tóm tắt bên phải khi chọn 1 khung giờ ──
-    function selectSlot(slotId, label, doctorName, date) {
+    let currentBasePrice = 0;
+
+    function selectSlot(slotId, label, doctorName, date, basePrice) {
         document.getElementById('summaryEmpty').style.display = 'none';
         document.getElementById('bookingForm').style.display = 'block';
         document.getElementById('hiddenSlotId').value = slotId;
         document.getElementById('summaryDoctorName').textContent = doctorName;
         document.getElementById('summaryDate').textContent = date;
         document.getElementById('summaryTime').textContent = label;
+
+        currentBasePrice = basePrice || 0;
+        const basePriceEl = document.getElementById('summaryBasePrice');
+        if (basePriceEl) {
+            basePriceEl.textContent = currentBasePrice > 0
+                ? new Intl.NumberFormat('vi-VN').format(currentBasePrice) + 'đ'
+                : 'Liên hệ';
+        }
+        updateTotalPrice();
     }
+
+    // ── Tính lại tổng tiền = phí khám bác sĩ + tổng dịch vụ bổ sung đã tick ──
+    function updateTotalPrice() {
+        const totalEl = document.getElementById('summaryTotalPrice');
+        if (!totalEl) return;
+        let addonTotal = 0;
+        document.querySelectorAll('.addon-service-checkbox:checked').forEach(function (cb) {
+            addonTotal += parseFloat(cb.dataset.price || 0);
+        });
+        const total = (currentBasePrice || 0) + addonTotal;
+        totalEl.textContent = new Intl.NumberFormat('vi-VN').format(total) + 'đ';
+    }
+
+    document.querySelectorAll('.addon-service-checkbox').forEach(function (cb) {
+        cb.addEventListener('change', updateTotalPrice);
+    });
 
     // ── Nếu đổi ngày sau khi đã mở 1 bác sĩ -> tải lại slot cho ngày mới ──
     dateInput.addEventListener('change', function () {
@@ -341,7 +453,47 @@
             const btn = document.querySelector('.toggle-doctor-btn[data-doctor-id="' + doctorId + '"]');
             loadSlots(doctorId, btn.dataset.doctorName, openPanel);
         }
+        loadAllDoctorPriceRanges();
     });
+
+    // ── Hiển thị "Từ X - Yđ" dưới tên mỗi bác sĩ theo ngày đang chọn ──
+    function loadAllDoctorPriceRanges() {
+        const date = dateInput.value;
+        document.querySelectorAll('.toggle-doctor-btn').forEach(function (btn) {
+            const doctorId = btn.dataset.doctorId;
+            const el = document.getElementById('price-range-' + doctorId);
+            if (!el || !date) return;
+
+            el.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:0.7rem;height:0.7rem;"></span>';
+
+            fetch(contextPath + '/patient/booking/slots?doctorId=' + doctorId + '&date=' + date)
+                .then(function (res) { return res.json(); })
+                .then(function (slots) {
+                    if (!slots || slots.length === 0) {
+                        el.innerHTML = '<span class="text-muted fw-normal">Không còn khung giờ trống</span>';
+                        return;
+                    }
+                    const prices = slots
+                        .map(s => s.price)
+                        .filter(p => p !== null && p !== undefined && p > 0);
+
+                    if (prices.length === 0) {
+                        el.innerHTML = '<span class="text-muted fw-normal">Liên hệ</span>';
+                        return;
+                    }
+                    const min = Math.min.apply(null, prices);
+                    const max = Math.max.apply(null, prices);
+                    const fmt = n => new Intl.NumberFormat('vi-VN').format(n) + 'đ';
+                    el.innerHTML = '<i class="bi bi-tag me-1"></i>' +
+                        (min === max ? fmt(min) : fmt(min) + ' - ' + fmt(max));
+                })
+                .catch(function () {
+                    el.innerHTML = '<span class="text-muted fw-normal">—</span>';
+                });
+        });
+    }
+
+    loadAllDoctorPriceRanges();
 })();
 </script>
 

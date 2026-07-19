@@ -899,6 +899,29 @@ public class UserDAO {
         }
     }
 
+    /**
+     * Cập nhật CHỈ full_name trong bảng users (dùng khi bác sĩ/bệnh nhân/nhân viên
+     * đổi tên từ trang hồ sơ riêng của họ — ví dụ DoctorProfileServlet).
+     * Không đụng tới email/phone (đã mã hoá) để tránh rủi ro ghi đè sai giá trị mã hoá.
+     */
+    public boolean updateFullName(int userId, String fullName) {
+        String sql = "UPDATE users SET full_name=? WHERE id=?";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, fullName);
+            ps.setInt(2, userId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("[UserDAO] updateFullName ERROR: " + e.getMessage());
+            return false;
+        } finally {
+            closeResources(conn, ps, null);
+        }
+    }
+
     /** Map row có kèm role_name từ JOIN */
     private User mapRowWithRole(ResultSet rs, boolean fullColumns) throws SQLException {
         User u = new User();

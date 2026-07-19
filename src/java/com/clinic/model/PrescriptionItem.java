@@ -16,6 +16,7 @@ public class PrescriptionItem {
     private String medicineName;
     private String medicineUnit;     // đơn vị tính (viên, gói, ml…)
     private String medicineCategory; // nhóm thuốc (từ medicine_categories)
+    private java.math.BigDecimal price; // đơn giá từ medicines
 
     public PrescriptionItem() {}
 
@@ -42,4 +43,7 @@ public class PrescriptionItem {
 
     public String getMedicineCategory() { return medicineCategory; }
     public void setMedicineCategory(String medicineCategory) { this.medicineCategory = medicineCategory; }
+
+    public java.math.BigDecimal getPrice() { return price; }
+    public void setPrice(java.math.BigDecimal price) { this.price = price; }
 }

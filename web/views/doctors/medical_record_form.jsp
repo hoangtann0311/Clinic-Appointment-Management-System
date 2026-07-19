@@ -174,6 +174,14 @@
     </div>
   </c:if>
 
+  <c:if test="${param.success == 'requested'}">
+    <div class="alert alert-success rounded-3 mb-3 d-flex align-items-center gap-2" role="alert">
+      <i class="bi bi-check-circle-fill fs-5"></i>
+      <span><strong>Đã tạo chỉ định siêu âm thành công.</strong> Yêu cầu đã được chuyển đến KTV Siêu âm.</span>
+      <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Đóng"></button>
+    </div>
+  </c:if>
+
   <%-- Banner --%>
   <div class="card border-0 rounded-4 text-white mb-4" style="background:linear-gradient(135deg,#1a6b3c,#28a745);">
     <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">

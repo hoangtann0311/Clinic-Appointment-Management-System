@@ -119,11 +119,6 @@ public class DoctorDAO {
         return null;
     }
 
-    /**
-     * Bác sĩ tự cập nhật hồ sơ cá nhân.
-     * Chỉ cho phép sửa: full_name, specialization, phone_number, degree, experience_years, bio, avatar_url.
-     * Email/username/password không được sửa ở đây.
-     */
     public boolean updateProfile(Doctor d) {
         String sql =
             "UPDATE doctors SET full_name=?, specialization=?, phone_number=?, " +
@@ -180,11 +175,7 @@ public class DoctorDAO {
         int experienceYears = rs.getInt("experience_years"); // 0 nếu NULL hoặc chưa cập nhật
         String avatar = rs.getString("avatar_url"); // null nếu bác sĩ chưa upload ảnh — JSP tự hiện chữ cái đầu thay thế
 
-        // Lưu ý: bảng doctors không có cột giá khám — giá thuộc về dịch vụ (services.price),
-        // 1 bác sĩ có thể thực hiện nhiều dịch vụ với giá khác nhau. Để 0 thay vì bịa số liệu giả.
-        double price = 0;
-
-        return new Doctor(id, fullName, specialization, degree, experienceYears, price, avatar);
+        return new Doctor(id, fullName, specialization, degree, experienceYears, avatar);
     }
 
     /**

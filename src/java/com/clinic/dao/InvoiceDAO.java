@@ -14,15 +14,16 @@ public class InvoiceDAO {
 
     private static final String BASE_SELECT = 
         "SELECT i.*, "
-        + "  u_pat.full_name AS patient_name, "
-        + "  u_pat.phone AS patient_phone, "
+        + "  COALESCE(u_pat.full_name, pt.full_name) AS patient_name, "
+        + "  pt.phone_number AS patient_phone, "
         + "  doc.full_name AS doctor_name, "
         + "  CONVERT(varchar, a.appointment_date, 23) AS appointment_date, "
         + "  s.service_name, "
         + "  u_staff.full_name AS confirmed_by_name "
         + "FROM invoices i "
         + "LEFT JOIN appointments a ON i.appointment_id = a.id "
-        + "LEFT JOIN users u_pat ON a.patient_id = u_pat.id "
+        + "LEFT JOIN patients pt ON a.patient_id = pt.id "
+        + "LEFT JOIN users u_pat ON pt.user_id = u_pat.id "
         + "LEFT JOIN doctors doc ON a.doctor_id = doc.id "
         + "LEFT JOIN services s ON a.service_id = s.id "
         + "LEFT JOIN users u_staff ON i.confirmed_by = u_staff.id ";
@@ -34,7 +35,7 @@ public class InvoiceDAO {
         List<Object> params = new ArrayList<>();
 
         if (search != null && !search.trim().isEmpty()) {
-            sql.append(" AND (u_pat.full_name LIKE ? OR u_pat.phone LIKE ? OR i.transaction_code LIKE ?) ");
+            sql.append(" AND (COALESCE(u_pat.full_name, pt.full_name) LIKE ? OR pt.phone_number LIKE ? OR i.transaction_code LIKE ?) ");
             String like = "%" + search.trim() + "%";
             params.add(like);
             params.add(like);
@@ -93,13 +94,14 @@ public class InvoiceDAO {
     public int countAllInvoices(String search, String status, String type, String date) {
         StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM invoices i ")
                 .append("LEFT JOIN appointments a ON i.appointment_id = a.id ")
-                .append("LEFT JOIN users u_pat ON a.patient_id = u_pat.id ")
+                .append("LEFT JOIN patients pt ON a.patient_id = pt.id ")
+                .append("LEFT JOIN users u_pat ON pt.user_id = u_pat.id ")
                 .append("WHERE 1=1 ");
 
         List<Object> params = new ArrayList<>();
 
         if (search != null && !search.trim().isEmpty()) {
-            sql.append(" AND (u_pat.full_name LIKE ? OR u_pat.phone LIKE ? OR i.transaction_code LIKE ?) ");
+            sql.append(" AND (COALESCE(u_pat.full_name, pt.full_name) LIKE ? OR pt.phone_number LIKE ? OR i.transaction_code LIKE ?) ");
             String like = "%" + search.trim() + "%";
             params.add(like);
             params.add(like);
@@ -148,6 +150,26 @@ public class InvoiceDAO {
         return 0;
     }
 
+    public int countPendingConfirmation() {
+        String sql = "SELECT COUNT(*) FROM invoices WHERE status = 'PendingConfirmation'";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            System.err.println("[InvoiceDAO] countPendingConfirmation ERROR: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return 0;
+    }
+
     public Invoice getById(int id) {
         String sql = BASE_SELECT + " WHERE i.id = ? ";
         Connection conn = null;
@@ -170,7 +192,7 @@ public class InvoiceDAO {
     }
 
     public Invoice getByAppointmentIdAndType(int appointmentId, String type) {
-        String sql = BASE_SELECT + " WHERE i.appointment_id = ? AND i.invoice_type = ? ";
+        String sql = BASE_SELECT + " WHERE i.appointment_id = ? AND i.invoice_type = ? ORDER BY i.id DESC";
         Connection conn = null;
         PreparedStatement ps = null;
         ResultSet rs = null;
@@ -251,6 +273,33 @@ public class InvoiceDAO {
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("[InvoiceDAO] submitPaymentDetails ERROR: " + e.getMessage());
+            return false;
+        } finally {
+            closeResources(conn, ps, null);
+        }
+    }
+
+    /**
+     * Giống submitPaymentDetails nhưng lưu kèm đường dẫn ảnh minh chứng chuyển khoản
+     * (bệnh nhân tải ảnh lên thay vì tự gõ mã giao dịch).
+     */
+    public boolean submitPaymentDetailsWithProof(int id, String paymentMethod, String transactionCode,
+                                                  String proofImagePath, String status) {
+        String sql = "UPDATE invoices SET payment_method = ?, transaction_code = ?, proof_image_path = ?, status = ? " +
+                     "WHERE id = ? AND status <> 'Paid'";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, paymentMethod);
+            ps.setString(2, transactionCode);
+            ps.setString(3, proofImagePath);
+            ps.setString(4, status);
+            ps.setInt(5, id);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("[InvoiceDAO] submitPaymentDetailsWithProof ERROR: " + e.getMessage());
             return false;
         } finally {
             closeResources(conn, ps, null);
@@ -433,6 +482,28 @@ public class InvoiceDAO {
         return true;
     }
 
+    public List<Invoice> getInvoicesByPatientUserId(int userId) {
+        String sql = BASE_SELECT + " WHERE pt.user_id = ? ORDER BY i.id DESC";
+        List<Invoice> list = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setInt(1, userId);
+            rs = ps.executeQuery();
+            while (rs.next()) {
+                list.add(mapRow(rs));
+            }
+        } catch (SQLException e) {
+            System.err.println("[InvoiceDAO] getInvoicesByPatientUserId ERROR: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return list;
+    }
+
 
     private Invoice mapRow(ResultSet rs) throws SQLException {
         Invoice inv = new Invoice();
@@ -453,6 +524,7 @@ public class InvoiceDAO {
         inv.setConfirmedAt(rs.getTimestamp("confirmed_at"));
         inv.setPaymentNote(rs.getString("payment_note"));
         inv.setCreatedAt(rs.getTimestamp("created_at"));
+        try { inv.setProofImagePath(rs.getString("proof_image_path")); } catch (SQLException ignore) {}
 
         // Transient
         inv.setPatientName(rs.getString("patient_name"));

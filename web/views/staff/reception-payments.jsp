@@ -95,10 +95,17 @@
                 </a>
             </li>
             <li>
-                <a href="${pageContext.request.contextPath}/admin/reception/payments" 
-                   class="active">
+                <a href="${pageContext.request.contextPath}/admin/reception/payments?status=PendingConfirmation"
+                   class="${statusParam == 'PendingConfirmation' || empty statusParam ? 'active' : ''}">
                     <i class="bi bi-credit-card-2-front"></i>
                     <span>Xác Nhận Thanh Toán</span>
+                </a>
+            </li>
+            <li>
+                <a href="${pageContext.request.contextPath}/admin/reception/payments?status=Paid"
+                   class="${statusParam == 'Paid' ? 'active' : ''}">
+                    <i class="bi bi-clock-history"></i>
+                    <span>Lịch Sử Giao Dịch</span>
                 </a>
             </li>
         </ul>
@@ -108,9 +115,19 @@
     <main class="admin-main" id="adminMain">
         <div class="admin-page-header">
             <div class="admin-page-header-left">
-                <h1 class="admin-page-title">Xác Nhận Thanh Toán Hóa Đơn</h1>
+                <h1 class="admin-page-title">
+                    <c:choose>
+                        <c:when test="${statusParam == 'Paid'}">Lịch Sử Giao Dịch Thanh Toán</c:when>
+                        <c:when test="${statusParam == 'PendingConfirmation'}">Duyệt Xác Nhận Thanh Toán</c:when>
+                        <c:otherwise>Xác Nhận Thanh Toán Hóa Đơn</c:otherwise>
+                    </c:choose>
+                </h1>
                 <div class="admin-page-subtitle">
-                    Quản lý tiếp đón &gt; Danh sách hóa đơn &amp; Thu phí dịch vụ
+                    Quản lý tiếp đón &gt;
+                    <c:choose>
+                        <c:when test="${statusParam == 'Paid'}">Lịch sử giao dịch</c:when>
+                        <c:otherwise>Danh sách hóa đơn &amp; Thu phí dịch vụ</c:otherwise>
+                    </c:choose>
                 </div>
             </div>
         </div>
@@ -294,11 +311,17 @@
                                                 </c:choose>
                                             </td>
                                             <td>
-                                                <c:choose>
-                                                    <c:when test="${inv.status == 'Unpaid' || inv.status == 'PendingConfirmation'}">
-                                                        <div class="d-flex gap-1">
+                                                <div class="d-flex gap-1 flex-wrap">
+                                                    <c:choose>
+                                                        <c:when test="${inv.status == 'Unpaid' || inv.status == 'PendingConfirmation'}">
+                                                            <c:if test="${inv.status == 'PendingConfirmation'}">
+                                                                <button type="button" class="btn btn-sm btn-outline-info fw-bold d-inline-flex align-items-center gap-1"
+                                                                        onclick="openQRModal(${inv.id}, '${inv.patientName}', ${inv.totalAmount}, '${inv.appointmentId}', '${inv.transactionCode}', '${inv.invoiceType}', '${fn:escapeXml(inv.serviceName != null ? inv.serviceName : 'Phí khám thai tổng quát')}')">
+                                                                    <i class="bi bi-qr-code-scan"></i> Xem QR
+                                                                </button>
+                                                            </c:if>
                                                             <button type="button" class="btn btn-sm btn-outline-success fw-bold d-inline-flex align-items-center gap-1"
-                                                                    onclick="openPaymentModal(${inv.id}, '${inv.patientName}', ${inv.totalAmount}, '${inv.invoiceType}')">
+                                                                    onclick="openPaymentModal(${inv.id}, '${inv.patientName}', ${inv.totalAmount}, '${inv.invoiceType}', '${inv.appointmentId}', '${inv.appointmentDate}', '${fn:escapeXml(inv.serviceName != null ? inv.serviceName : 'Phí khám thai tổng quát')}', '${inv.transactionCode}', '${inv.paymentMethod}', '${inv.proofImagePath}')">
                                                                 <i class="bi bi-credit-card"></i> Xác nhận Paid
                                                             </button>
                                                             <c:if test="${inv.invoiceType == 'PRESCRIPTION'}">
@@ -307,14 +330,14 @@
                                                                     <i class="bi bi-x-circle"></i> Từ chối
                                                                 </button>
                                                             </c:if>
-                                                        </div>
-                                                    </c:when>
-                                                    <c:otherwise>
-                                                        <button class="btn btn-sm btn-light border text-muted disabled" disabled>
-                                                            <i class="bi bi-lock"></i> Khóa
-                                                        </button>
-                                                    </c:otherwise>
-                                                </c:choose>
+                                                        </c:when>
+                                                        <c:otherwise>
+                                                            <button class="btn btn-sm btn-light border text-muted disabled" disabled>
+                                                                <i class="bi bi-lock"></i> Khóa
+                                                            </button>
+                                                        </c:otherwise>
+                                                    </c:choose>
+                                                </div>
                                             </td>
                                         </tr>
                                     </c:forEach>
@@ -373,6 +396,7 @@
                 </div>
                 <div class="modal-body p-4">
                     <input type="hidden" id="modalInvoiceId" name="invoiceId">
+                    <input type="hidden" id="modalAppointmentId" value="">
                     
                     <div class="mb-3">
                         <label class="text-muted small fw-bold">SẢN PHỤ</label>
@@ -384,17 +408,68 @@
                         <div class="fs-4 fw-bold text-danger" id="modalTotalAmount"></div>
                     </div>
 
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <span class="text-muted small fw-bold">LOẠI HÓA ĐƠN</span>
+                            <div><span class="badge bg-info text-dark" id="modalInvoiceType"></span></div>
+                        </div>
+                        <div class="col-6 text-end">
+                            <span class="text-muted small fw-bold">NGÀY HẸN</span>
+                            <div class="fw-bold text-dark" id="modalAppointmentDate"></div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3" id="modalServiceInfo">
+                        <span class="text-muted small fw-bold">DỊCH VỤ ĐĂNG KÝ</span>
+                        <div class="fw-bold text-dark" id="modalServiceName"></div>
+                    </div>
+
+                    <div id="modalRxInfo" style="display: none;" class="mb-3">
+                        <span class="text-muted small fw-bold">DANH SÁCH THUỐC ĐÃ KÊ</span>
+                        <div id="modalRxTable" class="mt-1"></div>
+                    </div>
+
+                    <div id="modalTestOrdersInfo" style="display: none;" class="mb-3">
+                        <span class="text-muted small fw-bold">CHI TIẾT CHỈ ĐỊNH SIÊU ÂM</span>
+                        <div id="modalTestOrdersTable" class="mt-1"></div>
+                    </div>
+
+                    <div id="modalTxInfo" style="display: none;" class="mb-3">
+                        <div class="alert alert-info py-2 px-3 mb-0" style="font-size:13px;">
+                            <span class="fw-bold"><i class="bi bi-info-circle me-1"></i>Thông tin thanh toán chuyển khoản:</span>
+                            <div class="mt-1">
+                                <strong>Mã giao dịch của BN:</strong> <code id="modalTxCode"></code><br>
+                                <strong>Phương thức đăng ký:</strong> <span id="modalTxMethod"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="modalProofImageBox" style="display: none;" class="mb-3">
+                        <label class="text-muted small fw-bold d-block mb-1">ẢNH MINH CHỨNG CHUYỂN KHOẢN (BỆNH NHÂN GỬI)</label>
+                        <a id="modalProofImageLink" href="#" target="_blank">
+                            <img id="modalProofImage" src="" alt="Ảnh minh chứng chuyển khoản"
+                                 class="img-fluid rounded-3 border" style="max-height: 280px;">
+                        </a>
+                        <div class="form-text">Bấm vào ảnh để xem kích thước đầy đủ.</div>
+                    </div>
+
+                    <div id="modalNoProofBox" style="display: none;" class="mb-3">
+                        <div class="alert alert-warning py-2 px-3 mb-0" style="font-size:13px;">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i>Bệnh nhân chưa gửi ảnh minh chứng chuyển khoản nào.
+                        </div>
+                    </div>
+
                     <div class="mb-3">
-                        <label class="form-label text-muted small fw-bold">PHƯƠNG THỨC THANH TOÁN</label>
+                        <label class="form-label text-muted small fw-bold">PHƯƠNG THỨC THANH TOÁN THỰC TẾ</label>
                         <div class="d-flex gap-4">
                             <div class="form-check">
-                                <input class="form-check-input" type="radio" name="paymentMethod" id="methodCash" value="Cash" checked onclick="toggleTxCode(false)">
+                                <input class="form-check-input" type="radio" name="paymentMethod" id="methodCash" value="Cash" checked>
                                 <label class="form-check-label fw-bold text-dark" for="methodCash">
                                     <i class="bi bi-cash me-1 text-success"></i> Tiền mặt (Cash)
                                 </label>
                             </div>
                             <div class="form-check">
-                                <input class="form-check-input" type="radio" name="paymentMethod" id="methodTransfer" value="BankTransfer" onclick="toggleTxCode(true)">
+                                <input class="form-check-input" type="radio" name="paymentMethod" id="methodTransfer" value="BankTransfer">
                                 <label class="form-check-label fw-bold text-dark" for="methodTransfer">
                                     <i class="bi bi-bank me-1 text-primary"></i> Chuyển khoản (BankTransfer)
                                 </label>
@@ -402,25 +477,49 @@
                         </div>
                     </div>
 
-                    <div class="mb-3" id="txCodeContainer" style="display: none;">
-                        <label for="transactionCode" class="form-label text-muted small fw-bold">MÃ GIAO DỊCH CHUYỂN KHOẢN <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="transactionCode" name="transactionCode" placeholder="Nhập mã giao dịch ngân hàng (VD: FT24090...)">
-                        <div class="invalid-feedback">Vui lòng nhập mã giao dịch ngân hàng.</div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="paymentNote" class="form-label text-muted small fw-bold">GHI CHÚ THANH TOÁN</label>
-                        <textarea class="form-control" id="paymentNote" name="paymentNote" rows="2" placeholder="Thông tin thêm (nếu có)..."></textarea>
-                    </div>
                 </div>
                 <div class="modal-footer bg-light border-0">
                     <button type="button" class="btn btn-secondary border" data-bs-dismiss="modal">Hủy bỏ</button>
+                    <button type="button" class="btn btn-outline-danger fw-bold" onclick="rejectCurrentPayment()">
+                        <i class="bi bi-x-lg"></i> Từ chối thanh toán
+                    </button>
                     <button type="submit" class="btn btn-success fw-bold px-4">
                         <i class="bi bi-check-lg"></i> Xác nhận PAID
                     </button>
                 </div>
             </div>
         </form>
+
+        <!-- Form riêng (không lồng trong form trên) để gửi Từ chối thanh toán sang StaffEditServlet -->
+        <form id="rejectPaymentForm" method="POST" action="${pageContext.request.contextPath}/admin/reception/edit" style="display:none;">
+            <input type="hidden" name="id" id="rejectApptId">
+            <input type="hidden" name="invoiceId" id="rejectInvoiceIdInput">
+            <input type="hidden" name="action" value="rejectPayment">
+            <input type="hidden" name="rejectReason" id="rejectReasonInput">
+        </form>
+    </div>
+</div>
+
+<!-- View QR Code Modal -->
+<div class="modal fade" id="qrModal" tabindex="-1" aria-labelledby="qrModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title fw-bold text-white" id="qrModalLabel">
+                    <i class="bi bi-qr-code-scan"></i> Xem QR Code
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div id="qrCodeDisplay" style="height: 200px; border: 1px solid #ccc; border-radius: 5px; display: none; text-align: center;">
+                </div>
+                <div id="paymentDetails" style="margin-top: 10px; font-size: 14px; color: #333;">
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-secondary border" data-bs-dismiss="modal">Hủy bỏ</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -428,6 +527,24 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
+    const prescriptionItemsData = {};
+    <c:if test="${not empty prescriptionItemsJson}">
+        <c:forEach var="entry" items="${prescriptionItemsJson.entrySet()}">
+            <c:if test="${not empty entry.value}">
+                prescriptionItemsData['${entry.key}'] = ${entry.value};
+            </c:if>
+        </c:forEach>
+    </c:if>
+
+    const testOrdersData = {};
+    <c:if test="${not empty testOrdersJson}">
+        <c:forEach var="entry" items="${testOrdersJson.entrySet()}">
+            <c:if test="${not empty entry.value}">
+                testOrdersData['${entry.key}'] = ${entry.value};
+            </c:if>
+        </c:forEach>
+    </c:if>
+
     // Sidebar toggle
     const sidebarToggle = document.getElementById('sidebarToggle');
     const adminSidebar = document.getElementById('adminSidebar');
@@ -448,43 +565,206 @@
     // Modal helpers
     const paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
     
-    function openPaymentModal(invoiceId, patientName, amount, type) {
+    function openPaymentModal(invoiceId, patientName, amount, type, appointmentId, appointmentDate, serviceName, transactionCode, paymentMethod, proofImagePath) {
         document.getElementById('modalInvoiceId').value = invoiceId;
+        document.getElementById('modalAppointmentId').value = appointmentId;
         document.getElementById('modalPatientName').textContent = patientName;
         document.getElementById('modalTotalAmount').textContent = new Intl.NumberFormat('vi-VN').format(amount) + 'đ';
         
-        // Reset form
-        document.getElementById('methodCash').checked = true;
-        document.getElementById('transactionCode').value = '';
-        document.getElementById('paymentNote').value = '';
-        toggleTxCode(false);
+        const typeLabels = {
+            'PRE_EXAM': 'Trước khám',
+            'POST_EXAM': 'Sau khám',
+            'PRESCRIPTION': 'Đơn thuốc'
+        };
+        document.getElementById('modalInvoiceType').textContent = typeLabels[type] || type;
+        document.getElementById('modalAppointmentDate').textContent = appointmentDate || '—';
+        document.getElementById('modalServiceName').textContent = serviceName || '—';
+
+        // Ảnh minh chứng chuyển khoản do bệnh nhân gửi (nếu có)
+        const proofBox = document.getElementById('modalProofImageBox');
+        const noProofBox = document.getElementById('modalNoProofBox');
+        const proofImg = document.getElementById('modalProofImage');
+        const proofLink = document.getElementById('modalProofImageLink');
+        if (proofImagePath && proofImagePath.trim() !== '' && proofImagePath !== 'null') {
+            const fullUrl = '${pageContext.request.contextPath}' + proofImagePath;
+            proofImg.src = fullUrl;
+            proofLink.href = fullUrl;
+            proofBox.style.display = 'block';
+            noProofBox.style.display = 'none';
+        } else {
+            proofBox.style.display = 'none';
+            noProofBox.style.display = (paymentMethod === 'BankTransfer') ? 'block' : 'none';
+        }
+
+        // Display transaction details if the patient already paid online
+        const txInfo = document.getElementById('modalTxInfo');
+        const txCode = document.getElementById('modalTxCode');
+        const txMethod = document.getElementById('modalTxMethod');
+
+        if (transactionCode && transactionCode.trim() !== '' && transactionCode !== 'null') {
+            txInfo.style.display = 'block';
+            txCode.textContent = transactionCode;
+            txMethod.textContent = paymentMethod === 'BankTransfer' ? 'Chuyển khoản' : 'Tiền mặt';
+        } else {
+            txInfo.style.display = 'none';
+        }
+
+        // Pre-select payment method thực tế dựa theo phương thức bệnh nhân đã đăng ký
+        if (paymentMethod === 'BankTransfer') {
+            document.getElementById('methodTransfer').checked = true;
+        } else {
+            document.getElementById('methodCash').checked = true;
+        }
+
+        // Reset prescription list
+        const modalRxTable = document.getElementById('modalRxTable');
+        const modalRxInfo = document.getElementById('modalRxInfo');
+        const prescriptionItems = prescriptionItemsData[invoiceId] || [];
+        if (type === 'PRESCRIPTION' && prescriptionItems.length > 0) {
+            let html = '<table class="table table-sm mb-0" style="font-size:13px;"><thead><tr><th>#</th><th>Tên thuốc</th><th>Đơn vị</th><th class="text-center">SL</th><th class="text-end">Đơn giá</th><th class="text-end">Thành tiền</th></tr></thead><tbody>';
+            prescriptionItems.forEach(function(item, idx) {
+                const lineTotal = (item.price * item.quantity);
+                html += '<tr>' +
+                    '<td>' + (idx + 1) + '</td>' +
+                    '<td>' + (item.name || '') + '</td>' +
+                    '<td>' + (item.unit || '') + '</td>' +
+                    '<td class="text-center">' + item.quantity + '</td>' +
+                    '<td class="text-end">' + new Intl.NumberFormat('vi-VN').format(item.price) + 'đ</td>' +
+                    '<td class="text-end">' + new Intl.NumberFormat('vi-VN').format(lineTotal) + 'đ</td>' +
+                    '</tr>';
+            });
+            html += '</tbody></table>';
+            modalRxTable.innerHTML = html;
+            modalRxInfo.style.display = 'block';
+        } else {
+            modalRxInfo.style.display = 'none';
+        }
+
+        // Reset test orders list
+        const modalTestOrdersTable = document.getElementById('modalTestOrdersTable');
+        const modalTestOrdersInfo = document.getElementById('modalTestOrdersInfo');
+        const testOrders = testOrdersData[invoiceId] || [];
+        if (type === 'POST_EXAM' && testOrders.length > 0) {
+            let html = '<table class="table table-sm mb-0" style="font-size:13px;"><thead><tr><th>#</th><th>Tên dịch vụ</th><th class="text-end">Đơn giá</th></tr></thead><tbody>';
+            testOrders.forEach(function(item, idx) {
+                html += '<tr>' +
+                    '<td>' + (idx + 1) + '</td>' +
+                    '<td>' + (item.name || '') + '</td>' +
+                    '<td class="text-end">' + new Intl.NumberFormat('vi-VN').format(item.price) + 'đ</td>' +
+                    '</tr>';
+            });
+            html += '</tbody></table>';
+            modalTestOrdersTable.innerHTML = html;
+            modalTestOrdersInfo.style.display = 'block';
+        } else {
+            modalTestOrdersInfo.style.display = 'none';
+        }
         
         paymentModal.show();
     }
 
-    function toggleTxCode(show) {
-        const container = document.getElementById('txCodeContainer');
-        const input = document.getElementById('transactionCode');
-        if (show) {
-            container.style.display = 'block';
-            input.focus();
-        } else {
-            container.style.display = 'none';
-        }
+    function validatePaymentForm() {
+        // Mã giao dịch giờ chỉ là thông tin bổ sung tuỳ chọn — bằng chứng chính là ảnh
+        // minh chứng chuyển khoản bệnh nhân đã gửi (hiển thị phía trên), nên không bắt buộc nữa.
+        return true;
     }
 
-    function validatePaymentForm() {
-        const isTransfer = document.getElementById('methodTransfer').checked;
-        const txCodeInput = document.getElementById('transactionCode');
-        
-        if (isTransfer) {
-            if (txCodeInput.value.trim() === '') {
-                txCodeInput.classList.add('is-invalid');
-                return false;
-            }
+    function rejectCurrentPayment() {
+        const apptId = document.getElementById('modalAppointmentId').value;
+        const invoiceId = document.getElementById('modalInvoiceId').value;
+        if (!apptId || !invoiceId) {
+            alert('Không xác định được hóa đơn cần từ chối.');
+            return;
         }
-        txCodeInput.classList.remove('is-invalid');
-        return true;
+        const reason = prompt('Lý do từ chối thanh toán (bệnh nhân sẽ mất slot đã giữ, phải đặt lại lịch):');
+        if (reason === null) return; // bấm Cancel
+        document.getElementById('rejectApptId').value = apptId;
+        document.getElementById('rejectInvoiceIdInput').value = invoiceId;
+        document.getElementById('rejectReasonInput').value = reason;
+        document.getElementById('rejectPaymentForm').submit();
+    }
+
+    const qrModal = new bootstrap.Modal(document.getElementById('qrModal'));
+
+    function openQRModal(invoiceId, patientName, amount, appointmentId, transactionCode, invoiceType, serviceName) {
+        const qrCodeDisplay = document.getElementById('qrCodeDisplay');
+        const paymentDetailsDiv = document.getElementById('paymentDetails');
+
+        // Generate VietQR URL
+        const bankAccount = "0967629020";
+        const bankName = "mb"; // MB Bank
+        const amount_long = Math.floor(parseFloat(amount));
+        const accountName = "PHONG KHAM SAN PHU";
+        const description = "CAMSHD" + appointmentId;
+
+        // VietQR API - compact format
+        const qrUrl = "https://img.vietqr.io/image/" + bankName + "-" + bankAccount + "-compact2.png?amount=" + amount_long + "&addInfo=" + encodeURIComponent(description) + "&accountName=" + encodeURIComponent(accountName);
+
+        // Create QR code display with image
+        qrCodeDisplay.innerHTML = '<img src="' + qrUrl + '" alt="QR Code" style="max-width: 200px; height: auto; object-fit: contain; border-radius: 5px;">';
+        qrCodeDisplay.style.display = 'block';
+
+        // Fetch prescription items or test orders
+        const prescriptionItems = prescriptionItemsData[invoiceId] || [];
+        const testOrders = testOrdersData[invoiceId] || [];
+
+        let itemsHtml = '';
+        if (invoiceType === 'PRESCRIPTION' && prescriptionItems.length > 0) {
+            itemsHtml += '<div style="margin-top: 10px; border-top: 1px solid #e0e0e0; padding-top: 10px;">' +
+                         '<strong>Danh sách thuốc đã kê:</strong>' +
+                         '<table class="table table-sm mb-0 mt-1" style="font-size:12px;">' +
+                         '<thead><tr><th>Tên thuốc</th><th class="text-center">SL</th><th class="text-end">Đơn giá</th></tr></thead><tbody>';
+            prescriptionItems.forEach(item => {
+                itemsHtml += '<tr><td>' + item.name + '</td><td class="text-center">' + item.quantity + '</td><td class="text-end">' + new Intl.NumberFormat('vi-VN').format(item.price) + 'đ</td></tr>';
+            });
+            itemsHtml += '</tbody></table></div>';
+        } else if (invoiceType === 'POST_EXAM' && testOrders.length > 0) {
+            itemsHtml += '<div style="margin-top: 10px; border-top: 1px solid #e0e0e0; padding-top: 10px;">' +
+                         '<strong>Danh sách chỉ định siêu âm:</strong>' +
+                         '<table class="table table-sm mb-0 mt-1" style="font-size:12px;">' +
+                         '<thead><tr><th>Tên dịch vụ</th><th class="text-end">Đơn giá</th></tr></thead><tbody>';
+            testOrders.forEach(item => {
+                itemsHtml += '<tr><td>' + item.name + '</td><td class="text-end">' + new Intl.NumberFormat('vi-VN').format(item.price) + 'đ</td></tr>';
+            });
+            itemsHtml += '</tbody></table></div>';
+        } else if (invoiceType === 'PRE_EXAM') {
+            itemsHtml += '<div style="margin-top: 10px; border-top: 1px solid #e0e0e0; padding-top: 10px;">' +
+                         '<strong>Dịch vụ khám đăng ký:</strong> <span class="fw-bold">' + (serviceName || 'Khám thai định kỳ') + '</span>' +
+                         '</div>';
+        }
+
+        // Display payment details
+        const formattedAmount = new Intl.NumberFormat('vi-VN').format(amount_long) + 'đ';
+        const typeLabels = {
+            'PRE_EXAM': 'Trước khám',
+            'POST_EXAM': 'Sau khám',
+            'PRESCRIPTION': 'Đơn thuốc'
+        };
+        const invoiceTypeLabel = typeLabels[invoiceType] || invoiceType;
+
+        paymentDetailsDiv.innerHTML =
+            '<div style="margin-top: 15px;">' +
+                '<div class="row">' +
+                    '<div class="col-6">' +
+                        '<strong>Bệnh nhân:</strong> ' + patientName + '<br>' +
+                        '<strong>Mã GD:</strong> <code>' + (transactionCode || 'Chưa nhập') + '</code>' +
+                    '</div>' +
+                    '<div class="col-6 text-end">' +
+                        '<strong>Số tiền:</strong> <span class="text-danger fw-bold">' + formattedAmount + '</span><br>' +
+                        '<strong>Phân loại:</strong> <span class="badge bg-info text-dark">' + invoiceTypeLabel + '</span>' +
+                    '</div>' +
+                '</div>' +
+                itemsHtml +
+                '<div style="margin-top: 10px; border-top: 1px solid #e0e0e0; padding-top: 10px; font-size: 13px;">' +
+                    '<strong>Thông tin chuyển khoản ngân hàng:</strong><br>' +
+                    'Ngân hàng: <strong>MB Bank</strong><br>' +
+                    'Số TK: <strong>' + bankAccount + '</strong><br>' +
+                    'Chủ TK: <strong>' + accountName + '</strong><br>' +
+                    'Nội dung: <strong>' + description + '</strong>' +
+                '</div>' +
+            '</div>';
+
+        qrModal.show();
     }
 
     function confirmDecline(invoiceId, patientName) {
@@ -506,8 +786,6 @@
     <input type="hidden" name="page" value="${currentPage}">
 </form>
 
-
-<%@ include file="../common/standalone-footer.jsp" %>
 </body>
 </html>
 

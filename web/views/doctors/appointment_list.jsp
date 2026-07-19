@@ -38,15 +38,7 @@
 
 <%-- ── Thống kê nhanh hôm nay ────────────────────────────────────────── --%>
 <div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
-        <div class="card border-0 rounded-4 h-100 text-center p-3" style="background:#e8f4fd;">
-            <div class="fs-1 fw-bold text-primary">
-                <c:out value="${empty todayCounts['pending'] ? 0 : todayCounts['pending']}"/>
-            </div>
-            <div class="small text-muted mt-1"><i class="bi bi-hourglass-split me-1"></i>Chờ xác nhận</div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-4">
         <div class="card border-0 rounded-4 h-100 text-center p-3" style="background:#e8fdf0;">
             <div class="fs-1 fw-bold text-success">
                 <c:out value="${empty todayCounts['confirmed'] ? 0 : todayCounts['confirmed']}"/>
@@ -54,7 +46,7 @@
             <div class="small text-muted mt-1"><i class="bi bi-check-circle me-1"></i>Đã xác nhận</div>
         </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-4">
         <div class="card border-0 rounded-4 h-100 text-center p-3" style="background:#f0eaff;">
             <div class="fs-1 fw-bold" style="color:#7c3aed;">
                 <c:out value="${empty todayCounts['success'] ? 0 : todayCounts['success']}"/>
@@ -62,7 +54,7 @@
             <div class="small text-muted mt-1"><i class="bi bi-clipboard2-check me-1"></i>Hoàn thành</div>
         </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-4">
         <div class="card border-0 rounded-4 h-100 text-center p-3" style="background:#fdf0f0;">
             <div class="fs-1 fw-bold text-danger">
                 <c:out value="${empty todayCounts['cancelled'] ? 0 : todayCounts['cancelled']}"/>
@@ -100,7 +92,6 @@
                 <label class="form-label small fw-medium text-muted">Trạng thái</label>
                 <select name="status" class="form-select rounded-3">
                     <option value="">Tất cả</option>
-                    <option value="Pending"        ${fn:toLowerCase(statusFilter) == 'pending'        ? 'selected' : ''}>Chờ xác nhận</option>
                     <option value="Confirmed"      ${fn:toLowerCase(statusFilter) == 'confirmed'      ? 'selected' : ''}>Đã xác nhận</option>
                     <option value="Waiting"        ${fn:toLowerCase(statusFilter) == 'waiting'        ? 'selected' : ''}>Chờ khám</option>
                     <option value="InProgress"     ${fn:toLowerCase(statusFilter) == 'inprogress'     ? 'selected' : ''}>Đang khám</option>
@@ -234,7 +225,6 @@
                                             <select name="newStatus"
                                                     onchange="this.form.submit()"
                                                     class="status-dropdown status-${fn:toLowerCase(appt.status)}">
-                                                <option value="Pending"       <c:if test="${fn:toLowerCase(appt.status) == 'pending'}">selected</c:if>>⏳ Chờ xác nhận</option>
                                                 <option value="Confirmed"     <c:if test="${fn:toLowerCase(appt.status) == 'confirmed'}">selected</c:if>>✅ Đã xác nhận</option>
                                                 <option value="Waiting"       <c:if test="${fn:toLowerCase(appt.status) == 'waiting'}">selected</c:if>>🕐 Chờ khám</option>
                                                 <option value="InProgress"    <c:if test="${fn:toLowerCase(appt.status) == 'inprogress'}">selected</c:if>>🩺 Đang khám</option>

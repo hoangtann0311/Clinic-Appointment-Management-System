@@ -122,12 +122,12 @@ public class MedicalRecordDAO {
             "  fetal_heart_rate, fetal_presentation, fetal_position, fetal_movement, " +
             "  cervical_dilation_cm, cervical_effacement, amniotic_fluid, presentation_station, " +
             "  edema, proteinuria, vaginal_bleeding, uterine_contractions, risk_flags_json, " +
-            "  treatment_plan, next_appointment_date, referred_to, status" +
-            ") VALUES (?,?,?,?,  ?,?,?,?,?,  ?,?,?,  ?,?,?,?,  ?,?,?,?,  ?,?,?,?,?,  ?,?,?,?)";
+            "  treatment_plan, next_appointment_date, referred_to" +
+            ") VALUES (?,?,?,?,  ?,?,?,?,?,  ?,?,?,  ?,?,?,?,  ?,?,?,?,  ?,?,?,?,?,  ?,?,?)";
 
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            bindParams(ps, mr, true);
+            bindParams(ps, mr, true, false);
             ps.executeUpdate();
             ResultSet keys = ps.getGeneratedKeys();
             if (keys.next()) return keys.getInt(1);
@@ -153,7 +153,7 @@ public class MedicalRecordDAO {
 
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            bindParams(ps, mr, false);
+            bindParams(ps, mr, false, true);
             ps.setInt(28, mr.getId());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) { e.printStackTrace(); }
@@ -168,7 +168,7 @@ public class MedicalRecordDAO {
      * Bind tất cả tham số.
      * @param includeApptId true khi INSERT (có cột appointment_id + created_at đầu tiên)
      */
-    private void bindParams(PreparedStatement ps, MedicalRecord mr, boolean includeApptId) throws SQLException {
+    private void bindParams(PreparedStatement ps, MedicalRecord mr, boolean includeApptId, boolean includeStatus) throws SQLException {
         int i = 1;
         if (includeApptId) {
             ps.setInt(i++, mr.getAppointmentId());
@@ -209,8 +209,9 @@ public class MedicalRecordDAO {
             ps.setDate(i++, Date.valueOf(mr.getNextAppointmentDate()));
         } else { ps.setNull(i++, Types.DATE); }
         ps.setString(i++, mr.getReferredTo());
-        // Status (draft / final)
-        ps.setString(i++, mr.getStatus() != null ? mr.getStatus() : "final");
+        if (includeStatus) {
+            ps.setString(i++, mr.getStatus() != null ? mr.getStatus() : "final");
+        }
     }
 
     private void setDoubleOrNull(PreparedStatement ps, int idx, Double val) throws SQLException {

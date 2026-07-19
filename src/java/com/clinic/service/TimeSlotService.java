@@ -273,6 +273,51 @@ public class TimeSlotService {
     }
 
     /**
+     * Cập nhật giá riêng cho MỘT khung giờ (giá theo giờ).
+     * priceStr rỗng/null → xóa giá riêng (dùng lại giá mặc định của bác sĩ).
+     *
+     * @return true nếu cập nhật thành công, false nếu có lỗi (xem errors)
+     */
+    public boolean updateSlotPrice(int slotId, String priceStr, Map<String, String> errors) {
+        Double price = parsePrice(priceStr, errors);
+        if (errors.containsKey("price")) return false;
+        boolean ok = timeSlotDAO.updateSlotPrice(slotId, price);
+        if (!ok) errors.put("general", "Không thể cập nhật giá cho khung giờ này.");
+        return ok;
+    }
+
+    /**
+     * Áp một giá cho TẤT CẢ khung giờ của một lịch trực (giá theo ngày,
+     * vì mỗi schedule tương ứng 1 bác sĩ trong 1 ngày làm việc cụ thể).
+     *
+     * @return số slot đã cập nhật, hoặc -1 nếu lỗi
+     */
+    public int updatePriceForSchedule(int scheduleId, String priceStr, Map<String, String> errors) {
+        Double price = parsePrice(priceStr, errors);
+        if (errors.containsKey("price")) return -1;
+        int updated = timeSlotDAO.updatePriceBySchedule(scheduleId, price);
+        if (updated < 0) errors.put("general", "Không thể cập nhật giá cho lịch trực này.");
+        return updated;
+    }
+
+    private Double parsePrice(String priceStr, Map<String, String> errors) {
+        if (priceStr == null || priceStr.trim().isEmpty()) {
+            return null; // xóa giá riêng → dùng lại giá mặc định của bác sĩ
+        }
+        try {
+            double price = Double.parseDouble(priceStr.trim());
+            if (price < 0) {
+                errors.put("price", "Giá không được âm.");
+                return null;
+            }
+            return price;
+        } catch (NumberFormatException e) {
+            errors.put("price", "Giá không hợp lệ.");
+            return null;
+        }
+    }
+
+    /**
      * Đếm tổng số time slots của một schedule.
      */
     public int countSlotsBySchedule(int scheduleId) {

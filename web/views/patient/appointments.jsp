@@ -92,6 +92,12 @@
                                             <span class="badge bg-light text-dark">${a.status}</span>
                                         </c:otherwise>
                                     </c:choose>
+                                    <c:if test="${a.preExamPaymentStatus == 'Paid'}">
+                                        <span class="badge bg-success mt-1 d-block">Đã thanh toán trước khám</span>
+                                    </c:if>
+                                    <c:if test="${a.preExamPaymentStatus == 'Unpaid' && (a.status == 'Pending' || a.status == 'Confirmed')}">
+                                        <span class="badge bg-warning text-dark mt-1 d-block">Chưa thanh toán</span>
+                                    </c:if>
                                 </td>
                                 <td class="text-end">
                                     <div class="d-flex flex-wrap justify-content-end gap-1">
@@ -100,9 +106,13 @@
                                             <a href="${pageContext.request.contextPath}/patient/booking?rescheduleId=${a.id}"
                                                class="btn btn-sm btn-outline-warning"
                                                title="Đổi lịch hẹn">
-                                                <i class="bi bi-arrow-repeat me-1"></i>Đổi lịch
+                                                 <i class="bi bi-arrow-repeat me-1"></i>Đổi lịch
                                             </a>
                                         </c:if>
+
+                                        <%-- Đã bỏ toàn bộ nút Thanh toán ở trang Lịch Hẹn — người dùng đã có mục
+                                             riêng "Thanh Toán Của Tôi" trên menu để xử lý thanh toán, không cần
+                                             lặp lại ở đây nữa. Badge trạng thái thanh toán ở cột "Trạng thái" vẫn giữ. --%>
 
                                         <%-- Huỷ (Pending/Confirmed) --%>
                                         <c:if test="${a.status == 'Pending' || a.status == 'Confirmed'}">
@@ -142,14 +152,9 @@
                                             </c:when>
                                         </c:choose>
 
-                                         <%-- Thanh toán (Confirmed, Waiting, Pending, hoặc SUCCESS để trả phí phát sinh/thuốc) --%>
-                                         <c:if test="${a.status == 'Confirmed' || a.status == 'Waiting' || a.status == 'Pending' || a.status == 'SUCCESS'}">
-                                             <a href="${pageContext.request.contextPath}/patient/payment?appointmentId=${a.id}"
-                                                class="btn btn-sm btn-outline-success"
-                                                title="Thanh toán hóa đơn">
-                                                 <i class="bi bi-credit-card me-1"></i>Thanh toán
-                                             </a>
-                                         </c:if>
+                                         <%-- Đã bỏ nút "Thanh toán" chung (trùng với nút "Thanh toán trước khám" ở trên
+                                              nhưng thiếu điều kiện kiểm tra preExamPaymentStatus, khiến nút vẫn hiện
+                                              dù đã thanh toán rồi). 3 nút Thanh toán theo loại hoá đơn phía trên đã đủ. --%>
 
                                         <%-- Đánh giá bác sĩ (chỉ khi hoàn thành) --%>
                                         <c:if test="${a.status == 'SUCCESS'}">

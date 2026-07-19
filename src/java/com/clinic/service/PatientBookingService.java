@@ -19,7 +19,9 @@ import java.sql.Date;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -72,7 +74,38 @@ public class PatientBookingService {
         if (doctorId <= 0 || date == null || date.isBefore(LocalDate.now())) {
             return List.of();
         }
-        return timeSlotDAO.findByDoctorAndDate(doctorId, Date.valueOf(date), SlotStatus.AVAILABLE);
+        List<TimeSlot> slots = timeSlotDAO.findByDoctorAndDateWithPrice(doctorId, Date.valueOf(date), SlotStatus.AVAILABLE);
+
+        LinkedHashMap<LocalTime, TimeSlot> unique = new LinkedHashMap<>();
+        for (TimeSlot slot : slots) {
+            unique.putIfAbsent(slot.getStartTime().toLocalTime(), slot);
+        }
+        return new ArrayList<>(unique.values());
+    }
+
+    /**
+     * Danh sách TẤT CẢ time-slot (mọi trạng thái, trừ COMPLETED/CANCELLED) của 1 bác sĩ
+     * trong 1 ngày — dùng để hiển thị đầy đủ lưới giờ khám cho bệnh nhân, trong đó slot
+     * không phải AVAILABLE vẫn hiển thị nhưng bị khóa (disable), thay vì ẩn hoàn toàn.
+     *
+     * <p>Lý do nghiệp vụ: nếu chỉ trả AVAILABLE, bệnh nhân sẽ tưởng nhầm hệ thống bị lỗi
+     * "tự dưng mất mất 1 khung giờ" khi thực ra khung giờ đó đang được người khác giữ chỗ/
+     * chờ duyệt/đã đặt. Hiển thị rõ trạng thái giúp bệnh nhân yên tâm và hiểu đúng lý do.
+     */
+    public List<TimeSlot> getSlotsForDisplay(int doctorId, LocalDate date) {
+        if (doctorId <= 0 || date == null || date.isBefore(LocalDate.now())) {
+            return List.of();
+        }
+        List<TimeSlot> slots = timeSlotDAO.findByDoctorAndDateWithPrice(doctorId, Date.valueOf(date), null);
+
+        LinkedHashMap<LocalTime, TimeSlot> unique = new LinkedHashMap<>();
+        for (TimeSlot slot : slots) {
+            if (slot.getStatus() == SlotStatus.COMPLETED || slot.getStatus() == SlotStatus.CANCELLED) {
+                continue;
+            }
+            unique.putIfAbsent(slot.getStartTime().toLocalTime(), slot);
+        }
+        return new ArrayList<>(unique.values());
     }
 
     // ── Đặt lịch khám ───────────────────────────────────────────────────
@@ -80,15 +113,17 @@ public class PatientBookingService {
     /**
      * Đặt lịch khám cho bệnh nhân đang đăng nhập.
      *
-     * @param userId    users.id của tài khoản đang đăng nhập (dùng để book slot)
-     * @param slotId    time_slots.id được chọn
-     * @param serviceId dịch vụ khám
-     * @param symptoms  triệu chứng (bắt buộc — theo BA 4.2)
-     * @param lmpStr    ngày kinh cuối cùng, định dạng yyyy-MM-dd (có thể rỗng)
-     * @param errors    map lỗi để trả về cho UI (key -&gt; message)
+     * @param userId     users.id của tài khoản đang đăng nhập (dùng để book slot)
+     * @param slotId     time_slots.id được chọn
+     * @param serviceIds dịch vụ bổ sung TUỲ CHỌN (có thể null/rỗng — không bắt buộc phải chọn).
+     *                   Phí khám bác sĩ (base fee) được tính riêng từ slot/doctor, không phụ
+     *                   thuộc vào danh sách này.
+     * @param symptoms   triệu chứng (bắt buộc — theo BA 4.2)
+     * @param lmpStr     ngày kinh cuối cùng, định dạng yyyy-MM-dd (có thể rỗng)
+     * @param errors     map lỗi để trả về cho UI (key -&gt; message)
      * @return Appointment vừa tạo, hoặc {@code null} nếu thất bại (xem errors)
      */
-    public Appointment bookAppointment(int userId, int slotId, int serviceId,
+    public Appointment bookAppointment(int userId, int slotId, int[] serviceIds,
                                         String symptoms, String lmpStr,
                                         Map<String, String> errors) {
 
@@ -114,11 +149,13 @@ public class PatientBookingService {
             return null;
         }
 
-        // 2. Dịch vụ phải tồn tại
-        ServiceItem service = serviceDAO.findServiceById(serviceId);
-        if (service == null) {
-            errors.put("serviceId", "Dịch vụ không tồn tại.");
-            return null;
+        // 2. Dịch vụ bổ sung là TUỲ CHỌN — nếu có chọn thì từng dịch vụ phải tồn tại
+        if (serviceIds == null) serviceIds = new int[0];
+        for (int sid : serviceIds) {
+            if (serviceDAO.findServiceById(sid) == null) {
+                errors.put("serviceIds", "Có dịch vụ bổ sung không tồn tại, vui lòng chọn lại.");
+                return null;
+            }
         }
 
         // 3. Triệu chứng bắt buộc (BA 4.2: "Patient nhập triệu chứng và ngày kinh cuối")
@@ -166,10 +203,14 @@ public class PatientBookingService {
             return null;
         }
 
-        // 7. Thực hiện đặt slot và tạo appointment trong cùng một transaction
+        // 7. Tính phí khám bác sĩ (base fee): lấy từ giá riêng của slot (theo ngày/giờ cụ thể).
+        //    Nếu slot chưa được thiết lập giá thì basePrice = 0 (hiển thị "Liên hệ" ở UI).
+        double basePrice = (slot.getPrice() != null) ? slot.getPrice() : 0;
+
+        // 8. Thực hiện đặt slot và tạo appointment trong cùng một transaction
         String gestationalAge = AppointmentDAO.calculateGestationalAge(lmp, workDate);
         boolean success = appointmentDAO.bookSlotAndCreateAppointment(
-                userId, patientId, slotId, serviceId, symptoms.trim(), lmp, gestationalAge, errors
+                userId, patientId, slotId, serviceIds, basePrice, symptoms.trim(), lmp, gestationalAge, errors
         );
 
         if (!success) {

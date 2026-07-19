@@ -15,11 +15,11 @@ public class PregnancyDAO {
 
     private static final String BASE_SELECT =
         "SELECT p.id, p.patient_id, p.start_date, p.estimated_due_date, p.actual_delivery_date, " +
-        "       p.pregnancy_status, p.fetus_count, p.notes, " +
-        "       u.full_name AS patient_name, " +
+        "       p.pregnancy_status, p.fetus_count, p.notes, p.created_at, " +
+        "       pt.full_name AS patient_name, " +
         "       (SELECT COUNT(*) FROM appointments a WHERE a.pregnancy_id = p.id) AS visit_count " +
         "FROM pregnancies p " +
-        "LEFT JOIN users u ON u.id = p.patient_id ";
+        "LEFT JOIN patients pt ON pt.id = p.patient_id ";
 
     // ────────────────────────────────────────────────────────────────────────
     // SELECT
@@ -208,6 +208,9 @@ public class PregnancyDAO {
         int fc = rs.getInt("fetus_count");
         if (!rs.wasNull()) p.setFetusCount(fc);
         p.setNotes(rs.getString("notes"));
+
+        Timestamp createdAt = rs.getTimestamp("created_at");
+        if (createdAt != null) p.setCreatedAt(createdAt.toLocalDateTime());
 
         p.setPatientName(rs.getString("patient_name"));
         p.setVisitCount(rs.getInt("visit_count"));

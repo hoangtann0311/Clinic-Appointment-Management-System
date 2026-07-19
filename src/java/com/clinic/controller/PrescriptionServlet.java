@@ -200,16 +200,18 @@ public class PrescriptionServlet extends HttpServlet {
         if (success) {
             // BR §4.8: Tự động tạo / cập nhật hóa đơn thuốc PRESCRIPTION
             try {
-                // Lấy appointmentId của bệnh án
                 com.clinic.model.MedicalRecord mr = recordDAO.getById(recordId);
+                System.out.println("[PrescriptionServlet] recordId=" + recordId + ", record=" + mr + ", appointmentId=" + (mr != null ? mr.getAppointmentId() : "null"));
                 if (mr != null && mr.getAppointmentId() > 0) {
                     java.math.BigDecimal total = calculatePrescriptionTotal(items);
-                    if (total.compareTo(java.math.BigDecimal.ZERO) > 0) {
-                        invoiceDAO.upsertPrescriptionInvoice(mr.getAppointmentId(), total);
-                    }
+                    System.out.println("[PrescriptionServlet] prescription total=" + total);
+                    handlePrescriptionInvoice(mr.getAppointmentId(), total);
+                } else {
+                    System.out.println("[PrescriptionServlet] SKIP invoice: record or appointmentId is null/0");
                 }
             } catch (Exception ex) {
-                System.err.println("[PrescriptionServlet] upsertPrescriptionInvoice failed: " + ex.getMessage());
+                System.err.println("[PrescriptionServlet] handlePrescriptionInvoice failed: " + ex.getMessage());
+                ex.printStackTrace();
             }
             response.sendRedirect(request.getContextPath()
                 + "/doctor/prescriptions?recordId=" + recordId + "&saved=1");
@@ -281,5 +283,42 @@ public class PrescriptionServlet extends HttpServlet {
             System.err.println("[PrescriptionServlet] calculatePrescriptionTotal error: " + e.getMessage());
         }
         return total;
+    }
+
+    private void handlePrescriptionInvoice(int appointmentId, java.math.BigDecimal newTotal) {
+        System.out.println("[PrescriptionServlet] handlePrescriptionInvoice START: appointmentId=" + appointmentId + ", newTotal=" + newTotal);
+        if (newTotal == null) newTotal = java.math.BigDecimal.ZERO;
+
+        com.clinic.model.Invoice existing = invoiceDAO.getByAppointmentIdAndType(appointmentId, "PRESCRIPTION");
+        System.out.println("[PrescriptionServlet] existing invoice=" + existing);
+
+        if (existing == null) {
+            System.out.println("[PrescriptionServlet] creating new invoice via upsertPrescriptionInvoice");
+            invoiceDAO.upsertPrescriptionInvoice(appointmentId, newTotal);
+            return;
+        }
+
+        String status = existing.getStatus() != null ? existing.getStatus() : "";
+        System.out.println("[PrescriptionServlet] existing status=" + status + ", oldTotal=" + existing.getTotalAmount());
+        if ("Paid".equalsIgnoreCase(status) || "DeclinedPurchase".equalsIgnoreCase(status)) {
+            java.math.BigDecimal oldTotal = existing.getTotalAmount() != null ? existing.getTotalAmount() : java.math.BigDecimal.ZERO;
+            java.math.BigDecimal diff = newTotal.subtract(oldTotal);
+            System.out.println("[PrescriptionServlet] diff=" + diff);
+            if (diff.compareTo(java.math.BigDecimal.ZERO) <= 0) {
+                System.out.println("[PrescriptionServlet] diff <= 0, skip creating new invoice");
+                return;
+            }
+            com.clinic.model.Invoice newInv = new com.clinic.model.Invoice();
+            newInv.setAppointmentId(appointmentId);
+            newInv.setTotalAmount(diff);
+            newInv.setStatus("Unpaid");
+            newInv.setInvoiceType("PRESCRIPTION");
+            newInv.setCreatedAt(new java.sql.Timestamp(System.currentTimeMillis()));
+            System.out.println("[PrescriptionServlet] inserting new invoice: appointmentId=" + appointmentId + ", diff=" + diff);
+            invoiceDAO.insert(newInv);
+        } else {
+            System.out.println("[PrescriptionServlet] existing not paid/declined, calling upsertPrescriptionInvoice");
+            invoiceDAO.upsertPrescriptionInvoice(appointmentId, newTotal);
+        }
     }
 }

@@ -1,6 +1,7 @@
 package com.clinic.model;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 /**
  * Model ánh xạ bảng pregnancies — theo dõi một thai kỳ của bệnh nhân.
@@ -17,6 +18,7 @@ public class Pregnancy {
     private String pregnancyStatus;   // VD: 'active', 'delivered', 'miscarried', 'terminated'
     private Integer fetusCount;
     private String notes;
+    private LocalDateTime createdAt;   // Ngày giờ hồ sơ thai kỳ được tạo
 
     // Trường tiện ích từ JOIN (không có cột riêng trong bảng pregnancies)
     private String patientName;
@@ -47,6 +49,15 @@ public class Pregnancy {
 
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
+
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    /** Chuỗi ngày giờ tạo đã format sẵn (dd/MM/yyyy HH:mm) để hiển thị trực tiếp trong JSP. */
+    public String getCreatedAtFormatted() {
+        if (createdAt == null) return null;
+        return createdAt.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+    }
 
     public String getPatientName() { return patientName; }
     public void setPatientName(String patientName) { this.patientName = patientName; }

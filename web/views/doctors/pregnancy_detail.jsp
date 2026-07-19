@@ -86,6 +86,13 @@
                 </div>
 
                 <div class="info-item mb-2">
+                    <span class="label">NGÀY TẠO HỒ SƠ</span>
+                    <span class="value text-muted small">
+                        ${not empty pregnancy.createdAtFormatted ? pregnancy.createdAtFormatted : '—'}
+                    </span>
+                </div>
+
+                <div class="info-item mb-2">
                     <span class="label">NGÀY DỰ SINH</span>
                     <span class="value">
                         ${pregnancy.estimatedDueDate != null ? pregnancy.estimatedDueDate : '—'}
@@ -145,9 +152,15 @@
                     </div>
 
                     <div class="mb-3">
+                        <label class="form-label small fw-medium">Ngày bắt đầu (LMP)</label>
+                        <input type="date" name="startDate" class="form-control form-control-sm rounded-3"
+                               value="${not empty pregnancy.startDate ? pregnancy.startDate : suggestedStartDate}">
+                    </div>
+
+                    <div class="mb-3">
                         <label class="form-label small fw-medium">Ngày dự sinh</label>
                         <input type="date" name="estimatedDueDate" class="form-control form-control-sm rounded-3"
-                               value="${pregnancy.estimatedDueDate}">
+                               value="${not empty pregnancy.estimatedDueDate ? pregnancy.estimatedDueDate : suggestedEstimatedDueDate}">
                     </div>
 
                     <div class="mb-3">

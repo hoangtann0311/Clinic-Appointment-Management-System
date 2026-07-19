@@ -40,6 +40,7 @@ public class TimeSlot implements Serializable {
     private byte[] version;        // ROWVERSION — optimistic lock
     private Timestamp createdAt;
     private Timestamp updatedAt;
+    private Double price; // Giá riêng cho khung giờ này (NULL = dùng giá mặc định của bác sĩ)
 
     // ── Transient fields (join từ bảng khác, dùng để hiển thị) ──
     private String doctorName;
@@ -64,6 +65,22 @@ public class TimeSlot implements Serializable {
      */
     public boolean isBooked() {
         return status == SlotStatus.BOOKED;
+    }
+
+    /**
+     * @return true nếu slot đang chờ Staff duyệt thanh toán.
+     */
+    public boolean isWaitingVerification() {
+        return status == SlotStatus.WAITING_VERIFICATION;
+    }
+
+    /**
+     * @return true nếu bệnh nhân có thể chọn slot này để đặt lịch (chỉ AVAILABLE).
+     * Mọi trạng thái khác (HELD, WAITING_VERIFICATION, BOOKED...) đều hiển thị
+     * nhưng bị khóa, không cho chọn — tránh gây hiểu lầm "mất khung giờ do lỗi hệ thống".
+     */
+    public boolean isSelectable() {
+        return status == SlotStatus.AVAILABLE;
     }
 
     /**
@@ -156,6 +173,14 @@ public class TimeSlot implements Serializable {
 
     public void setUpdatedAt(Timestamp updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Double getPrice() {
+        return price;
+    }
+
+    public void setPrice(Double price) {
+        this.price = price;
     }
 
     public String getDoctorName() {

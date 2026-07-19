@@ -63,21 +63,25 @@ public class PatientBookingServlet extends HttpServlet {
         if (user == null) return;
 
         String slotIdParam = request.getParameter("slotId");
-        String serviceIdParam = request.getParameter("serviceId");
+        String[] serviceIdParams = request.getParameterValues("serviceIds");
         String symptoms = request.getParameter("symptoms");
         String lmp = request.getParameter("lastMenstrualPeriod");
         String rescheduleIdParam = request.getParameter("rescheduleId");
 
         boolean isReschedule = (rescheduleIdParam != null && !rescheduleIdParam.trim().isEmpty());
         Map<String, String> errors = new HashMap<>();
-        int slotId = 0, serviceId = 0;
+        int slotId = 0;
+        int[] serviceIds = new int[0];
         try {
             slotId = Integer.parseInt(slotIdParam);
-            if (!isReschedule) {
-                serviceId = Integer.parseInt(serviceIdParam);
+            if (!isReschedule && serviceIdParams != null) {
+                serviceIds = new int[serviceIdParams.length];
+                for (int i = 0; i < serviceIdParams.length; i++) {
+                    serviceIds[i] = Integer.parseInt(serviceIdParams[i]);
+                }
             }
         } catch (Exception e) {
-            errors.put("general", isReschedule ? "Vui lòng chọn khung giờ hợp lệ." : "Vui lòng chọn khung giờ và dịch vụ hợp lệ.");
+            errors.put("general", isReschedule ? "Vui lòng chọn khung giờ hợp lệ." : "Vui lòng chọn khung giờ hợp lệ.");
         }
 
         Appointment appointment = null;
@@ -97,8 +101,13 @@ public class PatientBookingServlet extends HttpServlet {
                 }
             } else {
                 appointment = bookingService.bookAppointment(
-                        user.getId(), slotId, serviceId, symptoms, lmp, errors
+                        user.getId(), slotId, serviceIds, symptoms, lmp, errors
                 );
+                if (appointment != null) {
+                    response.sendRedirect(request.getContextPath()
+                            + "/patient/payment?appointmentId=" + appointment.getId());
+                    return;
+                }
             }
         }
 

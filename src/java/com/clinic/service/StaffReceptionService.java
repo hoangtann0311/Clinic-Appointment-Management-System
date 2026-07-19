@@ -193,7 +193,17 @@ public class StaffReceptionService {
         // 10. Lưu lịch hẹn
         appointment = appointmentDAO.createAppointment(appointment);
 
-        // 11. Ghi log và gửi thông báo giả lập Zalo
+        // 11. Tạo hóa đơn PRE_EXAM (trả trước dùng sau)
+        if (appointment != null) {
+            Invoice preExamInvoice = new Invoice();
+            preExamInvoice.setAppointmentId(appointment.getId());
+            preExamInvoice.setTotalAmount(java.math.BigDecimal.valueOf(service.getPrice()));
+            preExamInvoice.setStatus("Unpaid");
+            preExamInvoice.setInvoiceType("PRE_EXAM");
+            invoiceDAO.insert(preExamInvoice);
+        }
+
+        // 12. Ghi log và gửi thông báo giả lập Zalo
         if (appointment != null) {
             if (finalEmergency) {
                 auditLogDAO.logAction(
@@ -857,6 +867,41 @@ public class StaffReceptionService {
         return invoiceDAO.getById(id);
     }
 
+    /**
+     * Staff TỪ CHỐI thanh toán (ví dụ: minh chứng chuyển khoản không hợp lệ/không khớp).
+     * Huỷ luôn lịch hẹn liên quan và nhả slot về AVAILABLE để người khác đặt lại.
+     */
+    public boolean rejectPayment(int invoiceId, String reason, int rejectedBy) {
+        Invoice invoice = invoiceDAO.getById(invoiceId);
+        if (invoice == null) {
+            throw new IllegalArgumentException("Không tìm thấy hóa đơn cần từ chối.");
+        }
+        if ("Paid".equalsIgnoreCase(invoice.getStatus())) {
+            throw new IllegalArgumentException("Hóa đơn này đã được thanh toán, không thể từ chối.");
+        }
+
+        java.sql.Timestamp now = new java.sql.Timestamp(System.currentTimeMillis());
+        String note = (reason == null || reason.trim().isEmpty()) ? "Từ chối minh chứng thanh toán" : reason.trim();
+        boolean success = invoiceDAO.updatePaymentStatus(invoiceId, "Rejected", invoice.getPaymentMethod(),
+                invoice.getTransactionCode(), note, rejectedBy, now);
+
+        if (success && invoice.getAppointmentId() != null) {
+            if ("PRE_EXAM".equalsIgnoreCase(invoice.getInvoiceType())) {
+                appointmentDAO.rejectAppointmentAfterPaymentRejected(invoice.getAppointmentId());
+            }
+
+            auditLogDAO.logAction(
+                    "Từ chối thanh toán hóa đơn " + invoice.getInvoiceType() + " #" + invoiceId + " — Lý do: " + note,
+                    "Staff",
+                    "invoices",
+                    invoice.getStatus(),
+                    "Rejected"
+            );
+        }
+
+        return success;
+    }
+
     public boolean confirmPayment(int invoiceId, String paymentMethod, String transactionCode, String paymentNote, int confirmedBy) {
         Invoice invoice = invoiceDAO.getById(invoiceId);
         if (invoice == null) {
@@ -868,7 +913,18 @@ public class StaffReceptionService {
         }
 
         if ("BankTransfer".equalsIgnoreCase(paymentMethod) && (transactionCode == null || transactionCode.trim().isEmpty())) {
-            throw new IllegalArgumentException("Mã giao dịch là bắt buộc đối với phương thức Chuyển khoản.");
+            // Dùng mã GD bệnh nhân đã gửi nếu staff không nhập lại (nếu có)
+            if (invoice.getTransactionCode() != null && !invoice.getTransactionCode().trim().isEmpty()) {
+                transactionCode = invoice.getTransactionCode();
+            } else {
+                // Không còn bắt buộc mã giao dịch — bằng chứng chính giờ là ảnh minh chứng
+                // chuyển khoản (proof_image_path) mà Staff đã xem trước khi bấm xác nhận.
+                transactionCode = "";
+            }
+        }
+
+        if (paymentMethod == null || paymentMethod.trim().isEmpty()) {
+            paymentMethod = invoice.getPaymentMethod() != null ? invoice.getPaymentMethod() : "Cash";
         }
 
         String finalTxCode = transactionCode;
@@ -883,7 +939,12 @@ public class StaffReceptionService {
             // Nếu là hóa đơn trước khám (PRE_EXAM), xác nhận lịch hẹn
             if ("PRE_EXAM".equalsIgnoreCase(invoice.getInvoiceType()) && invoice.getAppointmentId() != null) {
                 appointmentDAO.confirmAppointmentAfterPreExamPaid(invoice.getAppointmentId());
+                // Chốt slot từ WAITING_VERIFICATION -> BOOKED (Staff đã duyệt thanh toán)
+                appointmentDAO.finalizeBookingAfterPaymentApproved(invoice.getAppointmentId());
             }
+
+            // Thông báo cho bệnh nhân
+            notifyPatientPaymentConfirmed(invoice);
 
             // Ghi audit log
             auditLogDAO.logAction(
@@ -896,6 +957,23 @@ public class StaffReceptionService {
         }
 
         return success;
+    }
+
+    private void notifyPatientPaymentConfirmed(Invoice invoice) {
+        if (invoice.getAppointmentId() == null) return;
+        Appointment apt = appointmentDAO.findAppointmentById(invoice.getAppointmentId());
+        if (apt == null || apt.getPatient() == null) return;
+
+        String typeLabel = "PRE_EXAM".equalsIgnoreCase(invoice.getInvoiceType()) ? "trước khám"
+                : "POST_EXAM".equalsIgnoreCase(invoice.getInvoiceType()) ? "sau khám"
+                : "PRESCRIPTION".equalsIgnoreCase(invoice.getInvoiceType()) ? "đơn thuốc" : "dịch vụ";
+
+        String content = "Thanh toán hóa đơn " + typeLabel + " (HĐ-" + invoice.getId() + ") đã được xác nhận. ";
+        if ("PRE_EXAM".equalsIgnoreCase(invoice.getInvoiceType())) {
+            content += "Lịch hẹn của bạn đã được xác nhận.";
+        }
+
+        sendMockZaloMessage(apt.getPatient(), content);
     }
 
     /**

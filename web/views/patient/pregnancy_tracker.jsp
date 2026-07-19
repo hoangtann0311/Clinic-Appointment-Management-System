@@ -51,6 +51,11 @@
                             <span class="badge bg-white text-danger fw-semibold px-3 py-2 rounded-pill mb-3">
                                 <i class="bi bi-calendar-check me-1"></i>Thai kỳ đang hoạt động
                             </span>
+                            <c:if test="${not empty pregnancy.createdAtFormatted}">
+                                <div class="small opacity-75 mb-2">
+                                    <i class="bi bi-clock-history me-1"></i>Hồ sơ tạo lúc ${pregnancy.createdAtFormatted}
+                                </div>
+                            </c:if>
                             
                             <h5 class="opacity-75 fw-medium mb-1">Bé yêu của bạn đã được</h5>
                             <h1 class="display-4 fw-bold mb-2">
@@ -132,28 +137,43 @@
                                             <div class="p-3 rounded-3 text-center" style="background: var(--pt-pink-50); border: 1px solid var(--pt-outline);">
                                                 <i class="bi bi-speedometer fs-4" style="color: var(--pt-pink-500);"></i>
                                                 <small class="d-block mt-1" style="color: var(--pt-muted);">Cân nặng mẹ</small>
-                                                <strong class="fs-5">${not empty lastVisit.weight_kg ? lastVisit.weight_kg += ' kg' : '—'}</strong>
+                                                <strong class="fs-5">
+                                                    <c:choose>
+                                                        <c:when test="${not empty lastVisit.weightKg}">${lastVisit.weightKg} kg</c:when>
+                                                        <c:otherwise>—</c:otherwise>
+                                                    </c:choose>
+                                                </strong>
                                             </div>
                                         </div>
                                         <div class="col-6 col-sm-3">
                                             <div class="p-3 rounded-3 text-center" style="background: var(--pt-pink-50); border: 1px solid var(--pt-outline);">
                                                 <i class="bi bi-heart-pulse-fill fs-4" style="color: var(--pt-pink-500);"></i>
                                                 <small class="d-block mt-1" style="color: var(--pt-muted);">Tim thai</small>
-                                                <strong class="fs-5">${not empty lastVisit.fetal_heart_rate ? lastVisit.fetal_heart_rate += ' nhịp/p' : '—'}</strong>
+                                                <strong class="fs-5">
+                                                    <c:choose>
+                                                        <c:when test="${not empty lastVisit.fetalHeartRate}">${lastVisit.fetalHeartRate} nhịp/p</c:when>
+                                                        <c:otherwise>—</c:otherwise>
+                                                    </c:choose>
+                                                </strong>
                                             </div>
                                         </div>
                                         <div class="col-6 col-sm-3">
                                             <div class="p-3 rounded-3 text-center" style="background: var(--pt-pink-50); border: 1px solid var(--pt-outline);">
                                                 <i class="bi bi-droplet-half fs-4" style="color: var(--pt-pink-400);"></i>
                                                 <small class="d-block mt-1" style="color: var(--pt-muted);">Huyết áp</small>
-                                                <strong class="fs-5 text-truncate d-block">${not empty lastVisit.blood_pressure ? lastVisit.blood_pressure : '—'}</strong>
+                                                <strong class="fs-5 text-truncate d-block">${not empty lastVisit.bloodPressure ? lastVisit.bloodPressure : '—'}</strong>
                                             </div>
                                         </div>
                                         <div class="col-6 col-sm-3">
                                             <div class="p-3 rounded-3 text-center" style="background: var(--pt-pink-50); border: 1px solid var(--pt-outline);">
                                                 <i class="bi bi-rulers fs-4" style="color: var(--pt-pink-600);"></i>
                                                 <small class="d-block mt-1" style="color: var(--pt-muted);">Bề cao tử cung</small>
-                                                <strong class="fs-5">${not empty lastVisit.fundal_height_cm ? lastVisit.fundal_height_cm += ' cm' : '—'}</strong>
+                                                <strong class="fs-5">
+                                                    <c:choose>
+                                                        <c:when test="${not empty lastVisit.fundalHeightCm}">${lastVisit.fundalHeightCm} cm</c:when>
+                                                        <c:otherwise>—</c:otherwise>
+                                                    </c:choose>
+                                                </strong>
                                             </div>
                                         </div>
                                     </div>
@@ -186,29 +206,36 @@
                                                 
                                                 <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-1">
                                                     <h6 class="fw-bold mb-0" style="color: var(--pt-on-surface);">
-                                                        Lần khám thai lúc ${item.gestational_age_weeks} tuần ${item.gestational_age_days} ngày
+                                                        Lần khám thai lúc ${item.gestationalAgeWeeks} tuần ${item.gestationalAgeDays} ngày
                                                     </h6>
-                                                    <span class="badge" style="background: var(--pt-pink-50); color: var(--pt-pink-700); border: 1px solid var(--pt-pink-200); font-weight: 600;">${item.appointment_date}</span>
+                                                    <span class="badge" style="background: var(--pt-pink-50); color: var(--pt-pink-700); border: 1px solid var(--pt-pink-200); font-weight: 600;">${item.appointmentDate}</span>
                                                 </div>
-                                                <p class="small mb-2" style="color: var(--pt-muted);">Bác sĩ khám: <strong style="color: var(--pt-pink-700);">BS. ${item.doctor_name}</strong></p>
+                                                <p class="small mb-2" style="color: var(--pt-muted);">Bác sĩ khám: <strong style="color: var(--pt-pink-700);">BS. ${item.doctorName}</strong></p>
+                                                <div class="mb-2">
+                                                    <a href="${pageContext.request.contextPath}/patient/pregnancy/results?recordId=${item.recordId}"
+                                                       class="btn btn-sm rounded-pill px-3"
+                                                       style="background: var(--pt-pink-500); color: white; border: none;">
+                                                        <i class="bi bi-images me-1"></i>Xem kết quả siêu âm
+                                                    </a>
+                                                </div>
                                                 <div class="p-3 rounded-3" style="background: var(--pt-surface-var, #fff6fb); border: 1px solid var(--pt-outline, #f0dae5);">
                                                     <div class="row g-2 small mb-2" style="color: var(--pt-on-var);">
-                                                        <c:if test="${not empty item.weight_kg}">
-                                                            <div class="col-sm-6"><i class="bi bi-check-circle-fill me-1" style="color: #22c55e;"></i>Cân nặng mẹ: ${item.weight_kg} kg</div>
+                                                        <c:if test="${not empty item.weightKg}">
+                                                            <div class="col-sm-6"><i class="bi bi-check-circle-fill me-1" style="color: #22c55e;"></i>Cân nặng mẹ: ${item.weightKg} kg</div>
                                                         </c:if>
-                                                        <c:if test="${not empty item.fetal_heart_rate}">
-                                                            <div class="col-sm-6"><i class="bi bi-check-circle-fill me-1" style="color: #22c55e;"></i>Nhịp tim thai: ${item.fetal_heart_rate} nhịp/phút</div>
+                                                        <c:if test="${not empty item.fetalHeartRate}">
+                                                            <div class="col-sm-6"><i class="bi bi-check-circle-fill me-1" style="color: #22c55e;"></i>Nhịp tim thai: ${item.fetalHeartRate} nhịp/phút</div>
                                                         </c:if>
-                                                        <c:if test="${not empty item.blood_pressure}">
-                                                            <div class="col-sm-6"><i class="bi bi-check-circle-fill me-1" style="color: #22c55e;"></i>Huyết áp: ${item.blood_pressure}</div>
+                                                        <c:if test="${not empty item.bloodPressure}">
+                                                            <div class="col-sm-6"><i class="bi bi-check-circle-fill me-1" style="color: #22c55e;"></i>Huyết áp: ${item.bloodPressure}</div>
                                                         </c:if>
-                                                        <c:if test="${not empty item.fundal_height_cm}">
-                                                            <div class="col-sm-6"><i class="bi bi-check-circle-fill me-1" style="color: #22c55e;"></i>Chiều cao tử cung: ${item.fundal_height_cm} cm</div>
+                                                        <c:if test="${not empty item.fundalHeightCm}">
+                                                            <div class="col-sm-6"><i class="bi bi-check-circle-fill me-1" style="color: #22c55e;"></i>Chiều cao tử cung: ${item.fundalHeightCm} cm</div>
                                                         </c:if>
                                                     </div>
                                                     <div class="border-top pt-2" style="border-color: var(--pt-outline) !important;">
                                                         <span class="d-block fw-semibold small mb-1" style="color: var(--pt-pink-700);">Chẩn đoán lâm sàng:</span>
-                                                        <p class="mb-0 small" style="color: var(--pt-muted);">${not empty item.final_diagnosis ? item.final_diagnosis : 'Không có'}</p>
+                                                        <p class="mb-0 small" style="color: var(--pt-muted);">${not empty item.finalDiagnosis ? item.finalDiagnosis : 'Không có'}</p>
                                                     </div>
                                                 </div>
                                             </div>

@@ -3,6 +3,8 @@ package com.clinic.controller;
 import com.clinic.dao.MedicalRecordDAO;
 import com.clinic.dao.InvoiceDAO;
 import com.clinic.dao.ServiceDAO;
+import com.clinic.dao.DoctorDAO;
+import com.clinic.model.Doctor;
 import com.clinic.model.MedicalRecord;
 import com.clinic.model.Invoice;
 import com.clinic.model.ServiceItem;
@@ -28,6 +30,7 @@ public class DoctorUltrasoundRequestServlet extends HttpServlet {
     private final MedicalRecordDAO medicalRecordDAO = new MedicalRecordDAO();
     private final InvoiceDAO invoiceDAO = new InvoiceDAO();
     private final ServiceDAO serviceDAO = new ServiceDAO();
+    private final DoctorDAO doctorDAO = new DoctorDAO();
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
@@ -51,6 +54,14 @@ public class DoctorUltrasoundRequestServlet extends HttpServlet {
             int apptId = Integer.parseInt(apptIdStr);
             int serviceId = Integer.parseInt(serviceIdStr);
 
+            // test_orders.doctor_id references the doctors profile ID, not users.id.
+            Doctor doctor = doctorDAO.findByUserId(user.getId());
+            if (doctor == null || doctor.getId() <= 0) {
+                response.sendError(HttpServletResponse.SC_CONFLICT,
+                        "Tài khoản bác sĩ chưa được liên kết với hồ sơ bác sĩ.");
+                return;
+            }
+
             // 1. Kiểm tra / tạo hồ sơ bệnh án
             MedicalRecord record = medicalRecordDAO.getByAppointmentId(apptId);
             int recordId;
@@ -69,7 +80,7 @@ public class DoctorUltrasoundRequestServlet extends HttpServlet {
             }
 
             // 2. Tạo chỉ định siêu âm trong test_orders
-            int orderId = orderService.createUltrasoundRequest(recordId, user.getId(), serviceId);
+            int orderId = orderService.createUltrasoundRequest(recordId, doctor.getId(), serviceId);
             if (orderId <= 0) {
                 throw new Exception("Không thể tạo yêu cầu siêu âm.");
             }

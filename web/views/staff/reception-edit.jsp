@@ -157,9 +157,9 @@
                     <div class="row">
                         <div class="col-md-6 cams-form-group">
                             <label class="cams-form-label">Bác sĩ khám chỉ định <span class="text-danger">*</span></label>
-                            <select name="doctorId" id="doctorId" class="cams-form-input" required onchange="updatePriceDisplay()">
+                            <select name="doctorId" id="doctorId" class="cams-form-input" required onchange="onDoctorOrDateChanged()">
                                 <c:forEach var="doc" items="${doctors}">
-                                    <option value="${doc.id}">
+                                    <option value="${doc.id}" data-price="${doc.price}" ${(apt.doctor != null && apt.doctor.id eq doc.id) ? 'selected' : ''}>
                                         <c:out value="${doc.name}"/> - <c:out value="${doc.specialization}"/>
                                     </option>
                                 </c:forEach>
@@ -167,9 +167,9 @@
                         </div>
                         <div class="col-md-6 cams-form-group">
                             <label class="cams-form-label">Gói dịch vụ ban đầu <span class="text-danger">*</span></label>
-                            <select name="serviceId" id="serviceId" class="cams-form-input" required onchange="updatePriceDisplay()">
+                            <select name="serviceId" id="serviceId" class="cams-form-input" required onchange="onDoctorOrDateChanged()">
                                 <c:forEach var="srv" items="${services}">
-                                    <option value="${srv.id}" data-price="${srv.price}" <c:if test="${apt.service != null && apt.service.id == srv.id}">selected</c:if>>
+                                    <option value="${srv.id}" data-price="${srv.price}" ${(apt.service != null && apt.service.id == srv.id) ? 'selected' : ''}>
                                         <c:out value="${srv.serviceName}"/> (<fmt:formatNumber value="${srv.price}" pattern="#,###"/>đ - <c:out value="${srv.durationMins}"/> phút)
                                     </option>
                                 </c:forEach>
@@ -187,21 +187,15 @@
                                    min="${today}"
                                    value="${apt.appointmentDate}"
                                    required
-                                   onchange="calculateLMPAge()"
-                                   oninput="calculateLMPAge()">
+                                   onchange="onDoctorOrDateChanged(); calculateLMPAge();">
                         </div>
                         <div class="col-md-4 cams-form-group">
                             <label class="cams-form-label">Khung giờ trống (Slots) <span class="text-danger">*</span></label>
-                            <select name="timeSlot" id="timeSlot" class="cams-form-input" required>
-                                <option value="08:00 - 08:20" <c:if test="${apt.timeSlot == '08:00 - 08:20'}">selected</c:if>>08:00 - 08:20</option>
-                                <option value="08:20 - 08:40" <c:if test="${apt.timeSlot == '08:20 - 08:40'}">selected</c:if>>08:20 - 08:40</option>
-                                <option value="08:40 - 09:00" <c:if test="${apt.timeSlot == '08:40 - 09:00'}">selected</c:if>>08:40 - 09:00</option>
-                                <option value="09:00 - 09:20" <c:if test="${apt.timeSlot == '09:00 - 09:20'}">selected</c:if>>09:00 - 09:20</option>
-                                <option value="09:20 - 09:40" <c:if test="${apt.timeSlot == '09:20 - 09:40'}">selected</c:if>>09:20 - 09:40</option>
-                                <option value="09:40 - 10:00" <c:if test="${apt.timeSlot == '09:40 - 10:00'}">selected</c:if>>09:40 - 10:00</option>
-                                <option value="10:00 - 10:20" <c:if test="${apt.timeSlot == '10:00 - 10:20'}">selected</c:if>>10:00 - 10:20</option>
-                                <option value="10:20 - 10:40" <c:if test="${apt.timeSlot == '10:20 - 10:40'}">selected</c:if>>10:20 - 10:40</option>
-                                <option value="10:40 - 11:00" <c:if test="${apt.timeSlot == '10:40 - 11:00'}">selected</c:if>>10:40 - 11:00</option>
+                            <select name="timeSlot" id="timeSlot" class="cams-form-input" required onchange="onSlotChanged()">
+                                <c:if test="${not empty apt.timeSlot}">
+                                    <option value="${apt.timeSlot}" selected>${apt.timeSlot} (đã đặt)</option>
+                                </c:if>
+                                <option value="">-- Chọn khung giờ --</option>
                             </select>
                             <small class="text-muted mt-1 d-block">Mỗi slot khám kéo dài mặc định 20 phút.</small>
                         </div>
@@ -214,6 +208,106 @@
                     </div>
 
                     <hr class="my-3 text-muted">
+
+                    <c:if test="${not empty preInvoice}">
+                        <div class="admin-card mb-3">
+                            <div class="card-header bg-white py-3">
+                                <h5 class="m-0 fw-bold text-dark d-flex align-items-center gap-2">
+                                    <i class="bi bi-credit-card-2-front text-primary"></i>
+                                    Thanh Toán Trước Khám
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <c:if test="${not empty param.success}">
+                                    <div class="alert alert-success"><i class="bi bi-check-circle-fill me-2"></i>Xác nhận thanh toán thành công!</div>
+                                </c:if>
+                                <c:if test="${not empty param.error}">
+                                    <div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill me-2"></i><c:out value="${param.error}"/></div>
+                                </c:if>
+                                <div class="row align-items-center">
+                                    <div class="col-md-4">
+                                        <label class="text-muted small fw-bold">MÃ HÓA ĐƠN</label>
+                                        <div class="fw-bold">HĐ-${preInvoice.id}</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="text-muted small fw-bold">TỔNG TIỀN</label>
+                                        <div class="fw-bold text-danger fs-5"><fmt:formatNumber value="${preInvoice.totalAmount}" pattern="#,###"/>đ</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="text-muted small fw-bold">TRẠNG THÁI</label>
+                                        <div>
+                                            <c:choose>
+                                                <c:when test="${preInvoice.status == 'Paid'}">
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                                        <i class="bi bi-check-circle me-1"></i>Đã thanh toán
+                                                    </span>
+                                                </c:when>
+                                                <c:when test="${preInvoice.status == 'PendingConfirmation'}">
+                                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                                                        <i class="bi bi-clock-history me-1"></i>Chờ xác nhận
+                                                    </span>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                                        <i class="bi bi-exclamation-circle me-1"></i>Chưa thanh toán
+                                                    </span>
+                                                </c:otherwise>
+                                            </c:choose>
+                                        </div>
+                                    </div>
+                                </div>
+                                <c:if test="${preInvoice.status == 'PendingConfirmation'}">
+                                    <hr class="my-3">
+                                    <c:if test="${not empty preInvoice.proofImagePath}">
+                                        <div class="mb-3">
+                                            <label class="text-muted small fw-bold d-block mb-1">ẢNH MINH CHỨNG CHUYỂN KHOẢN</label>
+                                            <a href="${pageContext.request.contextPath}${preInvoice.proofImagePath}" target="_blank">
+                                                <img src="${pageContext.request.contextPath}${preInvoice.proofImagePath}" alt="Minh chứng chuyển khoản"
+                                                     class="img-fluid rounded-3 border" style="max-height: 320px;">
+                                            </a>
+                                            <div class="form-text">Bấm vào ảnh để xem kích thước đầy đủ.</div>
+                                        </div>
+                                    </c:if>
+                                    <form method="POST" action="${pageContext.request.contextPath}/admin/reception/edit" onsubmit="return validatePaymentForm()">
+                                        <input type="hidden" name="id" value="${apt.id}">
+                                        <input type="hidden" name="action" value="confirmPayment">
+                                        <div class="row g-3">
+                                            <div class="col-md-3">
+                                                <label class="form-label text-muted small fw-bold">PHƯƠNG THỨC</label>
+                                                <select name="paymentMethod" class="form-select" onchange="toggleTxCode(this.value)">
+                                                    <option value="Cash">Tiền mặt</option>
+                                                    <option value="BankTransfer">Chuyển khoản</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3" id="txCodeContainer" style="display: none;">
+                                                <label class="form-label text-muted small fw-bold">MÃ GIAO DỊCH <span class="text-danger">*</span></label>
+                                                <input type="text" class="form-control" name="transactionCode" placeholder="VD: FT24090...">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label text-muted small fw-bold">GHI CHÚ</label>
+                                                <input type="text" class="form-control" name="paymentNote" placeholder="Thông tin thêm...">
+                                            </div>
+                                            <div class="col-md-2 d-flex align-items-end">
+                                                <button type="submit" class="btn btn-success fw-bold w-100">
+                                                    <i class="bi bi-check-lg me-1"></i> Xác nhận PAID
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                    <form method="POST" action="${pageContext.request.contextPath}/admin/reception/edit"
+                                          class="mt-2"
+                                          onsubmit="var r = prompt('Lý do từ chối thanh toán (bệnh nhân sẽ mất slot đã giữ):'); if (r === null) return false; document.getElementById('rejectReasonInput').value = r; return true;">
+                                        <input type="hidden" name="id" value="${apt.id}">
+                                        <input type="hidden" name="action" value="rejectPayment">
+                                        <input type="hidden" name="rejectReason" id="rejectReasonInput" value="">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm fw-bold">
+                                            <i class="bi bi-x-lg me-1"></i> Từ chối thanh toán
+                                        </button>
+                                    </form>
+                                </c:if>
+                            </div>
+                        </div>
+                    </c:if>
 
                     <!-- Gestational Age & Medical Declarations -->
                     <div class="row">
@@ -259,18 +353,68 @@
 </div>
 
 <script>
+    const contextPath = "${pageContext.request.contextPath}";
+
     function updatePriceDisplay() {
-        let docSelect = document.getElementById("doctorId");
         let srvSelect = document.getElementById("serviceId");
 
         let srvPrice = 0;
 
-        if (srvSelect.selectedIndex > 0) {
+        if (srvSelect.selectedIndex >= 0 && srvSelect.options[srvSelect.selectedIndex] != null) {
             srvPrice = parseFloat(srvSelect.options[srvSelect.selectedIndex].getAttribute("data-price")) || 0;
         }
 
-        let total = srvPrice;
-        document.getElementById("total-price-box").innerText = total.toLocaleString('vi-VN') + "đ";
+        document.getElementById("total-price-box").innerText = srvPrice.toLocaleString('vi-VN') + "đ";
+    }
+
+    function onDoctorOrDateChanged() {
+        updatePriceDisplay();
+        loadAvailableSlots();
+    }
+
+    function loadAvailableSlots() {
+        let doctorId = document.getElementById("doctorId").value;
+        let date = document.getElementById("appointmentDate").value;
+        let slotSelect = document.getElementById("timeSlot");
+
+        if (!doctorId || !date) {
+            slotSelect.innerHTML = '<option value="">-- Chọn khung giờ --</option>';
+            return;
+        }
+
+        fetch(contextPath + '/patient/booking/slots?doctorId=' + doctorId + '&date=' + date)
+            .then(function (res) { return res.json(); })
+            .then(function (slots) {
+                let html = '<option value="">-- Chọn khung giờ --</option>';
+                let availableLabels = new Set();
+                if (slots && slots.length > 0) {
+                    slots.forEach(function (s) {
+                        availableLabels.add(s.label);
+                        html += '<option value="' + s.label + '">' + s.time + ' - ' + s.label.split(' - ')[1] + '</option>';
+                    });
+                } else {
+                    html += '<option value="" disabled>Không có khung giờ trống</option>';
+                }
+
+                let currentSlot = "${apt.timeSlot}";
+                if (currentSlot && !availableLabels.has(currentSlot)) {
+                    html += '<option value="' + currentSlot + '" selected>' + currentSlot + ' (đã đặt)</option>';
+                }
+
+                slotSelect.innerHTML = html;
+
+                if (currentSlot && availableLabels.has(currentSlot)) {
+                    for (let i = 0; i < slotSelect.options.length; i++) {
+                        if (slotSelect.options[i].value === currentSlot) {
+                            slotSelect.selectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+            })
+            .catch(function () {
+                slotSelect.innerHTML = '<option value="">-- Chọn khung giờ --</option>';
+            });
     }
 
     function calculateLMPAge() {
@@ -381,6 +525,29 @@
         return true;
     }
 
+    function toggleTxCode(method) {
+        const container = document.getElementById("txCodeContainer");
+        const input = document.querySelector('input[name="transactionCode"]');
+        if (method === "BankTransfer") {
+            container.style.display = "block";
+            if (input) input.focus();
+        } else {
+            container.style.display = "none";
+            if (input) input.value = "";
+        }
+    }
+
+    function validatePaymentForm() {
+        const method = document.querySelector('select[name="paymentMethod"]').value;
+        const txInput = document.querySelector('input[name="transactionCode"]');
+        if (method === "BankTransfer" && (!txInput || txInput.value.trim() === "")) {
+            if (txInput) txInput.classList.add("is-invalid");
+            return false;
+        }
+        if (txInput) txInput.classList.remove("is-invalid");
+        return true;
+    }
+
     window.onload = function() {
         updatePriceDisplay();
         let lmpVal = document.getElementById("lastMenstrualPeriod").value;
@@ -418,7 +585,5 @@
         if (e.key === 'Escape') closeSidebar();
     });
 </script>
-
-<%@ include file="../common/standalone-footer.jsp" %>
 </body>
 </html>

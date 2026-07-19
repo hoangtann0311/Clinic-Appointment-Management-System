@@ -2,6 +2,7 @@ package com.clinic.controller;
 
 import com.clinic.config.AppConfig;
 import com.clinic.dao.DoctorDAO;
+import com.clinic.dao.UserDAO;
 import com.clinic.model.Doctor;
 import com.clinic.model.User;
 
@@ -33,6 +34,7 @@ public class DoctorProfileServlet extends HttpServlet {
             java.util.Set.of("image/jpeg", "image/jpg", "image/png", "image/webp");
 
     private final DoctorDAO doctorDAO = new DoctorDAO();
+    private final UserDAO userDAO = new UserDAO();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
@@ -147,7 +149,17 @@ public class DoctorProfileServlet extends HttpServlet {
         boolean ok = doctorDAO.updateProfile(doctor);
 
         if (ok) {
-            // Cập nhật lại fullName + avatarUrl trong session nếu cần
+            // Đồng bộ full_name sang bảng users — nếu không làm bước này,
+            // tên chỉ đổi tạm trong session và sẽ quay về tên cũ sau khi đăng xuất/đăng nhập lại,
+            // vì các nơi khác (login, header, danh sách...) đọc full_name từ bảng users chứ không phải doctors.
+            if (!fullName.equals(user.getFullName())) {
+                boolean userNameSynced = userDAO.updateFullName(user.getId(), fullName);
+                if (!userNameSynced) {
+                    System.err.println("[DoctorProfileServlet] Cảnh báo: không đồng bộ được full_name sang bảng users cho userId=" + user.getId());
+                }
+            }
+
+            // Cập nhật lại fullName + avatarUrl trong session để hiển thị ngay
             user.setFullName(fullName);
             user.setAvatarUrl(avatarUrl);
             req.getSession().setAttribute("user", user);

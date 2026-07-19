@@ -20,7 +20,6 @@ public class Doctor implements Serializable {
     // Additional fields from receptionist/manual booking features
     private String degree;
     private int experienceYears;
-    private double price;
     private String avatar;      // legacy alias
     private String avatarUrl;   // cột thật trong DB
     private String bio;
@@ -36,13 +35,12 @@ public class Doctor implements Serializable {
         this.phoneNumber = phoneNumber;
     }
 
-    public Doctor(int id, String name, String specialization, String degree, int experienceYears, double price, String avatar) {
+    public Doctor(int id, String name, String specialization, String degree, int experienceYears, String avatar) {
         this.id = id;
         this.fullName = name;
         this.specialization = specialization;
         this.degree = degree;
         this.experienceYears = experienceYears;
-        this.price = price;
         this.avatar = avatar;
     }
 
@@ -127,14 +125,6 @@ public class Doctor implements Serializable {
 
     public void setExperienceYears(int experienceYears) {
         this.experienceYears = experienceYears;
-    }
-
-    public double getPrice() {
-        return price;
-    }
-
-    public void setPrice(double price) {
-        this.price = price;
     }
 
     public String getAvatar() { return avatarUrl != null ? avatarUrl : avatar; }

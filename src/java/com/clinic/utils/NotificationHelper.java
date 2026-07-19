@@ -60,7 +60,7 @@ public class NotificationHelper {
             " có dấu hiệu cần theo dõi: " + flags + ". Vui lòng xem lại.");
     }
 
-    // ── Loại 6: Báo bệnh nhân đi thực hiện siêu âm ────
+    // ── Loại 6: Báo bệnh nhân có chỉ định siêu âm mới ───────────────────────────
     public static int getPatientUserIdByRecord(int medicalRecordId) {
         try (Connection c = DatabaseConfig.getConnection();
              PreparedStatement ps = c.prepareStatement(
@@ -89,8 +89,8 @@ public class NotificationHelper {
         String serviceName = getServiceName(serviceId);
         if (patientId > 0) {
             dao.create(patientId,
-                "📋 Chỉ định cận lâm sàng mới",
-                "Bác sĩ đã chỉ định bạn thực hiện \"" + serviceName + "\". Vui lòng di chuyển đến phòng chức năng/phòng siêu âm để chờ thực hiện.");
+                "📋 Chỉ định siêu âm mới",
+                "Bác sĩ đã chỉ định bạn thực hiện siêu âm \"" + serviceName + "\". Vui lòng đến phòng siêu âm để chờ thực hiện.");
         }
     }
 
@@ -126,10 +126,10 @@ public class NotificationHelper {
         // [0]=patientName, [1]=appointmentDate, [2]=timeSlot, [3]=doctorUserId
         try (Connection c = DatabaseConfig.getConnection();
              PreparedStatement ps = c.prepareStatement(
-                     "SELECT u.full_name, CONVERT(varchar,a.appointment_date,23), " +
+                     "SELECT pt.full_name, CONVERT(varchar,a.appointment_date,23), " +
                      "       a.time_slot, d.user_id " +
                      "FROM appointments a " +
-                     "JOIN users u ON u.id = a.patient_id " +
+                     "JOIN patients pt ON pt.id = a.patient_id " +
                      "JOIN doctors d ON d.id = a.doctor_id " +
                      "WHERE a.id=?")) {
             ps.setInt(1, appointmentId);
@@ -155,17 +155,17 @@ public class NotificationHelper {
      */
     public static void checkDraftReminders(int doctorId, int doctorUserId) {
         String sql =
-            "SELECT mr.id, u.full_name " +
+            "SELECT mr.id, pt.full_name " +
             "FROM medical_records mr " +
             "JOIN appointments a ON a.id = mr.appointment_id " +
-            "JOIN users u ON u.id = a.patient_id " +
+            "JOIN patients pt ON pt.id = a.patient_id " +
             "WHERE mr.status = 'draft' " +
             "  AND a.doctor_id = ? " +
             "  AND mr.created_at < DATEADD(HOUR, -24, GETDATE()) " +
             "  AND NOT EXISTS (" +
             "    SELECT 1 FROM notifications n " +
             "    WHERE n.user_id = ? " +
-            "      AND n.title LIKE N'%Hồ sơ đang chờ%' " +
+            "      AND n.title LIKE N'%Hồ sơ chưa hoàn tất%' " +
             "      AND n.content LIKE CONCAT(N'%#', mr.id, N'%') " +
             "      AND n.created_at > DATEADD(HOUR, -24, GETDATE())" +
             "  )";

@@ -338,7 +338,7 @@ public class TimeSlotDAO {
     }
 
     public TimeSlot findById(int id) {
-        String sql = "SELECT " + BASE_COLUMNS + ", d.full_name AS doctor_name, "
+        String sql = "SELECT " + BASE_COLUMNS + ", ts.price, d.full_name AS doctor_name, "
                    + "u.full_name AS booked_by_name "
                    + "FROM time_slots ts "
                    + "LEFT JOIN doctors d ON ts.doctor_id = d.id "
@@ -353,7 +353,10 @@ public class TimeSlotDAO {
             ps.setInt(1, id);
             rs = ps.executeQuery();
             if (rs.next()) {
-                return mapRow(rs);
+                TimeSlot ts = mapRow(rs);
+                double p = rs.getDouble("price");
+                if (!rs.wasNull()) ts.setPrice(p);
+                return ts;
             }
         } catch (SQLException e) {
             System.err.println("[TimeSlotDAO] findById ERROR: " + e.getMessage());
@@ -371,7 +374,7 @@ public class TimeSlotDAO {
      * Lấy danh sách time slots theo schedule_id (có phân trang).
      */
     public List<TimeSlot> findByScheduleId(int scheduleId, int offset, int pageSize) {
-        String sql = "SELECT " + BASE_COLUMNS + ", d.full_name AS doctor_name, "
+        String sql = "SELECT " + BASE_COLUMNS + ", ts.price, d.full_name AS doctor_name, "
                    + "u.full_name AS booked_by_name "
                    + "FROM time_slots ts "
                    + "LEFT JOIN doctors d ON ts.doctor_id = d.id "
@@ -392,7 +395,10 @@ public class TimeSlotDAO {
             ps.setInt(3, pageSize);
             rs = ps.executeQuery();
             while (rs.next()) {
-                list.add(mapRow(rs));
+                TimeSlot ts = mapRow(rs);
+                double p = rs.getDouble("price");
+                if (!rs.wasNull()) ts.setPrice(p);
+                list.add(ts);
             }
         } catch (SQLException e) {
             System.err.println("[TimeSlotDAO] findByScheduleId ERROR: " + e.getMessage());
@@ -400,6 +406,58 @@ public class TimeSlotDAO {
             closeResources(conn, ps, rs);
         }
         return list;
+    }
+
+    /**
+     * Cập nhật giá riêng cho MỘT khung giờ cụ thể (giá theo ngày/giờ).
+     * Truyền price = null để xóa giá riêng (quay lại dùng base_price của bác sĩ).
+     */
+    public boolean updateSlotPrice(int slotId, Double price) {
+        String sql = "UPDATE time_slots SET price = ?, updated_at = GETDATE() WHERE id = ?";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            if (price == null) {
+                ps.setNull(1, Types.DECIMAL);
+            } else {
+                ps.setDouble(1, price);
+            }
+            ps.setInt(2, slotId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("[TimeSlotDAO] updateSlotPrice ERROR: " + e.getMessage());
+            return false;
+        } finally {
+            closeResources(conn, ps, null);
+        }
+    }
+
+    /**
+     * Áp giá hàng loạt cho TẤT CẢ slot của một lịch trực (áp giá theo ngày,
+     * vì 1 schedule ứng với 1 bác sĩ trong 1 ngày làm việc).
+     */
+    public int updatePriceBySchedule(int scheduleId, Double price) {
+        String sql = "UPDATE time_slots SET price = ?, updated_at = GETDATE() WHERE schedule_id = ?";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            if (price == null) {
+                ps.setNull(1, Types.DECIMAL);
+            } else {
+                ps.setDouble(1, price);
+            }
+            ps.setInt(2, scheduleId);
+            return ps.executeUpdate();
+        } catch (SQLException e) {
+            System.err.println("[TimeSlotDAO] updatePriceBySchedule ERROR: " + e.getMessage());
+            return -1;
+        } finally {
+            closeResources(conn, ps, null);
+        }
     }
 
     /**
@@ -456,7 +514,7 @@ public class TimeSlotDAO {
      */
     public int countBookedSlots(int scheduleId) {
         String sql = "SELECT COUNT(*) AS total FROM time_slots "
-                   + "WHERE schedule_id = ? AND status = 'BOOKED'";
+                   + "WHERE schedule_id = ? AND status IN ('BOOKED', 'WAITING_VERIFICATION')";
         Connection conn = null;
         PreparedStatement ps = null;
         ResultSet rs = null;
@@ -483,7 +541,7 @@ public class TimeSlotDAO {
                    + "FROM time_slots ts "
                    + "LEFT JOIN doctors d ON ts.doctor_id = d.id "
                    + "LEFT JOIN users u ON ts.booked_by = u.id "
-                   + "WHERE ts.schedule_id = ? AND ts.status = 'BOOKED' "
+                   + "WHERE ts.schedule_id = ? AND ts.status IN ('BOOKED', 'WAITING_VERIFICATION') "
                    + "ORDER BY ts.start_time ASC";
 
         List<TimeSlot> list = new ArrayList<>();
@@ -526,7 +584,7 @@ public class TimeSlotDAO {
 
             // Đếm số slot BOOKED
             String countSql = "SELECT COUNT(*) AS total FROM time_slots WITH (UPDLOCK) "
-                            + "WHERE schedule_id = ? AND status = 'BOOKED'";
+                            + "WHERE schedule_id = ? AND status IN ('BOOKED', 'WAITING_VERIFICATION')";
             countPs = conn.prepareStatement(countSql);
             countPs.setInt(1, scheduleId);
             rs = countPs.executeQuery();
@@ -587,8 +645,53 @@ public class TimeSlotDAO {
      * Lấy danh sách time slots theo doctor_id và ngày, có thể lọc theo trạng thái.
      * Dùng cho chức năng đặt lịch khám (Phase 9).
      */
+    /**
+     * Giống findByDoctorAndDate nhưng SELECT thêm cột ts.price — dùng riêng cho trang
+     * đặt lịch bệnh nhân (cần hiển thị giá theo từng khung giờ cụ thể). Tách riêng khỏi
+     * BASE_COLUMNS dùng chung để không ảnh hưởng các trang quản lý slot khác.
+     */
+    public List<TimeSlot> findByDoctorAndDateWithPrice(int doctorId, Date workDate, SlotStatus status) {
+        StringBuilder sql = new StringBuilder("SELECT DISTINCT " + BASE_COLUMNS + ", ts.price, "
+            + "d.full_name AS doctor_name, "
+            + "u.full_name AS booked_by_name "
+            + "FROM time_slots ts "
+            + "LEFT JOIN doctors d ON ts.doctor_id = d.id "
+            + "LEFT JOIN users u ON ts.booked_by = u.id "
+            + "WHERE ts.doctor_id = ? AND ts.work_date = ? ");
+        if (status != null) {
+            sql.append("AND ts.status = ? ");
+        }
+        sql.append("ORDER BY ts.start_time ASC");
+
+        List<TimeSlot> list = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql.toString());
+            ps.setInt(1, doctorId);
+            ps.setDate(2, workDate);
+            if (status != null) {
+                ps.setString(3, status.name());
+            }
+            rs = ps.executeQuery();
+            while (rs.next()) {
+                TimeSlot ts = mapRow(rs);
+                double p = rs.getDouble("price");
+                if (!rs.wasNull()) ts.setPrice(p);
+                list.add(ts);
+            }
+        } catch (SQLException e) {
+            System.err.println("[TimeSlotDAO] findByDoctorAndDateWithPrice ERROR: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return list;
+    }
+
     public List<TimeSlot> findByDoctorAndDate(int doctorId, Date workDate, SlotStatus status) {
-        StringBuilder sql = new StringBuilder("SELECT " + BASE_COLUMNS + ", "
+        StringBuilder sql = new StringBuilder("SELECT DISTINCT " + BASE_COLUMNS + ", "
             + "d.full_name AS doctor_name, "
             + "u.full_name AS booked_by_name "
             + "FROM time_slots ts "

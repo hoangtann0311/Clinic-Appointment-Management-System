@@ -108,6 +108,32 @@ public class DoctorPregnancyServlet extends HttpServlet {
         List<java.util.Map<String, Object>> timeline =
                 pregnancyDAO.getTimelineByPregnancyId(pregnancyId);
 
+        // Nếu chưa có LMP (thai kỳ được tạo trước khi có tính năng tự gợi ý,
+        // hoặc bác sĩ để trống lúc tạo), gợi ý sẵn LMP dựa trên tuổi thai
+        // của LẦN KHÁM GẦN NHẤT trong timeline để bác sĩ không phải tự tính tay.
+        LocalDate suggestedStart = null;
+        if (pregnancy.getStartDate() == null && !timeline.isEmpty()) {
+            java.util.Map<String, Object> latest = timeline.get(timeline.size() - 1);
+            Object gawObj = latest.get("gestationalAgeWeeks");
+            Object dateObj = latest.get("appointmentDate");
+            if (gawObj != null && dateObj != null) {
+                int gaw = (Integer) gawObj;
+                int gad = latest.get("gestationalAgeDays") != null ? (Integer) latest.get("gestationalAgeDays") : 0;
+                LocalDate apptDate = LocalDate.parse((String) dateObj);
+                suggestedStart = apptDate.minusDays((long) gaw * 7 + gad);
+                req.setAttribute("suggestedStartDate", suggestedStart);
+            }
+        }
+
+        // Gợi ý Ngày dự sinh = LMP + 280 ngày (công thức Naegele) — chỉ khi
+        // chưa có EDD, dựa trên LMP thật (nếu đã có) hoặc LMP vừa gợi ý ở trên.
+        if (pregnancy.getEstimatedDueDate() == null) {
+            LocalDate lmpForEdd = pregnancy.getStartDate() != null ? pregnancy.getStartDate() : suggestedStart;
+            if (lmpForEdd != null) {
+                req.setAttribute("suggestedEstimatedDueDate", lmpForEdd.plusDays(280));
+            }
+        }
+
         req.setAttribute("pregnancy",  pregnancy);
         req.setAttribute("timeline",   timeline);
         req.setAttribute("doctorName", user.getFullName());
@@ -246,6 +272,9 @@ public class DoctorPregnancyServlet extends HttpServlet {
             return;
         }
 
+        LocalDate lmp = parseDateOrNull(req.getParameter("startDate"));
+        if (lmp != null) p.setStartDate(lmp);
+
         LocalDate edd = parseDateOrNull(req.getParameter("estimatedDueDate"));
         if (edd != null) p.setEstimatedDueDate(edd);
 
@@ -304,8 +333,12 @@ public class DoctorPregnancyServlet extends HttpServlet {
 
     private AppointmentInfo loadAppointmentInfo(int apptId) {
         String sql =
-            "SELECT a.patient_id, a.doctor_id, a.pregnancy_id, a.last_menstrual_period, pt.full_name " +
-            "FROM appointments a JOIN patients pt ON a.patient_id = pt.id " +
+            "SELECT a.patient_id, a.doctor_id, a.pregnancy_id, a.last_menstrual_period, " +
+            "       a.appointment_date, pt.full_name, " +
+            "       mr.gestational_age_weeks, mr.gestational_age_days " +
+            "FROM appointments a " +
+            "JOIN patients pt ON a.patient_id = pt.id " +
+            "LEFT JOIN medical_records mr ON mr.appointment_id = a.id " +
             "WHERE a.id = ?";
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -320,6 +353,20 @@ public class DoctorPregnancyServlet extends HttpServlet {
                 Date lmp = rs.getDate("last_menstrual_period");
                 info.lastMenstrualPeriod = lmp != null ? lmp.toLocalDate() : null;
                 info.patientName = rs.getString("full_name");
+
+                // Nếu bệnh nhân chưa tự khai LMP lúc đặt lịch, tự tính LMP dự đoán
+                // từ tuổi thai (tuần/ngày) mà bác sĩ đã ghi nhận trong hồ sơ bệnh án khám gần nhất.
+                if (info.lastMenstrualPeriod == null) {
+                    int gaw = rs.getInt("gestational_age_weeks");
+                    boolean hasWeeks = !rs.wasNull();
+                    int gad = rs.getInt("gestational_age_days");
+                    if (rs.wasNull()) gad = 0;
+                    Date apptDateSql = rs.getDate("appointment_date");
+                    if (hasWeeks && apptDateSql != null) {
+                        info.lastMenstrualPeriod =
+                            apptDateSql.toLocalDate().minusDays((long) gaw * 7 + gad);
+                    }
+                }
                 return info;
             }
         } catch (SQLException e) { e.printStackTrace(); }

@@ -133,7 +133,7 @@ public class PrescriptionDAO {
             throws SQLException {
         String sql =
             "SELECT pi.id, pi.prescription_id, pi.medicine_id, pi.quantity, pi.dosage, " +
-            "       m.name AS medicine_name, m.unit AS medicine_unit, " +
+            "       m.name AS medicine_name, m.unit AS medicine_unit, m.price AS medicine_price, " +
             "       mc.category_name AS medicine_category " +
             "FROM   prescription_items pi " +
             "JOIN   medicines m ON pi.medicine_id = m.id " +
@@ -154,6 +154,7 @@ public class PrescriptionDAO {
                 item.setMedicineName(rs.getString("medicine_name"));
                 item.setMedicineUnit(rs.getString("medicine_unit"));
                 item.setMedicineCategory(rs.getString("medicine_category"));
+                item.setPrice(rs.getBigDecimal("medicine_price"));
                 list.add(item);
             }
         }
