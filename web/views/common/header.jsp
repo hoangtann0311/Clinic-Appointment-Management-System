@@ -438,6 +438,11 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link patient-nav-link" href="${pageContext.request.contextPath}/patient/invoices">
+                                <i class="bi bi-credit-card me-1"></i>Thanh Toán Của Tôi
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link patient-nav-link" href="${pageContext.request.contextPath}/patient/medical-records">
                                 <i class="bi bi-journal-medical me-1"></i>Hồ Sơ Bệnh Án
                             </a>

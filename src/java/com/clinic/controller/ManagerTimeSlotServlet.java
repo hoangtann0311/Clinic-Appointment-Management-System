@@ -179,6 +179,10 @@ public class ManagerTimeSlotServlet extends HttpServlet {
                 handleRegenerate(req, resp, scheduleId, redirectUrl);
             } else if ("delete".equals(action)) {
                 handleDelete(req, resp, scheduleId, redirectUrl);
+            } else if ("updatePrice".equals(action)) {
+                handleUpdateSlotPrice(req, resp, redirectUrl);
+            } else if ("updatePriceForSchedule".equals(action)) {
+                handleUpdatePriceForSchedule(req, resp, scheduleId, redirectUrl);
             } else {
                 resp.sendRedirect(redirectUrl);
             }
@@ -281,6 +285,45 @@ public class ManagerTimeSlotServlet extends HttpServlet {
                     + java.net.URLEncoder.encode(
                             errors.getOrDefault("general", "Không+thể+xóa+slot"), "UTF-8"));
         }
+    }
+
+    /** Updates the optional price override for one available slot. */
+    private void handleUpdateSlotPrice(HttpServletRequest req, HttpServletResponse resp,
+                                       String redirectUrl) throws IOException {
+        int slotId = parseInt(req.getParameter("slotId"), -1);
+        if (slotId <= 0) {
+            resp.sendRedirect(redirectUrl + "&error=Slot+không+hợp+lệ");
+            return;
+        }
+
+        Map<String, String> errors = new HashMap<>();
+        if (timeSlotService.updateSlotPrice(slotId, req.getParameter("price"), errors)) {
+            User actor = getCurrentUser(req);
+            AuditUtil.log(actor != null ? actor.getId() : null,
+                    "Cập nhật giá slot #" + slotId, "time_slots", null,
+                    req.getParameter("price"), null);
+            resp.sendRedirect(redirectUrl + "&success=priceUpdated");
+            return;
+        }
+        resp.sendRedirect(redirectUrl + "&error=" + java.net.URLEncoder.encode(
+                errors.getOrDefault("price", errors.getOrDefault("general", "Không thể cập nhật giá")), "UTF-8"));
+    }
+
+    /** Applies one optional price override to all slots belonging to a schedule. */
+    private void handleUpdatePriceForSchedule(HttpServletRequest req, HttpServletResponse resp,
+                                              int scheduleId, String redirectUrl) throws IOException {
+        Map<String, String> errors = new HashMap<>();
+        int updated = timeSlotService.updatePriceForSchedule(scheduleId, req.getParameter("price"), errors);
+        if (updated >= 0) {
+            User actor = getCurrentUser(req);
+            AuditUtil.log(actor != null ? actor.getId() : null,
+                    "Áp giá cho " + updated + " slot của lịch trực #" + scheduleId,
+                    "time_slots", null, null, req.getParameter("price"));
+            resp.sendRedirect(redirectUrl + "&success=priceUpdated&count=" + updated);
+            return;
+        }
+        resp.sendRedirect(redirectUrl + "&error=" + java.net.URLEncoder.encode(
+                errors.getOrDefault("price", errors.getOrDefault("general", "Không thể cập nhật giá")), "UTF-8"));
     }
 
     // ── Private helpers ──

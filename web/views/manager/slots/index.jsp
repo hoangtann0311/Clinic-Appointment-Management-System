@@ -562,7 +562,27 @@
                 </form>
             </c:otherwise>
         </c:choose>
+        <c:if test="${hasSlots}">
+            <form method="post" action="${pageContext.request.contextPath}/manager/time-slots/"
+                  class="d-flex align-items-center gap-2"
+                  onsubmit="return confirm('Áp giá này cho tất cả khung giờ của ngày ${schedule.workDate}?');">
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                <input type="hidden" name="action" value="updatePriceForSchedule">
+                <input type="hidden" name="scheduleId" value="${schedule.id}">
+                <input type="number" name="price" min="0" step="1000" class="form-control form-control-sm"
+                       style="width:170px;" placeholder="Giá cho cả ngày (đ)">
+                <button type="submit" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-cash-coin me-1"></i>Áp Giá Cả Ngày
+                </button>
+            </form>
+        </c:if>
     </div>
+
+    <c:if test="${success eq 'priceUpdated'}">
+        <div class="alert alert-success py-2" style="font-size:0.85rem;">
+            <i class="bi bi-check-circle-fill me-1"></i>Đã cập nhật giá khung giờ thành công.
+        </div>
+    </c:if>
 
     <%-- ============================================================
          SLOTS CONTENT
@@ -623,6 +643,7 @@
                                     <th>Giờ Bắt Đầu</th>
                                     <th>Giờ Kết Thúc</th>
                                     <th>Trạng Thái</th>
+                                    <th style="width:225px;">Giá Riêng (đ)</th>
                                     <th>Bệnh Nhân</th>
                                     <th>Ngày Tạo</th>
                                 </tr>
@@ -657,6 +678,21 @@
                                                     <span class="badge-slot-cancelled"><i class="bi bi-x-circle-fill me-1"></i>Đã hủy</span>
                                                 </c:when>
                                             </c:choose>
+                                        </td>
+                                        <td>
+                                            <form method="post" action="${pageContext.request.contextPath}/manager/time-slots/"
+                                                  class="d-flex align-items-center gap-1">
+                                                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                                                <input type="hidden" name="action" value="updatePrice">
+                                                <input type="hidden" name="scheduleId" value="${schedule.id}">
+                                                <input type="hidden" name="slotId" value="${slot.id}">
+                                                <input type="number" name="price" min="0" step="1000"
+                                                       value="${slot.price}" placeholder="Mặc định"
+                                                       class="form-control form-control-sm" style="width:125px;">
+                                                <button type="submit" class="btn btn-sm btn-outline-primary" title="Lưu giá">
+                                                    <i class="bi bi-check-lg"></i>
+                                                </button>
+                                            </form>
                                         </td>
                                         <td style="font-size:0.8rem;">
                                             <c:choose>

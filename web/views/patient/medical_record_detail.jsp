@@ -226,7 +226,7 @@
                                         Lần siêu âm ${loop.index + 1}
                                         <span class="badge bg-light text-dark border ms-1">${order.status}</span>
                                     </span>
-                                    <small class="text-muted">${order.orderedAt}</small>
+                                    <small class="text-muted">${order.createdAtText}</small>
                                 </div>
                                 <p class="text-muted small mb-2">Ghi chú bác sĩ: ${not empty order.notes ? order.notes : '—'}</p>
 

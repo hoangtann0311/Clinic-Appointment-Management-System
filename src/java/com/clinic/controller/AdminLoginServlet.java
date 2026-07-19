@@ -41,6 +41,9 @@ public class AdminLoginServlet extends HttpServlet {
             if (user.getRoleId() == 1) {
                 // Đã là Admin → chuyển thẳng vào dashboard
                 response.sendRedirect(request.getContextPath() + "/admin/dashboard");
+            } else if (user.getRoleId() == 4) {
+                // Staff already has a valid session: preserve it and return to reception.
+                response.sendRedirect(request.getContextPath() + "/admin/reception");
             } else {
                 // Không phải Admin → đăng xuất và yêu cầu đăng nhập lại
                 session.invalidate();
