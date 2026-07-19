@@ -17,6 +17,8 @@ import java.sql.SQLException;
  */
 public class DatabaseConfig {
 
+    // Shared team database export is named ObstetricsClinicDB. Developers can
+    // override this locally with DB_NAME=ObstetricsClinicDB_Merge_Test.
     private static final String DATABASE_NAME = getSetting("DB_NAME", "ObstetricsClinicDB");
 
     // SQL Server Authentication credentials (chỉ dùng khi Windows Auth thất bại)

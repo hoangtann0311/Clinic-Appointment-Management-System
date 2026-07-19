@@ -102,8 +102,7 @@ public class PatientPaymentServlet extends HttpServlet {
                 if ("PRE_EXAM".equals(invoiceType)) {
                     invoice = new Invoice();
                     invoice.setAppointmentId(appointmentId);
-                    double price = appt.getService() != null ? appt.getService().getPrice() : 250000;
-                    invoice.setTotalAmount(BigDecimal.valueOf(price));
+                    invoice.setTotalAmount(resolvePreExamAmount(appointmentId));
                     invoice.setStatus("Unpaid");
                     invoice.setInvoiceType("PRE_EXAM");
                     invoice.setCreatedAt(new Timestamp(System.currentTimeMillis()));
@@ -205,6 +204,32 @@ public class PatientPaymentServlet extends HttpServlet {
         return null;
     }
 
+    /**
+     * Legacy appointments may not yet have a PRE_EXAM invoice. Preserve the locked
+     * doctor fee and every selected add-on service when creating that fallback invoice.
+     */
+    private BigDecimal resolvePreExamAmount(int appointmentId) {
+        String sql = "SELECT COALESCE(a.base_fee, s.price, CAST(250000 AS decimal(12,2))) "
+                + "+ COALESCE(SUM(aps.price), 0) AS total_amount "
+                + "FROM appointments a "
+                + "LEFT JOIN services s ON s.id = a.service_id "
+                + "LEFT JOIN appointment_services aps ON aps.appointment_id = a.id "
+                + "WHERE a.id = ? "
+                + "GROUP BY a.base_fee, s.price";
+        try (Connection conn = com.clinic.config.DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, appointmentId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next() && rs.getBigDecimal("total_amount") != null) {
+                    return rs.getBigDecimal("total_amount");
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return BigDecimal.valueOf(250000);
+    }
+
     /** SĐT + tên dịch vụ, bỏ dấu tiếng Việt, chỉ giữ chữ/số/khoảng trắng — dùng cho nội dung CK và QR. */
     private String buildTransferContent(String phone, String serviceName, int appointmentId) {
         String phonePart = (phone == null || phone.trim().isEmpty()) ? ("LH" + appointmentId) : phone.trim();
@@ -247,8 +272,35 @@ public class PatientPaymentServlet extends HttpServlet {
                 return;
             }
 
+            User user = (User) session.getAttribute("user");
+            Appointment appointment = appointmentDAO.findAppointmentById(invoice.getAppointmentId());
+            int patientId = new com.clinic.dao.PatientDAO().getPatientIdByUserId(user.getId());
+            if (appointment == null || patientId <= 0 || appointment.getPatientId() != patientId) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not own this invoice.");
+                return;
+            }
+
             if ("Paid".equalsIgnoreCase(invoice.getStatus())) {
                 response.sendRedirect(request.getContextPath() + "/patient/payment?appointmentId=" + invoice.getAppointmentId() + "&type=" + invoice.getInvoiceType() + "&error=HoaDonDaThanhToan");
+                return;
+            }
+            if ("PendingConfirmation".equalsIgnoreCase(invoice.getStatus())) {
+                response.sendRedirect(request.getContextPath() + "/patient/payment?appointmentId=" + invoice.getAppointmentId()
+                        + "&type=" + invoice.getInvoiceType() + "&error=HoaDonDangChoXacNhan");
+                return;
+            }
+            if ("DeclinedPurchase".equalsIgnoreCase(invoice.getStatus())) {
+                response.sendRedirect(request.getContextPath() + "/patient/payment?appointmentId=" + invoice.getAppointmentId()
+                        + "&type=" + invoice.getInvoiceType() + "&error=HoaDonDaTuChoiMua");
+                return;
+            }
+            if ("Rejected".equalsIgnoreCase(invoice.getStatus()) && "PRE_EXAM".equalsIgnoreCase(invoice.getInvoiceType())) {
+                response.sendRedirect(request.getContextPath() + "/patient/appointments?bookingError=ThanhToanTruocKhamDaBiTuChoi");
+                return;
+            }
+            if (!"BankTransfer".equalsIgnoreCase(paymentMethod) && !"Cash".equalsIgnoreCase(paymentMethod)) {
+                response.sendRedirect(request.getContextPath() + "/patient/payment?appointmentId=" + invoice.getAppointmentId()
+                        + "&type=" + invoice.getInvoiceType() + "&error=PhuongThucThanhToanKhongHopLe");
                 return;
             }
 

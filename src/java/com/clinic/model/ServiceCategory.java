@@ -5,8 +5,7 @@ import java.sql.Timestamp;
 
 /**
  * Entity ánh xạ bảng service_categories — nhóm dịch vụ y tế.
- * Dùng cho phòng khám sản phụ khoa:
- *   Khám sản, Siêu âm, Tư vấn, Thủ thuật
+ * Dùng cho phòng khám thai sản và siêu âm.
  */
 public class ServiceCategory implements Serializable {
 

@@ -819,9 +819,6 @@
                                     <option value="Phòng Siêu âm 2" ${formData.requiredRoomType eq 'Phòng Siêu âm 2' ? 'selected' : ''}>🩻 Phòng Siêu âm 2</option>
                                     <option value="Phòng Siêu âm 3" ${formData.requiredRoomType eq 'Phòng Siêu âm 3' ? 'selected' : ''}>🩻 Phòng Siêu âm 3</option>
                                 </optgroup>
-                                <optgroup label="Phòng Thủ thuật">
-                                    <option value="Phòng Thủ thuật" ${formData.requiredRoomType eq 'Phòng Thủ thuật' ? 'selected' : ''}>🏨 Phòng Thủ thuật</option>
-                                </optgroup>
                             </select>
                             <div class="invalid-feedback" id="err-requiredRoomType"></div>
                             <c:if test="${not empty errors.requiredRoomType}">
@@ -1021,9 +1018,6 @@
                                     <option value="Phòng Siêu âm 1">🩻 Phòng Siêu âm 1</option>
                                     <option value="Phòng Siêu âm 2">🩻 Phòng Siêu âm 2</option>
                                     <option value="Phòng Siêu âm 3">🩻 Phòng Siêu âm 3</option>
-                                </optgroup>
-                                <optgroup label="Phòng Thủ thuật">
-                                    <option value="Phòng Thủ thuật">🏨 Phòng Thủ thuật</option>
                                 </optgroup>
                             </select>
                             <div class="invalid-feedback" id="editErr-requiredRoomType"></div>

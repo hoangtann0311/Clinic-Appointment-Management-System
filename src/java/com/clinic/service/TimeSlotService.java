@@ -278,10 +278,10 @@ public class TimeSlotService {
      *
      * @return true nếu cập nhật thành công, false nếu có lỗi (xem errors)
      */
-    public boolean updateSlotPrice(int slotId, String priceStr, Map<String, String> errors) {
+    public boolean updateSlotPrice(int scheduleId, int slotId, String priceStr, Map<String, String> errors) {
         Double price = parsePrice(priceStr, errors);
         if (errors.containsKey("price")) return false;
-        boolean ok = timeSlotDAO.updateSlotPrice(slotId, price);
+        boolean ok = timeSlotDAO.updateSlotPrice(scheduleId, slotId, price);
         if (!ok) errors.put("general", "Không thể cập nhật giá cho khung giờ này.");
         return ok;
     }

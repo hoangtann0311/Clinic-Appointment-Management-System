@@ -402,6 +402,12 @@
                  + s.time
                  + '</button>';
         }
+        if (s.price === null || s.price === undefined || s.price === '') {
+            return '<button type="button" class="btn btn-outline-secondary btn-sm slot-btn" disabled '
+                 + 'title="Gia kham chua duoc cong bo">'
+                 + s.time
+                 + '</button>';
+        }
         return '<button type="button" class="btn btn-outline-primary btn-sm slot-btn" '
              + 'data-slot-id="' + s.id + '" data-label="' + s.label + '" data-price="' + (s.price !== null ? s.price : '') + '">'
              + s.time
@@ -419,10 +425,10 @@
         document.getElementById('summaryDate').textContent = date;
         document.getElementById('summaryTime').textContent = label;
 
-        currentBasePrice = basePrice || 0;
+        currentBasePrice = Number.isFinite(Number(basePrice)) ? Number(basePrice) : 0;
         const basePriceEl = document.getElementById('summaryBasePrice');
         if (basePriceEl) {
-            basePriceEl.textContent = currentBasePrice > 0
+            basePriceEl.textContent = currentBasePrice >= 0
                 ? new Intl.NumberFormat('vi-VN').format(currentBasePrice) + 'đ'
                 : 'Liên hệ';
         }
@@ -475,10 +481,10 @@
                     }
                     const prices = slots
                         .map(s => s.price)
-                        .filter(p => p !== null && p !== undefined && p > 0);
+                        .filter(p => p !== null && p !== undefined && p >= 0);
 
                     if (prices.length === 0) {
-                        el.innerHTML = '<span class="text-muted fw-normal">Liên hệ</span>';
+                        el.innerHTML = '<span class="text-muted fw-normal">Chưa công bố giá</span>';
                         return;
                     }
                     const min = Math.min.apply(null, prices);

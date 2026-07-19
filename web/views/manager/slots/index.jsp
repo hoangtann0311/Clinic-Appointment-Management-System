@@ -578,6 +578,11 @@
         </c:if>
     </div>
 
+    <c:if test="${param.warning eq 'NoAvailableSlotsForPriceUpdate'}">
+        <div class="alert alert-warning py-2" style="font-size:0.85rem;">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>Kh&ocirc;ng c&ograve;n khung gi&#7901; tr&#7889;ng &#273;&#7875; c&#7853;p nh&#7853;t gi&aacute;; gi&aacute; c&#7911;a slot &#273;&atilde; gi&#7919;/&#273;&#7863;t &#273;&#432;&#7907;c b&#7843;o to&agrave;n.
+        </div>
+    </c:if>
     <c:if test="${success eq 'priceUpdated'}">
         <div class="alert alert-success py-2" style="font-size:0.85rem;">
             <i class="bi bi-check-circle-fill me-1"></i>Đã cập nhật giá khung giờ thành công.
@@ -680,6 +685,7 @@
                                             </c:choose>
                                         </td>
                                         <td>
+                                            <c:if test="${slot.status.name() eq 'AVAILABLE'}">
                                             <form method="post" action="${pageContext.request.contextPath}/manager/time-slots/"
                                                   class="d-flex align-items-center gap-1">
                                                 <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
@@ -693,6 +699,16 @@
                                                     <i class="bi bi-check-lg"></i>
                                                 </button>
                                             </form>
+                                            </c:if>
+                                            <c:if test="${slot.status.name() ne 'AVAILABLE'}">
+                                                <span class="text-muted small">
+                                                    <c:choose>
+                                                        <c:when test="${not empty slot.price}">${slot.price}</c:when>
+                                                        <c:otherwise>M&#7863;c &#273;&#7883;nh</c:otherwise>
+                                                    </c:choose>
+                                                </span>
+                                                <div class="text-muted" style="font-size:0.72rem;">&#272;&atilde; kh&oacute;a theo l&#7883;ch h&#7865;n</div>
+                                            </c:if>
                                         </td>
                                         <td style="font-size:0.8rem;">
                                             <c:choose>

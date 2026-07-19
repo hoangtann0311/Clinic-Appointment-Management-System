@@ -530,7 +530,6 @@
                                                 <c:when test="${tbl eq 'reviews'}"><i class="bi bi-star"></i> Đánh giá</c:when>
                                                 <c:when test="${tbl eq 'system_settings'}"><i class="bi bi-gear"></i> Cài đặt</c:when>
                                                 <c:when test="${tbl eq 'ultrasound_images'}"><i class="bi bi-camera"></i> Ảnh siêu âm</c:when>
-                                                <c:when test="${tbl eq 'ultrasound_results'}"><i class="bi bi-file-image"></i> Kết quả siêu âm</c:when>
                                                 <c:when test="${tbl eq 'access_control'}"><i class="bi bi-shield-lock-fill"></i> Kiểm soát truy cập</c:when>
                                                 <c:when test="${tbl eq 'security'}"><i class="bi bi-shield-exclamation"></i> Bảo mật</c:when>
                                                 <c:when test="${tbl eq 'audit_logs'}"><i class="bi bi-journal-text"></i> Nhật ký</c:when>

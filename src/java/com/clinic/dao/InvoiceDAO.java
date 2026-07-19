@@ -236,7 +236,8 @@ public class InvoiceDAO {
     }
 
     public boolean updatePaymentStatus(int id, String status, String paymentMethod, String transactionCode, String paymentNote, int confirmedBy, Timestamp confirmedAt) {
-        String sql = "UPDATE invoices SET status = ?, payment_method = ?, transaction_code = ?, payment_note = ?, confirmed_by = ?, confirmed_at = ? WHERE id = ? ";
+        String sql = "UPDATE invoices SET status = ?, payment_method = ?, transaction_code = ?, payment_note = ?, confirmed_by = ?, confirmed_at = ? "
+                + "WHERE id = ? AND status NOT IN ('Paid', 'DeclinedPurchase')";
         Connection conn = null;
         PreparedStatement ps = null;
         try {
@@ -260,7 +261,8 @@ public class InvoiceDAO {
     }
 
     public boolean submitPaymentDetails(int id, String paymentMethod, String transactionCode, String status) {
-        String sql = "UPDATE invoices SET payment_method = ?, transaction_code = ?, status = ? WHERE id = ? AND status <> 'Paid'";
+        String sql = "UPDATE invoices SET payment_method = ?, transaction_code = ?, status = ? "
+                + "WHERE id = ? AND (status = 'Unpaid' OR (status = 'Rejected' AND invoice_type <> 'PRE_EXAM'))";
         Connection conn = null;
         PreparedStatement ps = null;
         try {
@@ -286,7 +288,7 @@ public class InvoiceDAO {
     public boolean submitPaymentDetailsWithProof(int id, String paymentMethod, String transactionCode,
                                                   String proofImagePath, String status) {
         String sql = "UPDATE invoices SET payment_method = ?, transaction_code = ?, proof_image_path = ?, status = ? " +
-                     "WHERE id = ? AND status <> 'Paid'";
+                     "WHERE id = ? AND (status = 'Unpaid' OR (status = 'Rejected' AND invoice_type <> 'PRE_EXAM'))";
         Connection conn = null;
         PreparedStatement ps = null;
         try {

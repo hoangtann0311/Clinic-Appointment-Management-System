@@ -410,10 +410,12 @@ public class TimeSlotDAO {
 
     /**
      * Cập nhật giá riêng cho MỘT khung giờ cụ thể (giá theo ngày/giờ).
-     * Truyền price = null để xóa giá riêng (quay lại dùng base_price của bác sĩ).
+     * Truyền price = null để bỏ công bố giá của slot.
      */
-    public boolean updateSlotPrice(int slotId, Double price) {
-        String sql = "UPDATE time_slots SET price = ?, updated_at = GETDATE() WHERE id = ?";
+    public boolean updateSlotPrice(int scheduleId, int slotId, Double price) {
+        // A price is part of the booking contract once a patient has held or booked a slot.
+        String sql = "UPDATE time_slots SET price = ?, updated_at = GETDATE() "
+                + "WHERE id = ? AND schedule_id = ? AND status = 'AVAILABLE'";
         Connection conn = null;
         PreparedStatement ps = null;
         try {
@@ -425,6 +427,7 @@ public class TimeSlotDAO {
                 ps.setDouble(1, price);
             }
             ps.setInt(2, slotId);
+            ps.setInt(3, scheduleId);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("[TimeSlotDAO] updateSlotPrice ERROR: " + e.getMessage());
@@ -439,7 +442,9 @@ public class TimeSlotDAO {
      * vì 1 schedule ứng với 1 bác sĩ trong 1 ngày làm việc).
      */
     public int updatePriceBySchedule(int scheduleId, Double price) {
-        String sql = "UPDATE time_slots SET price = ?, updated_at = GETDATE() WHERE schedule_id = ?";
+        // Keep historical invoice totals stable: only open slots may be repriced.
+        String sql = "UPDATE time_slots SET price = ?, updated_at = GETDATE() "
+                + "WHERE schedule_id = ? AND status = 'AVAILABLE'";
         Connection conn = null;
         PreparedStatement ps = null;
         try {

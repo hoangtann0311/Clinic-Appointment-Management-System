@@ -296,8 +296,14 @@ public class ManagerTimeSlotServlet extends HttpServlet {
             return;
         }
 
+        int scheduleId = parseInt(req.getParameter("scheduleId"), -1);
+        if (scheduleId <= 0) {
+            resp.sendRedirect(redirectUrl + "&error=Schedule+khong+hop+le");
+            return;
+        }
+
         Map<String, String> errors = new HashMap<>();
-        if (timeSlotService.updateSlotPrice(slotId, req.getParameter("price"), errors)) {
+        if (timeSlotService.updateSlotPrice(scheduleId, slotId, req.getParameter("price"), errors)) {
             User actor = getCurrentUser(req);
             AuditUtil.log(actor != null ? actor.getId() : null,
                     "Cập nhật giá slot #" + slotId, "time_slots", null,
@@ -314,12 +320,16 @@ public class ManagerTimeSlotServlet extends HttpServlet {
                                               int scheduleId, String redirectUrl) throws IOException {
         Map<String, String> errors = new HashMap<>();
         int updated = timeSlotService.updatePriceForSchedule(scheduleId, req.getParameter("price"), errors);
-        if (updated >= 0) {
+        if (updated > 0) {
             User actor = getCurrentUser(req);
             AuditUtil.log(actor != null ? actor.getId() : null,
                     "Áp giá cho " + updated + " slot của lịch trực #" + scheduleId,
                     "time_slots", null, null, req.getParameter("price"));
             resp.sendRedirect(redirectUrl + "&success=priceUpdated&count=" + updated);
+            return;
+        }
+        if (updated == 0) {
+            resp.sendRedirect(redirectUrl + "&warning=NoAvailableSlotsForPriceUpdate");
             return;
         }
         resp.sendRedirect(redirectUrl + "&error=" + java.net.URLEncoder.encode(

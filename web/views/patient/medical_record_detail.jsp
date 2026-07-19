@@ -228,7 +228,13 @@
                                     </span>
                                     <small class="text-muted">${order.createdAtText}</small>
                                 </div>
-                                <p class="text-muted small mb-2">Ghi chú bác sĩ: ${not empty order.notes ? order.notes : '—'}</p>
+                                <p class="text-muted small mb-2">
+                                    Triệu chứng ghi nhận:
+                                    <c:choose>
+                                        <c:when test="${not empty order.symptoms}"><c:out value="${order.symptoms}"/></c:when>
+                                        <c:otherwise>—</c:otherwise>
+                                    </c:choose>
+                                </p>
 
                                 <%-- Ảnh siêu âm --%>
                                 <c:set var="imgs" value="${orderImages[order.orderId]}"/>

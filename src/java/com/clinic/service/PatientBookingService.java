@@ -205,7 +205,13 @@ public class PatientBookingService {
 
         // 7. Tính phí khám bác sĩ (base fee): lấy từ giá riêng của slot (theo ngày/giờ cụ thể).
         //    Nếu slot chưa được thiết lập giá thì basePrice = 0 (hiển thị "Liên hệ" ở UI).
-        double basePrice = (slot.getPrice() != null) ? slot.getPrice() : 0;
+        // Never turn an unpublished fee into a zero-value PRE_EXAM invoice.
+        // A deliberate fee of 0 remains valid because its value is not null.
+        if (slot.getPrice() == null) {
+            errors.put("slotId", "Gi\u00e1 kh\u00e1m c\u1ee7a khung gi\u1edd n\u00e0y ch\u01b0a \u0111\u01b0\u1ee3c c\u00f4ng b\u1ed1. Vui l\u00f2ng ch\u1ecdn khung gi\u1edd kh\u00e1c ho\u1eb7c li\u00ean h\u1ec7 ph\u00f2ng kh\u00e1m.");
+            return null;
+        }
+        double basePrice = slot.getPrice();
 
         // 8. Thực hiện đặt slot và tạo appointment trong cùng một transaction
         String gestationalAge = AppointmentDAO.calculateGestationalAge(lmp, workDate);

@@ -99,9 +99,9 @@
             <%-- ========== Login Form ========== --%>
             <form action="${pageContext.request.contextPath}/login" method="post" novalidate>
 
-                <%-- Email --%>
+                <%-- Email hoặc tên đăng nhập --%>
                 <div class="floating-group">
-                    <input type="email"
+                    <input type="text"
                            class="floating-input ${not empty emailError ? 'is-invalid' : ''}"
                            id="email"
                            name="email"
@@ -109,7 +109,7 @@
                            value="${not empty emailValue ? emailValue : ''}"
                            required
                            autofocus>
-                    <label class="floating-label" for="email">Email</label>
+                    <label class="floating-label" for="email">Email hoặc tên đăng nhập</label>
                     <c:if test="${not empty emailError}">
                         <div class="invalid-feedback d-block">${emailError}</div>
                     </c:if>

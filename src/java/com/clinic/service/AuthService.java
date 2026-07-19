@@ -145,11 +145,11 @@ public class AuthService {
      * @param errors   Map để chứa lỗi nếu có
      * @return User nếu đăng nhập thành công, null nếu thất bại
      */
-    public User login(String email, String password, Map<String, String> errors) {
+    public User login(String emailOrUsername, String password, Map<String, String> errors) {
 
         // Bước 1: Validate input không rỗng
-        if (email == null || email.trim().isEmpty()) {
-            errors.put("email", "Vui lòng nhập email.");
+        if (emailOrUsername == null || emailOrUsername.trim().isEmpty()) {
+            errors.put("email", "Vui lòng nhập email hoặc tên đăng nhập.");
             return null;
         }
         if (password == null || password.isEmpty()) {
@@ -157,22 +157,23 @@ public class AuthService {
             return null;
         }
 
-        email = email.trim().toLowerCase();
+        String loginIdentifier = emailOrUsername.trim();
 
-        // Bước 2: Kiểm tra định dạng email
-        if (!ValidationUtil.isValidEmail(email)) {
-            errors.put("email", "Email không đúng định dạng.");
-            return null;
+        // Bước 2: Hỗ trợ cả email lẫn username. Một số tài khoản mẫu được
+        // import từ database chỉ có username, không có email để đăng nhập.
+        User user = null;
+        if (ValidationUtil.isValidEmail(loginIdentifier)) {
+            user = userDAO.findByEmail(loginIdentifier.toLowerCase());
         }
-
-        // Bước 3: Tìm user theo email
-        User user = userDAO.findByEmail(email);
+        if (user == null) {
+            user = userDAO.findByUsername(loginIdentifier);
+        }
         if (user == null) {
             errors.put("login", "Email hoặc mật khẩu không chính xác.");
             return null;
         }
 
-        // Bước 4: Kiểm tra trạng thái tài khoản
+        // Bước 3: Kiểm tra trạng thái tài khoản
         if (UserStatus.LOCKED.getValue().equalsIgnoreCase(user.getStatus())) {
             errors.put("login", "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.");
             return null;
@@ -186,13 +187,13 @@ public class AuthService {
             return null;
         }
 
-        // Bước 5: Kiểm tra mật khẩu với BCrypt
+        // Bước 4: Kiểm tra mật khẩu với BCrypt
         if (!BCryptUtil.checkPassword(password, user.getPasswordHash())) {
             errors.put("login", "Email hoặc mật khẩu không chính xác.");
             return null;
         }
 
-        // Bước 6: Xóa password hash trước khi trả về (bảo mật)
+        // Bước 5: Xóa password hash trước khi trả về (bảo mật)
         user.setPasswordHash(null);
         user.setVerificationToken(null);
 
