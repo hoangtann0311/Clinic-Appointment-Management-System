@@ -374,5 +374,7 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
     }
 })();
 </script>
+
+<%@ include file="../../common/standalone-footer.jsp" %>
 </body>
 </html>

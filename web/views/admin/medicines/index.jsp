@@ -500,5 +500,7 @@ function openEditModal(id, code, name, desc, dosage, unit, price, stock, isActiv
     new bootstrap.Modal(document.getElementById('editMedicineModal')).show();
 }
 </script>
+
+<%@ include file="../../common/standalone-footer.jsp" %>
 </body>
 </html>

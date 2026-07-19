@@ -1,22 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <title>Sonographer Dashboard - CAMS</title>
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Theme CSS -->
-    <link href="${pageContext.request.contextPath}/assets/css/admin.css" rel="stylesheet">
-</head>
-<body class="admin-body">
-
 <jsp:include page="../common/header.jsp" />
 
 <!-- Main Content Area -->
@@ -246,8 +230,6 @@
     </div>
 </div>
 
-<jsp:include page="../common/footer.jsp" />
-
 <style>
     /* KPI Cards Styling matching Staff page */
     .kpi-card {
@@ -366,5 +348,5 @@
         100% { transform: rotate(360deg); }
     }
 </style>
-</body>
-</html>
+
+<%@ include file="../common/footer.jsp" %>

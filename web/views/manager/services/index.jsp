@@ -1582,5 +1582,7 @@ function openEditModal(id, code, name, desc, price, duration, fasting, bladder, 
     });
 </c:if>
 </script>
+
+<%@ include file="../../common/standalone-footer.jsp" %>
 </body>
 </html>

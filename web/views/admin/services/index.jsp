@@ -497,5 +497,7 @@ function openEditModal(id, code, name, desc, price, duration, fasting, bladder, 
     new bootstrap.Modal(document.getElementById('editServiceModal')).show();
 }
 </script>
+
+<%@ include file="../../common/standalone-footer.jsp" %>
 </body>
 </html>

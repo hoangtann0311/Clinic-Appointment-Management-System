@@ -467,5 +467,7 @@ document.querySelectorAll('.role-tab-link').forEach(function(tab) {
     });
 });
 </script>
+
+<%@ include file="../../common/standalone-footer.jsp" %>
 </body>
 </html>

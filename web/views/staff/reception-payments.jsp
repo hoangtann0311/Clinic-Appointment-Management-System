@@ -506,6 +506,8 @@
     <input type="hidden" name="page" value="${currentPage}">
 </form>
 
+
+<%@ include file="../common/standalone-footer.jsp" %>
 </body>
 </html>
 

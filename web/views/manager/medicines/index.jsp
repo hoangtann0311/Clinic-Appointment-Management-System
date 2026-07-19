@@ -730,5 +730,7 @@ function openEditModal(id, code, name, desc, dosage, unit, price, stock, isActiv
     }
 })();
 </script>
+
+<%@ include file="../../common/standalone-footer.jsp" %>
 </body>
 </html>

@@ -240,6 +240,34 @@ footer {
     border-top: 1px solid #e9ecef;
 }
 
+/* Shared application footer: used by every authenticated role. */
+.cams-app-footer {
+    margin-top: 2rem;
+    padding: 1.35rem 1rem 1.45rem;
+    background: #fff7fa;
+    border-top: 1px solid #f1dbe5;
+    color: #725564;
+    font-family: 'Be Vietnam Pro', 'Segoe UI', sans-serif;
+    font-size: 0.76rem;
+    text-align: center;
+}
+
+.cams-app-footer p {
+    margin: 0;
+    line-height: 1.55;
+}
+
+.cams-app-footer-copyright {
+    color: #725564;
+    font-weight: 400;
+}
+
+.cams-app-footer-tagline {
+    margin-top: 0.25rem !important;
+    color: #9c1458;
+    font-weight: 500;
+}
+
 /* ---------- Responsive Fixes ---------- */
 @media (max-width: 576px) {
     .login-card {

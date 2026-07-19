@@ -1195,5 +1195,7 @@ document.addEventListener('DOMContentLoaded', function() {
     </c:if>
 });
 </script>
+
+<%@ include file="../../common/standalone-footer.jsp" %>
 </body>
 </html>

@@ -17,7 +17,6 @@ import java.sql.SQLException;
  */
 public class DatabaseConfig {
 
-    // Local settings can be supplied with JVM properties or environment variables.
     private static final String DATABASE_NAME = getSetting("DB_NAME", "ObstetricsClinicDB");
 
     // SQL Server Authentication credentials (chỉ dùng khi Windows Auth thất bại)

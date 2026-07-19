@@ -288,7 +288,7 @@ body.admin-body {
     border-radius: 50%;
     background: linear-gradient(135deg, var(--pink-400), var(--pink-600));
     color: #fff;
-    display: inline-flex;
+    display: flex;
     align-items: center;
     justify-content: center;
     font-family: var(--font-display);
@@ -296,7 +296,62 @@ body.admin-body {
     font-size: 1.4rem;
     text-transform: uppercase;
     margin-bottom: 0.75rem;
+    margin-left: auto;
+    margin-right: auto;
     box-shadow: 0 0 0 3px rgba(233,30,140,0.2), var(--shadow-pink);
+}
+
+/* Keep both uploaded images and the initial-letter fallback centered. */
+img.admin-sidebar-avatar {
+    display: block;
+    object-fit: cover;
+}
+
+.cams-app-footer {
+    margin-top: 2rem;
+    padding: 1.35rem 1rem 1.45rem;
+    background: #fff7fa;
+    border-top: 1px solid var(--c-outline-variant, #f1dbe5);
+    color: #725564;
+    font-family: var(--font-body, "Be Vietnam Pro", sans-serif);
+    font-size: 0.76rem;
+    text-align: center;
+}
+
+.cams-app-footer p {
+    margin: 0;
+    line-height: 1.55;
+}
+
+.cams-app-footer-copyright {
+    color: #725564;
+    font-weight: 400;
+}
+
+.cams-app-footer-tagline {
+    color: #9c1458;
+    font-weight: 500;
+    margin-top: 0.25rem !important;
+}
+
+/* The sidebar overlays the left side of the shared footer. Align its content
+   with the functional area instead of the full browser viewport. */
+.admin-body .cams-app-footer {
+    margin-left: var(--sidebar-w, 338px);
+    width: calc(100% - var(--sidebar-w, 338px));
+}
+
+.admin-body .cams-app-footer .container {
+    max-width: none;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+}
+
+@media (max-width: 991.98px) {
+    .admin-body .cams-app-footer {
+        margin-left: 0;
+        width: 100%;
+    }
 }
 
 .admin-sidebar-name {

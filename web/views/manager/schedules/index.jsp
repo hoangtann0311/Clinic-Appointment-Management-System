@@ -1077,5 +1077,7 @@ function openCancelModal(id, doctorName, shiftLabel) {
     });
 </c:if>
 </script>
+
+<%@ include file="../../common/standalone-footer.jsp" %>
 </body>
 </html>

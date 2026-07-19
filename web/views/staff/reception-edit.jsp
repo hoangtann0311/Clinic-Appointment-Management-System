@@ -418,5 +418,7 @@
         if (e.key === 'Escape') closeSidebar();
     });
 </script>
+
+<%@ include file="../common/standalone-footer.jsp" %>
 </body>
 </html>
