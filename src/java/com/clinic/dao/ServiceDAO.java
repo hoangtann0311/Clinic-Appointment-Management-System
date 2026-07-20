@@ -646,7 +646,10 @@ public class ServiceDAO {
 
     public List<ServiceItem> getAllServices() {
         List<ServiceItem> list = new ArrayList<>();
-        String sql = "SELECT id, service_name, price, duration_mins, requires_fasting, requires_full_bladder, required_room_type FROM services";
+        // Booking screens must never offer retired services. Historical appointments
+        // resolve their service through dedicated history queries instead.
+        String sql = "SELECT id, service_name, price, duration_mins, requires_fasting, requires_full_bladder, required_room_type "
+                + "FROM services WHERE is_active = 1 ORDER BY service_name";
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
@@ -668,7 +671,8 @@ public class ServiceDAO {
     }
 
     public ServiceItem findServiceById(int id) {
-        String sql = "SELECT id, service_name, price, duration_mins, requires_fasting, requires_full_bladder, required_room_type FROM services WHERE id = ?";
+        String sql = "SELECT id, service_name, price, duration_mins, requires_fasting, requires_full_bladder, required_room_type "
+                + "FROM services WHERE id = ? AND is_active = 1";
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);
@@ -689,6 +693,48 @@ public class ServiceDAO {
             e.printStackTrace();
         }
         return null;
+    }
+
+    /**
+     * Retrieves active ultrasound services without relying on a hard-coded
+     * category id. Imported databases may use different category identities.
+     */
+    public List<Service> findUltrasoundServices() {
+        String sql = "SELECT s.id, s.service_code, s.service_name, s.description, s.price, "
+                + "s.duration_mins, s.requires_fasting, s.requires_full_bladder, "
+                + "s.required_room_type, s.allowed_specialties, s.category_id, s.is_active "
+                + "FROM services s LEFT JOIN service_categories c ON c.id = s.category_id "
+                + "WHERE s.is_active = 1 AND ("
+                + "LOWER(CONVERT(nvarchar(255), ISNULL(s.service_name, ''))) LIKE N'%siêu âm%' "
+                + "OR LOWER(CONVERT(nvarchar(255), ISNULL(c.category_name, ''))) LIKE N'%siêu âm%' "
+                + "OR LOWER(CONVERT(nvarchar(255), ISNULL(s.required_room_type, ''))) LIKE N'%ultrasound%') "
+                + "ORDER BY s.service_name";
+        List<Service> list = new ArrayList<>();
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) list.add(mapRow(rs, false));
+        } catch (SQLException e) {
+            System.err.println("Lỗi findUltrasoundServices: " + e.getMessage());
+        }
+        return list;
+    }
+
+    /** Verifies that a selected service is active and belongs to ultrasound scope. */
+    public boolean isActiveUltrasoundService(int serviceId) {
+        String sql = "SELECT 1 FROM services s LEFT JOIN service_categories c ON c.id = s.category_id "
+                + "WHERE s.id = ? AND s.is_active = 1 AND ("
+                + "LOWER(CONVERT(nvarchar(255), ISNULL(s.service_name, ''))) LIKE N'%siêu âm%' "
+                + "OR LOWER(CONVERT(nvarchar(255), ISNULL(c.category_name, ''))) LIKE N'%siêu âm%' "
+                + "OR LOWER(CONVERT(nvarchar(255), ISNULL(s.required_room_type, ''))) LIKE N'%ultrasound%')";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, serviceId);
+            return ps.executeQuery().next();
+        } catch (SQLException e) {
+            System.err.println("Lỗi isActiveUltrasoundService: " + e.getMessage());
+        }
+        return false;
     }
 
     private void closeResources(Connection conn, PreparedStatement ps, ResultSet rs) {

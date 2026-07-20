@@ -197,7 +197,7 @@
                 <table class="admin-table">
                     <thead>
                         <tr>
-                            <th>ID</th>
+                            <th>STT</th>
                             <th>Mã DV</th>
                             <th>Tên Dịch Vụ</th>
                             <th>Đơn Giá</th>
@@ -210,9 +210,9 @@
                     <tbody>
                         <c:choose>
                             <c:when test="${not empty services}">
-                                <c:forEach var="svc" items="${services}">
+                                <c:forEach var="svc" items="${services}" varStatus="row">
                                     <tr>
-                                        <td style="color:var(--c-muted);font-size:0.8rem;">#${svc.id}</td>
+                                        <td style="color:var(--c-muted);font-size:0.8rem;">${(currentPage - 1) * pageSize + row.count}</td>
                                         <td style="font-weight:600;font-size:0.82rem;">${not empty svc.serviceCode ? svc.serviceCode : '—'}</td>
                                         <td style="font-weight:600;">${svc.serviceName}</td>
                                         <td style="font-weight:700;color:var(--c-primary);">

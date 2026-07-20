@@ -472,7 +472,7 @@
                     <table class="audit-table">
                         <thead>
                             <tr>
-                                <th style="width:60px;">#</th>
+                                <th style="width:60px;">STT</th>
                                 <th style="width:160px;">Thời Gian</th>
                                 <th style="width:150px;">Người Dùng</th>
                                 <th style="width:110px;">Phân hệ</th>
@@ -483,9 +483,9 @@
                         <tbody>
                             <c:forEach var="log" items="${auditLogs}" varStatus="loop">
                                 <tr onclick="openDetail(${log.id})" title="Nhấp để xem chi tiết">
-                                    <%-- ID --%>
-                                    <td data-label="#">
-                                        <span style="font-weight:600;color:#c24b6e;">#${log.id}</span>
+                                    <%-- STT --%>
+                                    <td data-label="STT">
+                                        <span style="font-weight:600;color:#c24b6e;">${(currentPage - 1) * pageSize + loop.count}</span>
                                     </td>
 
                                     <%-- Thời gian --%>

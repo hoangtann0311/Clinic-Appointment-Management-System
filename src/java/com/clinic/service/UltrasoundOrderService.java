@@ -117,11 +117,19 @@ public class UltrasoundOrderService {
      * Thêm hình ảnh siêu âm do Sonographer tải lên và tự động chuyển sang Uploaded
      */
     public boolean uploadUltrasoundImage(UltrasoundImage img) {
+        if (img == null || img.getTestOrderId() <= 0) {
+            return false;
+        }
+        UltrasoundWaitingPatient order = ultrasoundOrderDAO.getById(img.getTestOrderId());
+        if (order == null || (!"InProgress".equalsIgnoreCase(order.getStatus())
+                && !"Uploaded".equalsIgnoreCase(order.getStatus()))) {
+            return false;
+        }
         int imgId = ultrasoundImageDAO.insert(img);
         if (imgId > 0) {
-            // Cập nhật trạng thái chỉ định sang Uploaded
-            ultrasoundOrderDAO.updateStatus(img.getTestOrderId(), "Uploaded");
-            return true;
+            // Chỉ chuyển bước lần đầu; ảnh bổ sung không được thay đổi ca đã chốt.
+            return "Uploaded".equalsIgnoreCase(order.getStatus())
+                    || ultrasoundOrderDAO.updateStatus(img.getTestOrderId(), "Uploaded");
         }
         return false;
     }
@@ -269,6 +277,7 @@ public class UltrasoundOrderService {
     public boolean confirmUltrasoundResult(int orderId, String doctorMessage) {
         UltrasoundWaitingPatient order = ultrasoundOrderDAO.getById(orderId);
         if (order == null) return false;
+        if (doctorMessage == null || doctorMessage.trim().isEmpty()) return false;
 
         // Cho phép xác nhận từ Completed, Uploaded hoặc Failed (đảm bảo luồng khám không bị gián đoạn khi AI lỗi)
         if (!"Completed".equalsIgnoreCase(order.getStatus()) 
@@ -353,10 +362,6 @@ public class UltrasoundOrderService {
 
     public List<UltrasoundWaitingPatient> getOrdersByMedicalRecordId(int recordId) {
         return ultrasoundOrderDAO.getByMedicalRecordId(recordId);
-    }
-
-    public boolean markAsUltrasounded(int orderId) {
-        return updateOrderStatus(orderId, "Completed");
     }
 
     public String normalizeSortDir(String sortDir) {

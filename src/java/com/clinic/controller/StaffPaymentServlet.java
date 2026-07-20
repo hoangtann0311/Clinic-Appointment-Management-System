@@ -134,6 +134,12 @@ public class StaffPaymentServlet extends HttpServlet {
         if (page != null && !page.isEmpty()) qs.append("&page=").append(page);
         String suffix = qs.toString();
 
+        if (!"confirm".equalsIgnoreCase(action) && !"decline".equalsIgnoreCase(action)) {
+            response.sendRedirect(request.getContextPath() + "/admin/reception/payments?error="
+                    + java.net.URLEncoder.encode("Thao tác thanh toán không hợp lệ.", "UTF-8") + suffix);
+            return;
+        }
+
         try {
             int invoiceId = Integer.parseInt(invoiceIdStr);
             if ("decline".equalsIgnoreCase(action)) {

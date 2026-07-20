@@ -100,17 +100,9 @@
                     <label class="doctor-form-label">Chuyên khoa</label>
                     <select name="specialization" class="form-select">
                         <option value="">— Chọn chuyên khoa —</option>
-                        <option value="Sản phụ khoa"  ${doctor.specialization == 'Sản phụ khoa'  ? 'selected' : ''}>Sản phụ khoa</option>
-                        <option value="Nhi khoa"       ${doctor.specialization == 'Nhi khoa'       ? 'selected' : ''}>Nhi khoa</option>
-                        <option value="Nội khoa"       ${doctor.specialization == 'Nội khoa'       ? 'selected' : ''}>Nội khoa</option>
-                        <option value="Ngoại khoa"     ${doctor.specialization == 'Ngoại khoa'     ? 'selected' : ''}>Ngoại khoa</option>
-                        <option value="Tim mạch"       ${doctor.specialization == 'Tim mạch'       ? 'selected' : ''}>Tim mạch</option>
-                        <option value="Da liễu"        ${doctor.specialization == 'Da liễu'        ? 'selected' : ''}>Da liễu</option>
-                        <option value="Thần kinh"      ${doctor.specialization == 'Thần kinh'      ? 'selected' : ''}>Thần kinh</option>
-                        <option value="Mắt"            ${doctor.specialization == 'Mắt'            ? 'selected' : ''}>Mắt</option>
-                        <option value="Tai mũi họng"   ${doctor.specialization == 'Tai mũi họng'   ? 'selected' : ''}>Tai mũi họng</option>
-                        <option value="Răng hàm mặt"   ${doctor.specialization == 'Răng hàm mặt'   ? 'selected' : ''}>Răng hàm mặt</option>
-                        <option value="Khác"           ${doctor.specialization == 'Khác'           ? 'selected' : ''}>Khác</option>
+                        <option value="Sản phụ khoa" ${doctor.specialization == 'Sản phụ khoa' ? 'selected' : ''}>Sản phụ khoa</option>
+                        <option value="Thai sản &amp; Y học bào thai" ${doctor.specialization == 'Thai sản & Y học bào thai' ? 'selected' : ''}>Thai sản &amp; Y học bào thai</option>
+                        <option value="Siêu âm sản phụ khoa" ${doctor.specialization == 'Siêu âm sản phụ khoa' ? 'selected' : ''}>Siêu âm sản phụ khoa</option>
                     </select>
                 </div>
                 <div class="col-md-6">

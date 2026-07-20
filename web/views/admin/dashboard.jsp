@@ -1063,7 +1063,7 @@ body.admin-body {
                                 <table class="admin-table compact">
                                     <thead>
                                         <tr>
-                                            <th>ID</th>
+                                            <th>STT</th>
                                             <th>Họ Tên</th>
                                             <th>Email</th>
                                             <th>Vai Trò</th>
@@ -1072,9 +1072,9 @@ body.admin-body {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <c:forEach var="ru" items="${recentUsers}">
+                                        <c:forEach var="ru" items="${recentUsers}" varStatus="row">
                                             <tr>
-                                                <td style="color:var(--c-muted);font-size:0.78rem;">#${ru.id}</td>
+                                                <td style="color:var(--c-muted);font-size:0.78rem;">${row.count}</td>
                                                 <td style="font-weight:600;">${ru.fullName}</td>
                                                 <td style="font-size:0.78rem;">${ru.email}</td>
                                                 <td><span class="badge-role-tag" style="display:inline-block;padding:2px 10px;border-radius:var(--r-pill);font-size:0.7rem;font-weight:700;background:var(--pink-100);color:var(--pink-700);border:1px solid var(--pink-200);">${ru.roleName}</span></td>

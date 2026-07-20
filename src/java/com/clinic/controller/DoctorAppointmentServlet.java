@@ -107,37 +107,31 @@ public class DoctorAppointmentServlet extends HttpServlet {
         }
 
         String action = request.getParameter("action");
-        if ("updateStatus".equals(action)) {
+        if ("startConsultation".equals(action)) {
             String appointmentIdStr = request.getParameter("appointmentId");
-            String newStatus        = request.getParameter("newStatus");
 
-            // Danh sách trạng thái hợp lệ theo BA §7.1 (bác sĩ không được chuyển trực tiếp sang Emergency_SOS)
-            java.util.List<String> allowed = java.util.Arrays.asList(
-                "Pending", "Confirmed", "Waiting", "InProgress",
-                "SUCCESS", "Cancelled", "NoShow"
-            );
-            // So sánh không phân biệt hoa thường để tránh lỗi nhập liệu
-            boolean validStatus = newStatus != null && allowed.stream()
-                    .anyMatch(s -> s.equalsIgnoreCase(newStatus));
-            // Tìm canonical form
-            String canonicalStatus = validStatus
-                    ? allowed.stream().filter(s -> s.equalsIgnoreCase(newStatus)).findFirst().orElse(newStatus)
-                    : null;
-
-            if (appointmentIdStr == null || !validStatus) {
+            if (appointmentIdStr == null || appointmentIdStr.isBlank()) {
                 response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Tham số không hợp lệ.");
                 return;
             }
 
-            int appointmentId = Integer.parseInt(appointmentIdStr);
-            boolean ok = appointmentDAO.updateStatus(appointmentId, doctorId, canonicalStatus);
+            int appointmentId;
+            try {
+                appointmentId = Integer.parseInt(appointmentIdStr);
+            } catch (NumberFormatException e) {
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Mã lịch hẹn không hợp lệ.");
+                return;
+            }
+            boolean ok = appointmentDAO.startConsultation(appointmentId, doctorId);
 
             // Redirect lại trang hiện tại (giữ nguyên bộ lọc)
             String referer = request.getHeader("Referer");
             if (referer != null && !referer.isBlank()) {
-                response.sendRedirect(referer);
+                response.sendRedirect(referer + (referer.contains("?") ? "&" : "?")
+                        + (ok ? "success=consultationStarted" : "error=cannotStartConsultation"));
             } else {
-                response.sendRedirect(request.getContextPath() + "/doctor/appointments");
+                response.sendRedirect(request.getContextPath() + "/doctor/appointments?"
+                        + (ok ? "success=consultationStarted" : "error=cannotStartConsultation"));
             }
             return;
         }

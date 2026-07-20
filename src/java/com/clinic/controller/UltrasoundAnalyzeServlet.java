@@ -35,7 +35,13 @@ public class UltrasoundAnalyzeServlet extends HttpServlet {
             return;
         }
 
-        int orderId = Integer.parseInt(orderIdStr);
+        int orderId;
+        try {
+            orderId = Integer.parseInt(orderIdStr.trim());
+        } catch (NumberFormatException ex) {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "ID chỉ định siêu âm không hợp lệ.");
+            return;
+        }
 
         try {
             boolean success = orderService.runAiAnalysis(orderId, user.getId());

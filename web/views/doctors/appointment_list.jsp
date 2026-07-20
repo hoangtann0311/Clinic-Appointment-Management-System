@@ -216,23 +216,33 @@
                                         </c:choose>
                                     </td>
 
-                                    <%-- Trạng thái (dropdown thay đổi được) --%>
+                                    <%-- Bác sĩ chỉ được bắt đầu ca đã check-in; hoàn tất chỉ diễn ra khi lưu bệnh án chính thức. --%>
                                     <td>
-                                        <form method="post"
-                                              action="${pageContext.request.contextPath}/doctor/appointments">
-                                            <input type="hidden" name="action" value="updateStatus"/>
-                                            <input type="hidden" name="appointmentId" value="${appt.id}"/>
-                                            <select name="newStatus"
-                                                    onchange="this.form.submit()"
-                                                    class="status-dropdown status-${fn:toLowerCase(appt.status)}">
-                                                <option value="Confirmed"     <c:if test="${fn:toLowerCase(appt.status) == 'confirmed'}">selected</c:if>>✅ Đã xác nhận</option>
-                                                <option value="Waiting"       <c:if test="${fn:toLowerCase(appt.status) == 'waiting'}">selected</c:if>>🕐 Chờ khám</option>
-                                                <option value="InProgress"    <c:if test="${fn:toLowerCase(appt.status) == 'inprogress'}">selected</c:if>>🩺 Đang khám</option>
-                                                <option value="SUCCESS"       <c:if test="${fn:toLowerCase(appt.status) == 'success'}">selected</c:if>>📋 Hoàn thành</option>
-                                                <option value="Cancelled"     <c:if test="${fn:toLowerCase(appt.status) == 'cancelled'}">selected</c:if>>❌ Đã huỷ</option>
-                                                <option value="NoShow"        <c:if test="${fn:toLowerCase(appt.status) == 'noshow'}">selected</c:if>>🚫 Vắng mặt</option>
-                                            </select>
-                                        </form>
+                                        <c:choose>
+                                            <c:when test="${fn:toLowerCase(appt.status) == 'waiting' || fn:toLowerCase(appt.status) == 'emergency_sos'}">
+                                                <form method="post" action="${pageContext.request.contextPath}/doctor/appointments">
+                                                    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}"/>
+                                                    <input type="hidden" name="action" value="startConsultation"/>
+                                                    <input type="hidden" name="appointmentId" value="${appt.id}"/>
+                                                    <button type="submit" class="btn btn-sm btn-primary rounded-pill">Bắt đầu khám</button>
+                                                </form>
+                                            </c:when>
+                                            <c:when test="${fn:toLowerCase(appt.status) == 'inprogress'}">
+                                                <span class="badge bg-primary rounded-pill">Đang khám</span>
+                                            </c:when>
+                                            <c:when test="${fn:toLowerCase(appt.status) == 'success'}">
+                                                <span class="badge bg-success rounded-pill">Hoàn thành</span>
+                                            </c:when>
+                                            <c:when test="${fn:toLowerCase(appt.status) == 'confirmed'}">
+                                                <span class="badge bg-info text-dark rounded-pill">Chờ tiếp đón</span>
+                                            </c:when>
+                                            <c:when test="${fn:toLowerCase(appt.status) == 'cancelled'}">
+                                                <span class="badge bg-secondary rounded-pill">Đã hủy</span>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <span class="badge bg-light text-dark border rounded-pill"><c:out value="${appt.status}"/></span>
+                                            </c:otherwise>
+                                        </c:choose>
                                     </td>
 
                                     <%-- Hồ sơ bệnh án --%>

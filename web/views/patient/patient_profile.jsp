@@ -34,6 +34,7 @@
         <div class="card">
             <div class="card-body p-4">
                 <form method="post" action="${pageContext.request.contextPath}/patient/profile" novalidate>
+                    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
 
                     <div class="row g-4">
                         <%-- Thông tin cơ bản --%>

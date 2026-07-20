@@ -18,7 +18,7 @@ public class InvoiceDAO {
         + "  pt.phone_number AS patient_phone, "
         + "  doc.full_name AS doctor_name, "
         + "  CONVERT(varchar, a.appointment_date, 23) AS appointment_date, "
-        + "  s.service_name, "
+        + "  COALESCE(s.service_name, (SELECT STRING_AGG(sa.service_name, N', ') FROM appointment_services aps JOIN services sa ON sa.id = aps.service_id WHERE aps.appointment_id = a.id), N'Khám thai định kỳ') AS service_name, "
         + "  u_staff.full_name AS confirmed_by_name "
         + "FROM invoices i "
         + "LEFT JOIN appointments a ON i.appointment_id = a.id "
@@ -236,8 +236,10 @@ public class InvoiceDAO {
     }
 
     public boolean updatePaymentStatus(int id, String status, String paymentMethod, String transactionCode, String paymentNote, int confirmedBy, Timestamp confirmedAt) {
+        // Atomic state transition: a receipt can only be approved or rejected
+        // once, from an unpaid/pending-verification state.
         String sql = "UPDATE invoices SET status = ?, payment_method = ?, transaction_code = ?, payment_note = ?, confirmed_by = ?, confirmed_at = ? "
-                + "WHERE id = ? AND status NOT IN ('Paid', 'DeclinedPurchase')";
+                + "WHERE id = ? AND status IN ('Unpaid', 'PendingConfirmation')";
         Connection conn = null;
         PreparedStatement ps = null;
         try {

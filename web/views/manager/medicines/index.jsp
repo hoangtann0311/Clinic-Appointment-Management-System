@@ -200,16 +200,16 @@
             <table class="admin-table">
                 <thead>
                     <tr>
-                        <th>ID</th><th>Mã Thuốc</th><th>Tên Thuốc</th><th>Nhóm</th><th>Hàm Lượng</th>
+                        <th>STT</th><th>Mã Thuốc</th><th>Tên Thuốc</th><th>Nhóm</th><th>Hàm Lượng</th>
                         <th>ĐVT</th><th>Đơn Giá</th><th>Tồn Kho</th><th>Trạng Thái</th><th>Thao Tác</th>
                     </tr>
                 </thead>
                 <tbody>
                     <c:choose>
                         <c:when test="${not empty medicines}">
-                            <c:forEach var="med" items="${medicines}">
+                            <c:forEach var="med" items="${medicines}" varStatus="row">
                                 <tr>
-                                    <td style="color:var(--c-muted);font-size:0.78rem;">#${med.id}</td>
+                                    <td style="color:var(--c-muted);font-size:0.78rem;">${(currentPage - 1) * pageSize + row.count}</td>
                                     <td><code style="background:#fce4f3;color:#9c0f6e;padding:2px 8px;border-radius:4px;font-size:0.72rem;font-weight:600;">${not empty med.medicineCode ? fn:escapeXml(med.medicineCode) : '-'}</code></td>
                                     <td style="font-weight:600;">
                                         <div class="d-flex align-items-center gap-2">

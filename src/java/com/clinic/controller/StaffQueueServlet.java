@@ -1,5 +1,6 @@
 package com.clinic.controller;
 
+import com.clinic.model.User;
 import com.clinic.service.StaffReceptionService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -30,27 +31,19 @@ public class StaffQueueServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        if (!requireReceptionAccess(req, resp)) return;
         String path = req.getServletPath();
 
-        if ("/admin/reception/checkin".equals(path)) {
-            String id = req.getParameter("id");
-            if (id != null && !id.isEmpty()) {
-                staffReceptionService.checkInPatient(id);
-            }
-            resp.sendRedirect(req.getContextPath() + "/admin/reception");
-        } else if ("/admin/reception/cancel".equals(path)) {
-            String id = req.getParameter("id");
-            if (id != null && !id.isEmpty()) {
-                staffReceptionService.cancelAppointment(id);
-            }
-            resp.sendRedirect(req.getContextPath() + "/admin/reception");
-        } else {
-            renderQueue(req, resp);
+        if ("/admin/reception/checkin".equals(path) || "/admin/reception/cancel".equals(path)) {
+            resp.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED, "Check-in và hủy lịch phải dùng POST.");
+            return;
         }
+        renderQueue(req, resp);
     }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        if (!requireReceptionAccess(req, resp)) return;
         String path = req.getServletPath();
 
         if ("/admin/reception/checkin".equals(path)) {
@@ -89,7 +82,12 @@ public class StaffQueueServlet extends HttpServlet {
 
         String dateParam = req.getParameter("date");
         if (dateParam != null && !dateParam.isEmpty()) {
-            selectedDate = LocalDate.parse(dateParam);
+            try {
+                selectedDate = LocalDate.parse(dateParam);
+            } catch (java.time.format.DateTimeParseException e) {
+                selectedDate = LocalDate.now();
+                req.setAttribute("errors", Collections.singletonList("Ngày lọc không hợp lệ. Hệ thống đã hiển thị lịch hôm nay."));
+            }
         } else {
             selectedDate = LocalDate.now();
         }
@@ -115,5 +113,14 @@ public class StaffQueueServlet extends HttpServlet {
                 .collect(Collectors.toList()));
 
         req.getRequestDispatcher("/views/staff/reception-queue.jsp").forward(req, resp);
+    }
+
+    private boolean requireReceptionAccess(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        User user = (User) req.getSession().getAttribute("user");
+        if (user == null || (user.getRoleId() != 1 && user.getRoleId() != 4)) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền sử dụng khu vực tiếp đón.");
+            return false;
+        }
+        return true;
     }
 }

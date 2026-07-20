@@ -1037,11 +1037,11 @@
                         <c:when test="${not empty recentPatients}">
                             <div class="admin-table-wrapper">
                                 <table class="admin-table compact">
-                                    <thead><tr><th>ID</th><th>Họ Tên</th><th>Email / SĐT</th><th>Ngày ĐK</th></tr></thead>
+                                    <thead><tr><th>STT</th><th>Họ Tên</th><th>Email / SĐT</th><th>Ngày ĐK</th></tr></thead>
                                     <tbody>
-                                        <c:forEach var="rp" items="${recentPatients}">
+                                        <c:forEach var="rp" items="${recentPatients}" varStatus="row">
                                             <tr>
-                                                <td style="color:var(--c-muted);font-size:0.78rem;">#${rp.id}</td>
+                                                <td style="color:var(--c-muted);font-size:0.78rem;">${row.count}</td>
                                                 <td style="font-weight:600;">${rp.fullName}</td>
                                                 <td style="font-size:0.78rem;"><div>${rp.email}</div><c:if test="${not empty rp.phone}"><div style="color:var(--c-muted);">${rp.phone}</div></c:if></td>
                                                 <td style="color:var(--c-muted);font-size:0.78rem;white-space:nowrap;">${rp.createdAt}</td>

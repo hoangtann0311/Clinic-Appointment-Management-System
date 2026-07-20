@@ -156,16 +156,18 @@
                     </p>
                     <c:choose>
                       <c:when test="${not empty r.raw_image_url}">
-                        <a href="${r.raw_image_url}" target="_blank">
-                          <img src="${r.raw_image_url}" alt="Anh sieu am goc"
+                        <c:set var="rawImageUrl" value="${pageContext.request.contextPath}/${r.raw_image_url}" />
+                        <a href="${rawImageUrl}" target="_blank" class="d-block">
+                          <img src="${rawImageUrl}" alt="Ảnh siêu âm gốc"
                                class="img-fluid rounded-3 border"
                                style="max-height:280px;width:100%;object-fit:contain;background:#000;"
-                               onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
-                          <div class="d-none text-muted small p-3 border rounded-3">
-                            <i class="bi bi-image me-1"></i>
-                            <a href="${r.raw_image_url}" target="_blank">Mở ảnh gốc</a>
-                          </div>
+                               onerror="this.classList.add('d-none');document.getElementById('raw-image-missing-${r.order_id}').classList.remove('d-none');">
                         </a>
+                        <div id="raw-image-missing-${r.order_id}" class="d-none text-muted small p-3 border rounded-3">
+                          <i class="bi bi-exclamation-triangle me-1"></i>
+                          Không tìm thấy file ảnh gốc trên máy chủ.
+                          <a href="${rawImageUrl}" target="_blank">Mở đường dẫn ảnh</a>
+                        </div>
                       </c:when>
                       <c:otherwise>
                         <div class="border rounded-3 d-flex align-items-center justify-content-center text-muted"
@@ -184,16 +186,18 @@
                     </p>
                     <c:choose>
                       <c:when test="${not empty r.ai_processed_image_url}">
-                        <a href="${r.ai_processed_image_url}" target="_blank">
-                          <img src="${r.ai_processed_image_url}" alt="Anh AI"
+                        <c:set var="aiImageUrl" value="${pageContext.request.contextPath}/${r.ai_processed_image_url}" />
+                        <a href="${aiImageUrl}" target="_blank" class="d-block">
+                          <img src="${aiImageUrl}" alt="Ảnh AI phân tích"
                                class="img-fluid rounded-3 border"
                                style="max-height:280px;width:100%;object-fit:contain;background:#000;"
-                               onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
-                          <div class="d-none text-muted small p-3 border rounded-3">
-                            <i class="bi bi-image me-1"></i>
-                            <a href="${r.ai_processed_image_url}" target="_blank">Mở ảnh AI</a>
-                          </div>
+                               onerror="this.classList.add('d-none');document.getElementById('ai-image-missing-${r.order_id}').classList.remove('d-none');">
                         </a>
+                        <div id="ai-image-missing-${r.order_id}" class="d-none text-muted small p-3 border rounded-3">
+                          <i class="bi bi-exclamation-triangle me-1"></i>
+                          Không tìm thấy file ảnh AI trên máy chủ.
+                          <a href="${aiImageUrl}" target="_blank">Mở đường dẫn ảnh</a>
+                        </div>
                       </c:when>
                       <c:otherwise>
                         <div class="border rounded-3 d-flex align-items-center justify-content-center text-muted"
@@ -280,13 +284,14 @@
                         </div>
                       </div>
                       <form method="POST" action="${pageContext.request.contextPath}/doctor/results">
+                        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                         <input type="hidden" name="orderId"  value="${r.order_id}">
                         <input type="hidden" name="recordId" value="${recordId}">
                         <div class="mb-3">
                           <label for="doctorMsg-${r.order_id}" class="form-label fw-medium small" style="color:#92400e;">
                             <i class="bi bi-chat-text me-1"></i>Kết luận chẩn đoán lâm sàng
                           </label>
-                          <textarea id="doctorMsg-${r.order_id}" name="doctorMessage" rows="4"
+                          <textarea id="doctorMsg-${r.order_id}" name="doctorMessage" rows="4" required
                                     class="form-control" style="font-size:.9rem;resize:vertical;"
                                     placeholder="Nhập kết luận chính thức của bác sĩ tại đây...">${not empty r.ai_suggested_label ? r.ai_suggested_label : ''}</textarea>
                           <div class="form-text" style="color:#a16207;">

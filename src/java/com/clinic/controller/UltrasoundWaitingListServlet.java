@@ -105,24 +105,10 @@ public class UltrasoundWaitingListServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-
-        User user = getAuthorizedUser(request, response);
-        if (user == null) {
-            return;
-        }
-
-        String sortBy = ultrasoundOrderService.normalizeSortBy(request.getParameter("sortBy"));
-        String sortDir = ultrasoundOrderService.normalizeSortDir(request.getParameter("sortDir"));
-        String action = request.getParameter("action");
-
-        String messageParam = "error=invalidAction";
-        if ("markCompleted".equals(action)) {
-            int orderId = parseInt(request.getParameter("orderId"), -1);
-            boolean updated = ultrasoundOrderService.markAsUltrasounded(orderId);
-            messageParam = updated ? "success=completed" : "error=updateFailed";
-        }
-
-        response.sendRedirect(buildRedirectUrl(request, sortBy, sortDir, messageParam));
+        // Không cho đánh dấu hoàn tất tại danh sách chờ: bắt buộc đi qua upload,
+        // phân tích AI và bước bác sĩ xác nhận ở trang chi tiết.
+        response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED,
+                "Hãy thực hiện ca siêu âm theo quy trình tại trang chi tiết.");
     }
 
     private User getAuthorizedUser(HttpServletRequest request, HttpServletResponse response)
@@ -160,14 +146,4 @@ public class UltrasoundWaitingListServlet extends HttpServlet {
         return URLEncoder.encode(value != null ? value : "", StandardCharsets.UTF_8);
     }
 
-    private int parseInt(String value, int defaultValue) {
-        if (value == null || value.trim().isEmpty()) {
-            return defaultValue;
-        }
-        try {
-            return Integer.parseInt(value.trim());
-        } catch (NumberFormatException e) {
-            return defaultValue;
-        }
-    }
 }

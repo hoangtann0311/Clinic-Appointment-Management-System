@@ -189,6 +189,7 @@
           <strong>Đã có chỉ định siêu âm đang xử lý cho ${param.conflictServiceName}.</strong>
           <div class="small mb-2">Nếu cần chỉ định lại, hãy nêu rõ lý do lâm sàng. Hệ thống sẽ lưu lý do và tạo một yêu cầu mới.</div>
           <form method="post" action="${pageContext.request.contextPath}/doctor/ultrasound-request/create" class="row g-2 align-items-end">
+            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}"/>
             <input type="hidden" name="apptId" value="${param.apptId}">
             <input type="hidden" name="serviceId" value="${param.conflictServiceId}">
             <input type="hidden" name="force" value="1">
@@ -304,6 +305,7 @@
           <hr class="my-3">
           <div class="d-grid gap-2 mt-2">
             <form action="${pageContext.request.contextPath}/doctor/ultrasound-request/create" method="POST">
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}"/>
                 <input type="hidden" name="apptId" value="${apptId}">
                 <label class="form-label small fw-bold mb-1">CHỈ ĐỊNH SIÊU ÂM</label>
                 <select name="serviceId" class="form-select form-select-sm mb-2" required
@@ -326,6 +328,7 @@
     <%-- Cột phải: Form 4 tab --%>
     <div class="col-lg-9">
       <form method="post" action="${pageContext.request.contextPath}/doctor/medical-records" id="obsForm" novalidate>
+        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}"/>
         <input type="hidden" name="appointmentId" value="${apptId}"/>
         <c:if test="${record.id > 0}">
           <input type="hidden" name="recordId" value="${record.id}"/>

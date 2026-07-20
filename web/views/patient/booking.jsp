@@ -155,6 +155,7 @@
                 </div>
 
                 <form method="post" action="${pageContext.request.contextPath}/patient/booking" id="bookingForm" style="display:none;">
+                    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                     <input type="hidden" name="slotId" id="hiddenSlotId" required>
                     <c:if test="${not empty rescheduleId}">
                         <input type="hidden" name="rescheduleId" value="${rescheduleId}">
@@ -321,22 +322,32 @@
             return;
         }
 
+        // Xác định ngày hôm nay và giờ hiện tại theo giờ client
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        const todayStr = yyyy + '-' + mm + '-' + dd;
+        
+        const isToday = (date === todayStr);
+        const nowTimeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+
         const morning = slots.filter(s => s.time < '12:00');
         const afternoon = slots.filter(s => s.time >= '12:00');
 
         let html = '';
         if (morning.length > 0) {
             html += '<div class="slot-period-label mb-2"><i class="bi bi-sun me-1"></i>Sáng</div>';
-            html += '<div class="d-flex flex-wrap gap-2 mb-3">' + morning.map(s => slotButtonHtml(s)).join('') + '</div>';
+            html += '<div class="d-flex flex-wrap gap-2 mb-3">' + morning.map(s => slotButtonHtml(s, isToday, nowTimeStr)).join('') + '</div>';
         }
         if (afternoon.length > 0) {
             html += '<div class="slot-period-label mb-2"><i class="bi bi-moon me-1"></i>Chiều</div>';
-            html += '<div class="d-flex flex-wrap gap-2">' + afternoon.map(s => slotButtonHtml(s)).join('') + '</div>';
+            html += '<div class="d-flex flex-wrap gap-2">' + afternoon.map(s => slotButtonHtml(s, isToday, nowTimeStr)).join('') + '</div>';
         }
         html += '<div class="slot-notice mt-3" style="display:none;"></div>';
         container.innerHTML = html;
 
-        container.querySelectorAll('.slot-btn:not(.slot-locked)').forEach(function (btn) {
+        container.querySelectorAll('.slot-btn:not(.slot-locked):not(.slot-disabled)').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 container.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('active'));
                 this.classList.add('active');
@@ -348,7 +359,7 @@
             });
         });
 
-        container.querySelectorAll('.slot-btn.slot-locked').forEach(function (btn) {
+        container.querySelectorAll('.slot-btn.slot-locked:not(.slot-disabled)').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 const mine = this.dataset.mine === 'true';
                 showSlotNotice(container, this.dataset.status, this.textContent.trim(), mine);
@@ -393,11 +404,15 @@
         if (notice) notice.style.display = 'none';
     }
 
-    function slotButtonHtml(s) {
-        // available === false (mọi trạng thái khác AVAILABLE) -> vẫn hiển thị khung giờ,
-        // nhưng bấm vào sẽ hiện thông báo giải thích lý do thay vì cho chọn.
-        if (s.available === false) {
-            return '<button type="button" class="btn btn-outline-secondary btn-sm slot-btn slot-locked" '
+    function slotButtonHtml(s, isToday, nowTimeStr) {
+        const isPast = isToday && (s.time < nowTimeStr);
+
+        // available === false (mọi trạng thái khác AVAILABLE) hoặc đã trôi qua trong ngày -> làm mờ, chặn click
+        if (s.available === false || isPast) {
+            const titleText = isPast ? 'Khung giờ này đã trôi qua trong ngày' : 'Khung giờ này hiện không khả dụng';
+            return '<button type="button" class="btn btn-outline-secondary btn-sm slot-btn slot-locked slot-disabled disabled" '
+                 + 'style="opacity: 0.45; pointer-events: none; cursor: not-allowed;" '
+                 + 'title="' + titleText + '" '
                  + 'data-status="' + s.status + '" data-mine="' + (s.mine === true) + '">'
                  + s.time
                  + '</button>';

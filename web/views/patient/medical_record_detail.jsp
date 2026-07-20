@@ -209,80 +209,151 @@
                     </c:choose>
                 </div>
             </div>
+    </div> <%-- Đóng col-md-6 đơn thuốc --%>
+</div> <%-- Đóng row g-4 chính --%>
 
-
-            <%-- ══════════ Kết Quả Siêu Âm & AI ══════════ --%>
-            <c:if test="${not empty usOrders}">
-                <div class="card mt-3 border-0 shadow-sm">
-                    <div class="card-header bg-transparent border-0 fw-bold py-3">
-                        <i class="bi bi-soundwave text-info me-2"></i>Kết Quả Siêu Âm & Phân Tích AI
-                    </div>
-                    <div class="card-body pt-0">
-                        <c:forEach var="order" items="${usOrders}" varStatus="loop">
-                            <div class="${!loop.first ? 'border-top pt-3 mt-3' : ''}">
-                                <div class="d-flex align-items-center justify-content-between mb-2">
-                                    <span class="fw-semibold">
-                                        <i class="bi bi-clipboard2-pulse me-1 text-info"></i>
-                                        Lần siêu âm ${loop.index + 1}
-                                        <span class="badge bg-light text-dark border ms-1">${order.status}</span>
-                                    </span>
-                                    <small class="text-muted">${order.createdAtText}</small>
-                                </div>
-                                <p class="text-muted small mb-2">
-                                    Triệu chứng ghi nhận:
-                                    <c:choose>
-                                        <c:when test="${not empty order.symptoms}"><c:out value="${order.symptoms}"/></c:when>
-                                        <c:otherwise>—</c:otherwise>
-                                    </c:choose>
-                                </p>
-
-                                <%-- Ảnh siêu âm --%>
-                                <c:set var="imgs" value="${orderImages[order.orderId]}"/>
-                                <c:if test="${not empty imgs}">
-                                    <div class="d-flex flex-wrap gap-2 mb-3">
-                                        <c:forEach var="img" items="${imgs}">
-                                            <a href="${img.imageUrl}" target="_blank" title="${img.imageType}">
-                                                <img src="${img.imageUrl}" alt="Ảnh siêu âm"
-                                                     style="width:90px;height:90px;object-fit:cover;border-radius:8px;border:1px solid #dee2e6;"
-                                                     onerror="this.src='${pageContext.request.contextPath}/assets/img/us_placeholder.png'">
-                                            </a>
-                                        </c:forEach>
-                                    </div>
-                                </c:if>
-
-                                <%-- Kết quả AI --%>
-                                <c:set var="aiResult" value="${orderAiResults[order.orderId]}"/>
-                                <c:if test="${not empty aiResult}">
-                                    <div class="rounded-3 p-3" style="background:#f0f8ff;border:1px solid #b8d4f0;">
-                                        <div class="fw-bold small mb-2">
-                                            <i class="bi bi-robot me-1 text-primary"></i>Phân Tích AI
-                                            <span class="badge bg-primary ms-1" style="font-size:0.65rem;">
-                                                Độ chính xác: <fmt:formatNumber value="${aiResult.confidenceScore * 100}" pattern="0.0"/>%
-                                            </span>
-                                        </div>
-                                        <p class="mb-1 small"><strong>Chẩn đoán AI:</strong> ${aiResult.diagnosis}</p>
-                                        <c:if test="${not empty aiResult.findings}">
-                                            <p class="mb-1 small text-muted"><strong>Phát hiện:</strong> ${aiResult.findings}</p>
-                                        </c:if>
-                                        <c:if test="${not empty aiResult.recommendations}">
-                                            <p class="mb-0 small text-muted"><strong>Khuyến nghị:</strong> ${aiResult.recommendations}</p>
-                                        </c:if>
-                                    </div>
-                                </c:if>
-
-                                <c:if test="${empty imgs && empty aiResult}">
-                                    <p class="text-muted small fst-italic">Chưa có ảnh siêu âm hoặc kết quả AI cho lần này.</p>
-                                </c:if>
-                            </div>
-                        </c:forEach>
-                    </div>
+<%-- ══════════ Kết Quả Siêu Âm & AI (Cột 12 ngang bên dưới) ══════════ --%>
+<c:if test="${not empty usOrders}">
+    <div class="row g-4 mt-2">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-header bg-transparent border-0 fw-bold py-3">
+                    <i class="bi bi-soundwave text-info me-2"></i>Kết Quả Siêu Âm & Phân Tích AI
                 </div>
-            </c:if>
+                <div class="card-body pt-0">
+                    <c:forEach var="order" items="${usOrders}" varStatus="loop">
+                        <div class="${!loop.first ? 'border-top pt-3 mt-3' : ''}">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <span class="fw-semibold">
+                                    <i class="bi bi-clipboard2-pulse me-1 text-info"></i>
+                                    Lần siêu âm ${loop.index + 1}
+                                    <span class="badge bg-light text-dark border ms-1">${order.status}</span>
+                                </span>
+                                <small class="text-muted">${order.createdAtText}</small>
+                            </div>
+                            <p class="text-muted small mb-3">
+                                Triệu chứng ghi nhận:
+                                <c:choose>
+                                    <c:when test="${not empty order.symptoms}"><c:out value="${order.symptoms}"/></c:when>
+                                    <c:otherwise>—</c:otherwise>
+                                </c:choose>
+                            </p>
 
+                            <c:set var="imgs" value="${orderImages[order.orderId]}"/>
+                            <c:set var="aiResult" value="${orderAiResults[order.orderId]}"/>
+
+                            <div class="row g-3">
+                                <%-- Cột chứa các ảnh (gốc và AI) --%>
+                                <div class="col-md-5">
+                                    <div class="row g-2">
+                                        <%-- Ảnh siêu âm gốc --%>
+                                        <c:if test="${not empty imgs}">
+                                            <div class="col-6">
+                                                <div class="text-muted small mb-1 fw-semibold"><i class="bi bi-image me-1"></i>Ảnh siêu âm gốc</div>
+                                                <c:forEach var="img" items="${imgs}">
+                                                    <a href="javascript:void(0);" onclick="viewLargeImage('${pageContext.request.contextPath}/${img.filePath}')" title="Xem ảnh gốc">
+                                                        <img src="${pageContext.request.contextPath}/${img.filePath}" alt="Ảnh siêu âm gốc"
+                                                             style="width:100%; height:130px; object-fit:cover; border-radius:8px; border:1px solid #dee2e6;"
+                                                             onerror="this.src='${pageContext.request.contextPath}/assets/img/us_placeholder.png'">
+                                                    </a>
+                                                </c:forEach>
+                                            </div>
+                                        </c:if>
+
+                                        <%-- Ảnh phân tích AI --%>
+                                        <c:if test="${not empty aiResult && not empty aiResult.resultImage}">
+                                            <div class="col-6">
+                                                <div class="text-muted small mb-1 fw-semibold"><i class="bi bi-cpu me-1"></i>Ảnh phân tích AI</div>
+                                                <a href="javascript:void(0);" onclick="viewLargeImage('${pageContext.request.contextPath}/${aiResult.resultImage}')" title="Xem ảnh AI">
+                                                    <img src="${pageContext.request.contextPath}/${aiResult.resultImage}" alt="Ảnh phân tích AI"
+                                                         style="width:100%; height:130px; object-fit:cover; border-radius:8px; border:1px solid #dee2e6;"
+                                                         onerror="this.src='${pageContext.request.contextPath}/assets/img/us_placeholder.png'">
+                                                </a>
+                                            </div>
+                                        </c:if>
+                                    </div>
+                                </div>
+
+                                <%-- Cột thông tin kết luận & gợi ý AI --%>
+                                <div class="col-md-7">
+                                    <c:if test="${not empty aiResult}">
+                                        <div class="rounded-3 p-3 h-100" style="background:#f0f8ff;border:1px solid #b8d4f0;">
+                                            <div class="fw-bold small mb-2 text-primary">
+                                                <i class="bi bi-cpu-fill me-1 text-info"></i>Kết quả phân tích AI & Kết luận Bác sĩ
+                                            </div>
+                                            
+                                            <%-- Kết luận Bác sĩ --%>
+                                            <c:choose>
+                                                <c:when test="${order.status == 'confirmed'}">
+                                                    <p class="mb-2 small"><strong>Kết luận chính thức của Bác sĩ:</strong> <span class="fw-bold text-success"><c:out value="${aiResult.message}"/></span></p>
+                                                    <div class="mb-3">
+                                                        <span class="badge bg-success text-white small" style="font-size:0.75rem;">
+                                                            <i class="bi bi-patch-check-fill me-1"></i>Đã được Bác sĩ xác nhận & chốt kết luận
+                                                        </span>
+                                                    </div>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <p class="mb-3 small text-muted"><strong>Trạng thái:</strong> Đang chờ Bác sĩ khám chốt kết luận cuối cùng.</p>
+                                                </c:otherwise>
+                                            </c:choose>
+
+                                            <%-- Chỉ số AI tham khảo --%>
+                                            <div class="border-top pt-2 mt-2">
+                                                <div class="small fw-semibold text-secondary mb-1">Tham khảo kết quả phân tích AI:</div>
+                                                <p class="mb-1 small">
+                                                    <strong>Kết quả phát hiện:</strong> 
+                                                    <c:choose>
+                                                        <c:when test="${aiResult.detected}">
+                                                            <span class="text-danger fw-bold"><i class="bi bi-exclamation-triangle-fill me-1"></i>Phát hiện vùng nghi ngờ U xơ tử cung</span>
+                                                        </c:when>
+                                                        <c:otherwise>
+                                                            <span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Không phát hiện vùng bất thường</span>
+                                                        </c:otherwise>
+                                                    </c:choose>
+                                                </p>
+                                                <c:if test="${aiResult.confidence > 0}">
+                                                    <p class="mb-0 small text-muted">
+                                                        <strong>Độ tin cậy của AI:</strong> <fmt:formatNumber value="${aiResult.confidence}" pattern="0.0"/>%
+                                                    </p>
+                                                </c:if>
+                                            </div>
+                                        </div>
+                                    </c:if>
+
+                                    <c:if test="${empty imgs && empty aiResult}">
+                                        <p class="text-muted small fst-italic h-100 d-flex align-items-center justify-content-center border rounded-3 p-3">
+                                            Chưa có ảnh siêu âm hoặc kết quả AI cho lần này.
+                                        </p>
+                                    </c:if>
+                                </div>
+                            </div>
+                        </div>
+                    </c:forEach>
+                </div>
+            </div>
         </div>
-
     </div>
+</c:if>
 
+<!-- Modal xem ảnh lớn -->
+<div class="modal fade" id="imageViewerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-transparent border-0">
+            <div class="modal-body text-center p-0 position-relative">
+                <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Close"></button>
+                <img id="modalViewerImage" src="" alt="Zoom Image" style="max-width:100%; max-height:85vh; object-fit:contain; border-radius:8px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);">
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function viewLargeImage(src) {
+    document.getElementById('modalViewerImage').src = src;
+    var myModal = new bootstrap.Modal(document.getElementById('imageViewerModal'));
+    myModal.show();
+}
+</script>
 </c:if>
 
 <%@ include file="../common/footer.jsp" %>

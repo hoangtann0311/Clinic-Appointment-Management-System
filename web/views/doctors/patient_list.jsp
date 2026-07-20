@@ -90,7 +90,7 @@
                                             </div>
                                             <div>
                                                 <div class="fw-semibold">${p.fullName}</div>
-                                                <small class="text-muted">ID: #${p.id}</small>
+                                                <small class="text-muted">Hồ sơ thai sản</small>
                                             </div>
                                         </div>
                                     </td>

@@ -356,7 +356,7 @@
                     <table class="admin-table">
                         <thead>
                             <tr>
-                                <th>#ID</th>
+                                <th>STT</th>
                                 <th>Mã DV</th>
                                 <th>Tên Dịch Vụ</th>
                                 <th>Mô Tả</th>
@@ -370,9 +370,9 @@
                         <tbody>
                             <c:choose>
                                 <c:when test="${not empty services}">
-                                    <c:forEach var="svc" items="${services}">
+                                    <c:forEach var="svc" items="${services}" varStatus="row">
                                         <tr>
-                                            <td style="color:var(--c-muted);font-size:0.8rem;font-weight:600;">#${svc.id}</td>
+                                            <td style="color:var(--c-muted);font-size:0.8rem;font-weight:600;">${(currentPage - 1) * pageSize + row.count}</td>
                                             <td style="font-weight:600;font-size:0.82rem;">
                                                 <code style="background:var(--pink-50);color:var(--c-primary-dark);padding:2px 8px;border-radius:4px;font-size:0.75rem;">
                                                     ${not empty svc.serviceCode ? fn:escapeXml(svc.serviceCode) : '—'}
@@ -473,7 +473,7 @@
                     <table class="admin-table">
                         <thead>
                             <tr>
-                                <th>#ID</th>
+                                <th>STT</th>
                                 <th>Mã Thuốc</th>
                                 <th>Tên Thuốc</th>
                                 <th>Hàm Lượng</th>
@@ -487,9 +487,9 @@
                         <tbody>
                             <c:choose>
                                 <c:when test="${not empty medicines}">
-                                    <c:forEach var="med" items="${medicines}">
+                                    <c:forEach var="med" items="${medicines}" varStatus="row">
                                         <tr>
-                                            <td style="color:var(--c-muted);font-size:0.8rem;font-weight:600;">#${med.id}</td>
+                                            <td style="color:var(--c-muted);font-size:0.8rem;font-weight:600;">${(currentPage - 1) * pageSize + row.count}</td>
                                             <td style="font-weight:600;font-size:0.82rem;">
                                                 <code style="background:#eef2ff;color:#4338ca;padding:2px 8px;border-radius:4px;font-size:0.75rem;">
                                                     ${not empty med.medicineCode ? fn:escapeXml(med.medicineCode) : '—'}

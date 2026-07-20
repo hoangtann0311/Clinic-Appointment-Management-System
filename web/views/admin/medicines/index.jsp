@@ -197,7 +197,7 @@
                 <table class="admin-table">
                     <thead>
                         <tr>
-                            <th>ID</th>
+                            <th>STT</th>
                             <th>Mã Thuốc</th>
                             <th>Tên Thuốc</th>
                             <th>Hàm Lượng</th>
@@ -211,9 +211,9 @@
                     <tbody>
                         <c:choose>
                             <c:when test="${not empty medicines}">
-                                <c:forEach var="med" items="${medicines}">
+                                <c:forEach var="med" items="${medicines}" varStatus="row">
                                     <tr>
-                                        <td style="color:var(--c-muted);font-size:0.8rem;">#${med.id}</td>
+                                        <td style="color:var(--c-muted);font-size:0.8rem;">${(currentPage - 1) * pageSize + row.count}</td>
                                         <td style="font-weight:600;font-size:0.82rem;">${not empty med.medicineCode ? med.medicineCode : '—'}</td>
                                         <td style="font-weight:600;">${med.name}</td>
                                         <td>${not empty med.dosage ? med.dosage : '—'}</td>

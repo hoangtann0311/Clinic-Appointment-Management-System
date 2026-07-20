@@ -42,7 +42,10 @@
         </c:choose>
     </c:forEach>
 
-    <div class="col-md-4">
+    <c:set var="summaryColumn" value="${unpaidCount > 0 ? 'col-md-4' : 'col-md-6'}" />
+
+    <c:if test="${unpaidCount > 0}">
+    <div class="${summaryColumn}">
         <div class="card border-0 shadow-sm rounded-3 bg-white p-3">
             <div class="d-flex align-items-center gap-3">
                 <div class="rounded-circle bg-danger bg-opacity-10 text-danger d-flex align-items-center justify-content-center" style="width:48px;height:48px;">
@@ -55,7 +58,9 @@
             </div>
         </div>
     </div>
-    <div class="col-md-4">
+    </c:if>
+
+    <div class="${summaryColumn}">
         <div class="card border-0 shadow-sm rounded-3 bg-white p-3">
             <div class="d-flex align-items-center gap-3">
                 <div class="rounded-circle bg-warning bg-opacity-10 text-warning d-flex align-items-center justify-content-center" style="width:48px;height:48px;">
@@ -68,7 +73,7 @@
             </div>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="${summaryColumn}">
         <div class="card border-0 shadow-sm rounded-3 bg-white p-3">
             <div class="d-flex align-items-center gap-3">
                 <div class="rounded-circle bg-success bg-opacity-10 text-success d-flex align-items-center justify-content-center" style="width:48px;height:48px;">
@@ -164,7 +169,8 @@
                                             </c:when>
                                             <c:when test="${inv.status == 'PendingConfirmation'}">
                                                 <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
-                                                    <i class="bi bi-clock-history me-1"></i>Chờ xác nhận
+                                                    <i class="bi bi-clock-history me-1"></i>
+                                                    ${inv.paymentMethod == 'Cash' ? 'Chờ thu tiền tại quầy' : 'Chờ xác minh chuyển khoản'}
                                                 </span>
                                             </c:when>
                                             <c:when test="${inv.status == 'DeclinedPurchase'}">

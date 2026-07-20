@@ -301,9 +301,14 @@
                     <div class="text-center py-4">
                         <i class="bi bi-hospital fs-1 text-secondary mb-3 d-block"></i>
                         <p class="text-muted mb-4">Ca siêu âm đang ở trạng thái chờ tiếp nhận. Vui lòng nhấn nút bên dưới để chuyển sang trạng thái đang thực hiện.</p>
-                        <a href="${pageContext.request.contextPath}/sonographer/detail?orderId=${order.orderId}&action=start" class="btn btn-success fw-bold px-4 py-2">
-                            <i class="bi bi-play-fill fs-5"></i> Bắt đầu làm siêu âm
-                        </a>
+                        <form method="POST" action="${pageContext.request.contextPath}/sonographer/detail">
+                            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                            <input type="hidden" name="action" value="start">
+                            <input type="hidden" name="orderId" value="${order.orderId}">
+                            <button type="submit" class="btn btn-success fw-bold px-4 py-2">
+                                <i class="bi bi-play-fill fs-5"></i> Bắt đầu làm siêu âm
+                            </button>
+                        </form>
                     </div>
                 </c:if>
 
@@ -331,6 +336,7 @@
                         </c:if>
 
                         <form method="POST" action="${pageContext.request.contextPath}/sonographer/upload" enctype="multipart/form-data" class="border p-3 rounded bg-light">
+                            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                             <input type="hidden" name="orderId" value="${order.orderId}">
                             <div class="mb-3">
                                 <label for="fileUpload" class="form-label fw-bold text-dark">Chọn file ảnh siêu âm (JPG, JPEG, PNG, Tối đa 10MB)</label>
@@ -355,6 +361,7 @@
                                 <p class="small text-muted mb-3">Hình ảnh siêu âm đã sẵn sàng. Nhấn nút bên dưới để gửi phân tích tới AI Engine chẩn đoán tự động.</p>
                                 
                                 <form method="POST" action="${pageContext.request.contextPath}/sonographer/analyze" onsubmit="showAiLoading()">
+                                    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                     <input type="hidden" name="orderId" value="${order.orderId}">
                                     <button type="submit" class="btn btn-info text-white fw-bold px-4 py-2 w-100">
                                         <i class="bi bi-robot"></i> Gửi phân tích AI

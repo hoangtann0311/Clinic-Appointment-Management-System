@@ -355,7 +355,7 @@
                             <table class="admin-table">
                                 <thead>
                                     <tr>
-                                        <th>ID</th>
+                                        <th>STT</th>
                                         <th>Bác Sĩ</th>
                                         <th>Ngày Trực</th>
                                         <th>Ca Trực</th>
@@ -364,9 +364,9 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <c:forEach var="sched" items="${approvedSchedules}">
+                                    <c:forEach var="sched" items="${approvedSchedules}" varStatus="row">
                                         <tr>
-                                            <td style="color:var(--c-muted);font-size:0.8rem;">#${sched.id}</td>
+                                            <td style="color:var(--c-muted);font-size:0.8rem;">${row.count}</td>
                                             <td style="font-weight:600;">
                                                 <i class="bi bi-person-badge me-1" style="color:var(--pink-500);"></i>
                                                 ${fn:escapeXml(sched.doctorName)}
@@ -643,8 +643,7 @@
                         <table class="admin-table">
                             <thead>
                                 <tr>
-                                    <th style="width:60px;">#</th>
-                                    <th>Slot ID</th>
+                                    <th style="width:60px;">STT</th>
                                     <th>Giờ Bắt Đầu</th>
                                     <th>Giờ Kết Thúc</th>
                                     <th>Trạng Thái</th>
@@ -659,7 +658,6 @@
                                         <td style="color:var(--c-muted);font-size:0.8rem;">
                                             ${loop.index + 1 + (currentPage - 1) * pageSize}
                                         </td>
-                                        <td style="color:var(--c-muted);font-size:0.8rem;">#${slot.id}</td>
                                         <td style="font-weight:700;font-family:var(--font-display);">
                                             <i class="bi bi-play-circle-fill me-1" style="color:var(--pink-500);font-size:0.7rem;"></i>
                                             ${fn:substring(slot.startTime, 0, 5)}

@@ -31,6 +31,7 @@ public class StaffEditServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        if (!requireReceptionAccess(req, resp)) return;
         String idStr = req.getParameter("id");
         if (idStr != null && !idStr.isEmpty()) {
             try {
@@ -58,6 +59,7 @@ public class StaffEditServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        if (!requireReceptionAccess(req, resp)) return;
         req.setCharacterEncoding("UTF-8");
 
         String idStr = req.getParameter("id");
@@ -105,7 +107,12 @@ public class StaffEditServlet extends HttpServlet {
             if (invoiceIdParam != null && !invoiceIdParam.trim().isEmpty()) {
                 // Gọi từ trang Xác Nhận Thanh Toán (reception-payments.jsp) — biết chính xác invoiceId,
                 // áp dụng được cho mọi loại hóa đơn (PRE_EXAM/POST_EXAM/PRESCRIPTION).
-                targetInvoice = new com.clinic.dao.InvoiceDAO().getById(Integer.parseInt(invoiceIdParam));
+                try {
+                    targetInvoice = new com.clinic.dao.InvoiceDAO().getById(Integer.parseInt(invoiceIdParam));
+                } catch (NumberFormatException e) {
+                    resp.sendRedirect(req.getContextPath() + "/admin/reception/payments?error=M%C3%A3+h%C3%B3a+%C4%91%C6%A1n+kh%C3%B4ng+h%E1%BB%A3p+l%E1%BB%87.");
+                    return;
+                }
             } else {
                 // Gọi từ trang reception-edit.jsp (chỉ có appointmentId) — giữ hành vi cũ, chỉ xét PRE_EXAM.
                 targetInvoice = new com.clinic.dao.InvoiceDAO().getByAppointmentIdAndType(id, "PRE_EXAM");
@@ -152,5 +159,14 @@ public class StaffEditServlet extends HttpServlet {
 
             req.getRequestDispatcher("/views/staff/reception-edit.jsp").forward(req, resp);
         }
+    }
+
+    private boolean requireReceptionAccess(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        User user = (User) req.getSession().getAttribute("user");
+        if (user == null || (user.getRoleId() != 1 && user.getRoleId() != 4)) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền chỉnh sửa lịch tiếp đón.");
+            return false;
+        }
+        return true;
     }
 }

@@ -3,6 +3,9 @@ package com.clinic.controller;
 import com.clinic.config.DatabaseConfig;
 import com.clinic.model.User;
 import com.clinic.service.UltrasoundOrderService;
+import com.clinic.dao.MedicalRecordDAO;
+import com.clinic.dao.UltrasoundOrderDAO;
+import com.clinic.model.UltrasoundWaitingPatient;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -45,6 +48,19 @@ public class DoctorResultsServlet extends HttpServlet {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "recordId không hợp lệ."); return;
         }
 
+        // IDOR Check
+        Integer doctorId = getDoctorId(user.getId());
+        if (doctorId == null) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Tài khoản chưa liên kết hồ sơ bác sĩ.");
+            return;
+        }
+
+        MedicalRecordDAO recordDAO = new MedicalRecordDAO();
+        if (!recordDAO.recordBelongsToDoctor(recordId, doctorId)) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền truy cập kết quả siêu âm của bệnh án này.");
+            return;
+        }
+
         // Load kết quả siêu âm
         List<Map<String,Object>> ultrasoundResults = loadUltrasoundResults(recordId);
         // Load thông tin hồ sơ (tên BN, ngày khám)
@@ -72,8 +88,8 @@ public class DoctorResultsServlet extends HttpServlet {
             resp.sendRedirect(req.getContextPath() + "/login"); return;
         }
         User user = (User) session.getAttribute("user");
-        // Chỉ bác sĩ (roleId=2) hoặc admin (roleId=1) mới được xác nhận
-        if (user.getRoleId() != 1 && user.getRoleId() != 2) {
+        // Kết luận lâm sàng là trách nhiệm của bác sĩ điều trị.
+        if (user.getRoleId() != 2) {
             resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ Bác sĩ mới có quyền xác nhận kết quả siêu âm."); return;
         }
 
@@ -88,11 +104,33 @@ public class DoctorResultsServlet extends HttpServlet {
         if (orderIdStr == null || orderIdStr.isBlank()) {
             resp.sendRedirect(req.getContextPath() + "/doctor/results?recordId=" + recordId + "&error=invalidOrder"); return;
         }
+        if (doctorMsg == null || doctorMsg.isBlank()) {
+            resp.sendRedirect(req.getContextPath() + "/doctor/results?recordId=" + recordId + "&error=missingConclusion"); return;
+        }
 
         int orderId;
         try { orderId = Integer.parseInt(orderIdStr); }
         catch (NumberFormatException e) {
             resp.sendRedirect(req.getContextPath() + "/doctor/results?recordId=" + recordId + "&error=invalidOrder"); return;
+        }
+
+        // IDOR Check
+        Integer doctorId = getDoctorId(user.getId());
+        if (doctorId == null) {
+            resp.sendRedirect(req.getContextPath() + "/doctor/results?recordId=" + recordId + "&error=noDoctorProfile");
+            return;
+        }
+
+        MedicalRecordDAO recordDAO = new MedicalRecordDAO();
+        if (!recordDAO.recordBelongsToDoctor(recordId, doctorId)) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền xác nhận kết quả siêu âm cho bệnh án này.");
+            return;
+        }
+
+        UltrasoundWaitingPatient order = new UltrasoundOrderDAO().getById(orderId);
+        if (order == null || order.getMedicalRecordId() != recordId) {
+            resp.sendRedirect(req.getContextPath() + "/doctor/results?recordId=" + recordId + "&error=invalidOrderMapping");
+            return;
         }
 
         // Thực hiện xác nhận
@@ -193,5 +231,16 @@ public class DoctorResultsServlet extends HttpServlet {
             }
         } catch (SQLException e) { e.printStackTrace(); }
         return list;
+    }
+
+    private Integer getDoctorId(int userId) {
+        try (Connection c = DatabaseConfig.getConnection();
+             PreparedStatement ps = c.prepareStatement("SELECT id FROM doctors WHERE user_id = ?")) {
+            ps.setInt(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt("id");
+            }
+        } catch (Exception e) { e.printStackTrace(); }
+        return null;
     }
 }

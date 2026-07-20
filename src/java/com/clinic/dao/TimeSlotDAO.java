@@ -70,10 +70,7 @@ public class TimeSlotDAO {
             return 0;
         }
 
-        String sql = "INSERT INTO time_slots (schedule_id, doctor_id, work_date, "
-                   + "start_time, end_time, status, created_at, updated_at) "
-                   + "VALUES (?, ?, ?, ?, ?, 'AVAILABLE', GETDATE(), GETDATE())";
-
+        double defaultPrice = 200000.00; // Mặc định Khám thai định kỳ
         boolean ownConn = (conn == null);
         PreparedStatement ps = null;
         try {
@@ -81,6 +78,33 @@ public class TimeSlotDAO {
                 conn = DatabaseConfig.getConnection();
                 conn.setAutoCommit(false);
             }
+
+            // Lấy specialization để map giá khám mặc định
+            String getSpecSql = "SELECT specialization FROM doctors WHERE id = ?";
+            try (PreparedStatement specPs = conn.prepareStatement(getSpecSql)) {
+                specPs.setInt(1, doctorId);
+                try (ResultSet specRs = specPs.executeQuery()) {
+                    if (specRs.next()) {
+                        String spec = specRs.getString("specialization");
+                        if (spec != null) {
+                            String lower = spec.toLowerCase();
+                            if (lower.contains("hiếm muộn") || lower.contains("ivf")) {
+                                defaultPrice = 350000.00;
+                            } else if (lower.contains("tiền sản")) {
+                                defaultPrice = 300000.00;
+                            } else if (lower.contains("phụ khoa")) {
+                                defaultPrice = 250000.00;
+                            }
+                        }
+                    }
+                }
+            } catch (SQLException e) {
+                System.err.println("[TimeSlotDAO] Không lấy được specialization bác sĩ: " + e.getMessage());
+            }
+
+            String sql = "INSERT INTO time_slots (schedule_id, doctor_id, work_date, "
+                       + "start_time, end_time, status, price, created_at, updated_at) "
+                       + "VALUES (?, ?, ?, ?, ?, 'AVAILABLE', ?, GETDATE(), GETDATE())";
 
             ps = conn.prepareStatement(sql);
 
@@ -97,6 +121,7 @@ public class TimeSlotDAO {
                 ps.setDate(3, workDate);
                 ps.setTime(4, slotStart);
                 ps.setTime(5, slotEnd);
+                ps.setDouble(6, defaultPrice);
                 ps.addBatch();
 
                 currentStartMs = slotEndMs;
@@ -728,6 +753,37 @@ public class TimeSlotDAO {
             System.err.println("[TimeSlotDAO] findByDoctorAndDate ERROR: " + e.getMessage());
         } finally {
             closeResources(conn, ps, rs);
+        }
+        return list;
+    }
+
+    /**
+     * Read-only reception view of all approved slots on one day. Staff can see
+     * availability, but this DAO intentionally exposes no mutation operation.
+     */
+    public List<TimeSlot> findByDateForReception(Date workDate) {
+        String sql = "SELECT " + BASE_COLUMNS + ", d.full_name AS doctor_name, "
+                + "p.full_name AS booked_by_name "
+                + "FROM time_slots ts "
+                + "INNER JOIN doctor_schedules ds ON ds.id = ts.schedule_id "
+                + "INNER JOIN doctors d ON d.id = ts.doctor_id "
+                + "LEFT JOIN appointments a ON a.slot_id = ts.id "
+                + " AND a.status NOT IN ('Cancelled', 'NoShow') "
+                + "LEFT JOIN patients p ON p.id = a.patient_id "
+                + "WHERE ts.work_date = ? AND ds.status = 'APPROVED' "
+                + "ORDER BY d.full_name, ts.start_time";
+
+        List<TimeSlot> list = new ArrayList<>();
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setDate(1, workDate);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapRow(rs));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[TimeSlotDAO] findByDateForReception ERROR: " + e.getMessage());
         }
         return list;
     }

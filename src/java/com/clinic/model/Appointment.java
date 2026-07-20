@@ -129,7 +129,12 @@ public class Appointment {
 
     /** Trả về tên bác sĩ — dùng cho EL: ${appointment.doctorName} */
     public String getDoctorName() {
-        if (doctor != null) return doctor.getFullName();
+        if (doctor != null) {
+            String name = doctor.getFullName();
+            if (name != null) {
+                return name.replace("Bác sĩ ", "").replace("BS. ", "").trim();
+            }
+        }
         return null;
     }
 

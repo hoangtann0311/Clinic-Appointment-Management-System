@@ -89,6 +89,20 @@
                 </a>
             </li>
             <li>
+                <a href="${pageContext.request.contextPath}/admin/reception/doctor-schedules"
+                   class="${fn:contains(requestURI, 'doctor-schedules') ? 'active' : ''}">
+                    <i class="bi bi-calendar-week"></i>
+                    <span>Lịch Trực Bác Sĩ</span>
+                </a>
+            </li>
+            <li>
+                <a href="${pageContext.request.contextPath}/admin/reception/slots"
+                   class="${fn:contains(requestURI, '/slots') ? 'active' : ''}">
+                    <i class="bi bi-grid-3x3-gap"></i>
+                    <span>Khung Giờ Khám</span>
+                </a>
+            </li>
+            <li>
                 <a href="${pageContext.request.contextPath}/admin/reception/sos" 
                    class="${fn:contains(requestURI, 'sos') ? 'active' : ''}">
                     <i class="bi bi-bell-slash text-danger"></i>
@@ -125,6 +139,7 @@
                 <h5><i class="bi bi-calendar-plus"></i> Tiếp nhận cuộc gọi tổng đài & Tạo lịch hẹn khám (Manual Booking)</h5>
             </div>
             <div class="card-body">
+                <p class="text-muted small mb-4"><span class="text-danger fw-bold">*</span> Thông tin bắt buộc để tạo lịch hẹn.</p>
                 <c:if test="${not empty errors}">
                     <div class="alert alert-danger">
                         <strong>Không thể tạo lịch hẹn:</strong>
@@ -167,7 +182,7 @@
                                    oninput="this.value = this.value.replace(/[0-9]/g, '');">
                         </div>
                         <div class="col-md-4 cams-form-group">
-                            <label class="cams-form-label">Ngày sinh sản phụ</label>
+                            <label class="cams-form-label">Ngày sinh sản phụ <span class="text-muted fw-normal">(nếu có)</span></label>
                             <input type="date"
                                    name="dob"
                                    id="dob"
@@ -186,7 +201,7 @@
                     <div class="row">
                         <div class="col-md-6 cams-form-group">
                             <label class="cams-form-label">Bác sĩ khám chỉ định <span class="text-danger">*</span></label>
-                            <select name="doctorId" id="doctorId" class="cams-form-input" required onchange="updatePriceDisplay()">
+                            <select name="doctorId" id="doctorId" class="cams-form-input" required onchange="onDoctorOrDateChanged()">
                                 <option value="" disabled ${empty param.doctorId ? 'selected' : ''}>-- Chọn bác sĩ --</option>
 
                                 <c:forEach var="doc" items="${doctors}">
@@ -223,26 +238,17 @@
                                    min="${today}"
                                    value="${empty param.appointmentDate ? today : param.appointmentDate}"
                                    required
-                                   onchange="calculateLMPAge()"
+                                   onchange="onDoctorOrDateChanged(); calculateLMPAge()"
                                    oninput="calculateLMPAge()">
                         </div>
                         <div class="col-md-4 cams-form-group">
-                            <label class="cams-form-label">Khung giờ trống (Slots) <span class="text-danger">*</span></label>
+                            <label class="cams-form-label">Khung giờ khám <span class="text-danger">*</span></label>
 
                             <select name="timeSlot" id="timeSlot" class="cams-form-input" required>
                                 <option value="" disabled ${empty param.timeSlot ? 'selected' : ''}>-- Chọn khung giờ --</option>
-                                <option value="08:00 - 08:20" ${param.timeSlot == '08:00 - 08:20' ? 'selected' : ''}>08:00 - 08:20 (Còn trống)</option>
-                                <option value="08:20 - 08:40" ${param.timeSlot == '08:20 - 08:40' ? 'selected' : ''}>08:20 - 08:40 (Còn trống)</option>
-                                <option value="08:40 - 09:00" ${param.timeSlot == '08:40 - 09:00' ? 'selected' : ''}>08:40 - 09:00 (Còn trống)</option>
-                                <option value="09:00 - 09:20" ${param.timeSlot == '09:00 - 09:20' ? 'selected' : ''}>09:00 - 09:20 (Còn trống)</option>
-                                <option value="09:20 - 09:40" ${param.timeSlot == '09:20 - 09:40' ? 'selected' : ''}>09:20 - 09:40 (Còn trống)</option>
-                                <option value="09:40 - 10:00" ${param.timeSlot == '09:40 - 10:00' ? 'selected' : ''}>09:40 - 10:00 (Còn trống)</option>
-                                <option value="10:00 - 10:20" ${param.timeSlot == '10:00 - 10:20' ? 'selected' : ''}>10:00 - 10:20 (Còn trống)</option>
-                                <option value="10:20 - 10:40" ${param.timeSlot == '10:20 - 10:40' ? 'selected' : ''}>10:20 - 10:40 (Còn trống)</option>
-                                <option value="10:40 - 11:00" ${param.timeSlot == '10:40 - 11:00' ? 'selected' : ''}>10:40 - 11:00 (Còn trống)</option>
                             </select>
 
-                            <small class="text-muted mt-1 d-block">Mỗi slot khám không dài mặc định 20 phút.</small>
+                            <small class="text-muted mt-1 d-block">Chọn bác sĩ và ngày khám để tải các slot còn trống. Không áp dụng cho ca SOS.</small>
                         </div>
                         <div class="col-md-4 cams-form-group">
                             <label class="cams-form-label">Tổng chi phí tạm tính</label>
@@ -257,7 +263,7 @@
                     <!-- Gestational Age & Medical Declarations -->
                     <div class="row">
                         <div class="col-md-6 cams-form-group">
-                            <label class="cams-form-label">Ngày kinh cuối cùng (LMP)</label>
+                            <label class="cams-form-label">Ngày kinh cuối cùng (LMP) <span class="text-muted fw-normal">(nếu nhớ)</span></label>
                             <input type="date"
                                    name="lastMenstrualPeriod"
                                    id="lastMenstrualPeriod"
@@ -312,27 +318,39 @@
 </div>
 
 <script>
-    const initialPatients = [
-        {name: "Trần Thị C", phone: "0912345678", dob: "1998-05-12"},
-        {name: "Phạm Hải Yến", phone: "0987654321", dob: "2000-09-22"},
-        {name: "Nguyễn Hoàng Khang", phone: "0905123456", dob: "1995-11-04"}
-    ];
+    const contextPath = "${pageContext.request.contextPath}";
+    const selectedSlot = "${param.timeSlot}";
+    let phoneLookupSequence = 0;
 
     function lookupPhone(val) {
-        let match = initialPatients.find(p => p.phone === val.trim());
-        let label = document.getElementById("patient-match-label");
-        if (match) {
-            document.getElementById("name").value = match.name;
-            document.getElementById("dob").value = match.dob;
-            label.style.display = "block";
-            label.innerHTML = `<i class="bi bi-person-check-fill"></i> Đã nhận dạng sản phụ cũ: ${match.name}`;
-        } else {
-            label.style.display = "none";
-        }
+        const phone = val.trim();
+        const label = document.getElementById("patient-match-label");
+        const nameInput = document.getElementById("name");
+        const dobInput = document.getElementById("dob");
+        const requestId = ++phoneLookupSequence;
+
+        label.style.display = "none";
+        nameInput.readOnly = false;
+        dobInput.readOnly = false;
+        if (!/^0\d{9,10}$/.test(phone)) return;
+
+        fetch(contextPath + '/admin/reception/patient-lookup?phone=' + encodeURIComponent(phone))
+            .then(function (res) { return res.ok ? res.json() : null; })
+            .then(function (data) {
+                if (requestId !== phoneLookupSequence || !data) return;
+                if (data.exists) {
+                    nameInput.value = data.fullName || '';
+                    dobInput.value = data.dateOfBirth || '';
+                    nameInput.readOnly = true;
+                    dobInput.readOnly = true;
+                    label.style.display = 'block';
+                    label.innerHTML = '<i class="bi bi-person-check-fill"></i> Đã tìm thấy hồ sơ sản phụ; thông tin định danh được giữ nguyên.';
+                }
+            })
+            .catch(function () { /* Có thể vẫn tạo mới hồ sơ sau khi gửi form. */ });
     }
 
     function updatePriceDisplay() {
-        let docSelect = document.getElementById("doctorId");
         let srvSelect = document.getElementById("serviceId");
 
         let srvPrice = 0;
@@ -343,6 +361,52 @@
 
         let total = srvPrice;
         document.getElementById("total-price-box").innerText = total.toLocaleString('vi-VN') + "đ";
+    }
+
+    function onDoctorOrDateChanged() {
+        updatePriceDisplay();
+        loadAvailableSlots();
+    }
+
+    function loadAvailableSlots() {
+        const doctorId = document.getElementById('doctorId').value;
+        const date = document.getElementById('appointmentDate').value;
+        const slotSelect = document.getElementById('timeSlot');
+
+        if (!doctorId || !date) {
+            slotSelect.innerHTML = '<option value="" selected>-- Chọn bác sĩ và ngày khám trước --</option>';
+            return;
+        }
+
+        slotSelect.disabled = true;
+        slotSelect.innerHTML = '<option value="">Đang tải khung giờ trống...</option>';
+        fetch(contextPath + '/patient/booking/slots?doctorId=' + encodeURIComponent(doctorId) + '&date=' + encodeURIComponent(date))
+            .then(function (res) { return res.ok ? res.json() : Promise.reject(); })
+            .then(function (slots) {
+                let html = '<option value="" selected>-- Chọn khung giờ --</option>';
+                if (slots && slots.length) {
+                    slots.forEach(function (slot) {
+                        const selected = selectedSlot && selectedSlot === slot.label ? ' selected' : '';
+                        html += '<option value="' + slot.label + '"' + selected + '>' + slot.label + ' (còn trống)</option>';
+                    });
+                } else {
+                    html += '<option value="" disabled>Không có khung giờ trống</option>';
+                }
+                slotSelect.innerHTML = html;
+                syncEmergencySlotRequirement();
+            })
+            .catch(function () {
+                slotSelect.innerHTML = '<option value="" selected>Không tải được khung giờ, vui lòng thử lại</option>';
+                slotSelect.disabled = false;
+            });
+    }
+
+    function syncEmergencySlotRequirement() {
+        const emergency = document.getElementById('isEmergency').checked;
+        const slotSelect = document.getElementById('timeSlot');
+        slotSelect.required = !emergency;
+        slotSelect.disabled = emergency;
+        if (emergency) slotSelect.value = '';
     }
 
     function calculateLMPAge() {
@@ -411,6 +475,7 @@
             sosPanel.setAttribute("style", "display: none !important");
             isEmergency.checked = false;
         }
+        syncEmergencySlotRequirement();
     }
 
     function validateForm() {
@@ -422,7 +487,9 @@
         if (!validateDob()) {
             return false;
         }
-        if (!phone || !name || !doc || !srv) {
+        let slot = document.getElementById("timeSlot").value;
+        let emergency = document.getElementById("isEmergency").checked;
+        if (!phone || !name || !doc || !srv || (!emergency && !slot)) {
             alert("Vui lòng điền đầy đủ thông tin bắt buộc!");
             return false;
         }
@@ -571,6 +638,7 @@
         }
 
         validateDob();
+        onDoctorOrDateChanged();
     });
 
     // Sidebar Toggle Script

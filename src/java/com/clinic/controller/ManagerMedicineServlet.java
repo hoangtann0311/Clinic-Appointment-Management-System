@@ -233,6 +233,7 @@ public class ManagerMedicineServlet extends HttpServlet {
 
         req.setAttribute("historyList", historyList);
         req.setAttribute("currentPage", page);
+        req.setAttribute("pageSize", PAGE_SIZE);
         req.setAttribute("totalPages", totalPages);
         req.setAttribute("totalHistory", total);
 

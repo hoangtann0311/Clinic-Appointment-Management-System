@@ -33,6 +33,12 @@ public class DoctorProfileServlet extends HttpServlet {
     private static final java.util.Set<String> ALLOWED_CONTENT_TYPES =
             java.util.Set.of("image/jpeg", "image/jpg", "image/png", "image/webp");
 
+    private static final java.util.Set<String> ALLOWED_SPECIALIZATIONS = java.util.Set.of(
+            "Sản phụ khoa",
+            "Thai sản & Y học bào thai",
+            "Siêu âm sản phụ khoa"
+    );
+
     private final DoctorDAO doctorDAO = new DoctorDAO();
     private final UserDAO userDAO = new UserDAO();
 
@@ -83,6 +89,12 @@ public class DoctorProfileServlet extends HttpServlet {
         if (phoneNumber != null && !phoneNumber.isEmpty()
                 && !phoneNumber.matches("^[0-9+\\-\\s]{7,15}$")) {
             showError(req, resp, doctor, "Số điện thoại không hợp lệ.");
+            return;
+        }
+
+        if (specialization == null || !ALLOWED_SPECIALIZATIONS.contains(specialization)) {
+            showError(req, resp, doctor,
+                    "Chuyên khoa không thuộc phạm vi sản phụ khoa, thai sản và siêu âm của hệ thống.");
             return;
         }
 

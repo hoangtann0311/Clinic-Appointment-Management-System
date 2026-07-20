@@ -64,11 +64,12 @@ public class NotificationHelper {
     public static int getPatientUserIdByRecord(int medicalRecordId) {
         try (Connection c = DatabaseConfig.getConnection();
              PreparedStatement ps = c.prepareStatement(
-                     "SELECT a.patient_id FROM medical_records mr " +
-                     "JOIN appointments a ON a.id = mr.appointment_id WHERE mr.id=?")) {
+                     "SELECT p.user_id FROM medical_records mr " +
+                     "JOIN appointments a ON a.id = mr.appointment_id " +
+                     "JOIN patients p ON p.id = a.patient_id WHERE mr.id=?")) {
             ps.setInt(1, medicalRecordId);
             ResultSet rs = ps.executeQuery();
-            if (rs.next()) return rs.getInt("patient_id");
+            if (rs.next()) return rs.getInt("user_id");
         } catch (Exception e) { e.printStackTrace(); }
         return 0;
     }
@@ -176,6 +177,37 @@ public class NotificationHelper {
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
                 draftRecordReminder(doctorUserId, rs.getInt(1), rs.getString(2));
+            }
+        } catch (Exception e) { e.printStackTrace(); }
+    }
+
+    // ── Thông báo cập nhật bệnh án ──────────────────────────────────────────
+    public static void medicalRecordUpdated(int medicalRecordId, String finalDiagnosis) {
+        int patientUserId = getPatientUserIdByRecord(medicalRecordId);
+        if (patientUserId > 0) {
+            dao.create(patientUserId,
+                "📝 Hồ sơ bệnh án được cập nhật",
+                "Bác sĩ đã cập nhật hồ sơ bệnh án của bạn. Chẩn đoán: " + 
+                (finalDiagnosis != null && !finalDiagnosis.isBlank() ? finalDiagnosis : "chưa có kết luận cuối cùng") + 
+                ". Vui lòng xem chi tiết trong mục Hồ sơ bệnh án.");
+        }
+    }
+
+    // ── Thông báo thanh toán thành công ─────────────────────────────────────
+    public static void paymentConfirmed(int appointmentId, String invoiceType, double amount) {
+        String sql = "SELECT p.user_id FROM appointments a " +
+                     "JOIN patients p ON p.id = a.patient_id WHERE a.id=?";
+        try (Connection c = DatabaseConfig.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, appointmentId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    int patientUserId = rs.getInt("user_id");
+                    String typeLabel = "PRE_EXAM".equalsIgnoreCase(invoiceType) ? "Phí khám" : "Phí dịch vụ phát sinh / siêu âm";
+                    dao.create(patientUserId,
+                        "💰 Xác nhận thanh toán thành công",
+                        "Hóa đơn " + typeLabel + " trị giá " + new java.text.DecimalFormat("#,###").format(amount) + "đ của bạn đã được xác nhận thanh toán thành công.");
+                }
             }
         } catch (Exception e) { e.printStackTrace(); }
     }

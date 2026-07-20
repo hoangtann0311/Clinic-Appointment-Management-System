@@ -90,6 +90,20 @@
                 </a>
             </li>
             <li>
+                <a href="${pageContext.request.contextPath}/admin/reception/doctor-schedules"
+                   class="${fn:contains(requestURI, 'doctor-schedules') ? 'active' : ''}">
+                    <i class="bi bi-calendar-week"></i>
+                    <span>Lịch Trực Bác Sĩ</span>
+                </a>
+            </li>
+            <li>
+                <a href="${pageContext.request.contextPath}/admin/reception/slots"
+                   class="${fn:contains(requestURI, '/slots') ? 'active' : ''}">
+                    <i class="bi bi-grid-3x3-gap"></i>
+                    <span>Khung Giờ Khám</span>
+                </a>
+            </li>
+            <li>
                 <a href="${pageContext.request.contextPath}/admin/reception/sos" 
                    class="${fn:contains(requestURI, 'sos') ? 'active' : ''}">
                     <i class="bi bi-bell-slash text-danger"></i>
@@ -116,7 +130,7 @@
             <div class="admin-page-header-left">
                 <h1 class="admin-page-title">Thay Đổi Lịch Khám</h1>
                 <div class="admin-page-subtitle">
-                    Quản lý Tiếp đón &gt; Sửa đổi thông tin lịch hẹn #${apt.id}
+                    Quản lý Tiếp đón &gt; Sửa đổi thông tin lịch hẹn
                 </div>
             </div>
         </div>
@@ -159,7 +173,7 @@
                             <label class="cams-form-label">Bác sĩ khám chỉ định <span class="text-danger">*</span></label>
                             <select name="doctorId" id="doctorId" class="cams-form-input" required onchange="onDoctorOrDateChanged()">
                                 <c:forEach var="doc" items="${doctors}">
-                                    <option value="${doc.id}" data-price="${doc.price}" ${(apt.doctor != null && apt.doctor.id eq doc.id) ? 'selected' : ''}>
+                                    <option value="${doc.id}" ${(apt.doctor != null && apt.doctor.id eq doc.id) ? 'selected' : ''}>
                                         <c:out value="${doc.name}"/> - <c:out value="${doc.specialization}"/>
                                     </option>
                                 </c:forEach>
@@ -169,7 +183,8 @@
                             <label class="cams-form-label">Gói dịch vụ ban đầu <span class="text-danger">*</span></label>
                             <select name="serviceId" id="serviceId" class="cams-form-input" required onchange="onDoctorOrDateChanged()">
                                 <c:forEach var="srv" items="${services}">
-                                    <option value="${srv.id}" data-price="${srv.price}" ${(apt.service != null && apt.service.id == srv.id) ? 'selected' : ''}>
+                                    <option value="${srv.id}" data-price="${srv.price}"
+                                            <c:if test="${(apt.service != null and apt.service.id eq srv.id) or (apt.service == null and apt.serviceName eq srv.serviceName)}">selected</c:if>>
                                         <c:out value="${srv.serviceName}"/> (<fmt:formatNumber value="${srv.price}" pattern="#,###"/>đ - <c:out value="${srv.durationMins}"/> phút)
                                     </option>
                                 </c:forEach>

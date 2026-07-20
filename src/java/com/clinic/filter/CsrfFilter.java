@@ -143,7 +143,19 @@ public class CsrfFilter implements Filter {
                 || path.startsWith("/manager/services")
                 || path.startsWith("/manager/medicines")
                 || path.startsWith("/manager/schedules")
-                || path.startsWith("/manager/time-slots");
+                || path.startsWith("/manager/time-slots")
+                || path.equals("/doctor/appointments")
+                || path.equals("/doctor/medical-records")
+                || path.equals("/doctor/ultrasound-request/create")
+                || path.equals("/doctor/results")
+                || path.equals("/sonographer/detail")
+                || path.equals("/sonographer/upload")
+                || path.equals("/sonographer/analyze")
+                || path.equals("/patient/booking")
+                || path.equals("/patient/appointments")
+                || path.equals("/patient/payment")
+                || path.equals("/patient/profile")
+                || path.equals("/patient/review");
     }
     private String normalizePath(String rawPath) {
         if (rawPath == null || rawPath.isEmpty()) {

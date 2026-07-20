@@ -78,7 +78,7 @@ public class MedicalRecordServlet extends HttpServlet {
             req.setAttribute("mode",         "form");
             req.setAttribute("prescription", prescription);
             req.setAttribute("medicines",    prescriptionDAO.getAllMedicines());
-            req.setAttribute("ultrasoundServices", serviceDAO.findByCategoryId(2));
+            req.setAttribute("ultrasoundServices", serviceDAO.findUltrasoundServices());
             req.getRequestDispatcher("/views/doctors/medical_record_form.jsp").forward(req, resp);
 
         } else {
@@ -111,6 +111,26 @@ public class MedicalRecordServlet extends HttpServlet {
 
         if (!dao.appointmentBelongsToDoctor(apptId, doctorId)) {
             resp.sendError(HttpServletResponse.SC_FORBIDDEN); return;
+        }
+
+        AppointmentDAO appointmentDAO = new AppointmentDAO();
+        if (!appointmentDAO.isConsultationInProgress(apptId, doctorId)) {
+            errorOnPost(req, resp, apptId, user.getFullName(),
+                    "Chỉ có thể cập nhật bệnh án khi ca khám đang ở trạng thái Đang khám.");
+            return;
+        }
+
+        if (recordIdStr != null && !recordIdStr.isBlank()) {
+            try {
+                int recordId = Integer.parseInt(recordIdStr);
+                if (!dao.recordBelongsToDoctor(recordId, doctorId)) {
+                    resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền chỉnh sửa bệnh án này.");
+                    return;
+                }
+            } catch (NumberFormatException e) {
+                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "recordId không hợp lệ.");
+                return;
+            }
         }
 
         // ── Validate backend ─────────────────────────────────────────────────
@@ -294,7 +314,7 @@ public class MedicalRecordServlet extends HttpServlet {
             success = dao.update(mr);
             // Khi cập nhật hồ sơ từ draft → final, cũng cập nhật trạng thái lịch hẹn
             if (success && !isDraft) {
-                new AppointmentDAO().updateStatus(apptId, doctorId, "SUCCESS");
+                appointmentDAO.completeConsultation(apptId, doctorId);
             }
         } else {
             mr.setStatus(isDraft ? "draft" : "final");
@@ -302,7 +322,7 @@ public class MedicalRecordServlet extends HttpServlet {
             success = finalRecordId > 0;
             if (success && !isDraft) {
                 // BA §7.1: khi bác sĩ hoàn thành khám → SUCCESS
-                new AppointmentDAO().updateStatus(apptId, doctorId, "SUCCESS");
+                appointmentDAO.completeConsultation(apptId, doctorId);
             }
         }
 
@@ -340,6 +360,15 @@ public class MedicalRecordServlet extends HttpServlet {
         if (!success) {
             errorOnPost(req, resp, apptId, user.getFullName(), "Lưu hồ sơ thất bại. Vui lòng thử lại.");
             return;
+        }
+
+        // ── Bắn thông báo cập nhật hồ sơ bệnh án cho bệnh nhân khi lưu final ────
+        if (!isDraft) {
+            try {
+                com.clinic.utils.NotificationHelper.medicalRecordUpdated(finalRecordId, mr.getFinalDiagnosis());
+            } catch (Exception ex) {
+                System.err.println("[MedicalRecordServlet] Gửi thông báo cập nhật bệnh án thất bại: " + ex.getMessage());
+            }
         }
 
         // ── Loại 5: Thông báo dấu hiệu nguy cơ khi lưu final ─────────────────
@@ -416,7 +445,7 @@ public class MedicalRecordServlet extends HttpServlet {
         req.setAttribute("mode",              "form");
         req.setAttribute("prescription",      prescription);
         req.setAttribute("medicines",         prescriptionDAO.getAllMedicines());
-        req.setAttribute("ultrasoundServices", serviceDAO.findByCategoryId(2));
+        req.setAttribute("ultrasoundServices", serviceDAO.findUltrasoundServices());
         req.setAttribute("errorMessage",      msg);
         req.getRequestDispatcher("/views/doctors/medical_record_form.jsp").forward(req, resp);
     }

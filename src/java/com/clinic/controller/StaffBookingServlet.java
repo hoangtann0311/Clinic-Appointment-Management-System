@@ -1,6 +1,7 @@
 package com.clinic.controller;
 
 import com.clinic.model.Appointment;
+import com.clinic.model.User;
 import com.clinic.service.StaffReceptionService;
 import com.clinic.utils.NotificationHelper;
 import jakarta.servlet.ServletException;
@@ -30,6 +31,7 @@ public class StaffBookingServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        if (!requireReceptionAccess(req, resp)) return;
         LocalDate currentDate = LocalDate.now();
         DateTimeFormatter displayFormatter = DateTimeFormatter.ofPattern("dd 'tháng' MM, yyyy");
 
@@ -45,6 +47,7 @@ public class StaffBookingServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        if (!requireReceptionAccess(req, resp)) return;
         req.setCharacterEncoding("UTF-8");
 
         String name = req.getParameter("name");
@@ -94,5 +97,14 @@ public class StaffBookingServlet extends HttpServlet {
 
             req.getRequestDispatcher("/views/staff/reception-booking.jsp").forward(req, resp);
         }
+    }
+
+    private boolean requireReceptionAccess(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        User user = (User) req.getSession().getAttribute("user");
+        if (user == null || (user.getRoleId() != 1 && user.getRoleId() != 4)) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền tạo lịch tại quầy.");
+            return false;
+        }
+        return true;
     }
 }

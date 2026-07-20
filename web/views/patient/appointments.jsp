@@ -43,64 +43,69 @@
         </div>
     </c:when>
     <c:otherwise>
-        <div class="card">
+        <div class="card patient-appointments-card">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
+                <table class="table table-hover align-middle mb-0 patient-appointments-table">
                     <thead class="table-light">
                         <tr>
-                            <th>Ngày khám</th>
-                            <th>Giờ</th>
-                            <th>Bác sĩ</th>
-                            <th>Dịch vụ</th>
-                            <th>Triệu chứng</th>
-                            <th>Trạng thái</th>
-                            <th class="text-end">Thao tác</th>
+                            <th class="appointment-date">Ngày khám</th>
+                            <th class="appointment-time">Giờ</th>
+                            <th class="appointment-doctor">Bác sĩ</th>
+                            <th class="appointment-service">Dịch vụ</th>
+                            <th class="appointment-symptoms">Triệu chứng</th>
+                            <th class="appointment-status-cell">Trạng thái</th>
+                            <th class="appointment-actions text-end">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody>
                         <c:forEach var="a" items="${appointments}">
                             <tr>
-                                <td>${a.appointmentDate}</td>
-                                <td>${a.timeSlot}</td>
-                                <td>BS. ${a.doctor.fullName}</td>
-                                <td>${a.serviceName}</td>
-                                <td style="max-width:220px;" class="text-truncate">${a.symptoms}</td>
-                                <td>
+                                <td class="appointment-date">${a.appointmentDate}</td>
+                                <td class="appointment-time">${a.timeSlot}</td>
+                                <td class="appointment-doctor">BS. ${a.doctor.fullName}</td>
+                                <td class="appointment-service" title="${a.serviceName}"><span><c:out value="${not empty a.serviceName ? a.serviceName : 'Khám thai định kỳ'}"/></span></td>
+                                <td class="appointment-symptoms" title="${a.symptoms}"><span><c:out value="${a.symptoms}"/></span></td>
+                                <td class="appointment-status-cell">
+                                    <div class="appointment-status-line">
                                     <c:choose>
                                         <c:when test="${a.status == 'Confirmed'}">
-                                            <span class="badge bg-success">Đã xác nhận</span>
+                                            <span class="appointment-status-chip status-confirmed">Đã xác nhận</span>
                                         </c:when>
                                         <c:when test="${a.status == 'Pending'}">
-                                            <span class="badge bg-warning text-dark">Chờ xác nhận</span>
+                                            <span class="appointment-status-chip status-pending">Chờ duyệt</span>
                                         </c:when>
                                         <c:when test="${a.status == 'Waiting'}">
-                                            <span class="badge bg-info text-dark">Đang chờ khám</span>
+                                            <span class="appointment-status-chip status-waiting">Chờ khám</span>
                                         </c:when>
                                         <c:when test="${a.status == 'Emergency_SOS'}">
-                                            <span class="badge bg-danger">Khẩn cấp (SOS)</span>
+                                            <span class="appointment-status-chip status-sos">Khẩn cấp</span>
                                         </c:when>
                                         <c:when test="${a.status == 'SUCCESS'}">
-                                            <span class="badge bg-primary">Đã hoàn thành</span>
+                                            <span class="appointment-status-chip status-success">Hoàn thành</span>
                                         </c:when>
                                         <c:when test="${a.status == 'Cancelled'}">
-                                            <span class="badge bg-secondary">Đã huỷ</span>
+                                            <span class="appointment-status-chip status-cancelled">Đã huỷ</span>
                                         </c:when>
                                         <c:when test="${a.status == 'NoShow'}">
-                                            <span class="badge bg-dark">Không đến khám</span>
+                                            <span class="appointment-status-chip status-no-show">Vắng mặt</span>
                                         </c:when>
                                         <c:otherwise>
-                                            <span class="badge bg-light text-dark">${a.status}</span>
+                                            <span class="appointment-status-chip status-neutral">${a.status}</span>
                                         </c:otherwise>
                                     </c:choose>
                                     <c:if test="${a.preExamPaymentStatus == 'Paid'}">
-                                        <span class="badge bg-success mt-1 d-block">Đã thanh toán trước khám</span>
+                                        <span class="appointment-payment-chip payment-paid">Đã thanh toán</span>
+                                    </c:if>
+                                    <c:if test="${a.preExamPaymentStatus == 'PendingConfirmation'}">
+                                        <span class="appointment-payment-chip payment-pending" title="Chờ nhân viên xác nhận thanh toán">Chờ thanh toán</span>
                                     </c:if>
                                     <c:if test="${a.preExamPaymentStatus == 'Unpaid' && (a.status == 'Pending' || a.status == 'Confirmed')}">
-                                        <span class="badge bg-warning text-dark mt-1 d-block">Chưa thanh toán</span>
+                                        <span class="appointment-payment-chip payment-unpaid">Chưa thanh toán</span>
                                     </c:if>
+                                    </div>
                                 </td>
-                                <td class="text-end">
-                                    <div class="d-flex flex-wrap justify-content-end gap-1">
+                                <td class="appointment-actions text-end">
+                                    <div class="d-flex flex-nowrap justify-content-end gap-1">
                                         <%-- Đổi lịch (Pending/Confirmed) --%>
                                         <c:if test="${a.status == 'Pending' || a.status == 'Confirmed'}">
                                             <a href="${pageContext.request.contextPath}/patient/booking?rescheduleId=${a.id}"
@@ -120,6 +125,7 @@
                                                   action="${pageContext.request.contextPath}/patient/appointments"
                                                   onsubmit="return confirm('Bạn có chắc muốn huỷ lịch hẹn này?');"
                                                   style="display:inline;">
+                                                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                                 <input type="hidden" name="action" value="cancel">
                                                 <input type="hidden" name="appointmentId" value="${a.id}">
                                                 <button type="submit" class="btn btn-sm btn-outline-danger" title="Huỷ lịch hẹn">
@@ -194,6 +200,7 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form method="post" action="${pageContext.request.contextPath}/patient/appointments" id="sosForm">
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                 <input type="hidden" name="action" value="sos">
                 <input type="hidden" name="appointmentId" id="sosApptId">
                 <div class="modal-body p-4">
@@ -240,6 +247,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="post" action="${pageContext.request.contextPath}/patient/review">
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                 <div class="modal-body">
                     <input type="hidden" name="appointmentId" id="reviewApptId">
                     <p class="text-muted small mb-3">Bác sĩ: <strong id="reviewDoctorName"></strong></p>

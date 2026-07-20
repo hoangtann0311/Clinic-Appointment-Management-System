@@ -48,7 +48,13 @@ public class UltrasoundUploadServlet extends HttpServlet {
             return;
         }
 
-        int orderId = Integer.parseInt(orderIdStr);
+        int orderId;
+        try {
+            orderId = Integer.parseInt(orderIdStr.trim());
+        } catch (NumberFormatException ex) {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "ID chỉ định siêu âm không hợp lệ.");
+            return;
+        }
 
         // Kiểm tra quyền chuyển đổi trạng thái
         // Cho phép upload nếu trạng thái là InProgress hoặc Uploaded (upload thêm ảnh)

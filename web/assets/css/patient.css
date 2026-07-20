@@ -370,6 +370,37 @@ body.patient-body {
     vertical-align: middle;
 }
 
+/* Appointment list: keep each desktop row compact; small screens scroll instead of wrapping cells. */
+.patient-appointments-card { overflow: hidden; }
+.patient-appointments-table { min-width: 1210px; table-layout: fixed; }
+.patient-appointments-table th,
+.patient-appointments-table td { vertical-align: middle; }
+.patient-appointments-table .appointment-date { width: 11%; white-space: nowrap; }
+.patient-appointments-table .appointment-time { width: 10%; white-space: nowrap; }
+.patient-appointments-table .appointment-doctor { width: 13%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.patient-appointments-table .appointment-service { width: 20%; }
+.patient-appointments-table .appointment-symptoms { width: 19%; }
+.patient-appointments-table .appointment-status-cell { width: 18%; }
+.patient-appointments-table .appointment-actions { width: 15%; white-space: nowrap; }
+.patient-appointments-table .appointment-service > span,
+.patient-appointments-table .appointment-symptoms > span {
+    display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.appointment-status-line { display: flex; align-items: center; gap: 0.35rem; white-space: nowrap; }
+.appointment-status-chip,
+.appointment-payment-chip {
+    display: inline-flex; align-items: center; min-height: 27px; padding: 0.28rem 0.55rem;
+    border-radius: var(--pt-r-pill); font-size: 0.72rem; font-weight: 700; line-height: 1;
+}
+.status-confirmed, .status-success { color: #166534; background: #dcfce7; }
+.status-pending, .payment-pending { color: #8a5200; background: #fff3c4; }
+.status-waiting { color: #075985; background: #dff5ff; }
+.status-sos { color: #b42318; background: #ffe4e6; }
+.status-cancelled, .status-no-show, .status-neutral { color: #5f6470; background: #eef1f4; }
+.payment-paid { color: #166534; background: #dff7e8; }
+.payment-unpaid { color: #b42318; background: #ffe4e6; }
+.patient-appointments-table .appointment-actions .btn { white-space: nowrap; }
+
 /* ── Alerts ── */
 .alert {
     border: none !important;

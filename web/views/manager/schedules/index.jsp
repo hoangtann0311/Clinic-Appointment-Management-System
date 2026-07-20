@@ -473,7 +473,7 @@
                 <table class="admin-table">
                     <thead>
                         <tr>
-                            <th>ID</th>
+                            <th>STT</th>
                             <th>Bác Sĩ</th>
                             <th>Chuyên Khoa</th>
                             <th>Ngày Trực</th>
@@ -488,9 +488,9 @@
                     <tbody>
                         <c:choose>
                             <c:when test="${not empty schedules}">
-                                <c:forEach var="sched" items="${schedules}">
+                                <c:forEach var="sched" items="${schedules}" varStatus="row">
                                     <tr>
-                                        <td style="color:var(--c-muted);font-size:0.8rem;">#${sched.id}</td>
+                                        <td style="color:var(--c-muted);font-size:0.8rem;">${(currentPage - 1) * pageSize + row.count}</td>
                                         <td>
                                             <div class="d-flex align-items-center gap-2">
                                                 <div class="doctor-avatar-sm">
@@ -814,16 +814,16 @@
                         <table class="admin-table" style="font-size:0.82rem;">
                             <thead>
                                 <tr>
-                                    <th>Slot ID</th>
+                                    <th>STT</th>
                                     <th>Khung Giờ</th>
                                     <th>Bệnh Nhân</th>
                                     <th>Ngày Đặt</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <c:forEach var="bs" items="${bookedSlots}">
+                                <c:forEach var="bs" items="${bookedSlots}" varStatus="row">
                                     <tr>
-                                        <td>#${bs.id}</td>
+                                        <td>${row.count}</td>
                                         <td style="font-weight:600;">${bs.timeLabel}</td>
                                         <td>${not empty bs.bookedByName ? fn:escapeXml(bs.bookedByName) : '#' += bs.bookedBy}</td>
                                         <td style="font-size:0.78rem;color:var(--c-muted);">

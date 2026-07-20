@@ -109,6 +109,20 @@
                 </a>
             </li>
             <li>
+                <a href="${pageContext.request.contextPath}/admin/reception/doctor-schedules"
+                   class="${fn:contains(requestURI, 'doctor-schedules') ? 'active' : ''}">
+                    <i class="bi bi-calendar-week"></i>
+                    <span>Lịch Trực Bác Sĩ</span>
+                </a>
+            </li>
+            <li>
+                <a href="${pageContext.request.contextPath}/admin/reception/slots"
+                   class="${fn:contains(requestURI, '/slots') ? 'active' : ''}">
+                    <i class="bi bi-grid-3x3-gap"></i>
+                    <span>Khung Giờ Khám</span>
+                </a>
+            </li>
+            <li>
                 <a href="${pageContext.request.contextPath}/admin/reception/sos" 
                    class="${fn:contains(requestURI, 'sos') ? 'active' : ''}">
                     <i class="bi bi-bell-slash text-danger"></i>
@@ -295,7 +309,9 @@
                                 </td>
 
                                 <td>
-                                    <c:out value="${apt.service != null ? apt.service.serviceName : '-'}"/>
+                                    <%-- Lịch đặt online có thể lưu nhiều dịch vụ trong appointment_services,
+                                         nên service_id trên appointment có thể NULL. serviceName đã được DAO tổng hợp. --%>
+                                    <c:out value="${not empty apt.serviceName ? apt.serviceName : (apt.service != null ? apt.service.serviceName : '-')}"/>
                                 </td>
 
                                 <td class="text-center">

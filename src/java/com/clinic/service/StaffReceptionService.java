@@ -12,6 +12,8 @@ import com.clinic.utils.StaffValidator;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
+import com.clinic.config.DatabaseConfig;
 import java.time.LocalDate;
 import java.util.*;
 
@@ -22,6 +24,8 @@ public class StaffReceptionService {
     private final ServiceDAO serviceDAO = new ServiceDAO();
     private final AppointmentDAO appointmentDAO = new AppointmentDAO();
     private final AuditLogDAO auditLogDAO = new AuditLogDAO();
+    private final DoctorScheduleDAO doctorScheduleDAO = new DoctorScheduleDAO();
+    private final TimeSlotDAO timeSlotDAO = new TimeSlotDAO();
 
     public StaffReceptionService() {
     }
@@ -91,6 +95,24 @@ public class StaffReceptionService {
 
     public List<ServiceItem> getAllServices() {
         return serviceDAO.getAllServices();
+    }
+
+    /** Read-only approved duty roster for reception staff. */
+    public List<DoctorSchedule> getApprovedDoctorSchedules(LocalDate date) {
+        LocalDate selectedDate = date != null ? date : LocalDate.now();
+        List<DoctorSchedule> schedules = doctorScheduleDAO.findAll(
+                0, 200, "APPROVED", null,
+                java.sql.Date.valueOf(selectedDate), java.sql.Date.valueOf(selectedDate));
+        for (DoctorSchedule schedule : schedules) {
+            schedule.setBookedSlotCount(timeSlotDAO.countBookedSlots(schedule.getId()));
+        }
+        return schedules;
+    }
+
+    /** Read-only slot board. Non-available slots are intentionally not actionable. */
+    public List<TimeSlot> getDoctorSlotsForReception(LocalDate date) {
+        LocalDate selectedDate = date != null ? date : LocalDate.now();
+        return timeSlotDAO.findByDateForReception(java.sql.Date.valueOf(selectedDate));
     }
 
     public ServiceItem findServiceById(String id) {
@@ -163,6 +185,41 @@ public class StaffReceptionService {
             throw new IllegalArgumentException("Không thể tạo hồ sơ bệnh nhân.");
         }
 
+        // Tìm slotId tương ứng trong time_slots
+        java.sql.Time startTime = null;
+        if (!finalEmergency && slot != null && slot.contains("-")) {
+            try {
+                String startPart = slot.split("-")[0].trim();
+                startTime = java.sql.Time.valueOf(java.time.LocalTime.parse(startPart));
+            } catch (Exception ignored) {}
+        }
+
+        Integer foundSlotId = null;
+        if (startTime != null) {
+            String findSlotSql = "SELECT id FROM time_slots WHERE doctor_id = ? AND work_date = ? AND start_time = ? AND status = 'AVAILABLE'";
+            try (Connection conn = DatabaseConfig.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(findSlotSql)) {
+                ps.setInt(1, doctor.getId());
+                ps.setDate(2, java.sql.Date.valueOf(appDate));
+                ps.setTime(3, startTime);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        foundSlotId = rs.getInt("id");
+                    }
+                }
+            } catch (SQLException e) {
+                System.err.println("[StaffReceptionService] Lỗi khi tìm time_slot cho manual booking: " + e.getMessage());
+            }
+        }
+
+        // UI data can be forged. A normal booking must always resolve to an
+        // approved, currently available time_slot on the doctor's roster.
+        if (!finalEmergency && foundSlotId == null) {
+            throw new IllegalArgumentException(
+                    "Khung giờ đã hết chỗ hoặc không thuộc lịch trực đã được duyệt của bác sĩ. Vui lòng chọn lại."
+            );
+        }
+
         // 7. Tính tuổi thai
         String gestationalAge = calculateGestationalAge(lmp, appDate);
 
@@ -184,14 +241,28 @@ public class StaffReceptionService {
                 status
         );
 
+        if (foundSlotId != null) appointment.setSlotId(foundSlotId);
+
         // 9. Cấp số SOS nếu là ca cấp cứu
         if (finalEmergency) {
             int nextSosNum = appointmentDAO.getNextSosQueueNumber(appDate);
             appointment.setQueueNumber("SOS-" + String.format("%02d", nextSosNum));
         }
 
-        // 10. Lưu lịch hẹn
-        appointment = appointmentDAO.createAppointment(appointment);
+        // 10. Lưu lịch hẹn và giữ slot trong cùng một transaction để tránh đặt trùng.
+        if (finalEmergency) {
+            appointment = appointmentDAO.createAppointment(appointment);
+        } else {
+            int patientUserId = getUserIdForPatient(patient.getId());
+            appointment = appointmentDAO.createStaffAppointmentWithHeldSlot(
+                    appointment,
+                    foundSlotId,
+                    patientUserId > 0 ? patientUserId : null
+            );
+            if (appointment == null) {
+                throw new IllegalArgumentException("Khung giờ vừa được người khác chọn. Vui lòng tải lại và chọn slot khác.");
+            }
+        }
 
         // 11. Tạo hóa đơn PRE_EXAM (trả trước dùng sau)
         if (appointment != null) {
@@ -628,6 +699,16 @@ public class StaffReceptionService {
                 throw new IllegalArgumentException("Ca SOS khẩn cấp không thể hủy bằng thao tác thường.");
             }
 
+            // A paid appointment cannot be silently cancelled because its
+            // receipt must remain auditable and requires a separate refund
+            // decision. Unpaid/pending receipts are voided by the DAO
+            // transaction together with slot release.
+            if (appointmentDAO.isPreExamPaid(appointmentId)) {
+                throw new IllegalArgumentException(
+                        "Lịch hẹn đã thanh toán. Không thể hủy trực tiếp; cần xử lý hoàn tiền theo quy trình quản lý."
+                );
+            }
+
             boolean success = appointmentDAO.cancelAppointmentAndReleaseSlot(appointmentId, 0, "Lễ tân hủy lịch hẹn");
             if (!success) {
                 throw new IllegalArgumentException("Không thể hủy lịch hẹn hoặc lịch đã hoàn thành/đang khám.");
@@ -660,8 +741,16 @@ public class StaffReceptionService {
         if ("Cancelled".equalsIgnoreCase(apt.getStatus())
                 || "SUCCESS".equalsIgnoreCase(apt.getStatus())
                 || "InProgress".equalsIgnoreCase(apt.getStatus())
-                || "Waiting".equalsIgnoreCase(apt.getStatus())) {
+                || "Waiting".equalsIgnoreCase(apt.getStatus())
+                || !"Pending".equalsIgnoreCase(apt.getStatus())) {
             throw new IllegalArgumentException("Không thể sửa lịch hẹn ở trạng thái " + apt.getStatus() + ".");
+        }
+
+        Invoice preInvoice = new InvoiceDAO().getByAppointmentIdAndType(id, "PRE_EXAM");
+        if (preInvoice != null && !"Unpaid".equalsIgnoreCase(preInvoice.getStatus())) {
+            throw new IllegalArgumentException(
+                    "Lịch đã có yêu cầu thanh toán. Không thể đổi bác sĩ, dịch vụ hoặc slot sau khi bệnh nhân đã gửi thanh toán."
+            );
         }
 
         String patientName = apt.getPatient() != null ? apt.getPatient().getFullName() : apt.getPatientName();
@@ -686,9 +775,20 @@ public class StaffReceptionService {
 
         Doctor doctor = findDoctorById(doctorId);
         ServiceItem service = findServiceById(serviceId);
+        if (doctor == null || service == null) {
+            throw new IllegalArgumentException("Bác sĩ hoặc dịch vụ không còn hoạt động.");
+        }
         LocalDate appDate = LocalDate.parse(appDateStr);
         LocalDate lmp = StaffValidator.isEmpty(lmpStr) ? null : LocalDate.parse(lmpStr);
         String gestationalAge = calculateGestationalAge(lmp, appDate);
+
+        Integer targetSlotId = findAvailableOrCurrentSlot(
+                doctor.getId(), appDate, slot, apt.getSlotId());
+        if (targetSlotId == null) {
+            throw new IllegalArgumentException(
+                    "Khung giờ đã hết chỗ hoặc không thuộc lịch trực đã được duyệt của bác sĩ. Vui lòng chọn lại."
+            );
+        }
 
         apt.setDoctor(doctor);
         apt.setService(service);
@@ -698,7 +798,16 @@ public class StaffReceptionService {
         apt.setLastMenstrualPeriod(lmp);
         apt.setGestationalAge(gestationalAge);
 
-        appointmentDAO.updateAppointmentDetails(apt);
+        int patientUserId = apt.getPatient() != null ? getUserIdForPatient(apt.getPatient().getId()) : 0;
+        boolean updated = appointmentDAO.updatePendingStaffAppointmentWithSlot(
+                apt,
+                targetSlotId,
+                patientUserId > 0 ? patientUserId : null,
+                java.math.BigDecimal.valueOf(service.getPrice())
+        );
+        if (!updated) {
+            throw new IllegalArgumentException("Slot vừa thay đổi trạng thái hoặc lịch hẹn không còn được phép sửa. Vui lòng tải lại trang.");
+        }
 
         auditLogDAO.logAction(
                 "Thay đổi thông tin lịch hẹn khám bệnh án #" + id + " cho sản phụ " + apt.getPatientName(),
@@ -707,6 +816,31 @@ public class StaffReceptionService {
                 "-",
                 String.valueOf(id)
         );
+    }
+
+    private Integer findAvailableOrCurrentSlot(int doctorId, LocalDate workDate, String slot, Integer currentSlotId) {
+        if (slot == null || !slot.contains("-")) return null;
+        try {
+            java.time.LocalTime start = java.time.LocalTime.parse(slot.split("-")[0].trim());
+            String sql = "SELECT id FROM time_slots WHERE doctor_id = ? AND work_date = ? AND start_time = ? "
+                    + "AND (status = 'AVAILABLE' OR (id = ? AND status IN ('HELD', 'WAITING_VERIFICATION')))";
+            try (Connection conn = DatabaseConfig.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setInt(1, doctorId);
+                ps.setDate(2, java.sql.Date.valueOf(workDate));
+                ps.setTime(3, java.sql.Time.valueOf(start));
+                if (currentSlotId != null) {
+                    ps.setInt(4, currentSlotId);
+                } else {
+                    ps.setInt(4, -1);
+                }
+                try (ResultSet rs = ps.executeQuery()) {
+                    return rs.next() ? rs.getInt("id") : null;
+                }
+            }
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private boolean isStatus(String actualStatus, String expectedStatus) {
@@ -912,6 +1046,11 @@ public class StaffReceptionService {
             throw new IllegalArgumentException("Hóa đơn này đã được thanh toán trước đó.");
         }
 
+        if (!"Unpaid".equalsIgnoreCase(invoice.getStatus())
+                && !"PendingConfirmation".equalsIgnoreCase(invoice.getStatus())) {
+            throw new IllegalArgumentException("Invoice is not in a payable state: " + invoice.getStatus());
+        }
+
         if ("BankTransfer".equalsIgnoreCase(paymentMethod) && (transactionCode == null || transactionCode.trim().isEmpty())) {
             // Dùng mã GD bệnh nhân đã gửi nếu staff không nhập lại (nếu có)
             if (invoice.getTransactionCode() != null && !invoice.getTransactionCode().trim().isEmpty()) {
@@ -925,6 +1064,17 @@ public class StaffReceptionService {
 
         if (paymentMethod == null || paymentMethod.trim().isEmpty()) {
             paymentMethod = invoice.getPaymentMethod() != null ? invoice.getPaymentMethod() : "Cash";
+        }
+
+        // A bank transfer is confirmed only after the patient has submitted it
+        // with proof. Reception may verify it, but must not create one itself.
+        if ("BankTransfer".equalsIgnoreCase(paymentMethod)
+                && !"PendingConfirmation".equalsIgnoreCase(invoice.getStatus())) {
+            throw new IllegalArgumentException("Bank transfer must be submitted by the patient before confirmation.");
+        }
+        if ("BankTransfer".equalsIgnoreCase(paymentMethod)
+                && (invoice.getProofImagePath() == null || invoice.getProofImagePath().trim().isEmpty())) {
+            throw new IllegalArgumentException("Bank transfer proof is required before confirmation.");
         }
 
         String finalTxCode = transactionCode;
@@ -964,16 +1114,23 @@ public class StaffReceptionService {
         Appointment apt = appointmentDAO.findAppointmentById(invoice.getAppointmentId());
         if (apt == null || apt.getPatient() == null) return;
 
-        String typeLabel = "PRE_EXAM".equalsIgnoreCase(invoice.getInvoiceType()) ? "trước khám"
-                : "POST_EXAM".equalsIgnoreCase(invoice.getInvoiceType()) ? "sau khám"
+        String typeLabel = "PRE_EXAM".equalsIgnoreCase(invoice.getInvoiceType()) ? "trước khám (phí khám)"
+                : "POST_EXAM".equalsIgnoreCase(invoice.getInvoiceType()) ? "sau khám (siêu âm)"
                 : "PRESCRIPTION".equalsIgnoreCase(invoice.getInvoiceType()) ? "đơn thuốc" : "dịch vụ";
 
-        String content = "Thanh toán hóa đơn " + typeLabel + " (HĐ-" + invoice.getId() + ") đã được xác nhận. ";
+        String title = "💰 Xác nhận thanh toán thành công";
+        String content = "Thanh toán hóa đơn " + typeLabel + " (HĐ-" + invoice.getId() + ") trị giá " 
+                + new java.text.DecimalFormat("#,###").format(invoice.getTotalAmount()) + "đ đã được xác nhận. ";
         if ("PRE_EXAM".equalsIgnoreCase(invoice.getInvoiceType())) {
-            content += "Lịch hẹn của bạn đã được xác nhận.";
+            content += "Lịch hẹn của bạn đã được xác nhận thành công.";
         }
 
         sendMockZaloMessage(apt.getPatient(), content);
+
+        int patientUserId = getUserIdForPatient(apt.getPatient().getId());
+        if (patientUserId > 0) {
+            new com.clinic.dao.NotificationDAO().create(patientUserId, title, content);
+        }
     }
 
     /**

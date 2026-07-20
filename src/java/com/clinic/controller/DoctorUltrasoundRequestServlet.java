@@ -70,11 +70,22 @@ public class DoctorUltrasoundRequestServlet extends HttpServlet {
                 return;
             }
 
+            if (!serviceDAO.isActiveUltrasoundService(serviceId)) {
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST,
+                        "Chỉ có thể chỉ định một dịch vụ siêu âm đang hoạt động.");
+                return;
+            }
+
             // test_orders.doctor_id references the doctors profile ID, not users.id.
             Doctor doctor = doctorDAO.findByUserId(user.getId());
             if (doctor == null || doctor.getId() <= 0) {
                 response.sendError(HttpServletResponse.SC_CONFLICT,
                         "Tài khoản bác sĩ chưa được liên kết với hồ sơ bác sĩ.");
+                return;
+            }
+
+            if (!medicalRecordDAO.appointmentBelongsToDoctor(apptId, doctor.getId())) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền chỉ định siêu âm cho ca khám này.");
                 return;
             }
 
@@ -110,13 +121,20 @@ public class DoctorUltrasoundRequestServlet extends HttpServlet {
                 throw new Exception("Không thể tạo yêu cầu siêu âm.");
             }
 
+            // Bắn thông báo chỉ định siêu âm mới cho bệnh nhân
+            try {
+                com.clinic.utils.NotificationHelper.notifyPatientForUltrasound(recordId, serviceId);
+            } catch (Exception ex) {
+                System.err.println("[DoctorUltrasoundRequestServlet] Gửi thông báo chỉ định siêu âm thất bại: " + ex.getMessage());
+            }
+
             // 3. Tự động cập nhật / tạo hóa đơn POST_EXAM cho dịch vụ chỉ định
             ServiceItem service = serviceDAO.findServiceById(serviceId);
             BigDecimal price = service != null ? BigDecimal.valueOf(service.getPrice()) : new BigDecimal("250000.00");
 
             // Kiểm tra nếu đã có POST_EXAM invoice chưa thanh toán → cộng dồn tiền
             Invoice existingPostInvoice = invoiceDAO.getByAppointmentIdAndType(apptId, "POST_EXAM");
-            if (existingPostInvoice != null && !"Paid".equalsIgnoreCase(existingPostInvoice.getStatus())) {
+            if (existingPostInvoice != null && "Unpaid".equalsIgnoreCase(existingPostInvoice.getStatus())) {
                 // Cộng dồn tiền dịch vụ mới vào hóa đơn cũ
                 invoiceDAO.addAmountToInvoice(existingPostInvoice.getId(), price);
             } else {

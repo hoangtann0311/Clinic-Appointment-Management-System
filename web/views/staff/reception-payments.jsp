@@ -88,6 +88,20 @@
                 </a>
             </li>
             <li>
+                <a href="${pageContext.request.contextPath}/admin/reception/doctor-schedules"
+                   class="${fn:contains(requestURI, 'doctor-schedules') ? 'active' : ''}">
+                    <i class="bi bi-calendar-week"></i>
+                    <span>Lịch Trực Bác Sĩ</span>
+                </a>
+            </li>
+            <li>
+                <a href="${pageContext.request.contextPath}/admin/reception/slots"
+                   class="${fn:contains(requestURI, '/slots') ? 'active' : ''}">
+                    <i class="bi bi-grid-3x3-gap"></i>
+                    <span>Khung Giờ Khám</span>
+                </a>
+            </li>
+            <li>
                 <a href="${pageContext.request.contextPath}/admin/reception/sos" 
                    class="${fn:contains(requestURI, 'sos') ? 'active' : ''}">
                     <i class="bi bi-bell-slash text-danger"></i>
@@ -380,6 +394,7 @@
 <div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <form method="POST" action="${pageContext.request.contextPath}/admin/reception/payments" onsubmit="return validatePaymentForm()">
+            <input type="hidden" name="action" value="confirm">
             <!-- Retain filter parameters -->
             <input type="hidden" name="search" value="${searchParam}">
             <input type="hidden" name="status" value="${statusParam}">

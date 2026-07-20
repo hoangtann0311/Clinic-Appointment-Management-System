@@ -418,7 +418,7 @@
                 <table class="admin-table">
                     <thead>
                         <tr>
-                            <th>#ID</th>
+                            <th>STT</th>
                             <th>Người Dùng</th>
                             <th>Email</th>
                             <th>Điện Thoại</th>
@@ -431,9 +431,9 @@
                     <tbody>
                         <c:choose>
                             <c:when test="${not empty users}">
-                                <c:forEach var="u" items="${users}">
+                                <c:forEach var="u" items="${users}" varStatus="row">
                                     <tr class="${u.deleted ? 'tr-deleted' : ''}">
-                                        <td style="color:var(--c-muted);font-size:0.8rem;font-weight:600;">#${u.id}</td>
+                                        <td style="color:var(--c-muted);font-size:0.8rem;font-weight:600;">${(currentPage - 1) * pageSize + row.index + 1}</td>
                                         <td>
                                             <div class="d-flex align-items-center gap-2">
                                                 <div class="admin-avatar-sm" style="width:36px;height:36px;font-size:0.8rem;">

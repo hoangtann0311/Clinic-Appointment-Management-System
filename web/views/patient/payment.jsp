@@ -57,7 +57,7 @@
                         <c:otherwise>Thanh Toán Hóa Đơn Lâm Sàng</c:otherwise>
                     </c:choose>
                 </h2>
-                <p class="text-muted mb-0 small">Lịch hẹn #${appointment.id} — ${appointment.appointmentDate}</p>
+                <p class="text-muted mb-0 small">Lịch hẹn ngày ${appointment.appointmentDate}</p>
             </div>
         </div>
 
@@ -67,7 +67,10 @@
                 <i class="bi bi-check-circle-fill me-2"></i>
                 <c:choose>
                     <c:when test="${success == 'ThanhToanChoXacNhan'}">
-                        Thông tin thanh toán đã được ghi nhận. Vui lòng chờ nhân viên xác nhận!
+                        <c:choose>
+                            <c:when test="${invoice.paymentMethod == 'Cash'}">Đã đăng ký thanh toán tiền mặt. Vui lòng đến quầy lễ tân để nộp tiền và nhận xác nhận.</c:when>
+                            <c:otherwise>Đã gửi minh chứng chuyển khoản. Vui lòng chờ nhân viên xác minh giao dịch.</c:otherwise>
+                        </c:choose>
                     </c:when>
                     <c:otherwise>${success}</c:otherwise>
                 </c:choose>
@@ -186,14 +189,18 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-body text-center py-5">
                     <i class="bi bi-hourglass-split text-warning" style="font-size:4rem;"></i>
-                    <h3 class="fw-bold mt-3">Đang Chờ Xác Nhận</h3>
-                    <p class="text-muted mb-4">Thông tin thanh toán đã được ghi nhận. Nhân viên sẽ xác nhận sớm.</p>
+                    <h3 class="fw-bold mt-3">
+                        ${invoice.paymentMethod == 'Cash' ? 'Chờ Thanh Toán Tại Quầy' : 'Chờ Xác Minh Chuyển Khoản'}
+                    </h3>
+                    <p class="text-muted mb-4">
+                        ${invoice.paymentMethod == 'Cash' ? 'Bạn đã đăng ký thanh toán tiền mặt. Vui lòng đến quầy lễ tân để nộp tiền; nhân viên sẽ xác nhận sau khi thu tiền.' : 'Minh chứng chuyển khoản đã được ghi nhận. Nhân viên sẽ xác minh giao dịch sớm.'}
+                    </p>
                         <div class="invoice-hero d-inline-block text-start mb-4" style="min-width:320px;">
                             <div class="row g-3">
                                 <div class="col-6"><span class="text-muted small">Bác sĩ</span><div class="fw-bold">BS. ${appointment.doctorName}</div></div>
                                 <div class="col-6"><span class="text-muted small">Ngày khám</span><div class="fw-bold">${appointment.appointmentDate}</div></div>
                                 <div class="col-6"><span class="text-muted small">Giờ khám</span><div class="fw-bold">${appointment.timeSlot}</div></div>
-                                <div class="col-6"><span class="text-muted small">Dịch vụ</span><div class="fw-bold">${appointment.serviceName}</div></div>
+                                <div class="col-6"><span class="text-muted small">Dịch vụ</span><div class="fw-bold"><c:choose><c:when test="${not empty appointment.serviceName}">${appointment.serviceName}</c:when><c:otherwise>Khám lâm sàng (${appointment.doctor.specialization})</c:otherwise></c:choose></div></div>
                                 <c:if test="${not empty invoice.transactionCode}">
                                     <div class="col-12"><span class="text-muted small">Mã giao dịch</span><div><code>${invoice.transactionCode}</code></div></div>
                                 </c:if>
@@ -294,7 +301,7 @@
                                 <div class="col-md-6"><span class="text-muted small">Bác sĩ</span><div class="fw-bold">BS. ${appointment.doctorName}</div></div>
                                 <div class="col-md-6"><span class="text-muted small">Ngày khám</span><div class="fw-bold">${appointment.appointmentDate}</div></div>
                                 <div class="col-md-6"><span class="text-muted small">Giờ khám</span><div class="fw-bold">${appointment.timeSlot}</div></div>
-                                <div class="col-md-6"><span class="text-muted small">Dịch vụ</span><div class="fw-bold">${appointment.serviceName}</div></div>
+                                <div class="col-md-6"><span class="text-muted small">Dịch vụ</span><div class="fw-bold"><c:choose><c:when test="${not empty appointment.serviceName}">${appointment.serviceName}</c:when><c:otherwise>Khám lâm sàng (${appointment.doctor.specialization})</c:otherwise></c:choose></div></div>
                             </div>
                             <c:if test="${invoiceType == 'PRESCRIPTION' && not empty prescriptionItems}">
                                 <hr class="my-3">
@@ -386,6 +393,7 @@
                     </c:if>
 
                     <form method="post" action="${pageContext.request.contextPath}/patient/payment" id="paymentForm" enctype="multipart/form-data">
+                        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                         <input type="hidden" name="invoiceId" value="${invoice.id}">
 
                         <div class="row g-3 mb-4">

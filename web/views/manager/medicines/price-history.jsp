@@ -121,7 +121,7 @@
             <table class="admin-table">
                 <thead>
                     <tr>
-                        <th>ID</th>
+                        <th>STT</th>
                         <th>Thuốc</th>
                         <th>Giá Cũ</th>
                         <th>Giá Mới</th>
@@ -134,9 +134,9 @@
                 <tbody>
                     <c:choose>
                         <c:when test="${not empty historyList}">
-                            <c:forEach var="h" items="${historyList}">
+                            <c:forEach var="h" items="${historyList}" varStatus="row">
                                 <tr>
-                                    <td style="font-size:0.78rem;color:var(--c-muted);">#${h.id}</td>
+                                    <td style="font-size:0.78rem;color:var(--c-muted);">${(currentPage - 1) * pageSize + row.count}</td>
                                     <td>
                                         <a href="${pageContext.request.contextPath}/manager/medicines/?action=detail&id=${h.medicineId}" class="med-link">
                                             <c:if test="${not empty h.medicineCode}">

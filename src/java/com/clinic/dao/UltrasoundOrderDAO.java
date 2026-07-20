@@ -119,31 +119,6 @@ public class UltrasoundOrderDAO {
         }
     }
 
-    public boolean markCompleted(int orderId) {
-        String sql =
-            "UPDATE o SET o.status = ? "
-            + "FROM test_orders o "
-            + "LEFT JOIN services s ON o.service_id = s.id "
-            + "LEFT JOIN service_categories c ON s.category_id = c.id "
-            + "WHERE o.id = ? AND " + WAITING_CONDITION + " AND " + ULTRASOUND_SERVICE_CONDITION;
-
-        Connection conn = null;
-        PreparedStatement ps = null;
-
-        try {
-            conn = DatabaseConfig.getConnection();
-            ps = conn.prepareStatement(sql);
-            ps.setString(1, COMPLETED_STATUS);
-            ps.setInt(2, orderId);
-            return ps.executeUpdate() > 0;
-        } catch (SQLException e) {
-            System.err.println("[UltrasoundOrderDAO] markCompleted error: " + e.getMessage());
-            throw new RuntimeException("Lỗi database khi cập nhật trạng thái siêu âm", e);
-        } finally {
-            closeResources(conn, ps, null);
-        }
-    }
-
     public UltrasoundWaitingPatient getById(int orderId) {
         String sql =
             "SELECT o.id AS order_id, o.medical_record_id, mr.appointment_id, "

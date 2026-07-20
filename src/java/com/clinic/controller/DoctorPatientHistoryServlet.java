@@ -62,6 +62,27 @@ public class DoctorPatientHistoryServlet extends HttpServlet {
             return;
         }
 
+        // Kiểm tra xem bác sĩ có quyền xem lịch sử của bệnh nhân này không
+        boolean hasAppointment = false;
+        try (Connection c = DatabaseConfig.getConnection();
+             PreparedStatement ps = c.prepareStatement(
+                 "SELECT 1 FROM appointments WHERE patient_id = ? AND doctor_id = ?")) {
+            ps.setInt(1, patientId);
+            ps.setInt(2, doctorId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    hasAppointment = true;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        if (!hasAppointment) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền xem thông tin bệnh nhân này.");
+            return;
+        }
+
         // Lịch sử tất cả hồ sơ bệnh án của bệnh nhân này (toàn hệ thống, không giới hạn bác sĩ)
         List<MedicalRecord> records = dao.getByPatientId(patientId);
 

@@ -474,7 +474,7 @@
             <table class="admin-table">
                 <thead>
                     <tr>
-                        <th style="width:50px;">ID</th>
+                        <th style="width:50px;">STT</th>
                         <th style="width:110px;">Mã DV</th>
                         <th>Tên Dịch Vụ</th>
                         <th style="width:100px;">Nhóm</th>
@@ -488,9 +488,9 @@
                 <tbody>
                     <c:choose>
                         <c:when test="${not empty services}">
-                            <c:forEach var="svc" items="${services}">
+                            <c:forEach var="svc" items="${services}" varStatus="row">
                                 <tr>
-                                    <td style="color:var(--c-muted);font-size:0.78rem;">#${svc.id}</td>
+                                    <td style="color:var(--c-muted);font-size:0.78rem;">${(currentPage - 1) * pageSize + row.count}</td>
                                     <td>
                                         <span class="svc-code-badge">
                                             ${not empty svc.serviceCode ? fn:escapeXml(svc.serviceCode) : '&mdash;'}
