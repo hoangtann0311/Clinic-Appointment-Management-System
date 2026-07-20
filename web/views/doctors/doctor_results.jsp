@@ -85,6 +85,9 @@
         <c:when test="${param.error == 'invalidOrder'}">
           <strong>Lỗi!</strong> Không tìm thấy đơn siêu âm cần xác nhận.
         </c:when>
+        <c:when test="${param.error == 'incompleteConclusion'}">
+          <strong>Cần bổ sung kết luận.</strong> Hãy ghi tối thiểu 20 ký tự, nêu nhận định và hướng dẫn phù hợp để bệnh nhân có thể hiểu.
+        </c:when>
         <c:otherwise><strong>Lỗi:</strong> Đã xảy ra sự cố. Vui lòng thử lại.</c:otherwise>
       </c:choose>
     </div>
@@ -291,12 +294,12 @@
                           <label for="doctorMsg-${r.order_id}" class="form-label fw-medium small" style="color:#92400e;">
                             <i class="bi bi-chat-text me-1"></i>Kết luận chẩn đoán lâm sàng
                           </label>
-                          <textarea id="doctorMsg-${r.order_id}" name="doctorMessage" rows="4" required
+                          <textarea id="doctorMsg-${r.order_id}" name="doctorMessage" rows="4" required minlength="20" maxlength="2000"
                                     class="form-control" style="font-size:.9rem;resize:vertical;"
-                                    placeholder="Nhập kết luận chính thức của bác sĩ tại đây...">${not empty r.ai_suggested_label ? r.ai_suggested_label : ''}</textarea>
+                                    placeholder="Ví dụ: Chưa ghi nhận dấu hiệu u xơ trên ảnh hiện tại. Tiếp tục theo dõi thai kỳ và tái khám theo lịch hẹn hoặc sớm hơn khi đau bụng/tăng ra huyết.">${not empty r.ai_suggested_label ? r.ai_suggested_label : ''}</textarea>
                           <div class="form-text" style="color:#a16207;">
                             <i class="bi bi-info-circle me-1"></i>
-                            Bạn có thể chỉnh sửa nội dung AI gợi ý bên trên hoặc tự nhập kết luận mới.
+                            Nội dung này là phiếu trả kết quả cho bệnh nhân. Hãy viết rõ nhận định, hướng dẫn theo dõi và dấu hiệu cần tái khám; AI chỉ là thông tin hỗ trợ nội bộ.
                           </div>
                         </div>
                         <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">

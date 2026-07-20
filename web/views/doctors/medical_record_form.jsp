@@ -177,8 +177,27 @@
   <c:if test="${param.success == 'requested'}">
     <div class="alert alert-success rounded-3 mb-3 d-flex align-items-center gap-2" role="alert">
       <i class="bi bi-check-circle-fill fs-5"></i>
-      <span><strong>Đã tạo chỉ định siêu âm thành công.</strong> Yêu cầu đã được chuyển đến KTV Siêu âm.</span>
+      <c:choose>
+        <c:when test="${param.billing == 'additional'}">
+          <span><strong>Đã tạo chỉ định siêu âm.</strong> Đây là dịch vụ bổ sung; yêu cầu sẽ được chuyển cho KTV sau khi hóa đơn phát sinh được thanh toán.</span>
+        </c:when>
+        <c:otherwise>
+          <span><strong>Đã tạo chỉ định siêu âm.</strong> Dịch vụ đã có trong lịch hẹn nên không phát sinh thêm chi phí.</span>
+        </c:otherwise>
+      </c:choose>
       <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Đóng"></button>
+    </div>
+  </c:if>
+  <c:if test="${param.success == 'requested' && param.billing == 'covered'}">
+    <div class="alert alert-info rounded-3 mb-3 d-flex align-items-center gap-2" role="alert">
+      <i class="bi bi-receipt-cutoff fs-5"></i>
+      <span><strong>Không phát sinh thêm chi phí.</strong> Dịch vụ siêu âm này đã nằm trong lịch hẹn và hóa đơn trước khám của bệnh nhân.</span>
+    </div>
+  </c:if>
+  <c:if test="${param.success == 'requested' && param.billing == 'additional'}">
+    <div class="alert alert-warning rounded-3 mb-3 d-flex align-items-center gap-2" role="alert">
+      <i class="bi bi-cash-coin fs-5"></i>
+      <span><strong>Đã tạo chi phí phát sinh.</strong> Đây là dịch vụ bổ sung ngoài lịch hẹn; bệnh nhân cần hoàn tất hóa đơn sau khám trước khi KTV thực hiện.</span>
     </div>
   </c:if>
   <c:if test="${param.reorderConflict == '1'}">
@@ -208,7 +227,7 @@
   </c:if>
 
   <%-- Banner --%>
-  <div class="card border-0 rounded-4 text-white mb-4" style="background:linear-gradient(135deg,#1a6b3c,#28a745);">
+  <div class="card border-0 rounded-4 text-white mb-4 doctor-record-hero">
     <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
       <div>
         <h2 class="fw-bold mb-1">

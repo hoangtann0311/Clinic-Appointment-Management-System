@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-labelledby="title desc">
+  <title id="title">Bác sĩ siêu âm CAMS</title>
+  <desc id="desc">Ảnh minh họa bác sĩ nam mặc áo blouse trắng.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e9efff"/><stop offset="1" stop-color="#b7c9f4"/></linearGradient>
+  </defs>
+  <rect width="240" height="240" rx="120" fill="url(#bg)"/>
+  <circle cx="120" cy="93" r="44" fill="#dca47f"/>
+  <path d="M76 92c-2-40 16-66 44-66 32 0 49 25 45 67-13-13-27-20-45-20-18 0-31 7-44 19Z" fill="#1f2937"/>
+  <path d="M87 86c10 10 22 16 34 16 16 0 28-7 38-17v28c0 27-17 48-38 48-19 0-34-17-34-48Z" fill="#dca47f"/>
+  <path d="M48 232c6-47 32-74 72-74s66 27 72 74" fill="#ffffff"/>
+  <path d="M84 164l36 25 36-25 23 68H61Z" fill="#2769b8"/>
+  <path d="M103 162h34l-17 27Z" fill="#e2ecff"/>
+  <path d="M87 174c8 10 13 24 14 38" fill="none" stroke="#b2c6df" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="104" cy="216" r="8" fill="#b2c6df"/>
+</svg>

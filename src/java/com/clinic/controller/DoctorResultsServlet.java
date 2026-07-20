@@ -36,6 +36,10 @@ public class DoctorResultsServlet extends HttpServlet {
             resp.sendRedirect(req.getContextPath() + "/login"); return;
         }
         User user = (User) session.getAttribute("user");
+        if (user.getRoleId() != 2) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ Bác sĩ mới được xem và xác nhận kết quả siêu âm.");
+            return;
+        }
 
         // recordId
         String ridStr = req.getParameter("recordId");
@@ -106,6 +110,9 @@ public class DoctorResultsServlet extends HttpServlet {
         }
         if (doctorMsg == null || doctorMsg.isBlank()) {
             resp.sendRedirect(req.getContextPath() + "/doctor/results?recordId=" + recordId + "&error=missingConclusion"); return;
+        }
+        if (doctorMsg.trim().length() < 20) {
+            resp.sendRedirect(req.getContextPath() + "/doctor/results?recordId=" + recordId + "&error=incompleteConclusion"); return;
         }
 
         int orderId;
@@ -192,12 +199,12 @@ public class DoctorResultsServlet extends HttpServlet {
     // ── Thông tin hồ sơ bệnh án ─────────────────────────────────────────────
     private Map<String,String> loadRecordInfo(int recordId) {
         String sql =
-            "SELECT u.full_name AS patient_name, " +
+            "SELECT p.full_name AS patient_name, " +
             "       CONVERT(varchar, a.appointment_date, 23) AS appointment_date, " +
             "       mr.final_diagnosis " +
             "FROM medical_records mr " +
             "JOIN appointments a ON a.id = mr.appointment_id " +
-            "JOIN users u ON u.id = a.patient_id " +
+            "JOIN patients p ON p.id = a.patient_id " +
             "WHERE mr.id = ?";
         Map<String,String> info = new LinkedHashMap<>();
         try (Connection c = DatabaseConfig.getConnection();

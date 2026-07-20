@@ -44,6 +44,11 @@ public class UltrasoundAnalyzeServlet extends HttpServlet {
         }
 
         try {
+            if (!orderService.isReadyForSonographer(orderId)) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN,
+                        "Chỉ định chưa đủ điều kiện thanh toán để phân tích.");
+                return;
+            }
             boolean success = orderService.runAiAnalysis(orderId, user.getId());
             if (success) {
                 response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId + "&success=analyzed");

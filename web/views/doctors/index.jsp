@@ -84,7 +84,7 @@
                             </a>
                         </div>
                         <div class="col-sm-6">
-                            <a href="#" class="text-decoration-none">
+                            <a href="${pageContext.request.contextPath}/doctor/medical-records" class="text-decoration-none">
                                 <div class="quick-link-card p-3 rounded-3 border">
                                     <i class="bi bi-journal-medical fs-4 text-success"></i>
                                     <h6 class="mt-2 mb-1">Bệnh Án</h6>
@@ -93,7 +93,7 @@
                             </a>
                         </div>
                         <div class="col-sm-6">
-                            <a href="#" class="text-decoration-none">
+                            <a href="${pageContext.request.contextPath}/doctor/prescriptions-list" class="text-decoration-none">
                                 <div class="quick-link-card p-3 rounded-3 border">
                                     <i class="bi bi-prescription2 fs-4 text-danger"></i>
                                     <h6 class="mt-2 mb-1">Kê Đơn</h6>

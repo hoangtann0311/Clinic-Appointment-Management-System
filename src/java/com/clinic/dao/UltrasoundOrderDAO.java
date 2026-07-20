@@ -41,6 +41,15 @@ public class UltrasoundOrderDAO {
         "("
         + "ISNULL(a.is_emergency, 0) = 1 "
         + "OR UPPER(ISNULL(a.status, '')) = 'EMERGENCY_SOS' "
+        + "OR ((a.service_id = o.service_id OR EXISTS ("
+        + "       SELECT 1 FROM appointment_services aps "
+        + "       WHERE aps.appointment_id = a.id AND aps.service_id = o.service_id"
+        + "    )) AND EXISTS ("
+        + "       SELECT 1 FROM invoices pre "
+        + "       WHERE pre.appointment_id = a.id "
+        + "       AND UPPER(pre.invoice_type) = 'PRE_EXAM' "
+        + "       AND UPPER(pre.status) = 'PAID'"
+        + "    )) "
         + "OR EXISTS ("
         + "  SELECT 1 FROM invoices inv "
         + "  WHERE inv.appointment_id = a.id "
@@ -155,6 +164,33 @@ public class UltrasoundOrderDAO {
         return null;
     }
 
+    /**
+     * Uses the same payment gate as the sonographer queue so a guessed order
+     * ID cannot be used to bypass payment verification. Orders are handled by
+     * the shared sonographer pool in the current data model.
+     */
+    public boolean isReadyForSonographer(int orderId) {
+        String sql = "SELECT 1 "
+                + "FROM test_orders o "
+                + "LEFT JOIN medical_records mr ON o.medical_record_id = mr.id "
+                + "LEFT JOIN appointments a ON mr.appointment_id = a.id "
+                + "LEFT JOIN services s ON o.service_id = s.id "
+                + "LEFT JOIN service_categories c ON s.category_id = c.id "
+                + "WHERE o.id = ? AND " + ULTRASOUND_SERVICE_CONDITION
+                + " AND " + PAYMENT_GATE_CONDITION;
+
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, orderId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            System.err.println("[UltrasoundOrderDAO] isReadyForSonographer error: " + e.getMessage());
+            return false;
+        }
+    }
+
     public boolean updateStatus(int orderId, String newStatus) {
         String sql = "UPDATE test_orders SET status = ? WHERE id = ?";
         Connection conn = null;
@@ -200,7 +236,6 @@ public class UltrasoundOrderDAO {
                 if (rs.next()) {
                     int orderId = rs.getInt(1);
                     // Gửi thông báo cho bệnh nhân đi siêu âm
-                    com.clinic.utils.NotificationHelper.notifyPatientForUltrasound(medicalRecordId, serviceId);
                     return orderId;
                 }
             }

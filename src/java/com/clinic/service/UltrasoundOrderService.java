@@ -61,6 +61,11 @@ public class UltrasoundOrderService {
         return ultrasoundOrderDAO.getById(orderId);
     }
 
+    /** True only after the order passes the same payment gate as the work queue. */
+    public boolean isReadyForSonographer(int orderId) {
+        return ultrasoundOrderDAO.isReadyForSonographer(orderId);
+    }
+
     /**
      * Lọc và phân trang danh sách chỉ định siêu âm cho Sonographer
      */
@@ -78,7 +83,7 @@ public class UltrasoundOrderService {
      */
     public boolean updateOrderStatus(int orderId, String targetStatus) {
         UltrasoundWaitingPatient order = ultrasoundOrderDAO.getById(orderId);
-        if (order == null) return false;
+        if (order == null || !ultrasoundOrderDAO.isReadyForSonographer(orderId)) return false;
 
         if (!checkTransition(order.getStatus(), targetStatus)) {
             System.err.println("[UltrasoundOrderService] Trạng thái chuyển đổi không hợp lệ: " + order.getStatus() + " -> " + targetStatus);
@@ -121,6 +126,9 @@ public class UltrasoundOrderService {
             return false;
         }
         UltrasoundWaitingPatient order = ultrasoundOrderDAO.getById(img.getTestOrderId());
+        if (!ultrasoundOrderDAO.isReadyForSonographer(img.getTestOrderId())) {
+            return false;
+        }
         if (order == null || (!"InProgress".equalsIgnoreCase(order.getStatus())
                 && !"Uploaded".equalsIgnoreCase(order.getStatus()))) {
             return false;
@@ -146,7 +154,7 @@ public class UltrasoundOrderService {
      */
     public boolean runAiAnalysis(int orderId, int actorUserId) {
         UltrasoundWaitingPatient order = ultrasoundOrderDAO.getById(orderId);
-        if (order == null) return false;
+        if (order == null || !ultrasoundOrderDAO.isReadyForSonographer(orderId)) return false;
 
         // Kiểm tra quy tắc chuyển trạng thái
         if (!checkTransition(order.getStatus(), "Analyzing")) {

@@ -127,7 +127,7 @@ public class PatientPregnancyResultsServlet extends HttpServlet {
             "  AND (sc.category_name LIKE N'%siêu âm%' " +
             "       OR sc.category_name LIKE N'%ultrasound%' " +
             "       OR ISNULL(s.required_room_type,'') LIKE N'%ultrasound%') " +
-            "  AND to2.status IN ('Completed','confirmed') " + // chỉ hiện kết quả đã được bác sĩ xác nhận
+            "  AND LOWER(LTRIM(RTRIM(ISNULL(to2.status, '')))) = 'confirmed' " + // only doctor-confirmed results are released to the patient
             "ORDER BY to2.created_at";
 
         List<Map<String, Object>> results = new ArrayList<>();

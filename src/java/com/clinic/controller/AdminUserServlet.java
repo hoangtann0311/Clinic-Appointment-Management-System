@@ -292,6 +292,7 @@ public class AdminUserServlet extends HttpServlet {
                         return;
                     }
 
+                    User beforeUpdate = userService.getUserById(userId);
                     Map<String, String> errors = new HashMap<>();
                     if (userService.updateUserRoleAndStatus(userId, roleId, status, email, phone, errors)) {
                         User target = userService.getUserById(userId);
@@ -301,11 +302,11 @@ public class AdminUserServlet extends HttpServlet {
 
                         // Nếu role bị thay đổi → bump global permissions version
                         // để AuthorizationFilter buộc user đó phải sync/re-login
-                        if (target != null && target.getRoleId() != roleId) {
+                        if (beforeUpdate != null && beforeUpdate.getRoleId() != roleId) {
                             com.clinic.filter.AuthorizationFilter.bumpPermissionsVersion();
                         }
                         // Nếu status bị thay đổi → cũng bump để sync
-                        if (target != null && !status.equals(target.getStatus())) {
+                        if (beforeUpdate != null && !status.equals(beforeUpdate.getStatus())) {
                             com.clinic.filter.AuthorizationFilter.bumpPermissionsVersion();
                         }
 
@@ -329,6 +330,7 @@ public class AdminUserServlet extends HttpServlet {
                 // ── Xoá mềm (soft delete) ──
                 case "delete": {
                     int userId = parseInt(req.getParameter("userId"), -1);
+                    if (rejectSelfAdministration(req, resp, userId, redirectUrl, querySuffix)) return;
                     User target = userService.getUserById(userId);
                     String userName = target != null ? target.getFullName() : "Unknown";
                     if (userService.softDeleteUser(userId)) {
@@ -343,6 +345,7 @@ public class AdminUserServlet extends HttpServlet {
                 // ── Khoá / Mở khoá (toggle status) ──
                 case "toggleStatus": {
                     int userId = parseInt(req.getParameter("userId"), -1);
+                    if (rejectSelfAdministration(req, resp, userId, redirectUrl, querySuffix)) return;
                     String newStatus = req.getParameter("newStatus");
                     User target = userService.getUserById(userId);
                     String actionLabel = "Locked".equals(newStatus) ? "Khoá" : "Mở khoá";
@@ -453,15 +456,10 @@ public class AdminUserServlet extends HttpServlet {
 
                 // ── Xoá vĩnh viễn (hard delete) ──
                 case "hardDelete": {
-                    int userId = parseInt(req.getParameter("userId"), -1);
-                    User target = userService.getUserById(userId);
-                    String userName = target != null ? target.getFullName() : ("#" + userId);
-                    if (userService.deleteUser(userId)) {
-                        logAudit(req, "HARD_DELETE_USER", "Xoá vĩnh viễn người dùng #" + userId + ": " + userName);
-                        resp.sendRedirect(redirectUrl + "?success=hardDeleted" + querySuffix);
-                    } else {
-                        resp.sendRedirect(redirectUrl + "?error=Xoá+vĩnh+viễn+thất+bại" + querySuffix);
-                    }
+                    String message = java.net.URLEncoder.encode(
+                            "Không hỗ trợ xóa vĩnh viễn tài khoản từ hệ thống. Hãy dùng xóa mềm/khóa tài khoản để bảo toàn lịch sử khám và audit log.",
+                            "UTF-8");
+                    resp.sendRedirect(redirectUrl + "?error=" + message + querySuffix);
                     return;
                 }
 
@@ -497,6 +495,20 @@ public class AdminUserServlet extends HttpServlet {
             System.err.println("[AdminUserServlet] restoreUser ERROR: " + e.getMessage());
             return false;
         }
+    }
+
+    /** Prevent an administrator from locking or deleting the active admin session. */
+    private boolean rejectSelfAdministration(HttpServletRequest req, HttpServletResponse resp,
+                                             int targetUserId, String redirectUrl,
+                                             String querySuffix) throws IOException {
+        User actor = (User) req.getSession().getAttribute("user");
+        if (actor == null || actor.getId() != targetUserId) {
+            return false;
+        }
+        String message = java.net.URLEncoder.encode(
+                "Bạn không thể khóa hoặc xóa tài khoản quản trị đang đăng nhập.", "UTF-8");
+        resp.sendRedirect(redirectUrl + "?error=" + message + querySuffix);
+        return true;
     }
 
     // ═══════════════════════════════════════════════════════════

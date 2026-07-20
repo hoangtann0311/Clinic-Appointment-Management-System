@@ -86,12 +86,26 @@ public class NotificationHelper {
     }
 
     public static void notifyPatientForUltrasound(int medicalRecordId, int serviceId) {
+        notifyPatientForUltrasound(medicalRecordId, serviceId, false);
+    }
+
+    /**
+     * Informs the patient about a new ultrasound order without implying that an
+     * unpaid additional service can already be performed.
+     */
+    public static void notifyPatientForUltrasound(int medicalRecordId, int serviceId,
+                                                  boolean requiresAdditionalPayment) {
         int patientId = getPatientUserIdByRecord(medicalRecordId);
         String serviceName = getServiceName(serviceId);
         if (patientId > 0) {
+            String message = requiresAdditionalPayment
+                    ? "Bác sĩ đã chỉ định siêu âm \"" + serviceName
+                    + "\". Đây là dịch vụ phát sinh; vui lòng hoàn tất hóa đơn trước khi đến phòng siêu âm."
+                    : "Bác sĩ đã chỉ định thực hiện siêu âm \"" + serviceName
+                    + "\". Dịch vụ đã nằm trong lịch hẹn của bạn; vui lòng đến phòng siêu âm theo hướng dẫn.";
             dao.create(patientId,
                 "📋 Chỉ định siêu âm mới",
-                "Bác sĩ đã chỉ định bạn thực hiện siêu âm \"" + serviceName + "\". Vui lòng đến phòng siêu âm để chờ thực hiện.");
+                message);
         }
     }
 

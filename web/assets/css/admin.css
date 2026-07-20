@@ -1161,3 +1161,119 @@ body.admin-login-page {
     border-left: 4px solid var(--pink-600) !important;
 }
 
+/* ============================================================
+   DOCTOR WORKSPACE
+   A restrained clinical layer over the shared CAMS rose theme.
+   ============================================================ */
+.doctor-theme .admin-main {
+    background:
+        radial-gradient(circle at 90% 0%, rgba(251, 113, 133, .10), transparent 28rem),
+        linear-gradient(180deg, #fffafb 0%, #fff7fa 100%);
+}
+
+.doctor-theme .admin-main .card {
+    border: 1px solid #f6d5e0 !important;
+    box-shadow: 0 10px 28px rgba(96, 22, 54, .07) !important;
+}
+
+.doctor-theme .admin-main .card:hover {
+    box-shadow: 0 14px 32px rgba(96, 22, 54, .10) !important;
+}
+
+.doctor-theme .admin-main .table > :not(caption) > * > * {
+    border-color: #f8dbe5;
+}
+
+.doctor-theme .admin-main .table thead th {
+    color: #9f174d;
+    background: #fff1f5;
+    font-size: .76rem;
+    font-weight: 800;
+    letter-spacing: .035em;
+    text-transform: uppercase;
+}
+
+.doctor-theme .admin-main .table tbody tr {
+    transition: background-color .18s ease;
+}
+
+.doctor-theme .admin-main .table tbody tr:hover {
+    background: #fff8fa;
+}
+
+.doctor-theme .admin-main .form-label {
+    color: #7f1d4a;
+    font-weight: 700;
+}
+
+.doctor-theme .admin-main .form-control,
+.doctor-theme .admin-main .form-select {
+    min-height: 42px;
+    border-color: #efc5d5;
+    background-color: #fffdfd;
+}
+
+.doctor-theme .admin-main .form-control::placeholder {
+    color: #b58a9b;
+}
+
+.doctor-theme .admin-main .btn {
+    border-radius: .7rem;
+    font-weight: 700;
+}
+
+.doctor-theme .admin-main .alert {
+    border-width: 1px;
+    box-shadow: 0 6px 16px rgba(96, 22, 54, .05);
+}
+
+.doctor-theme .doctor-record-hero {
+    background: linear-gradient(135deg, #9d174d 0%, #e11d70 55%, #fb7185 100%) !important;
+    box-shadow: 0 14px 32px rgba(190, 24, 93, .22) !important;
+}
+
+.doctor-theme .admin-main .quick-link-card {
+    background: #fff;
+    border-color: #f2cddd !important;
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+
+.doctor-theme .admin-main .quick-link-card:hover {
+    transform: translateY(-3px);
+    border-color: #ec7ca6 !important;
+    box-shadow: 0 12px 22px rgba(190, 24, 93, .12);
+}
+
+/* Keep Doctor page banners in one calm clinical palette. Semantic status badges
+   are intentionally excluded so warning, pending and completed states stay clear. */
+.doctor-theme .admin-main .card.bg-primary.bg-gradient,
+.doctor-theme .admin-main .card.bg-success.bg-gradient,
+.doctor-theme .admin-main .card.bg-info.bg-gradient,
+.doctor-theme .admin-main .card.bg-danger.bg-gradient {
+    background: linear-gradient(135deg, #9d174d 0%, #e11d70 58%, #fb7185 100%) !important;
+    box-shadow: 0 .65rem 1.45rem rgba(190, 24, 93, .18) !important;
+    border-color: transparent !important;
+}
+
+.doctor-theme .admin-main .obs-nav .nav-link.active {
+    color: #b10f5c;
+    border-bottom-color: #e11d68;
+    background: #fff;
+}
+
+.doctor-theme .admin-main .obs-nav .nav-link:hover:not(.active) {
+    color: #9d174d;
+    background: #fff1f6;
+}
+
+.doctor-theme .admin-main .form-control:focus,
+.doctor-theme .admin-main .form-select:focus {
+    border-color: #ec4899 !important;
+    box-shadow: 0 0 0 .22rem rgba(236, 72, 153, .16) !important;
+}
+
+@media (max-width: 767.98px) {
+    .doctor-theme .admin-main { padding: 1rem; }
+    .doctor-theme .admin-main .table { font-size: .84rem; }
+}
+

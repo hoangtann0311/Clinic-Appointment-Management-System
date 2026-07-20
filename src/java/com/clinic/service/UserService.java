@@ -150,8 +150,8 @@ public class UserService {
             }
         }
 
-        // ── Validate roleId: phải nằm trong khoảng hợp lệ (1-7) ──
-        if (roleId < 1 || roleId > 7) {
+        // ── Validate roleId: chỉ nhận 6 vai trò còn trong phạm vi hệ thống ──
+        if (!isSupportedRoleId(roleId)) {
             errors.put("roleId", "Vai trò được chọn không hợp lệ (ID=" + roleId + "). Vui lòng chọn vai trò khác.");
             return false;
         }
@@ -210,6 +210,12 @@ public class UserService {
     /** Role ID hằng số — đồng bộ với seed data roles */
     private static final int ROLE_DOCTOR  = 2;
     private static final int ROLE_PATIENT = 5;
+    private static final int MAX_SUPPORTED_ROLE_ID = 6;
+
+    /** The Laboratory Technician role was removed from the product scope. */
+    private static boolean isSupportedRoleId(int roleId) {
+        return roleId >= 1 && roleId <= MAX_SUPPORTED_ROLE_ID;
+    }
 
     /**
      * Khi tạo user với role tương ứng, tự động insert vào bảng con
@@ -380,8 +386,8 @@ public class UserService {
     public boolean updateUserRoleAndStatus(int userId, int roleId, String status,
                                             String email, String phone,
                                             Map<String, String> errors) {
-        // Validate roleId: phải nằm trong khoảng hợp lệ (1-7)
-        if (roleId < 1 || roleId > 7) {
+        // Validate roleId: Laboratory Technician (7) is no longer supported.
+        if (!isSupportedRoleId(roleId)) {
             errors.put("roleId", "Vai trò được chọn không hợp lệ.");
             return false;
         }
@@ -422,6 +428,13 @@ public class UserService {
         User u = userDAO.findById(userId);
         if (u == null) {
             errors.put("general", "Người dùng không tồn tại hoặc đã bị xóa.");
+            return false;
+        }
+
+        // A role change can orphan a patient/doctor profile and historical clinical
+        // records. Create a new account instead; the existing one may be locked.
+        if (u.getRoleId() != roleId) {
+            errors.put("roleId", "Không thể đổi trực tiếp vai trò của tài khoản đang tồn tại. Hãy khóa tài khoản cũ và tạo tài khoản mới đúng vai trò để bảo toàn hồ sơ nghiệp vụ.");
             return false;
         }
 

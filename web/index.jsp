@@ -258,7 +258,10 @@
                 <div class="col-md-6 col-lg-3 scroll-reveal reveal-delay-1">
                     <div class="doctor-card">
                         <div class="doctor-avatar-wrapper">
-                            <div class="doctor-avatar">A</div>
+                            <div class="doctor-avatar">
+                                <img src="${pageContext.request.contextPath}/assets/images/doctor-obgyn-01.svg" alt="Ảnh minh họa bác sĩ sản phụ khoa" onerror="this.classList.add('is-missing'); this.style.display='none';">
+                                <span class="doctor-avatar-fallback" aria-label="Ảnh đại diện mặc định"><i class="bi bi-person-badge"></i></span>
+                            </div>
                         </div>
                         <h5 class="doctor-name">ThS.BS Nguyễn Thị Anh</h5>
                         <span class="doctor-role">Trưởng khoa Sản Phụ Khoa</span>
@@ -269,7 +272,10 @@
                 <div class="col-md-6 col-lg-3 scroll-reveal reveal-delay-2">
                     <div class="doctor-card">
                         <div class="doctor-avatar-wrapper">
-                            <div class="doctor-avatar">B</div>
+                            <div class="doctor-avatar">
+                                <img src="${pageContext.request.contextPath}/assets/images/doctor-obgyn-02.svg" alt="Ảnh minh họa bác sĩ siêu âm" onerror="this.classList.add('is-missing'); this.style.display='none';">
+                                <span class="doctor-avatar-fallback" aria-label="Ảnh đại diện mặc định"><i class="bi bi-person-badge"></i></span>
+                            </div>
                         </div>
                         <h5 class="doctor-name">BS CKI. Trần Văn Bình</h5>
                         <span class="doctor-role">Chuyên Gia Siêu Âm Chẩn Đoán</span>
@@ -280,7 +286,10 @@
                 <div class="col-md-6 col-lg-3 scroll-reveal reveal-delay-3">
                     <div class="doctor-card">
                         <div class="doctor-avatar-wrapper">
-                            <div class="doctor-avatar">C</div>
+                            <div class="doctor-avatar">
+                                <img src="${pageContext.request.contextPath}/assets/images/doctor-obgyn-03.svg" alt="Ảnh minh họa bác sĩ thai kỳ" onerror="this.classList.add('is-missing'); this.style.display='none';">
+                                <span class="doctor-avatar-fallback" aria-label="Ảnh đại diện mặc định"><i class="bi bi-person-badge"></i></span>
+                            </div>
                         </div>
                         <h5 class="doctor-name">ThS.BS Lê Hoài Chi</h5>
                         <span class="doctor-role">Bác Sĩ Điều Trị Cao Cấp</span>

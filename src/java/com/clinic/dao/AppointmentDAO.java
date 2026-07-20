@@ -177,6 +177,29 @@ public class AppointmentDAO {
     }
 
     /**
+     * Checks whether a service was selected when the appointment was booked.
+     * Both current appointment_services rows and legacy appointments.service_id
+     * rows are supported.
+     */
+    public boolean hasBookedService(int appointmentId, int serviceId) {
+        String sql = "SELECT 1 FROM appointments a WHERE a.id = ? "
+                + "AND (a.service_id = ? OR EXISTS ("
+                + "SELECT 1 FROM appointment_services aps "
+                + "WHERE aps.appointment_id = a.id AND aps.service_id = ?))";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, appointmentId);
+            ps.setInt(2, serviceId);
+            ps.setInt(3, serviceId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Database error while checking booked service", e);
+        }
+    }
+
+    /**
      * Creates a reception booking and holds its selected slot in one database
      * transaction. This prevents two concurrent reception requests from both
      * creating appointments for the same available slot.

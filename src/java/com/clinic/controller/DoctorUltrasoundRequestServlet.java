@@ -4,6 +4,7 @@ import com.clinic.dao.MedicalRecordDAO;
 import com.clinic.dao.InvoiceDAO;
 import com.clinic.dao.ServiceDAO;
 import com.clinic.dao.DoctorDAO;
+import com.clinic.dao.AppointmentDAO;
 import com.clinic.model.Doctor;
 import com.clinic.model.MedicalRecord;
 import com.clinic.model.Invoice;
@@ -33,6 +34,7 @@ public class DoctorUltrasoundRequestServlet extends HttpServlet {
     private final InvoiceDAO invoiceDAO = new InvoiceDAO();
     private final ServiceDAO serviceDAO = new ServiceDAO();
     private final DoctorDAO doctorDAO = new DoctorDAO();
+    private final AppointmentDAO appointmentDAO = new AppointmentDAO();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -91,6 +93,10 @@ public class DoctorUltrasoundRequestServlet extends HttpServlet {
 
             // 1. Kiểm tra / tạo hồ sơ bệnh án
             MedicalRecord record = medicalRecordDAO.getByAppointmentId(apptId);
+            // A service selected during booking belongs to PRE_EXAM and must
+            // not be charged again when the doctor creates its clinical order.
+            boolean includedInBookedAppointment = appointmentDAO.hasBookedService(apptId, serviceId);
+
             int recordId;
             if (record == null) {
                 MedicalRecord draft = new MedicalRecord();
@@ -121,34 +127,40 @@ public class DoctorUltrasoundRequestServlet extends HttpServlet {
                 throw new Exception("Không thể tạo yêu cầu siêu âm.");
             }
 
-            // Bắn thông báo chỉ định siêu âm mới cho bệnh nhân
+            // 3. Tạo hóa đơn POST_EXAM only when this is an additional service.
+            String billing = "covered";
+            if (!includedInBookedAppointment) {
+                ServiceItem service = serviceDAO.findServiceById(serviceId);
+                BigDecimal price = service != null ? BigDecimal.valueOf(service.getPrice()) : new BigDecimal("250000.00");
+
+            // Kiểm tra nếu đã có POST_EXAM invoice chưa thanh toán → cộng dồn tiền
+                Invoice existingPostInvoice = invoiceDAO.getByAppointmentIdAndType(apptId, "POST_EXAM");
+                if (existingPostInvoice != null && "Unpaid".equalsIgnoreCase(existingPostInvoice.getStatus())) {
+                // Cộng dồn tiền dịch vụ mới vào hóa đơn cũ
+                    invoiceDAO.addAmountToInvoice(existingPostInvoice.getId(), price);
+                } else {
+                // Tạo hóa đơn POST_EXAM mới
+                    Invoice invoice = new Invoice();
+                    invoice.setAppointmentId(apptId);
+                    invoice.setTotalAmount(price);
+                    invoice.setStatus("Unpaid");
+                    invoice.setInvoiceType("POST_EXAM");
+                    invoice.setCreatedAt(new java.sql.Timestamp(System.currentTimeMillis()));
+                    invoiceDAO.insert(invoice);
+                }
+                billing = "additional";
+            }
+
+            // Send a patient-safe message only after the applicable billing path is known.
             try {
-                com.clinic.utils.NotificationHelper.notifyPatientForUltrasound(recordId, serviceId);
+                com.clinic.utils.NotificationHelper.notifyPatientForUltrasound(
+                        recordId, serviceId, "additional".equals(billing));
             } catch (Exception ex) {
                 System.err.println("[DoctorUltrasoundRequestServlet] Gửi thông báo chỉ định siêu âm thất bại: " + ex.getMessage());
             }
 
-            // 3. Tự động cập nhật / tạo hóa đơn POST_EXAM cho dịch vụ chỉ định
-            ServiceItem service = serviceDAO.findServiceById(serviceId);
-            BigDecimal price = service != null ? BigDecimal.valueOf(service.getPrice()) : new BigDecimal("250000.00");
-
-            // Kiểm tra nếu đã có POST_EXAM invoice chưa thanh toán → cộng dồn tiền
-            Invoice existingPostInvoice = invoiceDAO.getByAppointmentIdAndType(apptId, "POST_EXAM");
-            if (existingPostInvoice != null && "Unpaid".equalsIgnoreCase(existingPostInvoice.getStatus())) {
-                // Cộng dồn tiền dịch vụ mới vào hóa đơn cũ
-                invoiceDAO.addAmountToInvoice(existingPostInvoice.getId(), price);
-            } else {
-                // Tạo hóa đơn POST_EXAM mới
-                Invoice invoice = new Invoice();
-                invoice.setAppointmentId(apptId);
-                invoice.setTotalAmount(price);
-                invoice.setStatus("Unpaid");
-                invoice.setInvoiceType("POST_EXAM");
-                invoice.setCreatedAt(new java.sql.Timestamp(System.currentTimeMillis()));
-                invoiceDAO.insert(invoice);
-            }
-
-            response.sendRedirect(request.getContextPath() + "/doctor/medical-records?apptId=" + apptId + "&success=requested");
+            response.sendRedirect(request.getContextPath() + "/doctor/medical-records?apptId=" + apptId
+                    + "&success=requested&billing=" + billing);
 
         } catch (Exception e) {
             e.printStackTrace();

@@ -53,6 +53,12 @@ public class UltrasoundDetailServlet extends HttpServlet {
         }
 
         // Load danh sách ảnh siêu âm đã upload
+        if (!orderService.isReadyForSonographer(orderId)) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN,
+                    "Chỉ định chưa đủ điều kiện thanh toán để xử lý.");
+            return;
+        }
+
         List<UltrasoundImage> images = orderService.getUltrasoundImages(orderId);
         
         // Load kết quả phân tích AI nếu có
@@ -84,6 +90,12 @@ public class UltrasoundDetailServlet extends HttpServlet {
 
         if (!"start".equalsIgnoreCase(request.getParameter("action"))) {
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Thao tác không hợp lệ.");
+            return;
+        }
+
+        if (!orderService.isReadyForSonographer(orderId)) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN,
+                    "Chỉ định chưa đủ điều kiện thanh toán để xử lý.");
             return;
         }
 

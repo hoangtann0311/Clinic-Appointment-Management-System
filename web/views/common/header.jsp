@@ -19,7 +19,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800;900&display=swap"
           rel="stylesheet">
     <!-- Custom CSS -->
-    <link href="${pageContext.request.contextPath}/assets/css/style.css"
+    <link href="${pageContext.request.contextPath}/assets/css/style.css?v=103"
           rel="stylesheet">
     <style>
         :root {
@@ -61,8 +61,8 @@
 <c:choose>
     <c:when test="${not empty sessionScope.user && (sessionScope.user.roleId == 2 || sessionScope.user.roleId == 6)}">
         <!-- Rose Pink Theme Header/Sidebar for Doctor (2) and Sonographer (6) -->
-        <link href="${pageContext.request.contextPath}/assets/css/admin.css" rel="stylesheet">
-        <body class="admin-body">
+        <link href="${pageContext.request.contextPath}/assets/css/admin.css?v=103" rel="stylesheet">
+        <body class="admin-body ${sessionScope.user.roleId == 2 ? 'doctor-theme' : 'sonographer-theme'}">
         
         <%-- TOP BAR --%>
         <nav class="admin-topbar">

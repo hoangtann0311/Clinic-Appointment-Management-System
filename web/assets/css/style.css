@@ -664,6 +664,27 @@ a, .btn, .quick-link-card, .form-control, .form-select {
     justify-content: center;
     border: 4px solid #ffffff;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    position: relative;
+}
+.doctor-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.doctor-avatar-fallback {
+    display: none;
+    position: absolute;
+    inset: 0;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--brand-pink-100) 0%, var(--brand-pink-50) 100%);
+    color: var(--brand-pink-600);
+    font-size: 2.5rem;
+}
+.doctor-avatar img.is-missing + .doctor-avatar-fallback {
+    display: flex;
 }
 .doctor-name {
     font-family: var(--font-heading);
@@ -773,6 +794,34 @@ a, .btn, .quick-link-card, .form-control, .form-select {
     display: flex;
     background: #ffffff;
     align-items: stretch;
+    position: relative;
+}
+.auth-home-link {
+    position: absolute;
+    z-index: 20;
+    top: 2rem;
+    left: 2rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.72rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 999px;
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    font-size: 0.88rem;
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: 0 8px 22px rgba(76, 5, 25, 0.16);
+    transition: transform .2s ease, background-color .2s ease, box-shadow .2s ease;
+}
+.auth-home-link:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.22);
+    transform: translateX(-2px);
+    box-shadow: 0 12px 26px rgba(76, 5, 25, 0.24);
 }
 
 /* Left Brand Panel (50% on desktop) */
@@ -1023,10 +1072,57 @@ a, .btn, .quick-link-card, .form-control, .form-select {
     .auth-split-left {
         display: none; /* Hide branding panel on smaller screens */
     }
+    .auth-home-link {
+        color: var(--brand-pink-700);
+        border-color: var(--brand-pink-200);
+        background: #ffffff;
+        box-shadow: 0 4px 16px rgba(136, 19, 55, .1);
+        top: 1.25rem;
+        left: 1.25rem;
+    }
+    .auth-home-link:hover {
+        color: var(--brand-pink-700);
+        background: var(--brand-pink-50);
+    }
     .auth-split-right {
         height: auto;
         overflow: visible;
         padding: 4rem 1.5rem;
     }
+}
+
+/* Patient-facing ultrasound report: clinical conclusion first, never raw AI metrics. */
+.patient-ultrasound-result .col-md-5 > .row > .col-6:nth-child(2),
+.patient-ultrasound-result .patient-ai-internal,
+.patient-ultrasound-result .col-md-7 .rounded-3 > .fw-bold.small.mb-2.text-primary,
+.patient-ultrasound-result .col-md-7 .border-top {
+    display: none;
+}
+
+.patient-ultrasound-result .col-md-5 > .row > .col-6:first-child {
+    flex: 0 0 100%;
+    max-width: 100%;
+}
+
+.patient-ultrasound-result .col-md-5 img {
+    height: 240px !important;
+    object-fit: contain !important;
+    background: #1d1020;
+}
+
+.patient-report-title {
+    color: var(--c-primary, #c2185b);
+    font-size: .92rem;
+}
+
+.patient-result-pending {
+    border: 1px dashed #f3b5cf;
+    background: linear-gradient(135deg, #fff8fb, #fff1f6);
+    color: #725364;
+}
+
+.patient-result-pending i {
+    color: #d81b60;
+    font-size: 1.55rem;
 }
 

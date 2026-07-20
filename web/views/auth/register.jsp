@@ -18,12 +18,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=Inter:wght@400;600;700&display=swap"
           rel="stylesheet">
     <!-- Custom CSS -->
-    <link href="${pageContext.request.contextPath}/assets/css/style.css?v=101" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/style.css?v=102" rel="stylesheet">
     
 </head>
 <body class="register-page">
 
 <div class="auth-split-wrapper w-100">
+    <a class="auth-home-link" href="${pageContext.request.contextPath}/" aria-label="Quay về trang chủ CAMS">
+        <i class="bi bi-arrow-left"></i><span>Quay lại trang chủ</span>
+    </a>
     <%-- ==================== LEFT: Brand Panel ==================== --%>
     <div class="auth-split-left">
         <div class="auth-glow-blob auth-glow-blob-1"></div>

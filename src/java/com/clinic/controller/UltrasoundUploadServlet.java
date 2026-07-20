@@ -64,6 +64,12 @@ public class UltrasoundUploadServlet extends HttpServlet {
             return;
         }
 
+        if (!orderService.isReadyForSonographer(orderId)) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN,
+                    "Chỉ định chưa đủ điều kiện thanh toán để tải ảnh.");
+            return;
+        }
+
         if (!"InProgress".equalsIgnoreCase(order.getStatus()) && !"Uploaded".equalsIgnoreCase(order.getStatus())) {
             response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId 
                     + "&error=" + java.net.URLEncoder.encode("Chỉ có thể tải ảnh lên khi trạng thái là Đang thực hiện (InProgress) hoặc Đã tải ảnh (Uploaded).", "UTF-8"));
