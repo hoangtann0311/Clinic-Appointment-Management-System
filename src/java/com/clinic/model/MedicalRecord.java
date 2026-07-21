@@ -53,6 +53,7 @@ public class MedicalRecord {
     private String    status;   // 'draft' = đang chờ XN, 'final' = hoàn tất
 
     // ── Trường JOIN (không lưu DB) ──────────────────────────────────────────
+    private int     patientId;
     private String  patientName;
     private String  appointmentDate;
     private String  timeSlot;
@@ -155,6 +156,9 @@ public class MedicalRecord {
     public void setStatus(String status) { this.status = status; }
     public boolean isDraft()  { return "draft".equals(status); }
     public boolean isFinal()  { return status == null || "final".equals(status); }
+
+    public int getPatientId() { return patientId; }
+    public void setPatientId(int patientId) { this.patientId = patientId; }
 
     public String getPatientName() { return patientName; }
     public void setPatientName(String v) { this.patientName = v; }

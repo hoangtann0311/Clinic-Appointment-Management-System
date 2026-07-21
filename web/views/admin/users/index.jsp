@@ -732,6 +732,30 @@
                                 <option value="Locked" ${formStatus eq 'Locked' ? 'selected' : ''}>Đã khoá</option>
                             </select>
                         </div>
+                        <div class="col-12 doctor-fields" id="addDoctorFields" style="display: none;">
+                            <hr class="my-2 text-muted">
+                            <h6 class="fw-bold text-primary mb-3"><i class="bi bi-hospital me-1"></i>Hồ sơ Bác sĩ (Bắt buộc khi chọn role Doctor)</h6>
+                            <div class="row g-3">
+                                <div class="col-md-5">
+                                    <label class="form-label fw-semibold">Chuyên khoa <span class="text-danger">*</span></label>
+                                    <input type="text" name="specialization" class="form-control ${not empty errors['specialization'] ? 'is-invalid' : ''}" placeholder="VD: Sản phụ khoa / Siêu âm thai" value="${fn:escapeXml(param.specialization)}">
+                                    <c:if test="${not empty errors['specialization']}">
+                                        <div class="invalid-feedback">${errors['specialization']}</div>
+                                    </c:if>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Bằng cấp / Học vị</label>
+                                    <input type="text" name="degree" class="form-control" placeholder="VD: BS. CKI / Thạc sĩ" value="${fn:escapeXml(param.degree)}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">Số năm kinh nghiệm</label>
+                                    <input type="number" name="experienceYears" class="form-control ${not empty errors['experienceYears'] ? 'is-invalid' : ''}" min="0" placeholder="VD: 5" value="${fn:escapeXml(param.experienceYears)}">
+                                    <c:if test="${not empty errors['experienceYears']}">
+                                        <div class="invalid-feedback">${errors['experienceYears']}</div>
+                                    </c:if>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -835,6 +859,30 @@
                             <c:if test="${not empty editErrors['status']}">
                                 <div class="invalid-feedback">${editErrors['status']}</div>
                             </c:if>
+                        </div>
+                        <div class="col-12 doctor-fields" id="editDoctorFields" style="display: none;">
+                            <hr class="my-2 text-muted">
+                            <h6 class="fw-bold text-primary mb-3"><i class="bi bi-hospital me-1"></i>Hồ sơ Bác sĩ (Bắt buộc khi chọn role Doctor)</h6>
+                            <div class="row g-3">
+                                <div class="col-md-5">
+                                    <label class="form-label fw-semibold">Chuyên khoa <span class="text-danger">*</span></label>
+                                    <input type="text" name="specialization" id="editSpecialization" class="form-control ${not empty editErrors['specialization'] ? 'is-invalid' : ''}" placeholder="VD: Sản phụ khoa / Siêu âm thai" value="${fn:escapeXml(param.specialization)}">
+                                    <c:if test="${not empty editErrors['specialization']}">
+                                        <div class="invalid-feedback">${editErrors['specialization']}</div>
+                                    </c:if>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Bằng cấp / Học vị</label>
+                                    <input type="text" name="degree" id="editDegree" class="form-control" placeholder="VD: BS. CKI / Thạc sĩ" value="${fn:escapeXml(param.degree)}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">Số năm kinh nghiệm</label>
+                                    <input type="number" name="experienceYears" id="editExperienceYears" class="form-control ${not empty editErrors['experienceYears'] ? 'is-invalid' : ''}" min="0" placeholder="VD: 5" value="${fn:escapeXml(param.experienceYears)}">
+                                    <c:if test="${not empty editErrors['experienceYears']}">
+                                        <div class="invalid-feedback">${editErrors['experienceYears']}</div>
+                                    </c:if>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -968,6 +1016,30 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
     }
 })();
 
+// ── Doctor fields toggle helper ──
+function toggleDoctorFields() {
+    var addRoleSelect = document.querySelector('#addUserModal select[name="roleId"]');
+    var addDoctorFields = document.getElementById('addDoctorFields');
+    if (addRoleSelect && addDoctorFields) {
+        addDoctorFields.style.display = (addRoleSelect.value == '2') ? 'block' : 'none';
+    }
+
+    var editRoleSelect = document.getElementById('editRoleId');
+    var editDoctorFields = document.getElementById('editDoctorFields');
+    if (editRoleSelect && editDoctorFields) {
+        editDoctorFields.style.display = (editRoleSelect.value == '2') ? 'block' : 'none';
+    }
+}
+document.addEventListener('DOMContentLoaded', function() {
+    var addRoleSelect = document.querySelector('#addUserModal select[name="roleId"]');
+    if (addRoleSelect) addRoleSelect.addEventListener('change', toggleDoctorFields);
+
+    var editRoleSelect = document.getElementById('editRoleId');
+    if (editRoleSelect) editRoleSelect.addEventListener('change', toggleDoctorFields);
+
+    toggleDoctorFields();
+});
+
 // ── Edit modal helper ──
 function openEditModal(id, fullName, email, phone, roleId, status) {
     document.getElementById('editUserId').value = id;
@@ -977,6 +1049,7 @@ function openEditModal(id, fullName, email, phone, roleId, status) {
     document.getElementById('editRoleId').value = roleId;
     document.getElementById('editStatus').value = status;
 
+    toggleDoctorFields();
     new bootstrap.Modal(document.getElementById('editUserModal')).show();
 }
 

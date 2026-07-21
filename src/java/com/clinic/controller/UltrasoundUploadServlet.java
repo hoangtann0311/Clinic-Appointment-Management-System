@@ -64,9 +64,9 @@ public class UltrasoundUploadServlet extends HttpServlet {
             return;
         }
 
-        if (!orderService.isReadyForSonographer(orderId)) {
+        if (!orderService.isReadyForSonographer(orderId) || !orderService.checkSonographerOwnership(orderId, user.getId())) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN,
-                    "Chỉ định chưa đủ điều kiện thanh toán để tải ảnh.");
+                    "Bạn không có quyền tải ảnh cho ca siêu âm này (Đã được phụ trách bởi KTV khác).");
             return;
         }
 
@@ -116,6 +116,20 @@ public class UltrasoundUploadServlet extends HttpServlet {
                         return;
                     }
 
+                    // Kiểm tra nội dung file thực sự là ảnh (chống giả mạo đuôi file)
+                    try (java.io.InputStream is = part.getInputStream()) {
+                        java.awt.image.BufferedImage imgCheck = javax.imageio.ImageIO.read(is);
+                        if (imgCheck == null) {
+                            response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId 
+                                    + "&error=" + java.net.URLEncoder.encode("Nội dung file tải lên không phải là hình ảnh hợp lệ.", "UTF-8"));
+                            return;
+                        }
+                    } catch (Exception ex) {
+                        response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId 
+                                + "&error=" + java.net.URLEncoder.encode("Không thể đọc định dạng hình ảnh.", "UTF-8"));
+                        return;
+                    }
+
                     // Kiểm tra kích thước file
                     if (part.getSize() > AppConfig.getMaxFileSize()) {
                         response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId 
@@ -141,9 +155,19 @@ public class UltrasoundUploadServlet extends HttpServlet {
                     }
 
                     // Tạo tên file ngẫu nhiên để tránh trùng
-                    String extension = originalFileName.substring(originalFileName.lastIndexOf("."));
+                    String extension = originalFileName.lastIndexOf(".") >= 0 ? originalFileName.substring(originalFileName.lastIndexOf(".")) : ".jpg";
                     String storedFileName = UUID.randomUUID().toString() + extension;
-                    String filePath = uploadPath + File.separator + storedFileName;
+                    File targetFile = new File(uploadPath, storedFileName);
+
+                    // Kiểm tra chống Path Traversal
+                    File canonicalDir = new File(uploadPath).getCanonicalFile();
+                    if (!targetFile.getCanonicalFile().getPath().startsWith(canonicalDir.getPath())) {
+                        response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId 
+                                + "&error=" + java.net.URLEncoder.encode("Đường dẫn file không hợp lệ (Path Traversal).", "UTF-8"));
+                        return;
+                    }
+
+                    String filePath = targetFile.getAbsolutePath();
                     String webPath = relativeUploadDir + "/" + storedFileName;
 
                     // Lưu file lên disk

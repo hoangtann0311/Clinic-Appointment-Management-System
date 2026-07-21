@@ -112,9 +112,16 @@ public class DoctorUltrasoundRequestServlet extends HttpServlet {
                 recordId = record.getId();
             }
 
-            // 2. Tạo chỉ định siêu âm trong test_orders
-            int orderId = orderService.createUltrasoundRequest(recordId, doctor.getId(), serviceId,
-                    forceReorder, reorderReason);
+            java.math.BigDecimal price = null;
+            if (!includedInBookedAppointment) {
+                ServiceItem service = serviceDAO.findServiceById(serviceId);
+                price = service != null ? java.math.BigDecimal.valueOf(service.getPrice()) : new java.math.BigDecimal("250000.00");
+            }
+
+            // 2 & 3. Tạo chỉ định siêu âm và hóa đơn POST_EXAM trong cùng 1 database Transaction
+            int orderId = orderService.createUltrasoundRequestInTransaction(apptId, recordId, doctor.getId(), serviceId,
+                    includedInBookedAppointment, price, reorderReason);
+
             if (orderId == UltrasoundOrderService.ACTIVE_ORDER_EXISTS) {
                 ServiceItem existingService = serviceDAO.findServiceById(serviceId);
                 String serviceName = existingService != null ? existingService.getServiceName() : "dịch vụ đã chọn";
@@ -124,32 +131,10 @@ public class DoctorUltrasoundRequestServlet extends HttpServlet {
                 return;
             }
             if (orderId <= 0) {
-                throw new Exception("Không thể tạo yêu cầu siêu âm.");
+                throw new Exception("Không thể tạo yêu cầu siêu âm và hóa đơn.");
             }
 
-            // 3. Tạo hóa đơn POST_EXAM only when this is an additional service.
-            String billing = "covered";
-            if (!includedInBookedAppointment) {
-                ServiceItem service = serviceDAO.findServiceById(serviceId);
-                BigDecimal price = service != null ? BigDecimal.valueOf(service.getPrice()) : new BigDecimal("250000.00");
-
-            // Kiểm tra nếu đã có POST_EXAM invoice chưa thanh toán → cộng dồn tiền
-                Invoice existingPostInvoice = invoiceDAO.getByAppointmentIdAndType(apptId, "POST_EXAM");
-                if (existingPostInvoice != null && "Unpaid".equalsIgnoreCase(existingPostInvoice.getStatus())) {
-                // Cộng dồn tiền dịch vụ mới vào hóa đơn cũ
-                    invoiceDAO.addAmountToInvoice(existingPostInvoice.getId(), price);
-                } else {
-                // Tạo hóa đơn POST_EXAM mới
-                    Invoice invoice = new Invoice();
-                    invoice.setAppointmentId(apptId);
-                    invoice.setTotalAmount(price);
-                    invoice.setStatus("Unpaid");
-                    invoice.setInvoiceType("POST_EXAM");
-                    invoice.setCreatedAt(new java.sql.Timestamp(System.currentTimeMillis()));
-                    invoiceDAO.insert(invoice);
-                }
-                billing = "additional";
-            }
+            String billing = includedInBookedAppointment ? "covered" : "additional";
 
             // Send a patient-safe message only after the applicable billing path is known.
             try {

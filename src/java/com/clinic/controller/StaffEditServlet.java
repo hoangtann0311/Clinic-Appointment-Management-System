@@ -59,7 +59,11 @@ public class StaffEditServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        if (!requireReceptionAccess(req, resp)) return;
+        User user = (User) req.getSession().getAttribute("user");
+        if (user == null || user.getRoleId() != 4) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Thao tác chỉnh sửa tiếp đón chỉ dành cho nhân viên Lễ tân (Staff).");
+            return;
+        }
         req.setCharacterEncoding("UTF-8");
 
         String idStr = req.getParameter("id");
@@ -78,7 +82,6 @@ public class StaffEditServlet extends HttpServlet {
             String transactionCode = req.getParameter("transactionCode");
             String paymentNote = req.getParameter("paymentNote");
 
-            User user = (User) req.getSession().getAttribute("user");
             int userId = user != null ? user.getId() : 0;
 
             Invoice preInvoice = new com.clinic.dao.InvoiceDAO().getByAppointmentIdAndType(id, "PRE_EXAM");
@@ -100,7 +103,6 @@ public class StaffEditServlet extends HttpServlet {
             String rejectReason = req.getParameter("rejectReason");
             String invoiceIdParam = req.getParameter("invoiceId");
 
-            User user = (User) req.getSession().getAttribute("user");
             int userId = user != null ? user.getId() : 0;
 
             Invoice targetInvoice;

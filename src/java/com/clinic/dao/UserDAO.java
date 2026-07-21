@@ -97,7 +97,6 @@ public class UserDAO {
                 + "verification_token, is_verified, google_id, auth_provider, is_deleted, created_at "
                 + "FROM users WHERE username = ? AND (is_deleted = 0 OR is_deleted IS NULL)";
         } else {
-            // If username doesn't exist, this might still fail, but we try anyway.
             sql = "SELECT id, full_name, " + DECRYPT_EMAIL + ", password_hash, "
                 + DECRYPT_PHONE + ", role_id, status "
                 + "FROM users WHERE username = ?";
@@ -117,8 +116,34 @@ public class UserDAO {
                 return mapRowToUser(rs);
             }
         } catch (SQLException e) {
-            System.err.println("Lỗi khi tìm user theo username: " + e.getMessage());
-            throw new RuntimeException("Lỗi database khi tìm user theo username", e);
+            System.err.println("[UserDAO] Lỗi khi tìm user theo username với mã hoá: " + e.getMessage());
+            return findByUsernamePlaintext(username, fullColumns);
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return null;
+    }
+
+    private User findByUsernamePlaintext(String username, boolean fullColumns) {
+        String sql = fullColumns
+            ? "SELECT id, full_name, email, username, password_hash, phone, role_id, status, "
+              + "verification_token, is_verified, google_id, auth_provider, is_deleted, created_at "
+              + "FROM users WHERE username = ? AND (is_deleted = 0 OR is_deleted IS NULL)"
+            : "SELECT id, full_name, email, username, password_hash, phone, role_id, status "
+              + "FROM users WHERE username = ?";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, username);
+            rs = ps.executeQuery();
+            if (rs.next()) {
+                return mapRowToUser(rs);
+            }
+        } catch (SQLException e) {
+            System.err.println("[UserDAO] Lỗi khi tìm user theo username plaintext: " + e.getMessage());
         } finally {
             closeResources(conn, ps, rs);
         }
@@ -166,8 +191,35 @@ public class UserDAO {
                 return mapRowToUser(rs);
             }
         } catch (SQLException e) {
-            System.err.println("Lỗi khi tìm user theo email: " + e.getMessage());
-            throw new RuntimeException("Lỗi database khi tìm user", e);
+            System.err.println("[UserDAO] Lỗi khi tìm user theo email với mã hoá: " + e.getMessage());
+            return findByEmailPlaintext(email, fullColumns);
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return null;
+    }
+
+    private User findByEmailPlaintext(String email, boolean fullColumns) {
+        String sql = fullColumns
+            ? "SELECT id, full_name, email, username, password_hash, phone, role_id, status, "
+              + "verification_token, is_verified, google_id, auth_provider, is_deleted, created_at "
+              + "FROM users WHERE (email = ? OR username = ?) AND (is_deleted = 0 OR is_deleted IS NULL)"
+            : "SELECT id, full_name, email, username, password_hash, phone, role_id, status "
+              + "FROM users WHERE (email = ? OR username = ?)";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, email);
+            ps.setString(2, email);
+            rs = ps.executeQuery();
+            if (rs.next()) {
+                return mapRowToUser(rs);
+            }
+        } catch (SQLException e) {
+            System.err.println("[UserDAO] Lỗi khi tìm user theo email plaintext: " + e.getMessage());
         } finally {
             closeResources(conn, ps, rs);
         }
@@ -220,6 +272,56 @@ public class UserDAO {
             throw new RuntimeException("Lỗi database khi thêm user", e);
         } finally {
             closeResources(conn, ps, rs);
+        }
+    }
+
+    /**
+     * Thêm user mới sử dụng connection từ transaction bên ngoài truyền vào.
+     */
+    public int insert(Connection conn, User user) throws SQLException {
+        String sql = "INSERT INTO users (full_name, email, username, password_hash, phone, role_id, status, "
+                   + "verification_token, is_verified, google_id, auth_provider, is_deleted, created_at) "
+                   + "VALUES (?, " + ENCRYPT_EMAIL_PARAM + ", ?, ?, " + ENCRYPT_PHONE_PARAM
+                   + ", ?, ?, ?, ?, ?, ?, 0, GETDATE())";
+
+        try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setString(1, user.getFullName());
+            ps.setString(2, user.getEmail());
+            ps.setString(3, user.getUsername());
+            ps.setString(4, user.getPasswordHash());
+            ps.setString(5, user.getPhone());
+            ps.setInt(6, user.getRoleId());
+            ps.setString(7, user.getStatus());
+            ps.setString(8, user.getVerificationToken());
+            ps.setBoolean(9, user.isVerified());
+            ps.setString(10, user.getGoogleId());
+            ps.setString(11, user.getAuthProvider());
+
+            int affectedRows = ps.executeUpdate();
+            if (affectedRows == 0) {
+                throw new SQLException("Thêm user thất bại - không có dòng nào được tạo");
+            }
+
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+            throw new SQLException("Thêm user thất bại - không lấy được ID");
+        }
+    }
+
+    /**
+     * Cập nhật role_id và status trong transaction từ ngoài truyền vào.
+     * Sử dụng duy nhất 1 câu UPDATE chuẩn theo schema của bảng users.
+     */
+    public boolean updateRoleAndStatus(Connection conn, int userId, int roleId, String status) throws SQLException {
+        String sql = "UPDATE users SET role_id = ?, status = ? WHERE id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, roleId);
+            ps.setString(2, status != null ? status : "Active");
+            ps.setInt(3, userId);
+            return ps.executeUpdate() > 0;
         }
     }
 
@@ -358,7 +460,7 @@ public class UserDAO {
         String sql = "SELECT id, full_name, username, " + DECRYPT_EMAIL + ", password_hash, "
                    + DECRYPT_PHONE + ", role_id, status, "
                    + "verification_token, is_verified, google_id, auth_provider, is_deleted, created_at "
-                   + "FROM users WHERE id = ? AND is_deleted = 0";
+                   + "FROM users WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)";
 
         Connection conn = null;
         PreparedStatement ps = null;
@@ -374,8 +476,31 @@ public class UserDAO {
                 return mapRowToUser(rs);
             }
         } catch (SQLException e) {
-            System.err.println("Lỗi khi tìm user theo id: " + e.getMessage());
-            throw new RuntimeException("Lỗi database khi tìm user theo id", e);
+            System.err.println("[UserDAO] Lỗi khi tìm user theo id với mã hoá: " + e.getMessage());
+            return findByIdPlaintext(userId);
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return null;
+    }
+
+    private User findByIdPlaintext(int userId) {
+        String sql = "SELECT id, full_name, username, email, password_hash, phone, role_id, status, "
+                   + "verification_token, is_verified, google_id, auth_provider, is_deleted, created_at "
+                   + "FROM users WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setInt(1, userId);
+            rs = ps.executeQuery();
+            if (rs.next()) {
+                return mapRowToUser(rs);
+            }
+        } catch (SQLException e) {
+            System.err.println("[UserDAO] Lỗi khi tìm user theo id plaintext: " + e.getMessage());
         } finally {
             closeResources(conn, ps, rs);
         }

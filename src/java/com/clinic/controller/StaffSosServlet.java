@@ -1,5 +1,6 @@
 package com.clinic.controller;
 
+import com.clinic.model.User;
 import com.clinic.service.StaffReceptionService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -40,6 +41,11 @@ public class StaffSosServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        User user = (User) req.getSession().getAttribute("user");
+        if (user == null || user.getRoleId() != 4) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Thao tác kích hoạt và giải tỏa ca SOS chỉ dành cho nhân viên Lễ tân (Staff).");
+            return;
+        }
         req.setCharacterEncoding("UTF-8");
         String path = req.getServletPath();
 

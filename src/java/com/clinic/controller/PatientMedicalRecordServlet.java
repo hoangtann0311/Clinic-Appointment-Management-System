@@ -39,28 +39,34 @@ public class PatientMedicalRecordServlet extends HttpServlet {
 
         int patientId = new com.clinic.dao.PatientDAO().getPatientIdByUserId(user.getId());
         String recordIdParam = request.getParameter("recordId");
+        if (recordIdParam == null || recordIdParam.trim().isEmpty()) {
+            recordIdParam = request.getParameter("id");
+        }
 
-        if (recordIdParam != null) {
+        if (recordIdParam != null && !recordIdParam.trim().isEmpty()) {
             // Chi tiết 1 hồ sơ
             if (patientId <= 0) {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN); return;
             }
             int recordId;
-            try { recordId = Integer.parseInt(recordIdParam); }
+            try { recordId = Integer.parseInt(recordIdParam.trim()); }
             catch (NumberFormatException e) {
-                response.sendError(HttpServletResponse.SC_BAD_REQUEST); return;
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "ID hồ sơ không hợp lệ."); return;
             }
 
             MedicalRecord record = recordDAO.getById(recordId);
-            if (record == null) {
-                response.sendError(HttpServletResponse.SC_NOT_FOUND); return;
+            // 1. Không tồn tại hoặc KHÔNG thuộc quyền sở hữu của Patient hiện tại -> trả HTTP 404
+            if (record == null || record.getPatientId() != patientId) {
+                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Không tìm thấy hồ sơ bệnh án.");
+                return;
             }
 
-            // Bảo mật: chỉ xem được hồ sơ của chính mình
-            List<MedicalRecord> myRecords = recordDAO.getByPatientId(patientId);
-            boolean mine = myRecords.stream().anyMatch(r -> r.getId() == recordId);
-            if (!mine) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN); return;
+            // 2. Hồ sơ thuộc về Patient nhưng chưa đủ điều kiện công bố (đang ở trạng thái draft)
+            if ("draft".equalsIgnoreCase(record.getStatus())) {
+                request.setAttribute("unreleasedNotice", "Hồ sơ bệnh án này đang trong quá trình xử lý và chưa được bác sĩ công bố.");
+                request.setAttribute("mode", "unreleased");
+                request.getRequestDispatcher("/views/patient/medical_record_detail.jsp").forward(request, response);
+                return;
             }
 
             Prescription prescription = prescriptionDAO.getByMedicalRecordId(recordId);

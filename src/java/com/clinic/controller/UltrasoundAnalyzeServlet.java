@@ -44,9 +44,9 @@ public class UltrasoundAnalyzeServlet extends HttpServlet {
         }
 
         try {
-            if (!orderService.isReadyForSonographer(orderId)) {
+            if (!orderService.isReadyForSonographer(orderId) || !orderService.checkSonographerOwnership(orderId, user.getId())) {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN,
-                        "Chỉ định chưa đủ điều kiện thanh toán để phân tích.");
+                        "Bạn không có quyền phân tích AI cho ca siêu âm này (Đã được phụ trách bởi KTV khác).");
                 return;
             }
             boolean success = orderService.runAiAnalysis(orderId, user.getId());

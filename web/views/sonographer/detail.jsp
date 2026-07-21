@@ -325,7 +325,7 @@
                                     <c:forEach var="img" items="${images}">
                                         <div class="col-md-4">
                                             <div class="border rounded p-2 text-center bg-light">
-                                                <img src="${pageContext.request.contextPath}/${img.filePath}" class="img-fluid rounded mb-2 border" style="max-height: 100px; object-fit: cover; cursor: zoom-in;" onclick="openViewer(this.src, 'Ảnh siêu âm tải lên: ${fn:escapeXml(img.originalFilename)}')">
+                                                <img src="${pageContext.request.contextPath}/sonographer/image?id=${img.id}" class="img-fluid rounded mb-2 border" style="max-height: 100px; object-fit: cover; cursor: zoom-in;" onclick="openViewer(this.src, 'Ảnh siêu âm tải lên: ${fn:escapeXml(img.originalFilename)}')">
                                                 <div class="small text-truncate" title="${img.originalFilename}">${img.originalFilename}</div>
                                                 <div class="text-muted" style="font-size: 10px;">${String.format('%,.1f KB', img.fileSize / 1024.0)}</div>
                                             </div>
@@ -353,10 +353,10 @@
                             </button>
                         </form>
 
-                        <!-- If Uploaded, allow sending to AI -->
+                        <!-- If Uploaded, allow sending to AI & Form Nhập kết quả chuyên môn -->
                         <c:if test="${fn:toLowerCase(order.status) == 'uploaded'}">
                             <hr class="my-4">
-                            <div class="text-center bg-info-subtle border border-info rounded p-3">
+                            <div class="bg-info-subtle border border-info rounded p-3 mb-4">
                                 <h6 class="fw-bold text-info-emphasis"><i class="bi bi-cpu"></i> Tích Hợp AI Engine Hỗ Trợ Chẩn Đoán</h6>
                                 <p class="small text-muted mb-3">Hình ảnh siêu âm đã sẵn sàng. Nhấn nút bên dưới để gửi phân tích tới AI Engine chẩn đoán tự động.</p>
                                 
@@ -366,6 +366,29 @@
                                     <button type="submit" class="btn btn-info text-white fw-bold px-4 py-2 w-100">
                                         <i class="bi bi-robot"></i> Gửi phân tích AI
                                     </button>
+                                </form>
+                            </div>
+
+                            <!-- Sonographer Expert Notes Entry Form -->
+                            <div class="border p-3 rounded bg-white shadow-sm">
+                                <h6 class="fw-bold text-dark mb-3"><i class="bi bi-journal-medical text-primary"></i> Nhập Kết Quả Siêu Âm Chuyên Môn (KTV)</h6>
+                                <form method="POST" action="${pageContext.request.contextPath}/sonographer/detail">
+                                    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                                    <input type="hidden" name="orderId" value="${order.orderId}">
+                                    
+                                    <div class="mb-3">
+                                        <label for="sonographerNotes" class="form-label fw-bold small text-muted">MÔ TẢ HÌNH ẢNH & NHẬN XÉT CHUYÊN MÔN</label>
+                                        <textarea class="form-control" id="sonographerNotes" name="sonographerNotes" rows="4" placeholder="Nhập nhận xét chi tiết hình ảnh siêu âm, kích thước, cấu trúc y tế..." required>${not empty aiResult ? aiResult.message : ''}</textarea>
+                                    </div>
+
+                                    <div class="d-flex gap-2">
+                                        <button type="submit" name="action" value="saveDraft" class="btn btn-outline-secondary fw-bold flex-grow-1">
+                                            <i class="bi bi-save"></i> Lưu nháp kết quả
+                                        </button>
+                                        <button type="submit" name="action" value="complete" class="btn btn-success fw-bold flex-grow-1">
+                                            <i class="bi bi-check-circle-fill"></i> Hoàn thành ca siêu âm
+                                        </button>
+                                    </div>
                                 </form>
                             </div>
                         </c:if>
@@ -416,20 +439,57 @@
                                 <span class="text-dark"><c:out value="${aiResult.message}"/></span>
                             </div>
 
-                            <!-- Side-by-side images -->
+                            <!-- Mismatched size warning banner -->
+                            <div id="overlaySizeWarning" class="alert alert-warning py-2 mb-3 small" style="display: none;">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                <strong>Kích thước vùng AI không tương thích với ảnh gốc.</strong> Chế độ overlay tự động ngắt để tránh sai lệch tọa độ.
+                            </div>
+
+                            <!-- 2-Layer Synchronized AI Overlay Viewport -->
                             <div class="mb-4">
-                                <label class="text-muted small fw-bold mb-2">HÌNH ẢNH PHÂN TÍCH (ĐẦU VÀO VÀ ĐẦU RA CỦA AI)</label>
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <label class="text-muted small fw-bold m-0">CHẾ ĐỘ OVERLAY VÙNG GỢI Ý AI (2-LAYER VIEWPORT)</label>
+                                    <div class="form-check form-switch m-0">
+                                        <input class="form-check-input" type="checkbox" id="toggleAiOverlay" checked onchange="toggleOverlayMask(this.checked)">
+                                        <label class="form-check-label small fw-bold text-rose" for="toggleAiOverlay">Hiển thị vùng AI gợi ý</label>
+                                    </div>
+                                </div>
+                                
+                                <div id="aiViewportContainer" style="position: relative; width: 100%; height: 320px; background: #0f172a; overflow: hidden; border-radius: 10px; border: 2px solid #334155; display: flex; align-items: center; justify-content: center;">
+                                    <!-- Layer 1: Raw Image -->
+                                    <img id="layerRawImage" src="${pageContext.request.contextPath}/${aiResult.inputImage}" onload="checkAndInitOverlay()" style="position: absolute; max-width: 100%; max-height: 100%; object-fit: contain; pointer-events: none; transition: transform 0.1s ease-out;">
+                                    <!-- Layer 2: Mask / AI Result Image stacked exactly over Layer 1 -->
+                                    <img id="layerAiMask" src="${pageContext.request.contextPath}/${not empty aiResult.maskImage ? aiResult.maskImage : aiResult.resultImage}" onload="checkAndInitOverlay()" style="position: absolute; max-width: 100%; max-height: 100%; object-fit: contain; pointer-events: none; opacity: 0.75; transition: transform 0.1s ease-out;">
+                                </div>
+                                
+                                <div class="d-flex align-items-center justify-content-between mt-2 px-1">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <small class="text-muted fw-bold" style="font-size: 11px;">Độ trong suốt Layer Mask:</small>
+                                        <input type="range" class="form-range" id="opacitySlider" min="0" max="100" value="75" style="width: 110px;" oninput="updateMaskOpacity(this.value)">
+                                        <small id="opacityValue" class="text-rose fw-bold" style="font-size: 11px;">75%</small>
+                                    </div>
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="zoomOverlay(1.25)" title="Phóng to"><i class="bi bi-zoom-in"></i> Phóng to</button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="zoomOverlay(0.8)" title="Thu nhỏ"><i class="bi bi-zoom-out"></i> Thu nhỏ</button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="resetOverlayTransform()" title="Đặt lại"><i class="bi bi-arrow-counterclockwise"></i> Đặt lại</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Side-by-side thumbnail previews -->
+                            <div class="mb-4">
+                                <label class="text-muted small fw-bold mb-2">HÌNH ẢNH GỐC VÀ KẾT QUẢ RIÊNG BIỆT (CLICK XEM LỚN)</label>
                                 <div class="row g-2">
                                     <div class="col-md-6">
                                         <div class="border rounded p-2 text-center bg-light">
-                                            <small class="text-muted d-block mb-1 fw-bold">Ảnh siêu âm gốc (Click to zoom)</small>
-                                            <img src="${pageContext.request.contextPath}/${aiResult.inputImage}" class="img-fluid rounded border" style="max-height: 250px; object-fit: contain; cursor: zoom-in;" onclick="openViewer(this.src, 'Ảnh gốc đầu vào')">
+                                            <small class="text-muted d-block mb-1 fw-bold">Ảnh siêu âm gốc</small>
+                                            <img src="${pageContext.request.contextPath}/${aiResult.inputImage}" class="img-fluid rounded border" style="max-height: 150px; object-fit: contain; cursor: zoom-in;" onclick="openViewer(this.src, 'Ảnh gốc đầu vào')">
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="border rounded p-2 text-center bg-light">
-                                            <small class="text-rose d-block mb-1 fw-bold">Ảnh kết quả phân tách (AI overlay - Click to zoom)</small>
-                                            <img src="${pageContext.request.contextPath}/${aiResult.resultImage}" class="img-fluid rounded border" style="max-height: 250px; object-fit: contain; cursor: zoom-in;" onclick="openViewer(this.src, 'Ảnh AI phân tích')">
+                                            <small class="text-rose d-block mb-1 fw-bold">Ảnh kết quả phân tách (AI Result)</small>
+                                            <img src="${pageContext.request.contextPath}/${aiResult.resultImage}" class="img-fluid rounded border" style="max-height: 150px; object-fit: contain; cursor: zoom-in;" onclick="openViewer(this.src, 'Ảnh AI phân tích')">
                                         </div>
                                     </div>
                                 </div>
@@ -441,7 +501,7 @@
                                     <i class="bi bi-info-circle-fill"></i> Khuyến cáo y khoa quan trọng
                                 </h6>
                                 <p class="m-0 small text-warning-emphasis">
-                                    Kết quả phân tích hình ảnh siêu âm bằng trí tuệ nhân tạo (AI Engine) chỉ mang tính chất tham khảo học thuật hỗ trợ. Quyết định chẩn đoán lâm sàng và phác đồ xử trí y tế cuối cùng thuộc về Bác sĩ chuyên môn sản khoa.
+                                    Vùng AI gợi ý chỉ mang tính hỗ trợ, không thay thế kết luận chuyên môn. Quyết định chẩn đoán lâm sàng và phác đồ xử trí y tế cuối cùng thuộc về Bác sĩ chuyên môn sản khoa.
                                 </p>
                             </div>
                         </c:if>
@@ -514,6 +574,70 @@
     // 3. Show loading screen when AI starts
     function showAiLoading() {
         document.getElementById("loadingOverlay").style.display = "flex";
+    }
+
+    // 4. 2-Layer Overlay Viewport Synchronized Zoom & Transform
+    let currentOverlayScale = 1.0;
+    let currentOverlayTransX = 0;
+    let currentOverlayTransY = 0;
+
+    function checkAndInitOverlay() {
+        const raw = document.getElementById("layerRawImage");
+        const mask = document.getElementById("layerAiMask");
+        const banner = document.getElementById("overlaySizeWarning");
+        const toggle = document.getElementById("toggleAiOverlay");
+
+        if (!raw || !mask) return;
+
+        if (raw.naturalWidth > 0 && mask.naturalWidth > 0) {
+            if (raw.naturalWidth === mask.naturalWidth && raw.naturalHeight === mask.naturalHeight) {
+                if (banner) banner.style.display = "none";
+                if (toggle) toggle.disabled = false;
+            } else {
+                console.warn("[AI Overlay] Kích thước vùng AI không tương thích với ảnh gốc:",
+                    raw.naturalWidth + "x" + raw.naturalHeight, "vs", mask.naturalWidth + "x" + mask.naturalHeight);
+                if (banner) banner.style.display = "block";
+                if (toggle) {
+                    toggle.checked = false;
+                    toggle.disabled = true;
+                }
+                mask.style.display = "none";
+            }
+        }
+    }
+
+    function toggleOverlayMask(show) {
+        const mask = document.getElementById("layerAiMask");
+        if (mask) mask.style.display = show ? "block" : "none";
+    }
+
+    function updateMaskOpacity(val) {
+        const mask = document.getElementById("layerAiMask");
+        const label = document.getElementById("opacityValue");
+        if (mask) mask.style.opacity = (val / 100.0);
+        if (label) label.innerText = val + "%";
+    }
+
+    function applyOverlayTransform() {
+        const raw = document.getElementById("layerRawImage");
+        const mask = document.getElementById("layerAiMask");
+        const transformStr = `translate(${currentOverlayTransX}px, ${currentOverlayTransY}px) scale(${currentOverlayScale})`;
+        if (raw) raw.style.transform = transformStr;
+        if (mask) mask.style.transform = transformStr;
+    }
+
+    function zoomOverlay(factor) {
+        currentOverlayScale *= factor;
+        if (currentOverlayScale < 0.5) currentOverlayScale = 0.5;
+        if (currentOverlayScale > 5.0) currentOverlayScale = 5.0;
+        applyOverlayTransform();
+    }
+
+    function resetOverlayTransform() {
+        currentOverlayScale = 1.0;
+        currentOverlayTransX = 0;
+        currentOverlayTransY = 0;
+        applyOverlayTransform();
     }
 </script>
 

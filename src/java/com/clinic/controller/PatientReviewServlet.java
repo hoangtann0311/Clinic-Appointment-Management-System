@@ -57,8 +57,8 @@ public class PatientReviewServlet extends HttpServlet {
                 return;
             }
 
-            // Status check
-            if (!"SUCCESS".equalsIgnoreCase(appt.getStatus())) {
+            // Status check (Hỗ trợ cả 'SUCCESS' và 'Completed')
+            if (!"SUCCESS".equalsIgnoreCase(appt.getStatus()) && !"Completed".equalsIgnoreCase(appt.getStatus())) {
                 response.sendRedirect(request.getContextPath() + "/patient/appointments?bookingError=LichHenChuaHoanThanh");
                 return;
             }

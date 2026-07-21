@@ -43,7 +43,11 @@ public class StaffQueueServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        if (!requireReceptionAccess(req, resp)) return;
+        User user = (User) req.getSession().getAttribute("user");
+        if (user == null || user.getRoleId() != 4) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Thao tác check-in và hủy lịch chỉ dành cho nhân viên Lễ tân (Staff).");
+            return;
+        }
         String path = req.getServletPath();
 
         if ("/admin/reception/checkin".equals(path)) {

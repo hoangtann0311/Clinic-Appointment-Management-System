@@ -14,12 +14,27 @@ public class AppConfig {
         try (InputStream input = AppConfig.class.getClassLoader().getResourceAsStream("config.properties")) {
             if (input != null) {
                 props.load(input);
-                System.out.println("[AppConfig] Đã tải thành công file config.properties");
-            } else {
-                System.err.println("[AppConfig] Không tìm thấy file config.properties, sử dụng cấu hình mặc định");
+                System.out.println("[AppConfig] Loaded config.properties from classpath");
             }
         } catch (Exception e) {
-            System.err.println("[AppConfig] Lỗi khi load file config.properties: " + e.getMessage());
+            System.err.println("[AppConfig] Error loading config.properties: " + e.getMessage());
+        }
+
+        // Hỗ trợ nạp file cấu hình bên ngoài project/WAR thông qua OCSS_CONFIG_FILE hoặc ocss.config.file
+        String externalPath = System.getProperty("ocss.config.file");
+        if (externalPath == null || externalPath.isBlank()) {
+            externalPath = System.getenv("OCSS_CONFIG_FILE");
+        }
+        if (externalPath != null && !externalPath.isBlank()) {
+            java.io.File extFile = new java.io.File(externalPath.trim());
+            if (extFile.exists() && extFile.isFile()) {
+                try (InputStream extInput = new java.io.FileInputStream(extFile)) {
+                    props.load(extInput);
+                    System.out.println("[AppConfig] Loaded external configuration file from: " + extFile.getAbsolutePath());
+                } catch (Exception e) {
+                    System.err.println("[AppConfig] Failed to load external config file: " + e.getMessage());
+                }
+            }
         }
     }
 

@@ -191,8 +191,10 @@ public class UserService {
             System.out.println("[UserService] createUser SUCCESS: id=" + newId
                     + ", username=" + generatedUsername + ", roleId=" + roleId);
 
-            // ── Tự động tạo record trong bảng role-specific ──
-            insertIntoRoleTable(newId, trimmedName, trimmedPhone, roleId);
+            // ── Tự động tạo record cho Patient nếu tạo từ luồng chung ──
+            if (roleId == ROLE_PATIENT) {
+                insertPatient(newId, trimmedName, trimmedPhone);
+            }
 
             return true;
         } catch (Exception e) {
@@ -218,35 +220,244 @@ public class UserService {
     }
 
     /**
-     * Khi tạo user với role tương ứng, tự động insert vào bảng con
-     * (doctors / patients) để đảm bảo dữ liệu nhất quán.
+     * Tạo tài khoản Bác sĩ trong cùng 1 Database Transaction (users + doctors).
+     * Đảm bảo không tồn tại Bác sĩ mồ côi (users.role_id = 2 nhưng không có doctors record).
      */
-    private void insertIntoRoleTable(int userId, String fullName, String phone, int roleId) {
-        try {
-            if (roleId == ROLE_DOCTOR) {
-                // ── Insert vào bảng doctors ──
-                Doctor doctor = new Doctor();
-                doctor.setUserId(userId);
-                doctor.setFullName(fullName);
-                doctor.setPhoneNumber(phone);
-                doctor.setSpecialization("Chưa cập nhật"); // Sẽ được admin cập nhật sau
+    public boolean createDoctorAccount(String fullName, String email, String password, String phone,
+                                      String specialization, String degree, int experienceYears,
+                                      String status, Map<String, String> errors) {
+        if (specialization == null || specialization.trim().isEmpty()) {
+            errors.put("specialization", "Vui lòng nhập chuyên khoa cho Bác sĩ.");
+            return false;
+        }
+        if (experienceYears < 0) {
+            errors.put("experienceYears", "Số năm kinh nghiệm không được là số âm.");
+            return false;
+        }
 
-                DoctorDAO doctorDAO = new DoctorDAO();
-                int doctorId = doctorDAO.insert(doctor);
-                if (doctorId > 0) {
-                    System.out.println("[UserService] Đã tạo doctor record: doctorId=" + doctorId
-                            + ", userId=" + userId);
-                } else {
-                    System.err.println("[UserService] CẢNH BÁO: Không tạo được doctor record cho userId=" + userId);
-                }
-            } else if (roleId == ROLE_PATIENT) {
-                // ── Insert vào bảng patients ──
-                insertPatient(userId, fullName, phone);
+        String trimmedName = (fullName != null) ? fullName.trim() : "";
+        if (trimmedName.length() < 6 || trimmedName.length() > 100) {
+            errors.put("fullName", "Họ và tên Bác sĩ phải từ 6 đến 100 ký tự.");
+            return false;
+        }
+
+        String trimmedEmail = (email != null) ? email.trim().toLowerCase() : "";
+        if (!trimmedEmail.matches("^[-A-Za-z0-9+_.]+@[-A-Za-z0-9.]+\\.[A-Za-z]{2,}$")) {
+            errors.put("email", "Email không hợp lệ.");
+            return false;
+        }
+        if (userDAO.findByEmail(trimmedEmail) != null) {
+            errors.put("email", "Email đã tồn tại.");
+            return false;
+        }
+
+        String trimmedPhone = (phone != null) ? phone.trim() : "";
+        if (!trimmedPhone.isEmpty() && !trimmedPhone.matches("^(0[3|5|7|8|9])[0-9]{8}$")) {
+            errors.put("phone", "Số điện thoại không hợp lệ (10 chữ số, bắt đầu 03|05|07|08|09).");
+            return false;
+        }
+        if (!trimmedPhone.isEmpty() && userDAO.findByPhone(trimmedPhone) != null) {
+            errors.put("phone", "Số điện thoại này đã được sử dụng.");
+            return false;
+        }
+
+        if (password == null || password.length() < 6) {
+            errors.put("password", "Mật khẩu phải từ 6 ký tự trở lên.");
+            return false;
+        }
+
+        String baseUsername = trimmedEmail.substring(0, trimmedEmail.indexOf('@')).replaceAll("[^a-zA-Z0-9_.]", "");
+        while (baseUsername.length() < 4) baseUsername += "0";
+        String generatedUsername = baseUsername;
+        int suffix = 1;
+        while (userDAO.findByUsername(generatedUsername.toLowerCase()) != null) {
+            generatedUsername = baseUsername + suffix;
+            suffix++;
+        }
+
+        User u = new User();
+        u.setFullName(trimmedName);
+        u.setEmail(trimmedEmail);
+        u.setUsername(generatedUsername.toLowerCase());
+        u.setPasswordHash(com.clinic.utils.BCryptUtil.hashPassword(password));
+        u.setPhone(trimmedPhone);
+        u.setRoleId(ROLE_DOCTOR);
+        u.setStatus(status != null ? status : "Active");
+        u.setVerified(true);
+        u.setAuthProvider("local");
+
+        String trimmedSpec = specialization.trim();
+        String trimmedDegree = (degree != null && !degree.isBlank()) ? degree.trim() : "Bác sĩ";
+
+        Connection conn = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            conn.setAutoCommit(false);
+
+            int newUserId = userDAO.insert(conn, u);
+
+            Doctor doctor = new Doctor();
+            doctor.setUserId(newUserId);
+            doctor.setFullName(trimmedName);
+            doctor.setPhoneNumber(trimmedPhone);
+            doctor.setSpecialization(trimmedSpec);
+            doctor.setDegree(trimmedDegree);
+            doctor.setExperienceYears(experienceYears);
+
+            DoctorDAO doctorDAO = new DoctorDAO();
+            int newDoctorId = doctorDAO.insert(conn, doctor);
+            if (newDoctorId <= 0) {
+                throw new SQLException("Không thể khởi tạo hồ sơ Bác sĩ trong bảng doctors.");
             }
+
+            conn.commit();
+            System.out.println("[UserService] createDoctorAccount TRANSACTION SUCCESS: userId=" + newUserId + ", doctorId=" + newDoctorId);
+            return true;
+
         } catch (Exception e) {
-            // Không làm fail toàn bộ operation — ghi log và tiếp tục
-            System.err.println("[UserService] CẢNH BÁO: Lỗi khi tạo role-specific record: " + e.getMessage());
-            e.printStackTrace(System.err);
+            if (conn != null) {
+                try { conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); }
+            }
+            System.err.println("[UserService] createDoctorAccount TRANSACTION ROLLBACK: " + e.getMessage());
+            errors.put("general", "Lỗi tạo tài khoản Bác sĩ: " + e.getMessage());
+            return false;
+        } finally {
+            if (conn != null) {
+                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ex) { ex.printStackTrace(); }
+            }
+        }
+    }
+
+    /**
+     * Đổi vai trò tài khoản từ Staff/Manager sang Bác sĩ trong cùng 1 Database Transaction.
+     */
+    public boolean changeUserRoleToDoctor(int userId, String specialization, String degree, int experienceYears,
+                                         String status, Map<String, String> errors) {
+        if (specialization == null || specialization.trim().isEmpty()) {
+            errors.put("specialization", "Vui lòng nhập chuyên khoa khi chuyển tài khoản sang vai trò Bác sĩ.");
+            return false;
+        }
+        if (experienceYears < 0) {
+            errors.put("experienceYears", "Số năm kinh nghiệm không được là số âm.");
+            return false;
+        }
+
+        User existingUser = userDAO.findById(userId);
+        if (existingUser == null) {
+            errors.put("general", "Không tìm thấy người dùng.");
+            return false;
+        }
+
+        String trimmedSpec = specialization.trim();
+        String trimmedDegree = (degree != null && !degree.isBlank()) ? degree.trim() : "Bác sĩ";
+        DoctorDAO doctorDAO = new DoctorDAO();
+        Doctor existingDoc = doctorDAO.findByUserId(userId);
+
+        Connection conn = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            conn.setAutoCommit(false);
+
+            boolean okUser = userDAO.updateRoleAndStatus(conn, userId, ROLE_DOCTOR, status);
+            if (!okUser) {
+                throw new SQLException("Cập nhật vai trò user thất bại.");
+            }
+
+            Doctor docData = new Doctor();
+            docData.setUserId(userId);
+            docData.setFullName(existingUser.getFullName());
+            docData.setPhoneNumber(existingUser.getPhone());
+            docData.setSpecialization(trimmedSpec);
+            docData.setDegree(trimmedDegree);
+            docData.setExperienceYears(experienceYears);
+
+            if (existingDoc != null) {
+                boolean okDoc = doctorDAO.updateProfile(conn, docData);
+                if (!okDoc) {
+                    throw new SQLException("Cập nhật hồ sơ Bác sĩ thất bại.");
+                }
+            } else {
+                int doctorId = doctorDAO.insert(conn, docData);
+                if (doctorId <= 0) {
+                    throw new SQLException("Không khởi tạo được hồ sơ Bác sĩ.");
+                }
+            }
+
+            conn.commit();
+            System.out.println("[UserService] changeUserRoleToDoctor TRANSACTION SUCCESS for userId=" + userId);
+            return true;
+
+        } catch (Exception e) {
+            if (conn != null) {
+                try { conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); }
+            }
+            System.err.println("[UserService] changeUserRoleToDoctor ROLLBACK for userId=" + userId + ": " + e.getMessage());
+            errors.put("general", "Không thể chuyển đổi vai trò Bác sĩ: " + e.getMessage());
+            return false;
+        } finally {
+            if (conn != null) {
+                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ex) { ex.printStackTrace(); }
+            }
+        }
+    }
+
+    /**
+     * Chuyển Bác sĩ sang vai trò khác (Staff/Manager), kiểm tra và chặn nếu Bác sĩ còn công việc chưa hoàn tất.
+     * Sử dụng 1 Database Transaction chung và xử lý lỗi SQL an toàn khi kiểm tra lịch làm việc.
+     */
+    public boolean changeDoctorRoleToOther(int userId, int newRoleId, String status, Map<String, String> errors) {
+        DoctorDAO doctorDAO = new DoctorDAO();
+        Connection conn = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            conn.setAutoCommit(false);
+
+            // 1. Tìm Doctor profile bằng cùng Connection transaction
+            Doctor doctor;
+            try {
+                doctor = doctorDAO.findByUserId(conn, userId);
+            } catch (SQLException e) {
+                conn.rollback();
+                errors.put("roleId", "Không thể kiểm tra lịch làm việc của Bác sĩ. Vui lòng thử lại.");
+                return false;
+            }
+
+            // 2. Kiểm tra công việc/lịch khám chưa hoàn tất
+            if (doctor != null) {
+                try {
+                    if (doctorDAO.hasActiveWorkOrAppointments(conn, doctor.getId())) {
+                        errors.put("roleId", "Bác sĩ này còn lịch khám (Pending/Confirmed/Waiting/Emergency_SOS/InProgress) hoặc Lịch làm việc tương lai chưa hoàn tất. Không thể chuyển vai trò!");
+                        conn.rollback();
+                        return false;
+                    }
+                } catch (SQLException e) {
+                    conn.rollback();
+                    errors.put("roleId", "Không thể kiểm tra lịch làm việc của Bác sĩ. Vui lòng thử lại.");
+                    return false;
+                }
+            }
+
+            // 3. Cập nhật role_id trong bảng users
+            boolean okUser = userDAO.updateRoleAndStatus(conn, userId, newRoleId, status);
+            if (!okUser) {
+                conn.rollback();
+                errors.put("roleId", "Không thể cập nhật vai trò người dùng. Vui lòng thử lại.");
+                return false;
+            }
+
+            conn.commit();
+            return true;
+
+        } catch (SQLException e) {
+            if (conn != null) {
+                try { conn.rollback(); } catch (SQLException ex) { }
+            }
+            errors.put("roleId", "Không thể cập nhật vai trò người dùng. Vui lòng thử lại.");
+            return false;
+        } finally {
+            if (conn != null) {
+                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ex) { }
+            }
         }
     }
 
