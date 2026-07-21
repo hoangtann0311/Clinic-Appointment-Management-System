@@ -448,6 +448,15 @@
                             </div>
 
                             <div class="mb-3">
+                                <label for="transactionCode" class="form-label fw-semibold">
+                                    Mã tham chiếu hoặc nội dung chuyển khoản <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" id="transactionCode" name="transactionCode" class="form-control"
+                                       maxlength="100" placeholder="VD: MB240721123 hoặc ${transferContent}">
+                                <div class="form-text">Nhập mã giao dịch ngân hàng hoặc nội dung chuyển khoản để lễ tân đối chiếu cùng ảnh minh chứng.</div>
+                            </div>
+
+                            <div class="mb-3">
                                 <label for="proofImage" class="form-label fw-semibold">
                                     Ảnh chụp màn hình chuyển khoản <span class="text-danger">*</span>
                                 </label>
@@ -461,7 +470,7 @@
                         </div>
 
                         <div id="submitArea" style="display:none;">
-                            <button type="submit" class="btn btn-primary w-100 fw-semibold py-2">
+                            <button type="submit" id="paymentSubmitButton" class="btn btn-primary w-100 fw-semibold py-2">
                                 <i class="bi bi-send-fill me-2"></i>Gửi Thông Tin Thanh Toán
                             </button>
                         </div>
@@ -495,6 +504,13 @@ function showMethod(method) {
         document.getElementById('bankCard').classList.add('selected');
     }
     document.getElementById('submitArea').style.display = 'block';
+
+    var submitButton = document.getElementById('paymentSubmitButton');
+    if (submitButton) {
+        submitButton.innerHTML = method === 'cash'
+            ? '<i class="bi bi-send-fill me-2"></i>Gửi yêu cầu thanh toán tiền mặt'
+            : '<i class="bi bi-send-fill me-2"></i>Gửi xác minh chuyển khoản';
+    }
 }
 
 document.getElementById('paymentForm') && document.getElementById('paymentForm').addEventListener('submit', function(e) {
@@ -505,6 +521,13 @@ document.getElementById('paymentForm') && document.getElementById('paymentForm')
         return;
     }
     if (method.value === 'BankTransfer') {
+        var referenceInput = document.getElementById('transactionCode');
+        if (!referenceInput || referenceInput.value.trim().length < 4) {
+            e.preventDefault();
+            alert('Vui lòng nhập mã tham chiếu hoặc nội dung chuyển khoản (ít nhất 4 ký tự).');
+            if (referenceInput) referenceInput.focus();
+            return;
+        }
         var fileInput = document.getElementById('proofImage');
         if (!fileInput.files || fileInput.files.length === 0) {
             e.preventDefault();

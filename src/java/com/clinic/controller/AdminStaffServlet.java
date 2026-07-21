@@ -114,13 +114,22 @@ public class AdminStaffServlet extends HttpServlet {
                     String phone = req.getParameter("phone");
                     int roleId = parseInt(req.getParameter("roleId"), 4);  // Default: Staff
                     String status = req.getParameter("status");
-                    // Đảm bảo roleId là staff role
                     if (!STAFF_ROLE_IDS.contains(roleId)) {
-                        roleId = 4; // fallback Staff
+                        roleId = 4;
                     }
+
                     Map<String, String> errors = new HashMap<>();
-                    if (userService.createUser(fullName, email, password, phone, roleId, status, errors)) {
-                        // Ghi audit log (nếu có hệ thống audit)
+                    boolean success;
+                    if (roleId == 2) { // Doctor
+                        String specialization = req.getParameter("specialization");
+                        String degree = req.getParameter("degree");
+                        int experienceYears = parseInt(req.getParameter("experienceYears"), 0);
+                        success = userService.createDoctorAccount(fullName, email, password, phone, specialization, degree, experienceYears, status, errors);
+                    } else {
+                        success = userService.createUser(fullName, email, password, phone, roleId, status, errors);
+                    }
+
+                    if (success) {
                         logAudit(req, "CREATE_STAFF", "Tạo nhân viên: " + fullName + " (role=" + roleId + ")");
                         resp.sendRedirect(redirectUrl + "?success=created");
                     } else {
@@ -134,28 +143,46 @@ public class AdminStaffServlet extends HttpServlet {
 
                 case "edit": {
                     int userId = parseInt(req.getParameter("userId"), -1);
+                    if (userId <= 0) {
+                        resp.sendRedirect(redirectUrl + "?error=ID+người+dùng+không+hợp+lệ");
+                        return;
+                    }
+
+                    com.clinic.model.User existingUser = new com.clinic.dao.UserDAO().findById(userId);
+                    if (existingUser == null) {
+                        resp.sendRedirect(redirectUrl + "?error=Người+dùng+không+tồn+tại");
+                        return;
+                    }
+
+                    int currentRoleId = existingUser.getRoleId();
+                    int roleId = parseInt(req.getParameter("roleId"), 4);
+                    if (!STAFF_ROLE_IDS.contains(roleId)) {
+                        roleId = 4;
+                    }
+                    String status = req.getParameter("status");
                     String fullName = req.getParameter("fullName");
                     String email = req.getParameter("email");
                     String username = req.getParameter("username");
                     String phone = req.getParameter("phone");
-                    int roleId = parseInt(req.getParameter("roleId"), 4);
-                    String status = req.getParameter("status");
-                    // Đảm bảo roleId là staff role
-                    if (!STAFF_ROLE_IDS.contains(roleId)) {
-                        roleId = 4;
-                    }
-
-                    System.out.println("[AdminStaffServlet] edit: userId=" + userId
-                        + ", fullName=" + fullName + ", email=" + email
-                        + ", username=" + username + ", phone=" + phone
-                        + ", roleId=" + roleId + ", status=" + status);
 
                     Map<String, String> errors = new HashMap<>();
-                    if (userService.updateUser(userId, fullName, email, phone, roleId, status, errors)) {
+                    boolean success;
+
+                    if (roleId == 2) { // Chuyển đổi/Cập nhật sang Doctor
+                        String specialization = req.getParameter("specialization");
+                        String degree = req.getParameter("degree");
+                        int experienceYears = parseInt(req.getParameter("experienceYears"), 0);
+                        success = userService.changeUserRoleToDoctor(userId, specialization, degree, experienceYears, status, errors);
+                    } else if (currentRoleId == 2 && roleId != 2) { // Chuyển từ Doctor sang role khác
+                        success = userService.changeDoctorRoleToOther(userId, roleId, status, errors);
+                    } else {
+                        success = userService.updateUser(userId, fullName, email, phone, roleId, status, errors);
+                    }
+
+                    if (success) {
                         logAudit(req, "EDIT_STAFF", "Sửa nhân viên #" + userId + ": " + fullName);
                         resp.sendRedirect(redirectUrl + "?success=updated");
                     } else {
-                        // Lưu lại giá trị form để hiển thị lại trong modal
                         req.setAttribute("editUserId", userId);
                         req.setAttribute("formEditFullName", fullName);
                         req.setAttribute("formEditEmail", email);
@@ -165,8 +192,6 @@ public class AdminStaffServlet extends HttpServlet {
                         req.setAttribute("formEditStatus", status);
                         req.setAttribute("editErrors", errors);
                         req.setAttribute("showEditModal", true);
-
-                        System.out.println("[AdminStaffServlet] edit FAILED: " + errors);
                         doGet(req, resp);
                     }
                     return;

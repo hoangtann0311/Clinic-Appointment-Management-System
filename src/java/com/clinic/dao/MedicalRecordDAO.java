@@ -28,6 +28,7 @@ public class MedicalRecordDAO {
         "  mr.edema, mr.proteinuria, mr.vaginal_bleeding, mr.uterine_contractions, mr.risk_flags_json, " +
         "  mr.treatment_plan, mr.next_appointment_date, mr.referred_to, " +
         "  pt.full_name AS patient_name, " +
+        "  a.patient_id AS patient_id, " +
         "  CONVERT(varchar, a.appointment_date, 23)          AS appointment_date, " +
         "  CONVERT(varchar, a.time_slot, 108)                AS time_slot, " +
         "  a.symptoms, " +
@@ -53,6 +54,25 @@ public class MedicalRecordDAO {
             ps.setInt(1, recordId);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) return mapRow(rs);
+        } catch (SQLException e) { e.printStackTrace(); }
+        return null;
+    }
+
+    /**
+     * Lấy chi tiết hồ sơ bệnh án theo ID và Patient ID (Chống IDOR trực tiếp từ SQL query).
+     */
+    public MedicalRecord getByIdAndPatientId(int recordId, int patientId) {
+        if (recordId <= 0 || patientId <= 0) return null;
+        String sql = BASE_SELECT + "WHERE mr.id = ? AND a.patient_id = ? "
+                + "AND (mr.status IS NULL OR LOWER(LTRIM(RTRIM(mr.status))) = 'final') "
+                + "AND UPPER(LTRIM(RTRIM(ISNULL(a.status, '')))) IN ('SUCCESS', 'COMPLETED')";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, recordId);
+            ps.setInt(2, patientId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return mapRow(rs);
+            }
         } catch (SQLException e) { e.printStackTrace(); }
         return null;
     }
@@ -106,6 +126,23 @@ public class MedicalRecordDAO {
             ps.setInt(1, recordId); ps.setInt(2, doctorId);
             return ps.executeQuery().next();
         } catch (SQLException e) { e.printStackTrace(); }
+        return false;
+    }
+
+    public boolean hasBlockingUltrasoundOrdersForAppointment(int appointmentId) {
+        String sql = "SELECT 1 FROM test_orders o "
+                + "JOIN medical_records mr ON mr.id = o.medical_record_id "
+                + "WHERE mr.appointment_id = ? "
+                + "AND LOWER(LTRIM(RTRIM(ISNULL(o.status, '')))) NOT IN ('confirmed', 'cancelled')";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, appointmentId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
         return false;
     }
 
@@ -272,6 +309,7 @@ public class MedicalRecordDAO {
         try { mr.setStatus(rs.getString("status")); } catch (SQLException ignored) { mr.setStatus("final"); }
 
         // JOIN fields
+        try { mr.setPatientId(rs.getInt("patient_id")); } catch (SQLException ignored) {}
         mr.setPatientName(rs.getString("patient_name"));
         mr.setAppointmentDate(rs.getString("appointment_date"));
         mr.setTimeSlot(rs.getString("time_slot"));

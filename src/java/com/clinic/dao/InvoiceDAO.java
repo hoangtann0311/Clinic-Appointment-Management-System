@@ -235,6 +235,21 @@ public class InvoiceDAO {
         return list;
     }
 
+    public boolean updatePaymentStatus(Connection conn, int id, String status, String paymentMethod, String transactionCode, String paymentNote, int confirmedBy, Timestamp confirmedAt) throws SQLException {
+        String sql = "UPDATE invoices SET status = ?, payment_method = ?, transaction_code = ?, payment_note = ?, confirmed_by = ?, confirmed_at = ? "
+                + "WHERE id = ? AND status IN ('Unpaid', 'PendingConfirmation')";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, status);
+            ps.setString(2, paymentMethod);
+            ps.setString(3, transactionCode);
+            ps.setString(4, paymentNote);
+            ps.setInt(5, confirmedBy);
+            ps.setTimestamp(6, confirmedAt);
+            ps.setInt(7, id);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
     public boolean updatePaymentStatus(int id, String status, String paymentMethod, String transactionCode, String paymentNote, int confirmedBy, Timestamp confirmedAt) {
         // Atomic state transition: a receipt can only be approved or rejected
         // once, from an unpaid/pending-verification state.
@@ -259,6 +274,46 @@ public class InvoiceDAO {
             return false;
         } finally {
             closeResources(conn, ps, null);
+        }
+    }
+
+    public int createOrAppendPostExamServiceInvoice(Connection conn, int appointmentId, int serviceId, java.math.BigDecimal price) throws SQLException {
+        String selectSql = "SELECT id, total_amount, status FROM invoices WITH (UPDLOCK, HOLDLOCK) WHERE appointment_id = ? AND UPPER(invoice_type) = 'POST_EXAM'";
+        try (PreparedStatement ps = conn.prepareStatement(selectSql)) {
+            ps.setInt(1, appointmentId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    int existingId = rs.getInt("id");
+                    java.math.BigDecimal curAmt = rs.getBigDecimal("total_amount");
+                    java.math.BigDecimal newAmt = curAmt != null ? curAmt.add(price != null ? price : java.math.BigDecimal.ZERO) : price;
+                    String updateSql = "UPDATE invoices SET total_amount = ? WHERE id = ?";
+                    try (PreparedStatement ups = conn.prepareStatement(updateSql)) {
+                        ups.setBigDecimal(1, newAmt);
+                        ups.setInt(2, existingId);
+                        ups.executeUpdate();
+                    }
+                    return existingId;
+                }
+            }
+        }
+        String insertSql = "INSERT INTO invoices (appointment_id, total_amount, status, invoice_type, created_at) VALUES (?, ?, 'Unpaid', 'POST_EXAM', GETDATE())";
+        try (PreparedStatement ips = conn.prepareStatement(insertSql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
+            ips.setInt(1, appointmentId);
+            ips.setBigDecimal(2, price);
+            ips.executeUpdate();
+            try (ResultSet keys = ips.getGeneratedKeys()) {
+                if (keys.next()) return keys.getInt(1);
+            }
+        }
+        return -1;
+    }
+
+    public int createOrAppendPostExamServiceInvoice(int appointmentId, int serviceId, java.math.BigDecimal price) {
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            return createOrAppendPostExamServiceInvoice(conn, appointmentId, serviceId, price);
+        } catch (SQLException e) {
+            System.err.println("[InvoiceDAO] createOrAppendPostExamServiceInvoice ERROR: " + e.getMessage());
+            return -1;
         }
     }
 

@@ -183,7 +183,7 @@
                             <option value="Unpaid" ${statusParam == 'Unpaid' ? 'selected' : ''}>Chưa thanh toán</option>
                             <option value="Paid" ${statusParam == 'Paid' ? 'selected' : ''}>Đã thanh toán</option>
                             <option value="PendingConfirmation" ${statusParam == 'PendingConfirmation' ? 'selected' : ''}>Chờ xác nhận</option>
-                            <option value="DeclinedPurchase" ${statusParam == 'DeclinedPurchase' ? 'selected' : ''}>Từ chối mua thuốc</option>
+                            <option value="declined_purchase" ${statusParam == 'declined_purchase' || statusParam == 'DeclinedPurchase' ? 'selected' : ''}>Đã từ chối mua thuốc</option>
                             <option value="Cancelled" ${statusParam == 'Cancelled' ? 'selected' : ''}>Đã hủy</option>
                         </select>
                     </div>
@@ -307,9 +307,9 @@
                                                             <i class="bi bi-clock-history"></i> Chờ xác nhận
                                                         </span>
                                                     </c:when>
-                                                    <c:when test="${inv.status == 'DeclinedPurchase'}">
+                                                    <c:when test="${inv.status == 'declined_purchase' || inv.status == 'DeclinedPurchase'}">
                                                         <span class="badge bg-danger-subtle text-danger border border-danger-subtle d-flex align-items-center gap-1 w-fit" title="Sản phụ từ chối mua thuốc tại phòng khám">
-                                                            <i class="bi bi-x-circle-fill"></i> Từ chối mua thuốc
+                                                            <i class="bi bi-x-circle-fill"></i> Đã từ chối mua thuốc
                                                         </span>
                                                     </c:when>
                                                     <c:when test="${inv.status == 'Cancelled'}">
@@ -394,6 +394,8 @@
 <div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <form method="POST" action="${pageContext.request.contextPath}/admin/reception/payments" onsubmit="return validatePaymentForm()">
+            <input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
+            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
             <input type="hidden" name="action" value="confirm">
             <!-- Retain filter parameters -->
             <input type="hidden" name="search" value="${searchParam}">
@@ -505,8 +507,10 @@
             </div>
         </form>
 
-        <!-- Form riêng (không lồng trong form trên) để gửi Từ chối thanh toán sang StaffEditServlet -->
+<!-- Form riêng (không lồng trong form trên) để gửi Từ chối thanh toán sang StaffEditServlet -->
         <form id="rejectPaymentForm" method="POST" action="${pageContext.request.contextPath}/admin/reception/edit" style="display:none;">
+            <input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
+            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
             <input type="hidden" name="id" id="rejectApptId">
             <input type="hidden" name="invoiceId" id="rejectInvoiceIdInput">
             <input type="hidden" name="action" value="rejectPayment">
@@ -792,6 +796,8 @@
 
 <!-- Hidden Form for Decline Purchase -->
 <form id="declineForm" method="POST" action="${pageContext.request.contextPath}/admin/reception/payments" style="display:none;">
+    <input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
+    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
     <input type="hidden" name="invoiceId" id="declineInvoiceId">
     <input type="hidden" name="action" value="decline">
     <input type="hidden" name="search" value="${searchParam}">

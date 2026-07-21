@@ -47,7 +47,11 @@ public class StaffBookingServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        if (!requireReceptionAccess(req, resp)) return;
+        User user = (User) req.getSession().getAttribute("user");
+        if (user == null || user.getRoleId() != 4) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Thao tác đặt lịch tại quầy chỉ dành cho nhân viên Lễ tân (Staff).");
+            return;
+        }
         req.setCharacterEncoding("UTF-8");
 
         String name = req.getParameter("name");

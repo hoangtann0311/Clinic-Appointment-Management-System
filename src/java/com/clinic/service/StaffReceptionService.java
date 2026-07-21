@@ -50,16 +50,6 @@ public class StaffReceptionService {
             throw new IllegalArgumentException("Ngày sinh sản phụ không được lớn hơn ngày hiện tại.");
         }
 
-        int age = java.time.Period.between(birthDate, today).getYears();
-
-        if (age < 12) {
-            throw new IllegalArgumentException("Tuổi sản phụ phải từ 12 tuổi trở lên để đặt lịch khám.");
-        }
-
-        if (age > 55) {
-            throw new IllegalArgumentException("Tuổi sản phụ không được vượt quá 55 tuổi khi đặt lịch khám sản/phụ khoa.");
-        }
-
         Patient newPatient = patientDAO.createPatient(
                 name,
                 phone,
@@ -383,7 +373,8 @@ public class StaffReceptionService {
             case "WAITING": return 3;
             case "CONFIRMED": return 4;
             case "PENDING": return 5;
-            case "SUCCESS": return 6;
+            case "SUCCESS":
+            case "COMPLETED": return 6;
             case "CANCELLED": return 7;
             case "NOSHOW": return 8;
             default: return 9;
@@ -407,7 +398,8 @@ public class StaffReceptionService {
                 throw new IllegalArgumentException("Lịch hẹn đã bị hủy, không thể check-in.");
             }
 
-            if ("SUCCESS".equalsIgnoreCase(apt.getStatus())) {
+            if ("SUCCESS".equalsIgnoreCase(apt.getStatus())
+                    || "Completed".equalsIgnoreCase(apt.getStatus())) {
                 throw new IllegalArgumentException("Lịch hẹn đã hoàn thành, không thể check-in.");
             }
 
@@ -420,14 +412,13 @@ public class StaffReceptionService {
             }
 
             if ("Emergency_SOS".equalsIgnoreCase(apt.getStatus())) {
-                appointmentDAO.updateStatus(appointmentId, "InProgress");
-
+                // Ca Emergency_SOS khi check-in giữ nguyên status Emergency_SOS và số thứ tự SOS-XX hiện tại
                 auditLogDAO.logAction(
-                        "Điều phối ca SOS vào phòng khám",
+                        "Xác nhận tiếp đón ca SOS tại quầy (giữ nguyên số " + apt.getQueueNumber() + ")",
                         "Staff",
                         "appointments",
                         "Emergency_SOS",
-                        "InProgress"
+                        "Emergency_SOS"
                 );
 
                 return;
@@ -557,14 +548,17 @@ public class StaffReceptionService {
                 throw new IllegalArgumentException("Chỉ ca Emergency_SOS mới được tắt cảnh báo.");
             }
 
-            appointmentDAO.updateStatus(appointmentId, "InProgress");
+            LocalDate appDate = apt.getAppointmentDate() != null ? apt.getAppointmentDate() : LocalDate.now();
+            int nextNum = appointmentDAO.getNextNormalQueueNumber(appDate);
+            String normalQueueNum = "STT-" + String.format("%02d", nextNum);
+            appointmentDAO.updateCheckIn(appointmentId, "Waiting", normalQueueNum);
 
             auditLogDAO.logAction(
-                    "Tắt cảnh báo SOS và bắt đầu tiếp nhận ca #" + id,
+                    "Giải tỏa cảnh báo SOS ca #" + id + " - chuyển Emergency_SOS -> Waiting, cấp số thường " + normalQueueNum,
                     "Staff",
                     "appointments",
                     "Emergency_SOS",
-                    "InProgress"
+                    "Waiting"
             );
 
         } catch (NumberFormatException e) {
@@ -683,7 +677,8 @@ public class StaffReceptionService {
                 throw new IllegalArgumentException("Lịch hẹn đã bị hủy trước đó.");
             }
 
-            if ("SUCCESS".equalsIgnoreCase(apt.getStatus())) {
+            if ("SUCCESS".equalsIgnoreCase(apt.getStatus())
+                    || "Completed".equalsIgnoreCase(apt.getStatus())) {
                 throw new IllegalArgumentException("Lịch hẹn đã hoàn thành, không thể hủy.");
             }
 
@@ -740,6 +735,7 @@ public class StaffReceptionService {
 
         if ("Cancelled".equalsIgnoreCase(apt.getStatus())
                 || "SUCCESS".equalsIgnoreCase(apt.getStatus())
+                || "Completed".equalsIgnoreCase(apt.getStatus())
                 || "InProgress".equalsIgnoreCase(apt.getStatus())
                 || "Waiting".equalsIgnoreCase(apt.getStatus())
                 || !"Pending".equalsIgnoreCase(apt.getStatus())) {
@@ -1046,53 +1042,68 @@ public class StaffReceptionService {
             throw new IllegalArgumentException("Hóa đơn này đã được thanh toán trước đó.");
         }
 
-        if (!"Unpaid".equalsIgnoreCase(invoice.getStatus())
-                && !"PendingConfirmation".equalsIgnoreCase(invoice.getStatus())) {
-            throw new IllegalArgumentException("Invoice is not in a payable state: " + invoice.getStatus());
-        }
-
-        if ("BankTransfer".equalsIgnoreCase(paymentMethod) && (transactionCode == null || transactionCode.trim().isEmpty())) {
-            // Dùng mã GD bệnh nhân đã gửi nếu staff không nhập lại (nếu có)
-            if (invoice.getTransactionCode() != null && !invoice.getTransactionCode().trim().isEmpty()) {
-                transactionCode = invoice.getTransactionCode();
-            } else {
-                // Không còn bắt buộc mã giao dịch — bằng chứng chính giờ là ảnh minh chứng
-                // chuyển khoản (proof_image_path) mà Staff đã xem trước khi bấm xác nhận.
-                transactionCode = "";
-            }
+        // Staff only confirms a request that the patient has already submitted.
+        // An Unpaid invoice must first be sent by the patient (cash request or
+        // bank-transfer proof); otherwise revenue could be recorded incorrectly.
+        if (!"PendingConfirmation".equalsIgnoreCase(invoice.getStatus())) {
+            throw new IllegalArgumentException("Yêu cầu thanh toán chưa ở trạng thái chờ Staff xác nhận.");
         }
 
         if (paymentMethod == null || paymentMethod.trim().isEmpty()) {
-            paymentMethod = invoice.getPaymentMethod() != null ? invoice.getPaymentMethod() : "Cash";
+            throw new IllegalArgumentException("Thiếu phương thức thanh toán bệnh nhân đã gửi.");
+        }
+        paymentMethod = paymentMethod.trim();
+
+        if (!"Cash".equalsIgnoreCase(paymentMethod) && !"BankTransfer".equalsIgnoreCase(paymentMethod)) {
+            throw new IllegalArgumentException("Phương thức thanh toán không hợp lệ.");
+        }
+
+        if (invoice.getPaymentMethod() == null
+                || !paymentMethod.equalsIgnoreCase(invoice.getPaymentMethod().trim())) {
+            throw new IllegalArgumentException("Không thể thay đổi phương thức sau khi bệnh nhân gửi yêu cầu.");
         }
 
         // A bank transfer is confirmed only after the patient has submitted it
         // with proof. Reception may verify it, but must not create one itself.
         if ("BankTransfer".equalsIgnoreCase(paymentMethod)
-                && !"PendingConfirmation".equalsIgnoreCase(invoice.getStatus())) {
-            throw new IllegalArgumentException("Bank transfer must be submitted by the patient before confirmation.");
-        }
-        if ("BankTransfer".equalsIgnoreCase(paymentMethod)
                 && (invoice.getProofImagePath() == null || invoice.getProofImagePath().trim().isEmpty())) {
-            throw new IllegalArgumentException("Bank transfer proof is required before confirmation.");
+            throw new IllegalArgumentException("Cần có ảnh minh chứng chuyển khoản trước khi xác nhận.");
         }
 
-        String finalTxCode = transactionCode;
-        if ("Cash".equalsIgnoreCase(paymentMethod)) {
-            finalTxCode = "CASH_" + invoiceId + "_" + (System.currentTimeMillis() / 1000);
-        }
-
+        String patientReference = firstNonBlank(transactionCode, invoice.getTransactionCode());
+        // A receipt code belongs to the staff approval event.  It is generated
+        // for both methods so Manager revenue/audit always has a stable key.
+        String finalTxCode = createReceiptCode(paymentMethod, invoiceId);
+        String finalPaymentNote = appendPatientReference(paymentNote, patientReference, finalTxCode);
         java.sql.Timestamp now = new java.sql.Timestamp(System.currentTimeMillis());
-        boolean success = invoiceDAO.updatePaymentStatus(invoiceId, "Paid", paymentMethod, finalTxCode, paymentNote, confirmedBy, now);
+        boolean success;
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                success = invoiceDAO.updatePaymentStatus(conn, invoiceId, "Paid", paymentMethod,
+                        finalTxCode, finalPaymentNote, confirmedBy, now);
+
+                if (success && "PRE_EXAM".equalsIgnoreCase(invoice.getInvoiceType())
+                        && invoice.getAppointmentId() != null) {
+                    success = appointmentDAO.confirmPreExamPayment(conn, invoice.getAppointmentId());
+                }
+
+                if (success) {
+                    conn.commit();
+                } else {
+                    conn.rollback();
+                }
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Không thể xác nhận thanh toán một cách an toàn.", e);
+        }
         
         if (success) {
-            // Nếu là hóa đơn trước khám (PRE_EXAM), xác nhận lịch hẹn
-            if ("PRE_EXAM".equalsIgnoreCase(invoice.getInvoiceType()) && invoice.getAppointmentId() != null) {
-                appointmentDAO.confirmAppointmentAfterPreExamPaid(invoice.getAppointmentId());
-                // Chốt slot từ WAITING_VERIFICATION -> BOOKED (Staff đã duyệt thanh toán)
-                appointmentDAO.finalizeBookingAfterPaymentApproved(invoice.getAppointmentId());
-            }
-
             // Thông báo cho bệnh nhân
             notifyPatientPaymentConfirmed(invoice);
 
@@ -1107,6 +1118,28 @@ public class StaffReceptionService {
         }
 
         return success;
+    }
+
+    private String createReceiptCode(String paymentMethod, int invoiceId) {
+        String prefix = "BankTransfer".equalsIgnoreCase(paymentMethod) ? "BT" : "CASH";
+        String date = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE);
+        return prefix + "-" + date + "-HD" + invoiceId;
+    }
+
+    private String firstNonBlank(String first, String second) {
+        if (first != null && !first.trim().isEmpty()) {
+            return first.trim();
+        }
+        return second == null ? "" : second.trim();
+    }
+
+    private String appendPatientReference(String note, String patientReference, String receiptCode) {
+        String normalizedNote = note == null ? "" : note.trim();
+        if (patientReference.isEmpty() || patientReference.equals(receiptCode)) {
+            return normalizedNote;
+        }
+        String referenceNote = "Mã tham chiếu bệnh nhân: " + patientReference;
+        return normalizedNote.isEmpty() ? referenceNote : normalizedNote + " | " + referenceNote;
     }
 
     private void notifyPatientPaymentConfirmed(Invoice invoice) {

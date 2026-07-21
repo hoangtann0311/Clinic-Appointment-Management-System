@@ -1,0 +1,30 @@
+# ===============================================================================
+# SAMPLE CONFIGURATION TEMPLATE FOR OCSS SYSTEM (config.properties.example)
+#
+# Primary configuration method: Environment Variables
+#   - DB_URL: Custom JDBC URL (optional, e.g. jdbc:sqlserver://localhost:1433;databaseName=ObstetricsClinicDB;encrypt=true;trustServerCertificate=true;)
+#   - DB_USER: Database username (e.g. ocss_app)
+#   - DB_PASSWORD: Database password
+#   - DB_NAME: Database name (default: ObstetricsClinicDB)
+#
+# Optional external configuration file method:
+#   Set environment variable OCSS_CONFIG_FILE or system property ocss.config.file
+#   pointing to an absolute file path OUTSIDE the project / WAR directory
+#   (e.g., OCSS_CONFIG_FILE=C:\ocss\config.properties or /etc/ocss/config.properties)
+# ===============================================================================
+
+# Database Settings for SQL Server Authentication (Optional if using Windows Auth)
+# db.url=jdbc:sqlserver://localhost:1433;databaseName=ObstetricsClinicDB;encrypt=true;trustServerCertificate=true;
+# db.user=ocss_app
+# db.password=your_secure_password
+# db.name=ObstetricsClinicDB
+
+# Configuration for AI Engine Integration
+ai.engine.baseUrl=http://localhost:8080/ClinicAppointmentManagementSystem/mock-ai-engine
+ai.engine.analyzePath=
+ai.engine.connectTimeout=5000
+ai.engine.readTimeout=30000
+
+# Configuration for Ultrasound File Uploads
+ultrasound.uploadDirectory=uploads/ultrasound
+ultrasound.maxFileSize=10485760

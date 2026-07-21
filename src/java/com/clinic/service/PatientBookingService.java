@@ -285,6 +285,15 @@ public class PatientBookingService {
             return false;
         }
 
+        // A collected PRE_EXAM payment must never disappear behind a normal
+        // patient cancellation.  The current system has no refund approval
+        // workflow, therefore leave the receipt and slot untouched and direct
+        // the patient to reception for a traceable refund decision.
+        if (appointmentDAO.isPreExamPaid(appointmentId)) {
+            errors.put("general", "Lịch hẹn đã thanh toán. Vui lòng liên hệ lễ tân để được hỗ trợ hủy và hoàn tiền theo quy trình.");
+            return false;
+        }
+
         // BR: chỉ huỷ trước giờ khám tối thiểu 2 giờ
         if (appt.getTimeSlot() != null && appt.getTimeSlot().contains("-")) {
             try {

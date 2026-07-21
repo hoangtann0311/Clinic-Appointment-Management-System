@@ -308,6 +308,13 @@ public class PatientPaymentServlet extends HttpServlet {
             String proofImagePath = null;
 
             if ("BankTransfer".equalsIgnoreCase(paymentMethod)) {
+                transactionCode = transactionCode == null ? "" : transactionCode.trim();
+                if (transactionCode.length() < 4 || transactionCode.length() > 100) {
+                    response.sendRedirect(request.getContextPath() + "/patient/payment?appointmentId=" + invoice.getAppointmentId()
+                            + "&type=" + invoice.getInvoiceType() + "&error="
+                            + java.net.URLEncoder.encode("Vui lòng nhập mã tham chiếu hoặc nội dung chuyển khoản từ 4 đến 100 ký tự.", "UTF-8"));
+                    return;
+                }
                 Part filePart = request.getPart("proofImage");
                 if (filePart == null || filePart.getSize() <= 0) {
                     response.sendRedirect(request.getContextPath() + "/patient/payment?appointmentId=" + invoice.getAppointmentId() + "&type=" + invoice.getInvoiceType() + "&error=" + java.net.URLEncoder.encode("Vui lòng tải lên ảnh chụp màn hình chuyển khoản.", "UTF-8"));
@@ -329,7 +336,6 @@ public class PatientPaymentServlet extends HttpServlet {
                     response.sendRedirect(request.getContextPath() + "/patient/payment?appointmentId=" + invoice.getAppointmentId() + "&type=" + invoice.getInvoiceType() + "&error=" + java.net.URLEncoder.encode("Lỗi khi lưu ảnh, vui lòng thử lại.", "UTF-8"));
                     return;
                 }
-                if (transactionCode == null) transactionCode = "";
             } else if ("Cash".equalsIgnoreCase(paymentMethod)) {
                 transactionCode = "";
             }

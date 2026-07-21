@@ -81,7 +81,7 @@ public class DashboardDAO {
         String sql = "SELECT ISNULL(SUM(i.total_amount), 0) AS total FROM invoices i "
                    + "INNER JOIN appointments a ON i.appointment_id = a.id "
                    + "WHERE a.appointment_date = CAST(GETDATE() AS DATE) "
-                   + "AND i.status = 'paid'";
+                   + "AND UPPER(LTRIM(RTRIM(i.status))) = 'PAID'";
         return executeSum(sql);
     }
 
@@ -131,11 +131,11 @@ public class DashboardDAO {
     }
 
     public double sumRevenueAll() {
-        return executeSum("SELECT ISNULL(SUM(total_amount), 0) AS total FROM invoices WHERE LOWER(status) = 'paid'");
+        return executeSum("SELECT ISNULL(SUM(total_amount), 0) AS total FROM invoices WHERE UPPER(LTRIM(RTRIM(status))) = 'PAID'");
     }
 
     public double sumRevenue(LocalDate from, LocalDate to) {
-        return executeSum("SELECT ISNULL(SUM(i.total_amount), 0) AS total FROM invoices i INNER JOIN appointments a ON i.appointment_id = a.id WHERE a.appointment_date >= ? AND a.appointment_date <= ? AND LOWER(i.status) = 'paid'", from, to);
+        return executeSum("SELECT ISNULL(SUM(i.total_amount), 0) AS total FROM invoices i INNER JOIN appointments a ON i.appointment_id = a.id WHERE a.appointment_date >= ? AND a.appointment_date <= ? AND UPPER(LTRIM(RTRIM(i.status))) = 'PAID'", from, to);
     }
     public int countEmergencyToday() {
         return executeCount("SELECT COUNT(*) AS total FROM appointments WHERE appointment_date = CAST(GETDATE() AS DATE) AND LOWER(status) = 'emergency_sos'");
@@ -162,15 +162,15 @@ public class DashboardDAO {
     }
 
     public int countSuccessfulCasesToday() {
-        return executeCount("SELECT COUNT(DISTINCT a.id) AS total FROM appointments a INNER JOIN invoices i ON i.appointment_id = a.id WHERE a.appointment_date = CAST(GETDATE() AS DATE) AND LOWER(a.status) = 'completed' AND LOWER(i.status) = 'paid'");
+        return executeCount("SELECT COUNT(*) AS total FROM appointments a WHERE a.appointment_date = CAST(GETDATE() AS DATE) AND UPPER(LTRIM(RTRIM(a.status))) IN ('COMPLETED', 'SUCCESS')");
     }
 
     public int countSuccessfulCasesAll() {
-        return executeCount("SELECT COUNT(DISTINCT a.id) AS total FROM appointments a INNER JOIN invoices i ON i.appointment_id = a.id WHERE LOWER(a.status) = 'completed' AND LOWER(i.status) = 'paid'");
+        return executeCount("SELECT COUNT(*) AS total FROM appointments a WHERE UPPER(LTRIM(RTRIM(a.status))) IN ('COMPLETED', 'SUCCESS')");
     }
 
     public int countSuccessfulCases(LocalDate from, LocalDate to) {
-        return executeCount("SELECT COUNT(DISTINCT a.id) AS total FROM appointments a INNER JOIN invoices i ON i.appointment_id = a.id WHERE a.appointment_date >= ? AND a.appointment_date <= ? AND LOWER(a.status) = 'completed' AND LOWER(i.status) = 'paid'", from, to);
+        return executeCount("SELECT COUNT(*) AS total FROM appointments a WHERE a.appointment_date >= ? AND a.appointment_date <= ? AND UPPER(LTRIM(RTRIM(a.status))) IN ('COMPLETED', 'SUCCESS')", from, to);
     }
 
     public Map<String, Integer> getAppointmentsChart(LocalDate from, LocalDate to) {

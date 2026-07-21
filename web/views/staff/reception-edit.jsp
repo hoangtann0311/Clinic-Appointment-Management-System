@@ -151,6 +151,7 @@
                     </div>
                 </c:if>
                 <form action="${pageContext.request.contextPath}/admin/reception/edit" method="post" onsubmit="return validateForm()">
+                    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                     <input type="hidden" name="id" value="${apt.id}">
                     
                     <!-- Patient Search & Info (Read Only) -->
@@ -283,15 +284,17 @@
                                             <div class="form-text">Bấm vào ảnh để xem kích thước đầy đủ.</div>
                                         </div>
                                     </c:if>
-                                    <form method="POST" action="${pageContext.request.contextPath}/admin/reception/edit" onsubmit="return validatePaymentForm()">
+                                    <form method="POST" action="${pageContext.request.contextPath}/admin/reception/edit">
+                                        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                         <input type="hidden" name="id" value="${apt.id}">
                                         <input type="hidden" name="action" value="confirmPayment">
                                         <div class="row g-3">
                                             <div class="col-md-3">
                                                 <label class="form-label text-muted small fw-bold">PHƯƠNG THỨC</label>
-                                                <select name="paymentMethod" class="form-select" onchange="toggleTxCode(this.value)">
-                                                    <option value="Cash">Tiền mặt</option>
-                                                    <option value="BankTransfer">Chuyển khoản</option>
+                                                <input type="hidden" name="paymentMethod" value="${preInvoice.paymentMethod}">
+                                                <select class="form-select" disabled>
+                                                    <option value="Cash" ${preInvoice.paymentMethod == 'Cash' ? 'selected' : ''}>Tiền mặt</option>
+                                                    <option value="BankTransfer" ${preInvoice.paymentMethod == 'BankTransfer' ? 'selected' : ''}>Chuyển khoản</option>
                                                 </select>
                                             </div>
                                             <div class="col-md-3" id="txCodeContainer" style="display: none;">
@@ -312,6 +315,7 @@
                                     <form method="POST" action="${pageContext.request.contextPath}/admin/reception/edit"
                                           class="mt-2"
                                           onsubmit="var r = prompt('Lý do từ chối thanh toán (bệnh nhân sẽ mất slot đã giữ):'); if (r === null) return false; document.getElementById('rejectReasonInput').value = r; return true;">
+                                        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                         <input type="hidden" name="id" value="${apt.id}">
                                         <input type="hidden" name="action" value="rejectPayment">
                                         <input type="hidden" name="rejectReason" id="rejectReasonInput" value="">

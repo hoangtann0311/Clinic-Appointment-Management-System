@@ -152,7 +152,11 @@ public class PrescriptionServlet extends HttpServlet {
                 sendError(request, response, "Số lượng không hợp lệ ở dòng " + (i + 1) + " (phải từ 1–9999)."); return;
             }
 
-            String dosage = (dosages != null && i < dosages.length) ? dosages[i].trim() : "";
+            String rawDosage = (dosages != null && i < dosages.length) ? dosages[i] : null;
+            if (rawDosage == null || rawDosage.isBlank()) {
+                sendError(request, response, "Liều dùng và hướng dẫn không được để trống ở dòng " + (i + 1) + "."); return;
+            }
+            String dosage = rawDosage.trim();
             if (dosage.length() > 500) {
                 sendError(request, response, "Liều dùng quá dài ở dòng " + (i + 1) + " (tối đa 500 ký tự)."); return;
             }

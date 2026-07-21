@@ -1,6 +1,7 @@
 package com.clinic.service;
 
 import com.clinic.config.AppConfig;
+import com.clinic.config.DatabaseConfig;
 import com.clinic.dao.UltrasoundOrderDAO;
 import com.clinic.dao.UltrasoundImageDAO;
 import com.clinic.dao.AiAnalysisResultDAO;
@@ -13,6 +14,8 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -93,11 +96,97 @@ public class UltrasoundOrderService {
         return ultrasoundOrderDAO.updateStatus(orderId, targetStatus);
     }
 
+    public boolean startUltrasoundOrder(int orderId, int sonographerUserId) {
+        if (!ultrasoundOrderDAO.isReadyForSonographer(orderId)) return false;
+        return ultrasoundOrderDAO.startUltrasoundOrder(orderId, sonographerUserId);
+    }
+
+    public boolean checkSonographerOwnership(int orderId, int sonographerUserId) {
+        return ultrasoundOrderDAO.checkSonographerOwnership(orderId, sonographerUserId);
+    }
+
+    public boolean checkDoctorOwnership(int orderId, int doctorUserId) {
+        return ultrasoundOrderDAO.checkDoctorOwnership(orderId, doctorUserId);
+    }
+
+    public boolean checkPatientOwnership(int orderId, int patientUserId) {
+        return ultrasoundOrderDAO.checkPatientOwnership(orderId, patientUserId);
+    }
+
+    public boolean completeSonographerResult(int orderId, String sonographerNotes) {
+        UltrasoundWaitingPatient order = ultrasoundOrderDAO.getById(orderId);
+        if (order == null || !ultrasoundOrderDAO.isReadyForSonographer(orderId)) return false;
+        if (sonographerNotes == null || sonographerNotes.trim().isEmpty()) return false;
+
+        // Lưu nhận xét chuyên môn của Sonographer vào ai_analysis_results nếu có hoặc cập nhật status
+        AiAnalysisResult aiResult = aiAnalysisResultDAO.getByTestOrderId(orderId);
+        if (aiResult != null) {
+            aiResult.setMessage(sonographerNotes.trim());
+            aiAnalysisResultDAO.deleteByTestOrderId(orderId);
+            aiAnalysisResultDAO.insert(aiResult);
+        }
+
+        return ultrasoundOrderDAO.updateStatus(orderId, "Completed");
+    }
+
     /**
      * Tạo chỉ định siêu âm mới (được gọi từ Doctor)
      */
     public int createUltrasoundRequest(int medicalRecordId, int doctorId, int serviceId) {
         return createUltrasoundRequest(medicalRecordId, doctorId, serviceId, false, null);
+    }
+
+    /**
+     * Prevents duplicate active orders and performs order insertion + invoice creation
+     * in a single atomic database transaction using WITH (UPDLOCK, HOLDLOCK).
+     */
+    public int createUltrasoundRequestInTransaction(int apptId, int medicalRecordId, int doctorId, int serviceId,
+                                                    boolean includedInBookedAppointment, BigDecimal price, String reorderReason) {
+        Connection conn = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            conn.setAutoCommit(false);
+
+            // 1. Kiểm tra active order với UPDLOCK, HOLDLOCK
+            UltrasoundWaitingPatient activeOrder = ultrasoundOrderDAO.findActiveOrder(conn, medicalRecordId, serviceId);
+            if (activeOrder != null) {
+                conn.rollback();
+                return ACTIVE_ORDER_EXISTS;
+            }
+
+            // 2. Insert test_orders
+            String reason = reorderReason == null ? null : reorderReason.trim();
+            int orderId = ultrasoundOrderDAO.insert(conn, medicalRecordId, doctorId, serviceId, "Pending", reason);
+            if (orderId <= 0) {
+                conn.rollback();
+                return -1;
+            }
+
+            // 3. Tạo/Cộng dồn hóa đơn POST_EXAM nếu là dịch vụ bổ sung ngoài lịch hẹn
+            if (!includedInBookedAppointment) {
+                com.clinic.dao.InvoiceDAO invoiceDAO = new com.clinic.dao.InvoiceDAO();
+                int invoiceId = invoiceDAO.createOrAppendPostExamServiceInvoice(conn, apptId, serviceId, price);
+                if (invoiceId <= 0) {
+                    conn.rollback();
+                    return -1;
+                }
+            }
+
+            // 4. Commit toàn bộ transaction khi cả order và invoice thành công
+            conn.commit();
+            return orderId;
+        } catch (Exception e) {
+            if (conn != null) {
+                try { conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); }
+            }
+            System.err.println("[UltrasoundOrderService] createUltrasoundRequestInTransaction ERROR: " + e.getMessage());
+            return -1;
+        } finally {
+            if (conn != null) {
+                try { conn.setAutoCommit(true); } catch (SQLException ex) {}
+                DatabaseConfig.closeConnection(conn);
+            }
+        }
     }
 
     /**
@@ -244,8 +333,9 @@ public class UltrasoundOrderService {
                     // Lưu kết quả AI mới
                     aiAnalysisResultDAO.insert(result);
 
-                    // Chuyển trạng thái sang Completed
-                    ultrasoundOrderDAO.updateStatus(orderId, "Completed");
+                    // khi AI phân tích thành công, lưu AI status "Success" nhưng KHÔNG tự động hoàn thành order!
+                    // Order giữ trạng thái Uploaded để Sonographer nhập nhận xét chuyên môn và bấm Hoàn thành.
+                    ultrasoundOrderDAO.updateStatus(orderId, "Uploaded");
                     return true;
                 } else {
                     throw new Exception("AI Engine trả về lỗi: " + extractJsonField(responseBody, "errorMessage"));
@@ -322,8 +412,8 @@ public class UltrasoundOrderService {
             }
         }
 
-        // Cập nhật trạng thái đơn siêu âm thành 'confirmed'
-        return ultrasoundOrderDAO.updateStatus(orderId, "confirmed");
+        // Cập nhật trạng thái đơn siêu âm thành 'Confirmed'
+        return ultrasoundOrderDAO.updateStatus(orderId, "Confirmed");
     }
 
     /**

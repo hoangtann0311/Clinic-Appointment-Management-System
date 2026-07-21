@@ -5,182 +5,332 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 
 /**
- * Cấu hình kết nối SQL Server Database.
- * Tự động thử nhiều phương thức kết nối để tìm cấu hình hoạt động.
- * <p>
- * Các kiểu kết nối được thử:
- * 1. Windows Auth - Default instance (localhost:1433)
- * 2. Windows Auth - Named instance SQLEXPRESS
- * 3. Windows Auth - Named instance MSSQLSERVER
- * 4. SQL Auth (sa) - Default instance
- * 5. SQL Auth (sa) - Named instance SQLEXPRESS
+ * Cấu hình kết nối SQL Server.
+ *
+ * Thứ tự ưu tiên cấu hình:
+ * 1. Java system property.
+ * 2. Environment variable.
+ * 3. AppConfig/config.properties.
+ * 4. Giá trị mặc định an toàn.
+ *
+ * Không lưu username/password thật trực tiếp trong repository.
  */
-public class DatabaseConfig {
+public final class DatabaseConfig {
 
-    // Shared team database export is named ObstetricsClinicDB. Developers can
-    // override this locally with DB_NAME=ObstetricsClinicDB_Merge_Test.
-    private static final String DATABASE_NAME = getSetting("DB_NAME", "ObstetricsClinicDB");
+    private static final String DATABASE_NAME =
+            getSetting("DB_NAME", "ObstetricsClinicDB");
 
-    // SQL Server Authentication credentials (chỉ dùng khi Windows Auth thất bại)
-    private static final String DB_USER = getSetting("DB_USER", "sa");
-    // Keep the repository password-free. Each member sets only this fallback locally,
-    // or supplies DB_PASSWORD as an environment variable.
-    private static final String DB_PASSWORD = getSetting("DB_PASSWORD", "123");
+    /**
+     * Có thể cấu hình toàn bộ JDBC URL bằng DB_URL.
+     *
+     * Ví dụ Windows Authentication:
+     * jdbc:sqlserver://localhost\\SQLEXPRESS;
+     * databaseName=ObstetricsClinicDB;
+     * integratedSecurity=true;
+     * encrypt=true;
+     * trustServerCertificate=true;
+     *
+     * Ví dụ SQL Authentication:
+     * jdbc:sqlserver://localhost:1433;
+     * databaseName=ObstetricsClinicDB;
+     * encrypt=true;
+     * trustServerCertificate=true;
+     */
+    private static final String CUSTOM_DB_URL =
+            getSetting("DB_URL", null);
 
-    // Danh sách các URL kết nối sẽ thử lần lượt
+    /**
+     * Không đặt tài khoản và mật khẩu mặc định trong source code.
+     * Thành viên cấu hình bằng DB_USER và DB_PASSWORD trên máy cá nhân.
+     */
+    private static final String DB_USER =
+            getSetting("DB_USER", null);
+
+    private static final String DB_PASSWORD =
+            getSetting("DB_PASSWORD", null);
+
+    /**
+     * Bốn URL đầu sử dụng Windows Authentication.
+     * Hai URL cuối sử dụng SQL Server Authentication.
+     */
     private static final String[] CONNECTION_URLS = {
-        // Windows Authentication - Default instance port 1433
         "jdbc:sqlserver://localhost:1433;"
                 + "databaseName=" + DATABASE_NAME + ";"
                 + "integratedSecurity=true;"
                 + "encrypt=true;"
                 + "trustServerCertificate=true;",
 
-        // Windows Authentication - Named instance SQLEXPRESS
         "jdbc:sqlserver://localhost\\SQLEXPRESS;"
                 + "databaseName=" + DATABASE_NAME + ";"
                 + "integratedSecurity=true;"
                 + "encrypt=true;"
                 + "trustServerCertificate=true;",
 
-        // Windows Authentication - Named instance MSSQLSERVER
         "jdbc:sqlserver://localhost\\MSSQLSERVER;"
                 + "databaseName=" + DATABASE_NAME + ";"
                 + "integratedSecurity=true;"
                 + "encrypt=true;"
                 + "trustServerCertificate=true;",
 
-        // Windows Auth - Không chỉ định port (tự động)
         "jdbc:sqlserver://localhost;"
                 + "databaseName=" + DATABASE_NAME + ";"
                 + "integratedSecurity=true;"
                 + "encrypt=true;"
                 + "trustServerCertificate=true;",
 
-        // SQL Server Authentication - Default instance
         "jdbc:sqlserver://localhost:1433;"
                 + "databaseName=" + DATABASE_NAME + ";"
                 + "encrypt=true;"
                 + "trustServerCertificate=true;",
 
-        // SQL Server Authentication - Named instance SQLEXPRESS
         "jdbc:sqlserver://localhost\\SQLEXPRESS;"
                 + "databaseName=" + DATABASE_NAME + ";"
                 + "encrypt=true;"
-                + "trustServerCertificate=true;",
+                + "trustServerCertificate=true;"
     };
 
-    private static String activeUrl = null;
-    private static boolean useSqlAuth = false;
+    private static volatile String activeUrl;
+    private static volatile boolean activeUrlUsesSqlAuth;
+
+    private DatabaseConfig() {
+        // Utility class
+    }
 
     private static String getSetting(String name, String defaultValue) {
         String property = System.getProperty(name);
         if (property != null && !property.isBlank()) {
-            return property;
+            return property.trim();
         }
+
         String environment = System.getenv(name);
-        return environment != null && !environment.isBlank() ? environment : defaultValue;
+        if (environment != null && !environment.isBlank()) {
+            return environment.trim();
+        }
+
+        String configKey = name.toLowerCase().replace('_', '.');
+        String appConfigValue = AppConfig.get(configKey, null);
+
+        if (appConfigValue != null && !appConfigValue.isBlank()) {
+            return appConfigValue.trim();
+        }
+
+        return defaultValue;
     }
 
     static {
         try {
             Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
         } catch (ClassNotFoundException e) {
-            throw new RuntimeException("Không tìm thấy SQL Server JDBC Driver. "
-                    + "Hãy thêm mssql-jdbc vào WEB-INF/lib.", e);
+            throw new ExceptionInInitializerError(
+                    "Không tìm thấy SQL Server JDBC Driver. "
+                            + "Hãy thêm mssql-jdbc vào WEB-INF/lib. "
+                            + "Chi tiết: " + e.getMessage()
+            );
         }
     }
 
     /**
-     * Lấy connection đến database. Tự động thử các URL cho đến khi kết nối thành công.
+     * Mở kết nối tới SQL Server.
      *
-     * @return Connection object
-     * @throws SQLException nếu tất cả các cách kết nối đều thất bại
+     * @return kết nối database
+     * @throws SQLException khi tất cả phương thức kết nối đều thất bại
      */
     public static Connection getConnection() throws SQLException {
-        // Nếu đã biết URL hoạt động, dùng lại luôn
-        if (activeUrl != null) {
-            try {
-                if (useSqlAuth) {
-                    return DriverManager.getConnection(activeUrl, DB_USER, DB_PASSWORD);
-                }
-                return DriverManager.getConnection(activeUrl);
-            } catch (SQLException e) {
-                // URL cũ không hoạt động nữa, reset để thử lại
-                System.err.println("URL đã lưu không hoạt động, thử lại tất cả...");
-                activeUrl = null;
-            }
-        }
-
-        // Thử lần lượt từng URL
         SQLException lastException = null;
 
-        // Phase 1: Thử Windows Authentication
-        for (int i = 0; i < CONNECTION_URLS.length; i++) {
-            String url = CONNECTION_URLS[i];
-            boolean isSqlAuth = (i >= 4); // 4 URL đầu là Windows Auth, còn lại là SQL Auth
-
+        /*
+         * 1. Ưu tiên URL tùy chỉnh.
+         */
+        if (CUSTOM_DB_URL != null && !CUSTOM_DB_URL.isBlank()) {
             try {
-                Connection conn;
-                if (isSqlAuth) {
-                    conn = DriverManager.getConnection(url, DB_USER, DB_PASSWORD);
-                } else {
-                    conn = DriverManager.getConnection(url);
-                }
-                // Kết nối thành công
-                activeUrl = url;
-                useSqlAuth = isSqlAuth;
-                System.out.println(">>> Database connected: " + (isSqlAuth ? "SQL Auth" : "Windows Auth"));
-                return conn;
+                Connection connection = connectCustomUrl(CUSTOM_DB_URL);
+
+                System.out.println(
+                        ">>> Database connected using custom DB_URL: "
+                                + getAuthenticationDescription(CUSTOM_DB_URL)
+                );
+
+                return connection;
             } catch (SQLException e) {
                 lastException = e;
-                // In ra lỗi để debug (chỉ in lần đầu)
-                if (i == 0) {
-                    System.err.println("Đang thử các phương thức kết nối SQL Server...");
-                }
-                System.err.println("  [" + (i + 1) + "] Thất bại: " + getShortUrl(url)
-                        + " - " + e.getMessage().split("\n")[0]);
+                logConnectionFailure("Custom DB_URL", e);
             }
         }
 
-        // Tất cả đều thất bại
+        /*
+         * 2. Tái sử dụng URL từng kết nối thành công.
+         */
+        if (activeUrl != null) {
+            try {
+                return openConnection(activeUrl, activeUrlUsesSqlAuth);
+            } catch (SQLException e) {
+                lastException = e;
+                activeUrl = null;
+                activeUrlUsesSqlAuth = false;
+
+                logConnectionFailure("Cached connection URL", e);
+            }
+        }
+
+        /*
+         * 3. Thử lần lượt các URL dự phòng.
+         */
+        for (int index = 0; index < CONNECTION_URLS.length; index++) {
+            String url = CONNECTION_URLS[index];
+            boolean sqlAuthentication = index >= 4;
+
+            if (sqlAuthentication && !hasSqlCredentials()) {
+                continue;
+            }
+
+            try {
+                Connection connection =
+                        openConnection(url, sqlAuthentication);
+
+                activeUrl = url;
+                activeUrlUsesSqlAuth = sqlAuthentication;
+
+                System.out.println(
+                        ">>> Database connected: "
+                                + (sqlAuthentication
+                                ? "SQL Server Authentication"
+                                : "Windows Authentication")
+                                + " | Database: "
+                                + DATABASE_NAME
+                );
+
+                return connection;
+            } catch (SQLException e) {
+                lastException = e;
+
+                logConnectionFailure(
+                        "[" + (index + 1) + "] "
+                                + getAuthenticationDescription(url),
+                        e
+                );
+            }
+        }
+
+        String sqlState = lastException != null
+                ? lastException.getSQLState()
+                : "N/A";
+
+        int errorCode = lastException != null
+                ? lastException.getErrorCode()
+                : 0;
+
         throw new SQLException(
                 "KHÔNG THỂ KẾT NỐI SQL SERVER.\n"
-                + "Vui lòng kiểm tra:\n"
-                + "1. SQL Server đã được cài đặt và đang chạy chưa?\n"
-                + "   Mở Services.msc, tìm 'SQL Server (MSSQLSERVER)' hoặc 'SQL Server (SQLEXPRESS)'\n"
-                + "2. TCP/IP đã được bật trong SQL Server Configuration Manager chưa?\n"
-                + "   SQL Server Configuration Manager > SQL Server Network Configuration\n"
-                + "   > Protocols for MSSQLSERVER > TCP/IP > Enable = Yes\n"
-                + "3. SQL Server Browser service đã chạy chưa? (nếu dùng named instance)\n"
-                + "   Services.msc > SQL Server Browser > Start\n"
-                + "4. Windows Firewall có đang chặn port 1433 không?\n"
-                + "5. Nếu dùng SQL Auth (sa/123), SQL Server đã bật Mixed Mode chưa?\n"
-                + "   SSMS > Click phải Server > Properties > Security > SQL Server and Windows Authentication mode\n\n"
-                + "Lỗi gốc: " + lastException.getMessage(),
-                lastException);
+                        + "Database: " + DATABASE_NAME + "\n"
+                        + "Hãy kiểm tra:\n"
+                        + "1. SQL Server hoặc SQLEXPRESS đang chạy.\n"
+                        + "2. Database đã tồn tại.\n"
+                        + "3. TCP/IP đã được bật.\n"
+                        + "4. SQL Server Browser đang chạy nếu dùng named instance.\n"
+                        + "5. mssql-jdbc_auth DLL đã được cấu hình nếu dùng "
+                        + "Windows Authentication.\n"
+                        + "6. DB_USER và DB_PASSWORD đã được đặt nếu dùng SQL Auth.\n"
+                        + "SQLState: " + sqlState + "\n"
+                        + "Error code: " + errorCode,
+                lastException
+        );
+    }
+
+    /**
+     * Kết nối bằng DB_URL tùy chỉnh.
+     */
+    private static Connection connectCustomUrl(String url)
+            throws SQLException {
+
+        if (usesIntegratedSecurity(url)) {
+            return DriverManager.getConnection(url);
+        }
+
+        if (hasSqlCredentials()) {
+            return DriverManager.getConnection(
+                    url,
+                    DB_USER,
+                    DB_PASSWORD
+            );
+        }
+
+        /*
+         * Cho phép URL tự chứa cơ chế xác thực hoặc cấu hình khác.
+         * Không khuyến nghị đưa password trực tiếp vào URL trong repository.
+         */
+        return DriverManager.getConnection(url);
+    }
+
+    private static Connection openConnection(
+            String url,
+            boolean sqlAuthentication
+    ) throws SQLException {
+
+        if (sqlAuthentication) {
+            if (!hasSqlCredentials()) {
+                throw new SQLException(
+                        "Thiếu DB_USER hoặc DB_PASSWORD cho SQL Authentication."
+                );
+            }
+
+            return DriverManager.getConnection(
+                    url,
+                    DB_USER,
+                    DB_PASSWORD
+            );
+        }
+
+        return DriverManager.getConnection(url);
+    }
+
+    private static boolean hasSqlCredentials() {
+        return DB_USER != null
+                && !DB_USER.isBlank()
+                && DB_PASSWORD != null
+                && !DB_PASSWORD.isBlank();
+    }
+
+    private static boolean usesIntegratedSecurity(String url) {
+        return url != null
+                && url.toLowerCase().contains("integratedsecurity=true");
+    }
+
+    private static String getAuthenticationDescription(String url) {
+        return usesIntegratedSecurity(url)
+                ? "Windows Authentication"
+                : "SQL Server Authentication";
+    }
+
+    private static void logConnectionFailure(
+            String method,
+            SQLException exception
+    ) {
+        System.err.println(
+                method
+                        + " thất bại. SQLState="
+                        + exception.getSQLState()
+                        + ", errorCode="
+                        + exception.getErrorCode()
+        );
     }
 
     /**
      * Đóng connection an toàn.
      */
-    public static void closeConnection(Connection conn) {
-        if (conn != null) {
-            try {
-                conn.close();
-            } catch (SQLException e) {
-                System.err.println("Lỗi khi đóng connection: " + e.getMessage());
-            }
+    public static void closeConnection(Connection connection) {
+        if (connection == null) {
+            return;
         }
-    }
 
-    /**
-     * Lấy URL rút gọn để hiển thị log.
-     */
-    private static String getShortUrl(String url) {
-        if (url.contains("integratedSecurity=true")) {
-            return "Windows Auth";
+        try {
+            connection.close();
+        } catch (SQLException e) {
+            System.err.println(
+                    "Lỗi khi đóng connection. SQLState="
+                            + e.getSQLState()
+                            + ", errorCode="
+                            + e.getErrorCode()
+            );
         }
-        return "SQL Auth (sa)";
     }
 }

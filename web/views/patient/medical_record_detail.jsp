@@ -88,6 +88,23 @@
 
 </c:if>
 
+<c:if test="${mode == 'unreleased'}">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm rounded-4 p-4 text-center">
+                <i class="bi bi-clock-history text-warning display-4 mb-3"></i>
+                <h4 class="fw-bold">Kết quả chưa được công bố</h4>
+                <p class="text-muted mb-4">${unreleasedNotice}</p>
+                <div>
+                    <a href="${pageContext.request.contextPath}/patient/medical-records" class="btn btn-primary rounded-pill px-4">
+                        <i class="bi bi-arrow-left me-1"></i>Quay lại danh sách
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</c:if>
+
 <%-- ══════════════════════════════════════════════════════════════════════
      CHẾ ĐỘ CHI TIẾT: /patient/medical-records?recordId=X
      ══════════════════════════════════════════════════════════════════════ --%>

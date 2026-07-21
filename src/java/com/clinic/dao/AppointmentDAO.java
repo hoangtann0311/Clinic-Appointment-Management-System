@@ -662,6 +662,21 @@ public class AppointmentDAO {
         }
     }
 
+    public boolean confirmPreExamPayment(Connection conn, int appointmentId) throws SQLException {
+        String apptSql = "UPDATE appointments SET status = 'Confirmed' WHERE id = ? AND status = 'Pending'";
+        try (PreparedStatement ps = conn.prepareStatement(apptSql)) {
+            ps.setInt(1, appointmentId);
+            ps.executeUpdate();
+        }
+
+        String slotSql = "UPDATE time_slots SET status = 'BOOKED', updated_at = GETDATE() WHERE id = (SELECT slot_id FROM appointments WHERE id = ?)";
+        try (PreparedStatement ps = conn.prepareStatement(slotSql)) {
+            ps.setInt(1, appointmentId);
+            ps.executeUpdate();
+        }
+        return true;
+    }
+
     /**
      * Gọi khi bệnh nhân vừa gửi thông tin thanh toán (invoice chuyển sang PendingConfirmation),
      * tức là bệnh nhân đã "kịp" trong thời gian giữ chỗ 15 phút — chốt slot thành
@@ -903,7 +918,7 @@ public class AppointmentDAO {
 
     /** Completes a consultation only after it has been started by the assigned doctor. */
     public boolean completeConsultation(int appointmentId, int doctorId) {
-        String sql = "UPDATE appointments SET status = 'SUCCESS' "
+        String sql = "UPDATE appointments SET status = 'Completed' "
                 + "WHERE id = ? AND doctor_id = ? AND status = 'InProgress'";
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {

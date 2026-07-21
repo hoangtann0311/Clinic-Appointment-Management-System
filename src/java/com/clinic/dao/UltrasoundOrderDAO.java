@@ -209,6 +209,124 @@ public class UltrasoundOrderDAO {
         }
     }
 
+    private static Boolean hasSonographerOwnershipColumn = null;
+
+    public boolean isSonographerOwnershipSupported() {
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            return checkSonographerOwnershipColumn(conn);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private boolean checkSonographerOwnershipColumn(Connection conn) {
+        if (hasSonographerOwnershipColumn != null) return hasSonographerOwnershipColumn;
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'test_orders' AND COLUMN_NAME = 'sonographer_user_id'")) {
+            try (ResultSet rs = ps.executeQuery()) {
+                hasSonographerOwnershipColumn = rs.next();
+            }
+        } catch (Exception e) {
+            hasSonographerOwnershipColumn = false;
+        }
+        return hasSonographerOwnershipColumn;
+    }
+
+    /**
+     * Atomically moves an unassigned pending order to InProgress and assigns sonographer_user_id.
+     * Prevents race condition if two sonographers try to start the same order.
+     */
+    public boolean startUltrasoundOrder(int orderId, int sonographerUserId) {
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            boolean hasCol = checkSonographerOwnershipColumn(conn);
+            if (!hasCol) {
+                System.err.println("[UltrasoundOrderDAO] CẤU HÌNH DATABASE CHƯA HỖ TRỢ OWNERSHIP: Bảng test_orders chưa bổ sung cột sonographer_user_id (V12 migration script).");
+                String sql = "UPDATE test_orders SET status = 'InProgress' WHERE id = ? AND UPPER(LTRIM(RTRIM(ISNULL(status, '')))) IN ('PENDING', 'WAITING', 'ORDERED')";
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setInt(1, orderId);
+                    return ps.executeUpdate() > 0;
+                }
+            } else {
+                String sql = "UPDATE test_orders SET sonographer_user_id = ?, accepted_at = CURRENT_TIMESTAMP, status = 'InProgress' "
+                        + "WHERE id = ? AND (sonographer_user_id IS NULL OR sonographer_user_id = ?) AND UPPER(LTRIM(RTRIM(ISNULL(status, '')))) IN ('PENDING', 'WAITING', 'ORDERED')";
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setInt(1, sonographerUserId);
+                    ps.setInt(2, orderId);
+                    ps.setInt(3, sonographerUserId);
+                    return ps.executeUpdate() > 0;
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[UltrasoundOrderDAO] startUltrasoundOrder error: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Verifies that the given sonographer is the owner of the specified order.
+     */
+    public boolean checkSonographerOwnership(int orderId, int sonographerUserId) {
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            boolean hasCol = checkSonographerOwnershipColumn(conn);
+            if (!hasCol) {
+                return true; // Migration not executed yet
+            }
+            String sql = "SELECT 1 FROM test_orders WHERE id = ? AND sonographer_user_id = ?";
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setInt(1, orderId);
+                ps.setInt(2, sonographerUserId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    return rs.next();
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[UltrasoundOrderDAO] checkSonographerOwnership error: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Verifies that the given doctor (by user ID) is the ordering doctor for this ultrasound order.
+     */
+    public boolean checkDoctorOwnership(int orderId, int doctorUserId) {
+        String sql = "SELECT 1 FROM test_orders o "
+                   + "LEFT JOIN doctors d ON o.doctor_id = d.id "
+                   + "WHERE o.id = ? AND d.user_id = ?";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, orderId);
+            ps.setInt(2, doctorUserId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            System.err.println("[UltrasoundOrderDAO] checkDoctorOwnership error: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Verifies that the given patient (by user ID) owns the appointment for this order AND order is Confirmed.
+     */
+    public boolean checkPatientOwnership(int orderId, int patientUserId) {
+        String sql = "SELECT 1 FROM test_orders o "
+                   + "LEFT JOIN medical_records mr ON o.medical_record_id = mr.id "
+                   + "LEFT JOIN appointments a ON mr.appointment_id = a.id "
+                   + "LEFT JOIN patients p ON a.patient_id = p.id "
+                   + "WHERE o.id = ? AND p.user_id = ? AND UPPER(LTRIM(RTRIM(ISNULL(o.status, '')))) IN ('CONFIRMED', 'COMPLETED')";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, orderId);
+            ps.setInt(2, patientUserId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            System.err.println("[UltrasoundOrderDAO] checkPatientOwnership error: " + e.getMessage());
+            return false;
+        }
+    }
+
     public int insert(int medicalRecordId, int doctorId, int serviceId, String status) {
         return insert(medicalRecordId, doctorId, serviceId, status, null);
     }
@@ -217,14 +335,9 @@ public class UltrasoundOrderDAO {
      * Creates an ultrasound order.  A reason is recorded only when the doctor
      * explicitly re-orders a service that already has an active order.
      */
-    public int insert(int medicalRecordId, int doctorId, int serviceId, String status, String reorderReason) {
+    public int insert(Connection conn, int medicalRecordId, int doctorId, int serviceId, String status, String reorderReason) throws SQLException {
         String sql = "INSERT INTO test_orders (medical_record_id, doctor_id, service_id, status, reorder_reason, created_at) VALUES (?, ?, ?, ?, ?, GETDATE())";
-        Connection conn = null;
-        PreparedStatement ps = null;
-        ResultSet rs = null;
-        try {
-            conn = DatabaseConfig.getConnection();
-            ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+        try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt(1, medicalRecordId);
             ps.setInt(2, doctorId);
             ps.setInt(3, serviceId);
@@ -232,33 +345,36 @@ public class UltrasoundOrderDAO {
             ps.setString(5, reorderReason);
             int rows = ps.executeUpdate();
             if (rows > 0) {
-                rs = ps.getGeneratedKeys();
-                if (rs.next()) {
-                    int orderId = rs.getInt(1);
-                    // Gửi thông báo cho bệnh nhân đi siêu âm
-                    return orderId;
+                try (ResultSet rs = ps.getGeneratedKeys()) {
+                    if (rs.next()) {
+                        return rs.getInt(1);
+                    }
                 }
             }
-        } catch (SQLException e) {
-            System.err.println("[UltrasoundOrderDAO] insert error: " + e.getMessage());
-        } finally {
-            closeResources(conn, ps, rs);
         }
         return -1;
     }
 
-    /**
-     * Finds an unfinished order for the same medical record and service.
-     * Completed, cancelled and doctor-confirmed orders may be ordered again.
-     */
-    public UltrasoundWaitingPatient findActiveOrder(int medicalRecordId, int serviceId) {
+    public int insert(int medicalRecordId, int doctorId, int serviceId, String status, String reorderReason) {
+        Connection conn = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            return insert(conn, medicalRecordId, doctorId, serviceId, status, reorderReason);
+        } catch (SQLException e) {
+            System.err.println("[UltrasoundOrderDAO] insert error: " + e.getMessage());
+            return -1;
+        } finally {
+            DatabaseConfig.closeConnection(conn);
+        }
+    }
+
+    public UltrasoundWaitingPatient findActiveOrder(Connection conn, int medicalRecordId, int serviceId) throws SQLException {
         String sql = "SELECT TOP 1 o.id AS order_id, o.medical_record_id, o.service_id, o.status, o.created_at "
-                + "FROM test_orders o "
+                + "FROM test_orders o WITH (UPDLOCK, HOLDLOCK) "
                 + "WHERE o.medical_record_id = ? AND o.service_id = ? "
                 + "AND UPPER(LTRIM(RTRIM(ISNULL(o.status, '')))) NOT IN ('COMPLETED', 'CANCELLED', 'CONFIRMED') "
                 + "ORDER BY o.id DESC";
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, medicalRecordId);
             ps.setInt(2, serviceId);
             try (ResultSet rs = ps.executeQuery()) {
@@ -273,6 +389,12 @@ public class UltrasoundOrderDAO {
                 order.setCreatedAt(rs.getTimestamp("created_at"));
                 return order;
             }
+        }
+    }
+
+    public UltrasoundWaitingPatient findActiveOrder(int medicalRecordId, int serviceId) {
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            return findActiveOrder(conn, medicalRecordId, serviceId);
         } catch (SQLException e) {
             throw new RuntimeException("Lỗi database khi kiểm tra chỉ định siêu âm đang xử lý", e);
         }

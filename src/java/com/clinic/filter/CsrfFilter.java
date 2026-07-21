@@ -84,9 +84,18 @@ public class CsrfFilter implements Filter {
         if (isCsrfProtectedPath(path) && ("POST".equals(method) || "PUT".equals(method)
                 || "DELETE".equals(method) || "PATCH".equals(method))) {
 
-            String requestToken = httpReq.getParameter(CSRF_PARAM_NAME);
-            if (requestToken == null) {
+            String requestToken = httpReq.getParameter("csrfToken");
+            if (requestToken == null || requestToken.isBlank()) {
+                requestToken = httpReq.getParameter("_csrf");
+            }
+            if (requestToken == null || requestToken.isBlank()) {
+                requestToken = httpReq.getParameter(CSRF_PARAM_NAME);
+            }
+            if (requestToken == null || requestToken.isBlank()) {
                 requestToken = httpReq.getHeader("X-CSRF-TOKEN");
+            }
+            if (requestToken == null || requestToken.isBlank()) {
+                requestToken = httpReq.getHeader("X-CSRF-Token");
             }
 
             if (requestToken == null || !sessionToken.equals(requestToken)) {
@@ -140,6 +149,7 @@ public class CsrfFilter implements Filter {
                 || path.startsWith("/admin/services")
                 || path.startsWith("/admin/medicines")
                 || path.startsWith("/admin/pricing")
+                || path.startsWith("/admin/reception")
                 || path.startsWith("/manager/services")
                 || path.startsWith("/manager/medicines")
                 || path.startsWith("/manager/schedules")

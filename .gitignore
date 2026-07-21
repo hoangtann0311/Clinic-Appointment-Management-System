@@ -38,3 +38,13 @@ Desktop.ini
 .DS_Store
 *.tmp
 *.log
+
+# --- Local secret environment configurations (CRITICAL) ---
+config.local.properties
+db.properties
+*.local.properties
+
+# --- Temporary compilation outputs ---
+output/
+tmp/
+

@@ -84,7 +84,9 @@ public class PatientPregnancyResultsServlet extends HttpServlet {
             "JOIN appointments a   ON mr.appointment_id = a.id " +
             "JOIN doctors doc      ON a.doctor_id = doc.id " +
             "JOIN users doc_u      ON doc.user_id = doc_u.id " +
-            "WHERE mr.id = ? AND a.patient_id = ?";
+            "WHERE mr.id = ? AND a.patient_id = ? "
+            + "AND (mr.status IS NULL OR LOWER(LTRIM(RTRIM(mr.status))) = 'final') "
+            + "AND UPPER(LTRIM(RTRIM(ISNULL(a.status, '')))) IN ('SUCCESS', 'COMPLETED')";
         try (Connection c = DatabaseConfig.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setInt(1, recordId);

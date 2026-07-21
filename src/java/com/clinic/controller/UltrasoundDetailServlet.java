@@ -88,7 +88,8 @@ public class UltrasoundDetailServlet extends HttpServlet {
             return;
         }
 
-        if (!"start".equalsIgnoreCase(request.getParameter("action"))) {
+        String action = request.getParameter("action");
+        if (!"start".equalsIgnoreCase(action) && !"complete".equalsIgnoreCase(action) && !"saveDraft".equalsIgnoreCase(action)) {
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Thao tác không hợp lệ.");
             return;
         }
@@ -99,10 +100,45 @@ public class UltrasoundDetailServlet extends HttpServlet {
             return;
         }
 
-        if (orderService.updateOrderStatus(orderId, "InProgress")) {
-            response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId + "&success=started");
+        if ("start".equalsIgnoreCase(action)) {
+            if (orderService.startUltrasoundOrder(orderId, user.getId())) {
+                response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId + "&success=started");
+            } else {
+                response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId + "&error=" + java.net.URLEncoder.encode("Không thể tiếp nhận ca (Đã có KTV khác tiếp nhận hoặc chưa thanh toán).", "UTF-8"));
+            }
         } else {
-            response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId + "&error=cannotStart");
+            // Thao tác complete hoặc saveDraft bắt buộc kiểm tra Ownership
+            if (!orderService.checkSonographerOwnership(orderId, user.getId())) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền cập nhật kết quả cho ca siêu âm này (Đã được phụ trách bởi KTV khác).");
+                return;
+            }
+
+            String sonographerNotes = request.getParameter("sonographerNotes");
+            if ("complete".equalsIgnoreCase(action)) {
+                if (sonographerNotes == null || sonographerNotes.trim().isEmpty()) {
+                    response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId 
+                            + "&error=" + java.net.URLEncoder.encode("Vui lòng nhập đầy đủ kết quả nhận xét chuyên môn siêu âm.", "UTF-8"));
+                    return;
+                }
+                if (orderService.completeSonographerResult(orderId, sonographerNotes)) {
+                    response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId + "&success=completed");
+                } else {
+                    response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId 
+                            + "&error=" + java.net.URLEncoder.encode("Lỗi khi hoàn thành ca siêu âm.", "UTF-8"));
+                }
+            } else if ("saveDraft".equalsIgnoreCase(action)) {
+                // Lưu nháp kết quả
+                if (sonographerNotes != null && !sonographerNotes.trim().isEmpty()) {
+                    com.clinic.model.AiAnalysisResult aiRes = orderService.getAiResult(orderId);
+                    if (aiRes != null) {
+                        aiRes.setMessage(sonographerNotes.trim());
+                        com.clinic.dao.AiAnalysisResultDAO dao = new com.clinic.dao.AiAnalysisResultDAO();
+                        dao.deleteByTestOrderId(orderId);
+                        dao.insert(aiRes);
+                    }
+                }
+                response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId + "&success=draftSaved");
+            }
         }
     }
 }
