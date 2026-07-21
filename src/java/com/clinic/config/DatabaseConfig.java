@@ -25,7 +25,7 @@ public class DatabaseConfig {
     private static final String DB_USER = getSetting("DB_USER", "sa");
     // Keep the repository password-free. Each member sets only this fallback locally,
     // or supplies DB_PASSWORD as an environment variable.
-    private static final String DB_PASSWORD = getSetting("DB_PASSWORD", "");
+    private static final String DB_PASSWORD = getSetting("DB_PASSWORD", "123");
 
     // Danh sách các URL kết nối sẽ thử lần lượt
     private static final String[] CONNECTION_URLS = {
