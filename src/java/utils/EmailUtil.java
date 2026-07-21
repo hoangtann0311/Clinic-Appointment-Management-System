@@ -42,7 +42,7 @@ public class EmailUtil {
     private static final String SMTP_PASSWORD = "lfqf yger itub dhma";
 
     /** Tên hiển thị khi gửi email */
-    private static final String FROM_NAME = "Phòng Khám Sản - CAMS";
+    private static final String FROM_NAME = "Ph\u00f2ng Kh\u00e1m S\u1ea3n - CAMS";
 
     /** Email gửi đi (thường giống SMTP_USERNAME) */
     private static final String FROM_EMAIL = SMTP_USERNAME;
@@ -74,7 +74,7 @@ public class EmailUtil {
      */
     public static void sendVerificationEmail(String toEmail, String toName, String token) {
         String verificationLink = APP_BASE_URL + "/verify-email?token=" + token;
-        String subject = "Xác Thực Tài Khoản - Phòng Khám Sản";
+        String subject = "X\u00e1c Th\u1ef1c T\u00e0i Kho\u1ea3n - Ph\u00f2ng Kh\u00e1m S\u1ea3n";
 
         // Nội dung email HTML
         String htmlContent = buildVerificationEmailHtml(toName, verificationLink);
@@ -139,9 +139,9 @@ public class EmailUtil {
         // Tạo MimeMessage
         Object message = mimeMessageClass.getConstructor(sessionClass).newInstance(session);
 
-        // Set From: message.setFrom(new InternetAddress(FROM_EMAIL, FROM_NAME))
-        Object fromAddress = internetAddressClass.getConstructor(String.class, String.class)
-                .newInstance(FROM_EMAIL, FROM_NAME);
+        // Set From: message.setFrom(new InternetAddress(FROM_EMAIL, FROM_NAME, "UTF-8"))
+        Object fromAddress = internetAddressClass.getConstructor(String.class, String.class, String.class)
+                .newInstance(FROM_EMAIL, FROM_NAME, "UTF-8");
         mimeMessageClass.getMethod("setFrom", addressClass)
                 .invoke(message, fromAddress);
 
@@ -282,7 +282,7 @@ public class EmailUtil {
      */
     public static void sendPasswordResetEmail(String toEmail, String toName, String token) {
         String resetLink = APP_BASE_URL + "/reset-password?token=" + token;
-        String subject = "Đặt Lại Mật Khẩu - Phòng Khám Sản";
+        String subject = "\u0110\u1eb7t L\u1ea1i M\u1eadt Kh\u1ea9u - Ph\u00f2ng Kh\u00e1m S\u1ea3n";
 
         // Nội dung email HTML
         String htmlContent = buildResetPasswordEmailHtml(toName, resetLink);
