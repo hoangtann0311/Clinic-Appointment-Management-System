@@ -296,116 +296,128 @@
                 <h5 class="m-0 fw-bold text-dark"><i class="bi bi-activity text-primary"></i> Tiến Trình Nghiệp Vụ</h5>
             </div>
             <div class="card-body">
-                <!-- 1. PENDING: Button to start ultrasound -->
-                <c:if test="${fn:toLowerCase(order.status) == 'pending' || fn:toLowerCase(order.status) == 'waiting' || fn:toLowerCase(order.status) == 'ordered'}">
-                    <div class="text-center py-4">
-                        <i class="bi bi-hospital fs-1 text-secondary mb-3 d-block"></i>
-                        <p class="text-muted mb-4">Ca siêu âm đang ở trạng thái chờ tiếp nhận. Vui lòng nhấn nút bên dưới để chuyển sang trạng thái đang thực hiện.</p>
-                        <form method="POST" action="${pageContext.request.contextPath}/sonographer/detail">
-                            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
-                            <input type="hidden" name="action" value="start">
-                            <input type="hidden" name="orderId" value="${order.orderId}">
-                            <button type="submit" class="btn btn-success fw-bold px-4 py-2">
-                                <i class="bi bi-play-fill fs-5"></i> Bắt đầu làm siêu âm
-                            </button>
-                        </form>
-                    </div>
-                </c:if>
-
-                <!-- 2. IN PROGRESS / UPLOADED: Upload images form -->
-                <c:if test="${fn:toLowerCase(order.status) == 'inprogress' || fn:toLowerCase(order.status) == 'uploaded'}">
-                    <div>
-                        <h6 class="fw-bold text-dark mb-3"><i class="bi bi-upload text-rose"></i> Tải hình ảnh siêu âm lên hệ thống</h6>
-                        
-                        <!-- Uploaded Images List (if any) -->
-                        <c:if test="${not empty images}">
-                            <div class="mb-4">
-                                <label class="text-muted small fw-bold mb-2">ẢNH ĐÃ TẢI LÊN</label>
-                                <div class="row g-2">
-                                    <c:forEach var="img" items="${images}">
-                                        <div class="col-md-4">
-                                            <div class="border rounded p-2 text-center bg-light">
-                                                <img src="${pageContext.request.contextPath}/sonographer/image?id=${img.id}" class="img-fluid rounded mb-2 border" style="max-height: 100px; object-fit: cover; cursor: zoom-in;" onclick="openViewer(this.src, 'Ảnh siêu âm tải lên: ${fn:escapeXml(img.originalFilename)}')">
-                                                <div class="small text-truncate" title="${img.originalFilename}">${img.originalFilename}</div>
-                                                <div class="text-muted" style="font-size: 10px;">${String.format('%,.1f KB', img.fileSize / 1024.0)}</div>
-                                            </div>
-                                        </div>
-                                    </c:forEach>
-                                </div>
+                <c:choose>
+                    <c:when test="${not ownershipSupported}">
+                        <div class="alert alert-warning border-warning d-flex align-items-center mb-0" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill fs-4 me-2"></i>
+                            <div>
+                                <strong>Cảnh báo:</strong> Cơ sở dữ liệu chưa được nâng cấp để quản lý người phụ trách siêu âm.
                             </div>
-                        </c:if>
-
-                        <form method="POST" action="${pageContext.request.contextPath}/sonographer/upload" enctype="multipart/form-data" class="border p-3 rounded bg-light">
-                            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
-                            <input type="hidden" name="orderId" value="${order.orderId}">
-                            <div class="mb-3">
-                                <label for="fileUpload" class="form-label fw-bold text-dark">Chọn file ảnh siêu âm (JPG, JPEG, PNG, Tối đa 10MB)</label>
-                                <input class="form-control" type="file" id="fileUpload" name="file" onchange="previewImage(event)" required>
-                            </div>
-                            <!-- Image Preview Container -->
-                            <div id="imagePreviewContainer" style="display: none;" class="text-center mb-3">
-                                <div class="preview-img-container">
-                                    <img id="imagePreview" class="preview-img" alt="Xem trước ảnh siêu âm">
-                                </div>
-                            </div>
-                            <button type="submit" class="btn btn-primary fw-bold w-100">
-                                <i class="bi bi-cloud-arrow-up-fill"></i> Tải ảnh lên máy chủ
-                            </button>
-                        </form>
-
-                        <!-- If Uploaded, allow sending to AI & Form Nhập kết quả chuyên môn -->
-                        <c:if test="${fn:toLowerCase(order.status) == 'uploaded'}">
-                            <hr class="my-4">
-                            <div class="bg-info-subtle border border-info rounded p-3 mb-4">
-                                <h6 class="fw-bold text-info-emphasis"><i class="bi bi-cpu"></i> Tích Hợp AI Engine Hỗ Trợ Chẩn Đoán</h6>
-                                <p class="small text-muted mb-3">Hình ảnh siêu âm đã sẵn sàng. Nhấn nút bên dưới để gửi phân tích tới AI Engine chẩn đoán tự động.</p>
-                                
-                                <form method="POST" action="${pageContext.request.contextPath}/sonographer/analyze" onsubmit="showAiLoading()">
+                        </div>
+                    </c:when>
+                    <c:otherwise>
+                        <!-- 1. PENDING: Button to start ultrasound -->
+                        <c:if test="${fn:toLowerCase(order.status) == 'pending' || fn:toLowerCase(order.status) == 'waiting' || fn:toLowerCase(order.status) == 'ordered'}">
+                            <div class="text-center py-4">
+                                <i class="bi bi-hospital fs-1 text-secondary mb-3 d-block"></i>
+                                <p class="text-muted mb-4">Ca siêu âm đang ở trạng thái chờ tiếp nhận. Vui lòng nhấn nút bên dưới để chuyển sang trạng thái đang thực hiện.</p>
+                                <form method="POST" action="${pageContext.request.contextPath}/sonographer/detail">
                                     <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                                    <input type="hidden" name="action" value="start">
                                     <input type="hidden" name="orderId" value="${order.orderId}">
-                                    <button type="submit" class="btn btn-info text-white fw-bold px-4 py-2 w-100">
-                                        <i class="bi bi-robot"></i> Gửi phân tích AI
+                                    <button type="submit" class="btn btn-success fw-bold px-4 py-2">
+                                        <i class="bi bi-play-fill fs-5"></i> Bắt đầu làm siêu âm
                                     </button>
                                 </form>
                             </div>
+                        </c:if>
 
-                            <!-- Sonographer Expert Notes Entry Form -->
-                            <div class="border p-3 rounded bg-white shadow-sm">
-                                <h6 class="fw-bold text-dark mb-3"><i class="bi bi-journal-medical text-primary"></i> Nhập Kết Quả Siêu Âm Chuyên Môn (KTV)</h6>
-                                <form method="POST" action="${pageContext.request.contextPath}/sonographer/detail">
+                        <!-- 2. IN PROGRESS / UPLOADED: Upload images form -->
+                        <c:if test="${fn:toLowerCase(order.status) == 'inprogress' || fn:toLowerCase(order.status) == 'uploaded'}">
+                            <div>
+                                <h6 class="fw-bold text-dark mb-3"><i class="bi bi-upload text-rose"></i> Tải hình ảnh siêu âm lên hệ thống</h6>
+                                
+                                <!-- Uploaded Images List (if any) -->
+                                <c:if test="${not empty images}">
+                                    <div class="mb-4">
+                                        <label class="text-muted small fw-bold mb-2">ẢNH ĐÃ TẢI LÊN</label>
+                                        <div class="row g-2">
+                                            <c:forEach var="img" items="${images}">
+                                                <div class="col-md-4">
+                                                    <div class="border rounded p-2 text-center bg-light">
+                                                        <img src="${pageContext.request.contextPath}/sonographer/image?id=${img.id}" class="img-fluid rounded mb-2 border" style="max-height: 100px; object-fit: cover; cursor: zoom-in;" onclick="openViewer(this.src, 'Ảnh siêu âm tải lên: ${fn:escapeXml(img.originalFilename)}')">
+                                                        <div class="small text-truncate" title="${img.originalFilename}">${img.originalFilename}</div>
+                                                        <div class="text-muted" style="font-size: 10px;">${String.format('%,.1f KB', img.fileSize / 1024.0)}</div>
+                                                    </div>
+                                                </div>
+                                            </c:forEach>
+                                        </div>
+                                    </div>
+                                </c:if>
+
+                                <form method="POST" action="${pageContext.request.contextPath}/sonographer/upload" enctype="multipart/form-data" class="border p-3 rounded bg-light">
                                     <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                     <input type="hidden" name="orderId" value="${order.orderId}">
-                                    
                                     <div class="mb-3">
-                                        <label for="sonographerNotes" class="form-label fw-bold small text-muted">MÔ TẢ HÌNH ẢNH & NHẬN XÉT CHUYÊN MÔN</label>
-                                        <textarea class="form-control" id="sonographerNotes" name="sonographerNotes" rows="4" placeholder="Nhập nhận xét chi tiết hình ảnh siêu âm, kích thước, cấu trúc y tế..." required>${not empty aiResult ? aiResult.message : ''}</textarea>
+                                        <label for="fileUpload" class="form-label fw-bold text-dark">Chọn file ảnh siêu âm (JPG, JPEG, PNG, Tối đa 10MB)</label>
+                                        <input class="form-control" type="file" id="fileUpload" name="file" onchange="previewImage(event)" required>
+                                    </div>
+                                    <!-- Image Preview Container -->
+                                    <div id="imagePreviewContainer" style="display: none;" class="text-center mb-3">
+                                        <div class="preview-img-container">
+                                            <img id="imagePreview" class="preview-img" alt="Xem trước ảnh siêu âm">
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary fw-bold w-100">
+                                        <i class="bi bi-cloud-arrow-up-fill"></i> Tải ảnh lên máy chủ
+                                    </button>
+                                </form>
+
+                                <!-- If Uploaded, allow sending to AI & Form Nhập kết quả chuyên môn -->
+                                <c:if test="${fn:toLowerCase(order.status) == 'uploaded'}">
+                                    <hr class="my-4">
+                                    <div class="bg-info-subtle border border-info rounded p-3 mb-4">
+                                        <h6 class="fw-bold text-info-emphasis"><i class="bi bi-cpu"></i> Tích Hợp AI Engine Hỗ Trợ Chẩn Đoán</h6>
+                                        <p class="small text-muted mb-3">Hình ảnh siêu âm đã sẵn sàng. Nhấn nút bên dưới để gửi phân tích tới AI Engine chẩn đoán tự động.</p>
+                                        
+                                        <form method="POST" action="${pageContext.request.contextPath}/sonographer/analyze" onsubmit="showAiLoading()">
+                                            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                                            <input type="hidden" name="orderId" value="${order.orderId}">
+                                            <button type="submit" class="btn btn-info text-white fw-bold px-4 py-2 w-100">
+                                                <i class="bi bi-robot"></i> Gửi phân tích AI
+                                            </button>
+                                        </form>
                                     </div>
 
-                                    <div class="d-flex gap-2">
-                                        <button type="submit" name="action" value="saveDraft" class="btn btn-outline-secondary fw-bold flex-grow-1">
-                                            <i class="bi bi-save"></i> Lưu nháp kết quả
-                                        </button>
-                                        <button type="submit" name="action" value="complete" class="btn btn-success fw-bold flex-grow-1">
-                                            <i class="bi bi-check-circle-fill"></i> Hoàn thành ca siêu âm
-                                        </button>
+                                    <!-- Sonographer Expert Notes Entry Form -->
+                                    <div class="border p-3 rounded bg-white shadow-sm">
+                                        <h6 class="fw-bold text-dark mb-3"><i class="bi bi-journal-medical text-primary"></i> Nhập Kết Quả Siêu Âm Chuyên Môn (KTV)</h6>
+                                        <form method="POST" action="${pageContext.request.contextPath}/sonographer/detail">
+                                            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                                            <input type="hidden" name="orderId" value="${order.orderId}">
+                                            
+                                            <div class="mb-3">
+                                                <label for="sonographerNotes" class="form-label fw-bold small text-muted">MÔ TẢ HÌNH ẢNH & NHẬN XÉT CHUYÊN MÔN</label>
+                                                <textarea class="form-control" id="sonographerNotes" name="sonographerNotes" rows="4" placeholder="Nhập nhận xét chi tiết hình ảnh siêu âm, kích thước, cấu trúc y tế..." required>${not empty aiResult ? aiResult.message : ''}</textarea>
+                                            </div>
+
+                                            <div class="d-flex gap-2">
+                                                <button type="submit" name="action" value="saveDraft" class="btn btn-outline-secondary fw-bold flex-grow-1">
+                                                    <i class="bi bi-save"></i> Lưu nháp kết quả
+                                                </button>
+                                                <button type="submit" name="action" value="complete" class="btn btn-success fw-bold flex-grow-1">
+                                                    <i class="bi bi-check-circle-fill"></i> Hoàn thành ca siêu âm
+                                                </button>
+                                            </div>
+                                        </form>
                                     </div>
-                                </form>
+                                </c:if>
                             </div>
                         </c:if>
-                    </div>
-                </c:if>
 
-                <!-- 3. ANALYZING: Loading spinner -->
-                <c:if test="${fn:toLowerCase(order.status) == 'analyzing'}">
-                    <div class="text-center py-5" id="aiLoadingSection">
-                        <div class="spinner-border text-info mb-3" style="width: 3rem; height: 3rem;" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                        <h5 class="fw-bold text-info-emphasis"><i class="bi bi-cpu"></i> AI Engine đang xử lý hình ảnh...</h5>
-                        <p class="text-muted small">Quá trình này có thể mất từ 5-15 giây để vẽ mask phân tích và nhận diện túi thai / vùng tổn thương.</p>
-                        <div class="ai-pulse-bar mt-3"></div>
-                    </div>
-                </c:if>
+                        <!-- 3. ANALYZING: Loading spinner -->
+                        <c:if test="${fn:toLowerCase(order.status) == 'analyzing'}">
+                            <div class="text-center py-5" id="aiLoadingSection">
+                                <div class="spinner-border text-info mb-3" style="width: 3rem; height: 3rem;" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <h5 class="fw-bold text-info-emphasis"><i class="bi bi-cpu"></i> AI Engine đang xử lý hình ảnh...</h5>
+                                <p class="text-muted small">Quá trình này có thể mất từ 5-15 giây để vẽ mask phân tích và nhận diện túi thai / vùng tổn thương.</p>
+                                <div class="ai-pulse-bar mt-3"></div>
+                            </div>
+                        </c:if>
+                    </c:otherwise>
+                </c:choose>
 
                 <!-- 4. COMPLETED: Display AI Results -->
                 <c:if test="${fn:toLowerCase(order.status) == 'completed'}">

@@ -67,6 +67,7 @@ public class UltrasoundDetailServlet extends HttpServlet {
         request.setAttribute("order", order);
         request.setAttribute("images", images);
         request.setAttribute("aiResult", aiResult);
+        request.setAttribute("ownershipSupported", orderService.isSonographerOwnershipSupported());
 
         request.getRequestDispatcher("/views/sonographer/detail.jsp").forward(request, response);
     }
@@ -74,6 +75,10 @@ public class UltrasoundDetailServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws IOException {
+        if (!orderService.isSonographerOwnershipSupported()) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Cơ sở dữ liệu chưa được nâng cấp để quản lý người phụ trách siêu âm.");
+            return;
+        }
         User user = (User) request.getSession().getAttribute("user");
         if (user == null || user.getRoleId() != 6) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền truy cập.");

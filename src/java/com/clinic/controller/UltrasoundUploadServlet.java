@@ -36,6 +36,11 @@ public class UltrasoundUploadServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
+        if (!orderService.isSonographerOwnershipSupported()) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Cơ sở dữ liệu chưa được nâng cấp để quản lý người phụ trách siêu âm.");
+            return;
+        }
+
         User user = (User) request.getSession().getAttribute("user");
         if (user == null || user.getRoleId() != 6) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền thực hiện.");

@@ -241,11 +241,7 @@ public class UltrasoundOrderDAO {
             boolean hasCol = checkSonographerOwnershipColumn(conn);
             if (!hasCol) {
                 System.err.println("[UltrasoundOrderDAO] CẤU HÌNH DATABASE CHƯA HỖ TRỢ OWNERSHIP: Bảng test_orders chưa bổ sung cột sonographer_user_id (V12 migration script).");
-                String sql = "UPDATE test_orders SET status = 'InProgress' WHERE id = ? AND UPPER(LTRIM(RTRIM(ISNULL(status, '')))) IN ('PENDING', 'WAITING', 'ORDERED')";
-                try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                    ps.setInt(1, orderId);
-                    return ps.executeUpdate() > 0;
-                }
+                return false;
             } else {
                 String sql = "UPDATE test_orders SET sonographer_user_id = ?, accepted_at = CURRENT_TIMESTAMP, status = 'InProgress' "
                         + "WHERE id = ? AND (sonographer_user_id IS NULL OR sonographer_user_id = ?) AND UPPER(LTRIM(RTRIM(ISNULL(status, '')))) IN ('PENDING', 'WAITING', 'ORDERED')";
@@ -269,7 +265,7 @@ public class UltrasoundOrderDAO {
         try (Connection conn = DatabaseConfig.getConnection()) {
             boolean hasCol = checkSonographerOwnershipColumn(conn);
             if (!hasCol) {
-                return true; // Migration not executed yet
+                return false; // Migration not executed yet, fail closed
             }
             String sql = "SELECT 1 FROM test_orders WHERE id = ? AND sonographer_user_id = ?";
             try (PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -313,7 +309,7 @@ public class UltrasoundOrderDAO {
                    + "LEFT JOIN medical_records mr ON o.medical_record_id = mr.id "
                    + "LEFT JOIN appointments a ON mr.appointment_id = a.id "
                    + "LEFT JOIN patients p ON a.patient_id = p.id "
-                   + "WHERE o.id = ? AND p.user_id = ? AND UPPER(LTRIM(RTRIM(ISNULL(o.status, '')))) IN ('CONFIRMED', 'COMPLETED')";
+                   + "WHERE o.id = ? AND p.user_id = ? AND UPPER(LTRIM(RTRIM(ISNULL(o.status, '')))) = 'CONFIRMED'";
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, orderId);

@@ -86,6 +86,40 @@ public class UltrasoundImageDAO {
         return list;
     }
 
+    public UltrasoundImage getById(int id) {
+        String sql = "SELECT ui.*, u.full_name AS uploader_name FROM ultrasound_images ui "
+                   + "LEFT JOIN users u ON ui.uploaded_by = u.id "
+                   + "WHERE ui.id = ?";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setInt(1, id);
+            rs = ps.executeQuery();
+            if (rs.next()) {
+                UltrasoundImage img = new UltrasoundImage();
+                img.setId(rs.getInt("id"));
+                img.setTestOrderId(rs.getInt("test_order_id"));
+                img.setOriginalFilename(rs.getString("original_filename"));
+                img.setStoredFilename(rs.getString("stored_filename"));
+                img.setFilePath(rs.getString("file_path"));
+                img.setFileSize(rs.getLong("file_size"));
+                img.setContentType(rs.getString("content_type"));
+                img.setUploadedBy(rs.getInt("uploaded_by"));
+                img.setUploadedAt(rs.getTimestamp("uploaded_at"));
+                img.setUploaderName(rs.getString("uploader_name"));
+                return img;
+            }
+        } catch (SQLException e) {
+            System.err.println("[UltrasoundImageDAO] getById ERROR: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return null;
+    }
+
     public boolean delete(int id) {
         String sql = "DELETE FROM ultrasound_images WHERE id = ?";
         Connection conn = null;

@@ -50,21 +50,7 @@ public class UltrasoundImageStreamServlet extends HttpServlet {
         }
 
         // Tìm thông tin ảnh siêu âm từ Database theo imageId
-        UltrasoundImage img = orderService.getUltrasoundImages(0).stream()
-                .filter(i -> i.getId() == imageId)
-                .findFirst()
-                .orElse(null);
-
-        if (img == null) {
-            // Lấy lại danh sách ảnh theo testOrderId nếu cần
-            java.util.List<UltrasoundImage> allImages = orderService.getUltrasoundImages(0);
-            for (UltrasoundImage i : allImages) {
-                if (i.getId() == imageId) {
-                    img = i;
-                    break;
-                }
-            }
-        }
+        UltrasoundImage img = orderService.getUltrasoundImageById(imageId);
 
         if (img == null) {
             response.sendError(HttpServletResponse.SC_NOT_FOUND, "Không tìm thấy tệp ảnh y tế trong cơ sở dữ liệu.");

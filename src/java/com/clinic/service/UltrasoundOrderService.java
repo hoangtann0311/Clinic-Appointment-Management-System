@@ -114,6 +114,7 @@ public class UltrasoundOrderService {
     }
 
     public boolean completeSonographerResult(int orderId, String sonographerNotes) {
+        if (!isSonographerOwnershipSupported()) return false;
         UltrasoundWaitingPatient order = ultrasoundOrderDAO.getById(orderId);
         if (order == null || !ultrasoundOrderDAO.isReadyForSonographer(orderId)) return false;
         if (sonographerNotes == null || sonographerNotes.trim().isEmpty()) return false;
@@ -211,6 +212,9 @@ public class UltrasoundOrderService {
      * Thêm hình ảnh siêu âm do Sonographer tải lên và tự động chuyển sang Uploaded
      */
     public boolean uploadUltrasoundImage(UltrasoundImage img) {
+        if (!isSonographerOwnershipSupported()) {
+            return false;
+        }
         if (img == null || img.getTestOrderId() <= 0) {
             return false;
         }
@@ -238,10 +242,19 @@ public class UltrasoundOrderService {
         return ultrasoundImageDAO.getByTestOrderId(testOrderId);
     }
 
+    public UltrasoundImage getUltrasoundImageById(int imageId) {
+        return ultrasoundImageDAO.getById(imageId);
+    }
+
+    public boolean isSonographerOwnershipSupported() {
+        return ultrasoundOrderDAO.isSonographerOwnershipSupported();
+    }
+
     /**
      * Gửi yêu cầu phân tích hình ảnh sang AI Engine qua HTTP
      */
     public boolean runAiAnalysis(int orderId, int actorUserId) {
+        if (!isSonographerOwnershipSupported()) return false;
         UltrasoundWaitingPatient order = ultrasoundOrderDAO.getById(orderId);
         if (order == null || !ultrasoundOrderDAO.isReadyForSonographer(orderId)) return false;
 
