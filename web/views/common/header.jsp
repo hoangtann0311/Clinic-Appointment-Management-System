@@ -63,7 +63,7 @@
         <!-- Rose Pink Theme Header/Sidebar for Doctor (2) and Sonographer (6) -->
         <link href="${pageContext.request.contextPath}/assets/css/admin.css?v=103" rel="stylesheet">
         <body class="admin-body ${sessionScope.user.roleId == 2 ? 'doctor-theme' : 'sonographer-theme'}">
-        
+
         <%-- TOP BAR --%>
         <nav class="admin-topbar">
             <div class="admin-topbar-left">
@@ -73,7 +73,7 @@
                 <a href="${pageContext.request.contextPath}/home" class="admin-topbar-brand">
                     <i class="bi bi-hospital-fill"></i>
                     CAMS
-                    <span class="brand-badge">${sessionScope.user.roleId == 2 ? 'Doctor' : 'Sonographer'}</span>
+                    <span class="brand-badge">${sessionScope.user.roleId == 2 ? 'Bác sĩ lâm sàng' : 'Bác sĩ Siêu âm'}</span>
                 </a>
             </div>
             <div class="admin-topbar-right">
@@ -95,7 +95,7 @@
                     </c:choose>
                     <span>${sessionScope.user.fullName}</span>
                     <span class="admin-topbar-role">
-                        <i class="bi bi-briefcase-fill me-1"></i>${sessionScope.user.roleId == 2 ? 'Bác Sĩ' : 'KTV Siêu Âm'}
+                        <i class="bi bi-briefcase-fill me-1"></i>${sessionScope.user.roleId == 2 ? 'Bác sĩ lâm sàng' : 'Bác sĩ Siêu âm'}
                     </span>
                 </div>
 
@@ -158,14 +158,14 @@
                 </c:choose>
                 <div class="admin-sidebar-name">${sessionScope.user.fullName}</div>
                 <span class="admin-sidebar-badge">
-                    <i class="bi bi-person-badge-fill"></i>${sessionScope.user.roleId == 2 ? 'Bác Sĩ' : 'KTV Siêu Âm'}
+                    <i class="bi bi-person-badge-fill"></i>${sessionScope.user.roleId == 2 ? 'Bác sĩ lâm sàng' : 'Bác sĩ Siêu âm'}
                 </span>
             </div>
 
             <ul class="admin-sidebar-menu">
                 <c:choose>
                     <c:when test="${sessionScope.user.roleId == 2}">
-                        <li class="admin-sidebar-section">Chức Năng Bác Sĩ</li>
+                        <li class="admin-sidebar-section">Chức Năng Bác Sĩ lâm sàng</li>
                         <li>
                             <a href="${pageContext.request.contextPath}/doctor/dashboard">
                                 <i class="bi bi-speedometer2"></i>
@@ -212,42 +212,42 @@
                     <c:when test="${sessionScope.user.roleId == 6}">
                         <li class="admin-sidebar-section">Chức Năng Siêu Âm</li>
                         <li>
-                            <a href="${pageContext.request.contextPath}/sonographer/dashboard" 
+                            <a href="${pageContext.request.contextPath}/sonographer/dashboard"
                                class="${fn:contains(pageContext.request.requestURI, '/dashboard') ? 'active' : ''}">
                                 <i class="bi bi-speedometer2"></i>
                                 <span>Dashboard Thống Kê</span>
                             </a>
                         </li>
                         <li>
-                            <a href="${pageContext.request.contextPath}/sonographer/waiting-list" 
+                            <a href="${pageContext.request.contextPath}/sonographer/waiting-list"
                                class="${fn:contains(pageContext.request.requestURI, '/waiting-list') && empty param.status ? 'active' : ''}">
                                 <i class="bi bi-hourglass-split"></i>
                                 <span>Yêu Cầu Chờ Siêu Âm</span>
                             </a>
                         </li>
                         <li>
-                            <a href="${pageContext.request.contextPath}/sonographer/waiting-list?status=InProgress" 
+                            <a href="${pageContext.request.contextPath}/sonographer/waiting-list?status=InProgress"
                                class="${param.status == 'InProgress' ? 'active' : ''}">
                                 <i class="bi bi-play-circle"></i>
                                 <span>Đang Thực Hiện</span>
                             </a>
                         </li>
                         <li>
-                            <a href="${pageContext.request.contextPath}/sonographer/waiting-list?status=Uploaded" 
+                            <a href="${pageContext.request.contextPath}/sonographer/waiting-list?status=Uploaded"
                                class="${param.status == 'Uploaded' ? 'active' : ''}">
                                 <i class="bi bi-cloud-upload"></i>
                                 <span>Đã Tải Ảnh (Chờ AI)</span>
                             </a>
                         </li>
                         <li>
-                            <a href="${pageContext.request.contextPath}/sonographer/waiting-list?status=Completed" 
+                            <a href="${pageContext.request.contextPath}/sonographer/waiting-list?status=Completed"
                                class="${param.status == 'Completed' ? 'active' : ''}">
                                 <i class="bi bi-check-circle"></i>
                                 <span>Đã Hoàn Thành</span>
                             </a>
                         </li>
                         <li>
-                            <a href="${pageContext.request.contextPath}/sonographer/ai-model" 
+                            <a href="${pageContext.request.contextPath}/sonographer/ai-model"
                                class="${fn:contains(pageContext.request.requestURI, '/ai-model') ? 'active' : ''}">
                                 <i class="bi bi-robot"></i>
                                 <span>Model AI</span>
@@ -447,11 +447,7 @@
                                 <i class="bi bi-journal-medical me-1"></i>Hồ Sơ Bệnh Án
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link patient-nav-link" href="${pageContext.request.contextPath}/patient/pregnancy">
-                                <i class="bi bi-heart-pulse-fill me-1"></i>Theo Dõi Thai Kỳ
-                            </a>
-                        </li>
+
                     </ul>
 
                     <!-- User Actions / Profile Dropdown -->
@@ -588,11 +584,7 @@
                                         <i class="bi bi-journal-medical me-1"></i>Hồ Sơ Khám Bệnh
                                     </a>
                                 </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="${pageContext.request.contextPath}/patient/pregnancy">
-                                        <i class="bi bi-heart-pulse-fill text-danger me-1"></i>Theo Dõi Thai Kỳ
-                                    </a>
-                                </li>
+
                                 <li class="nav-item">
                                     <a class="nav-link position-relative" href="${pageContext.request.contextPath}/patient/notifications">
                                         <i class="bi bi-bell me-1"></i>Thông Báo

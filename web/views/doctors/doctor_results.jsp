@@ -3,348 +3,125 @@
 <%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
 <%@ include file="../common/header.jsp" %>
 
-<%-- ── Custom CSS for alignment with Brand CAMS ── --%>
 <style>
-  /* Ghi đè màu chủ đạo Bootstrap sang màu thương hiệu CAMS (Rose/Crimson) */
-  #resultTabs .nav-link {
-    color: #4b5563;
-    background: #f3f4f6;
-    border: 1px solid #e5e7eb;
-    transition: all 0.2s ease;
-  }
-  #resultTabs .nav-link.active {
-    background: linear-gradient(135deg, #be123c 0%, #881337 100%) !important;
-    color: #ffffff !important;
-    border-color: transparent !important;
-    box-shadow: 0 4px 12px rgba(190, 18, 60, 0.25);
-  }
-  #resultTabs .nav-link:hover:not(.active) {
-    background: #e5e7eb;
-    color: #111827;
-  }
-  .text-brand {
-    color: #be123c !important;
-  }
-  .bg-brand {
-    background-color: #be123c !important;
-  }
+  .result-toast { position:fixed;top:76px;right:20px;z-index:1080;min-width:320px;max-width:440px; }
+  .clinical-value { white-space:pre-wrap;line-height:1.65; }
+  .result-image { width:100%;height:300px;object-fit:contain;background:#0f172a;border-radius:8px; }
+  .official-report { border-left:4px solid #2563eb;background:#f8fafc; }
 </style>
 
-<%-- ── Banner ──────────────────────────────────────────────────────── --%>
-<div class="row mb-4">
-  <div class="col-12">
-    <div class="card border-0 rounded-4 text-white"
-         style="background:linear-gradient(135deg,#be123c,#881337);">
-      <div class="card-body p-4">
-        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
-          <div>
-            <h2 class="fw-bold mb-1">
-              <i class="bi bi-clipboard2-pulse me-2"></i>Kết Quả Cận Lâm Sàng
-            </h2>
-            <p class="mb-0 opacity-75">
-              Bệnh nhân: <strong>${recordInfo.patientName}</strong>
-              <c:if test="${not empty recordInfo.appointmentDate}">
-                — Ngày khám: <strong>${recordInfo.appointmentDate}</strong>
-              </c:if>
-              — Hồ sơ #${recordId}
-            </p>
-          </div>
-          <a href="javascript:history.back()"
-             class="btn btn-light btn-sm rounded-pill px-3">
-            <i class="bi bi-arrow-left me-1"></i>Quay lại hồ sơ
-          </a>
+<div class="admin-page-header d-flex justify-content-between align-items-start gap-3 mb-4">
+  <div><h1 class="admin-page-title mb-1">Kết quả cận lâm sàng</h1>
+    <div class="admin-page-subtitle">Bệnh nhân: <strong><c:out value="${recordInfo.patientName}" /></strong>
+      — Ngày khám: <c:out value="${recordInfo.appointmentDate}" /> — Hồ sơ #${recordId}</div></div>
+  <a href="javascript:history.back()" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Quay lại hồ sơ</a>
+</div>
+
+<c:if test="${not empty param.success}"><div class="alert alert-success alert-dismissible fade show shadow-sm result-toast" data-auto-dismiss="true">
+  <i class="bi bi-check-circle-fill me-2"></i>Đã xác nhận kết quả siêu âm. Bệnh nhân có thể xem phiếu chính thức.
+  <button class="btn-close" data-bs-dismiss="alert"></button></div></c:if>
+<c:if test="${not empty param.error}"><div class="alert alert-danger alert-dismissible fade show shadow-sm result-toast" data-auto-dismiss="true">
+  <i class="bi bi-exclamation-triangle-fill me-2"></i>
+  <c:choose><c:when test="${param.error == 'incompleteConclusion'}">Ghi chú xác nhận phải có ít nhất 20 ký tự.</c:when>
+    <c:when test="${param.error == 'confirmFailed'}">Chỉ có thể xác nhận phiếu đã được Bác sĩ Siêu âm ký và đang ở trạng thái chờ duyệt.</c:when>
+    <c:otherwise>Không thể hoàn tất thao tác. Vui lòng kiểm tra dữ liệu.</c:otherwise></c:choose>
+  <button class="btn-close" data-bs-dismiss="alert"></button></div></c:if>
+
+<c:if test="${not reviewSchemaSupported}"><div class="alert alert-warning">Chưa áp dụng migration V13. Chức năng xem phiếu đã ký và xác nhận kết quả đang bị khóa an toàn.</div></c:if>
+
+<c:choose>
+  <c:when test="${empty ultrasoundResults}"><div class="admin-card p-5 text-center text-muted"><i class="bi bi-soundwave fs-1"></i><p class="mt-3 mb-0">Hồ sơ chưa có chỉ định siêu âm.</p></div></c:when>
+  <c:otherwise><div class="d-grid gap-4">
+    <c:forEach var="r" items="${ultrasoundResults}" varStatus="loop">
+      <c:set var="orderStatus" value="${fn:toLowerCase(r.order_status)}" />
+      <article class="admin-card" id="us-order-${r.order_id}">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div><h5 class="mb-1"><c:out value="${r.service_name}" /> #${loop.index + 1}</h5><div class="small text-muted">Chỉ định lúc <c:out value="${r.ordered_at}" /></div></div>
+          <c:choose><c:when test="${orderStatus == 'confirmed'}"><span class="badge bg-success">Đã xác nhận</span></c:when>
+            <c:when test="${orderStatus == 'completed'}"><span class="badge bg-warning text-dark">Chờ bác sĩ lâm sàng xác nhận</span></c:when>
+            <c:otherwise><span class="badge bg-secondary"><c:out value="${r.order_status}" /></span></c:otherwise></c:choose>
         </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<%-- ── Alerts (success / error) ─────────────────────────────────────── --%>
-<c:if test="${not empty param.success}">
-  <div class="alert alert-success alert-dismissible fade show rounded-4 mb-4 d-flex align-items-center gap-2" role="alert">
-    <i class="bi bi-check-circle-fill fs-5"></i>
-    <div>
-      <c:choose>
-        <c:when test="${param.success == 'confirmed'}">
-          <strong>Xác nhận thành công!</strong> Kết quả siêu âm đã được bác sĩ duyệt và chốt kết luận chính thức.
-        </c:when>
-        <c:otherwise>Thao tác thực hiện thành công!</c:otherwise>
-      </c:choose>
-    </div>
-    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
-  </div>
-</c:if>
-<c:if test="${not empty param.error}">
-  <div class="alert alert-danger alert-dismissible fade show rounded-4 mb-4 d-flex align-items-center gap-2" role="alert">
-    <i class="bi bi-exclamation-triangle-fill fs-5"></i>
-    <div>
-      <c:choose>
-        <c:when test="${param.error == 'confirmFailed'}">
-          <strong>Xác nhận thất bại!</strong> Không thể xác nhận kết quả siêu âm. Vui lòng kiểm tra trạng thái đơn hoặc thử lại.
-        </c:when>
-        <c:when test="${param.error == 'invalidOrder'}">
-          <strong>Lỗi!</strong> Không tìm thấy đơn siêu âm cần xác nhận.
-        </c:when>
-        <c:when test="${param.error == 'incompleteConclusion'}">
-          <strong>Cần bổ sung kết luận.</strong> Hãy ghi tối thiểu 20 ký tự, nêu nhận định và hướng dẫn phù hợp để bệnh nhân có thể hiểu.
-        </c:when>
-        <c:otherwise><strong>Lỗi:</strong> Đã xảy ra sự cố. Vui lòng thử lại.</c:otherwise>
-      </c:choose>
-    </div>
-    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
-  </div>
-</c:if>
-
-<%-- ── Kết quả siêu âm ── --%>
-<div class="d-flex align-items-center mb-4">
-  <h4 class="fw-bold mb-0 text-dark"><i class="bi bi-soundwave me-2 text-brand"></i>Kết quả siêu âm</h4>
-  <span class="badge bg-danger ms-2 rounded-pill">${fn:length(ultrasoundResults)}</span>
-</div>
-
-<div id="panel-us">
-  <c:choose>
-    <c:when test="${empty ultrasoundResults}">
-      <div class="card border-0 rounded-4 text-center py-5 text-muted">
-        <i class="bi bi-soundwave fs-1 d-block mb-3 opacity-25"></i>
-        <h6>Hồ sơ này chưa có kết quả siêu âm.</h6>
-      </div>
-    </c:when>
-    <c:otherwise>
-      <div class="row g-4">
-        <c:forEach var="r" items="${ultrasoundResults}" varStatus="st">
-          <div class="col-12" id="us-order-${r.order_id}">
-            <div class="card border-0 rounded-4 shadow-sm">
-              <div class="card-body p-4">
-
-                <%-- Card header --%>
-                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                  <div>
-                    <h6 class="fw-bold mb-0">
-                      <i class="bi bi-soundwave text-brand me-1"></i>
-                      ${not empty r.service_name ? r.service_name : 'Kết quả siêu âm'} #${st.index + 1}
-                    </h6>
-                    <small class="text-muted">Chỉ định lúc: ${r.ordered_at}</small>
-                  </div>
-                  <div class="d-flex align-items-center gap-2">
-                    <c:if test="${not empty r.sonographer_name}">
-                      <small class="text-muted"><i class="bi bi-person me-1"></i>KTV: ${r.sonographer_name}</small>
-                    </c:if>
-                    <%-- Badge trạng thái --%>
-                    <c:choose>
-                      <c:when test="${r.order_status == 'confirmed'}">
-                        <span class="badge rounded-pill bg-brand" style="font-size:.75rem;">
-                          <i class="bi bi-check-circle-fill me-1"></i>Bác sĩ đã xác nhận
-                        </span>
-                      </c:when>
-                      <c:when test="${r.order_status == 'Completed'}">
-                        <span class="badge bg-warning text-dark rounded-pill" style="font-size:.75rem;">
-                          <i class="bi bi-hourglass-split me-1"></i>Chờ bác sĩ duyệt
-                        </span>
-                      </c:when>
-                      <c:otherwise>
-                        <span class="badge bg-secondary rounded-pill" style="font-size:.75rem;">
-                          <i class="bi bi-clock me-1"></i>${r.order_status}
-                        </span>
-                      </c:otherwise>
-                    </c:choose>
-                  </div>
-                </div>
-
-                <%-- Ảnh gốc + ảnh AI song song --%>
-                <div class="row g-3 mb-3">
-                  <%-- Ảnh gốc --%>
-                  <div class="col-md-6">
-                    <p class="fw-medium small mb-2">
-                      <i class="bi bi-camera me-1"></i>Ảnh siêu âm gốc
-                    </p>
-                    <c:choose>
-                      <c:when test="${not empty r.raw_image_url}">
-                        <c:set var="rawImageUrl" value="${pageContext.request.contextPath}/${r.raw_image_url}" />
-                        <a href="${rawImageUrl}" target="_blank" class="d-block">
-                          <img src="${rawImageUrl}" alt="Ảnh siêu âm gốc"
-                               class="img-fluid rounded-3 border"
-                               style="max-height:280px;width:100%;object-fit:contain;background:#000;"
-                               onerror="this.classList.add('d-none');document.getElementById('raw-image-missing-${r.order_id}').classList.remove('d-none');">
-                        </a>
-                        <div id="raw-image-missing-${r.order_id}" class="d-none text-muted small p-3 border rounded-3">
-                          <i class="bi bi-exclamation-triangle me-1"></i>
-                          Không tìm thấy file ảnh gốc trên máy chủ.
-                          <a href="${rawImageUrl}" target="_blank">Mở đường dẫn ảnh</a>
-                        </div>
-                      </c:when>
-                      <c:otherwise>
-                        <div class="border rounded-3 d-flex align-items-center justify-content-center text-muted"
-                             style="height:160px;background:#f8f9fa;">
-                          <span class="small">Chưa có ảnh gốc</span>
-                        </div>
-                      </c:otherwise>
-                    </c:choose>
-                  </div>
-
-                  <%-- Ảnh AI phân tích --%>
-                  <div class="col-md-6">
-                    <p class="fw-medium small mb-2">
-                      <i class="bi bi-cpu me-1 text-warning"></i>Ảnh AI phân tích
-                      <span class="badge bg-warning text-dark ms-1 rounded-pill" style="font-size:.65rem;">Chỉ tham khảo</span>
-                    </p>
-                    <c:choose>
-                      <c:when test="${not empty r.ai_processed_image_url}">
-                        <c:set var="aiImageUrl" value="${pageContext.request.contextPath}/${r.ai_processed_image_url}" />
-                        <a href="${aiImageUrl}" target="_blank" class="d-block">
-                          <img src="${aiImageUrl}" alt="Ảnh AI phân tích"
-                               class="img-fluid rounded-3 border"
-                               style="max-height:280px;width:100%;object-fit:contain;background:#000;"
-                               onerror="this.classList.add('d-none');document.getElementById('ai-image-missing-${r.order_id}').classList.remove('d-none');">
-                        </a>
-                        <div id="ai-image-missing-${r.order_id}" class="d-none text-muted small p-3 border rounded-3">
-                          <i class="bi bi-exclamation-triangle me-1"></i>
-                          Không tìm thấy file ảnh AI trên máy chủ.
-                          <a href="${aiImageUrl}" target="_blank">Mở đường dẫn ảnh</a>
-                        </div>
-                      </c:when>
-                      <c:otherwise>
-                        <div class="border rounded-3 d-flex align-items-center justify-content-center text-muted"
-                             style="height:160px;background:#f8f9fa;">
-                          <span class="small">AI chưa phân tích</span>
-                        </div>
-                      </c:otherwise>
-                    </c:choose>
-                  </div>
-                </div>
-
-                <%-- ═══════════════════════════════════════════════════════
-                     DOCTOR CONFIRMATION SECTION
-                     ═══════════════════════════════════════════════════════ --%>
-
-                <c:choose>
-                  <%-- ── Đã xác nhận: hiển thị kết luận chính thức ── --%>
-                  <c:when test="${r.order_status == 'confirmed'}">
-                    <div class="p-3 rounded-3 border" style="background:linear-gradient(135deg,#fff1f2,#ffe4e6);border-color:#fecdd3!important;">
-                      <div class="d-flex align-items-center gap-2 mb-2">
-                        <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-brand"
-                              style="width:32px;height:32px;">
-                          <i class="bi bi-check-lg text-white"></i>
-                        </span>
-                        <div>
-                          <div class="fw-bold text-brand">Kết Luận Siêu Âm Chính Thức</div>
-                          <small class="text-muted">Bác sĩ đã xem xét và xác nhận kết quả phân tích AI</small>
-                        </div>
-                      </div>
-                      <c:if test="${not empty r.ai_suggested_label}">
-                        <div class="p-3 rounded-3 mb-2" style="background:rgba(255,255,255,0.7);font-size:.9rem;line-height:1.7;">
-                          ${r.ai_suggested_label}
-                        </div>
-                      </c:if>
-                      <c:if test="${r.ai_confidence_score != null}">
-                        <div class="d-flex align-items-center gap-2">
-                          <small class="fw-medium text-brand">Độ tin cậy AI:</small>
-                          <div class="progress flex-grow-1" style="height:8px;max-width:180px;">
-                            <div class="progress-bar bg-brand" role="progressbar"
-                                 style="width:${r.ai_confidence_score}%;"
-                                 aria-valuenow="${r.ai_confidence_score}" aria-valuemin="0" aria-valuemax="100"></div>
-                          </div>
-                          <small class="fw-bold text-brand">${r.ai_confidence_score}%</small>
-                        </div>
-                      </c:if>
-                    </div>
-                  </c:when>
-
-                  <%-- ── Completed hoặc Uploaded/Failed (Cho phép bác sĩ chốt kết quả thủ công nếu không chạy AI hoặc AI lỗi) ── --%>
-                  <c:when test="${r.order_status == 'Completed' || r.order_status == 'Uploaded' || r.order_status == 'Failed'}">
-                    <%-- Đề xuất AI (tham khảo) --%>
-                    <c:if test="${not empty r.ai_suggested_label or r.ai_confidence_score != null}">
-                      <div class="p-3 rounded-3 mb-3" style="background:#fffbeb;border-left:4px solid #f59e0b;">
-                        <div class="fw-medium small text-warning mb-1">
-                          <i class="bi bi-robot me-1"></i>Đề xuất của AI (chỉ mang tính tham khảo)
-                        </div>
-                        <c:if test="${not empty r.ai_suggested_label}">
-                          <div class="mb-1 small">${r.ai_suggested_label}</div>
-                        </c:if>
-                        <c:if test="${r.ai_confidence_score != null}">
-                          <div class="d-flex align-items-center gap-2">
-                            <strong class="small">Độ tin cậy:</strong>
-                            <div class="progress flex-grow-1" style="height:8px;max-width:160px;">
-                              <div class="progress-bar bg-warning" role="progressbar"
-                                   style="width:${r.ai_confidence_score}%"
-                                   aria-valuenow="${r.ai_confidence_score}" aria-valuemin="0" aria-valuemax="100"></div>
-                            </div>
-                            <strong class="small">${r.ai_confidence_score}%</strong>
-                          </div>
-                        </c:if>
-                      </div>
-                    </c:if>
-
-                    <%-- Form xác nhận của bác sĩ --%>
-                    <div class="p-3 rounded-3 border" style="background:linear-gradient(135deg,#fefce8,#fef9c3);border-color:#fde047!important;">
-                      <div class="d-flex align-items-center gap-2 mb-3">
-                        <span class="d-inline-flex align-items-center justify-content-center rounded-circle"
-                              style="width:32px;height:32px;background:#ca8a04;">
-                          <i class="bi bi-pencil-square text-white" style="font-size:.8rem;"></i>
-                        </span>
-                        <div>
-                          <div class="fw-bold" style="color:#92400e;">Kết Luận Chuyên Môn Của Bác Sĩ</div>
-                          <small class="text-muted">Xem xét gợi ý AI phía trên rồi nhập kết luận và xác nhận</small>
-                        </div>
-                      </div>
-                      <form method="POST" action="${pageContext.request.contextPath}/doctor/results">
-                        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
-                        <input type="hidden" name="orderId"  value="${r.order_id}">
-                        <input type="hidden" name="recordId" value="${recordId}">
-                        <div class="mb-3">
-                          <label for="doctorMsg-${r.order_id}" class="form-label fw-medium small" style="color:#92400e;">
-                            <i class="bi bi-chat-text me-1"></i>Kết luận chẩn đoán lâm sàng
-                          </label>
-                          <textarea id="doctorMsg-${r.order_id}" name="doctorMessage" rows="4" required minlength="20" maxlength="2000"
-                                    class="form-control" style="font-size:.9rem;resize:vertical;"
-                                    placeholder="Ví dụ: Chưa ghi nhận dấu hiệu u xơ trên ảnh hiện tại. Tiếp tục theo dõi thai kỳ và tái khám theo lịch hẹn hoặc sớm hơn khi đau bụng/tăng ra huyết.">${not empty r.ai_suggested_label ? r.ai_suggested_label : ''}</textarea>
-                          <div class="form-text" style="color:#a16207;">
-                            <i class="bi bi-info-circle me-1"></i>
-                            Nội dung này là phiếu trả kết quả cho bệnh nhân. Hãy viết rõ nhận định, hướng dẫn theo dõi và dấu hiệu cần tái khám; AI chỉ là thông tin hỗ trợ nội bộ.
-                          </div>
-                        </div>
-                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                          <div class="small" style="color:#92400e;">
-                            <i class="bi bi-shield-check me-1"></i>
-                            Sau khi xác nhận, trạng thái sẽ chuyển thành <strong>Đã xác nhận</strong> và không thể thay đổi.
-                          </div>
-                          <button type="submit" class="btn fw-bold px-4"
-                                  style="background:linear-gradient(135deg,#be123c,#881337);color:white;border:none;"
-                                  onclick="return confirm('Bạn có chắc chắn muốn xác nhận và hoàn tất kết quả siêu âm này không?')">
-                            <i class="bi bi-patch-check-fill me-2"></i>Xác Nhận &amp; Hoàn Tất
-                          </button>
-                        </div>
-                      </form>
-                    </div>
-                  </c:when>
-
-                  <%-- ── Trạng thái khác: đang tiến hành ── --%>
-                  <c:otherwise>
-                    <div class="p-3 rounded-3 text-muted" style="background:#f8fafc;border-left:4px solid #cbd5e1;">
-                      <i class="bi bi-hourglass-split me-2"></i>
-                      Đơn siêu âm đang được tiến hành — chưa có kết quả AI để duyệt.
-                      <span class="badge bg-secondary ms-2">${r.order_status}</span>
-                    </div>
-                  </c:otherwise>
-                </c:choose>
-
-              </div>
+        <div class="card-body p-4">
+          <div class="row g-3 mb-4">
+            <div class="col-xl-4"><div class="small fw-semibold mb-2">1. Ảnh siêu âm gốc</div>
+              <c:choose><c:when test="${not empty r.raw_image_id}">
+                <img loading="lazy" class="result-image" src="${pageContext.request.contextPath}/medical/ultrasound-image?id=${r.raw_image_id}" alt="Ảnh siêu âm gốc không có lớp khoanh">
+              </c:when><c:otherwise><div class="border rounded p-5 text-center text-muted">Chưa có ảnh</div></c:otherwise></c:choose>
+            </div>
+            <div class="col-xl-4"><div class="small fw-semibold mb-2">2. Vùng AI phân tích <span class="badge bg-secondary-subtle text-secondary">Tham khảo</span></div>
+              <c:choose><c:when test="${not empty r.ai_processed_image_url && not empty r.raw_image_id}"><img loading="lazy" class="result-image" src="${pageContext.request.contextPath}/medical/ai-image?orderId=${r.order_id}&amp;imageId=${r.raw_image_id}&amp;type=result" alt="Ảnh AI phân tích đúng ảnh gốc"></c:when>
+              <c:otherwise><div class="border rounded p-5 text-center text-muted">AI không tạo vùng hợp lệ cho ảnh này</div></c:otherwise></c:choose>
+            </div>
+            <div class="col-xl-4"><div class="small fw-semibold mb-2">3. Vùng Bác sĩ Siêu âm xác nhận/chỉnh sửa</div>
+              <c:choose><c:when test="${not empty r.raw_image_id}"><div class="position-relative">
+                <img loading="lazy" id="review-image-${r.order_id}" class="result-image" src="${pageContext.request.contextPath}/medical/ultrasound-image?id=${r.raw_image_id}" alt="Ảnh có vùng Bác sĩ Siêu âm xác nhận hoặc chỉnh sửa">
+                <canvas id="review-overlay-${r.order_id}" class="position-absolute" style="inset:0;pointer-events:none"></canvas>
+                <textarea id="review-annotation-${r.order_id}" hidden><c:out value="${r.annotation_data}" /></textarea>
+              </div></c:when><c:otherwise><div class="border rounded p-5 text-center text-muted">Chưa có vùng duyệt</div></c:otherwise></c:choose>
             </div>
           </div>
-        </c:forEach>
-      </div>
-    </c:otherwise>
-  </c:choose>
-</div>
+
+          <c:if test="${not empty r.ai_suggested_label}"><details class="border rounded p-3 mb-4"><summary class="fw-semibold">Gợi ý AI (chỉ tham khảo)</summary>
+            <div class="mt-2 clinical-value"><c:out value="${r.ai_suggested_label}" /></div>
+            <c:if test="${not empty r.ai_confidence_score}"><div class="small text-muted mt-2">Độ tin cậy: <c:out value="${r.ai_confidence_score}" />%</div></c:if>
+          </details></c:if>
+
+          <c:choose>
+            <c:when test="${empty r.report_status}">
+              <div class="alert alert-secondary mb-0">Bác sĩ Siêu âm chưa ký phiếu kết quả. Chưa thể xác nhận hoặc chốt hồ sơ bệnh án.</div>
+            </c:when>
+            <c:otherwise>
+              <section class="official-report rounded p-4 mb-4">
+                <div class="d-flex justify-content-between align-items-start gap-2 mb-3"><div><h6 class="fw-bold mb-1">Phiếu kết quả của Bác sĩ Siêu âm</h6>
+                  <div class="small text-muted">Ký bởi <strong><c:out value="${r.signed_name}" /></strong> lúc <c:out value="${r.signed_at}" /></div></div>
+                  <span class="badge bg-primary-subtle text-primary">Vùng: <c:out value="${r.review_status}" /></span></div>
+                <c:if test="${r.review_status == 'Rejected'}"><div class="alert alert-warning py-2 small">Lý do từ chối AI: <c:out value="${r.rejection_reason}" /></div></c:if>
+                <div class="mb-3"><div class="small text-muted">Mô tả hình ảnh</div><div class="clinical-value"><c:out value="${r.image_description}" /></div></div>
+                <div class="mb-3"><div class="small text-muted">Nhận xét chuyên môn</div><div class="clinical-value"><c:out value="${r.professional_findings}" /></div></div>
+                <div><div class="small text-muted">Kết luận siêu âm</div><div class="clinical-value fw-semibold"><c:out value="${r.sonographer_conclusion}" /></div></div>
+              </section>
+
+              <c:choose><c:when test="${orderStatus == 'completed' && r.report_status == 'Signed'}">
+                <form method="post" action="${pageContext.request.contextPath}/doctor/results" class="border rounded p-4">
+                  <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}"><input type="hidden" name="orderId" value="${r.order_id}"><input type="hidden" name="recordId" value="${recordId}">
+                  <label for="doctor-notes-${r.order_id}" class="form-label fw-semibold">Ghi chú xác nhận của Bác sĩ lâm sàng <span class="text-danger">*</span></label>
+                  <textarea id="doctor-notes-${r.order_id}" name="doctorMessage" class="form-control" rows="3" minlength="20" maxlength="2000" required
+                    placeholder="Ghi nhận đã đối chiếu kết quả siêu âm với thăm khám lâm sàng và nêu hướng xử trí..."></textarea>
+                  <div class="form-text mb-3">Nội dung này không thay thế hoặc sửa kết luận của Bác sĩ Siêu âm.</div>
+                  <div class="d-flex justify-content-end"><button class="btn btn-primary" onclick="return confirm('Xác nhận đã xem phiếu siêu âm và cho phép chốt hồ sơ?')">
+                    <i class="bi bi-patch-check me-1"></i>Xác nhận kết quả</button></div>
+                </form>
+              </c:when><c:when test="${orderStatus == 'confirmed'}"><div class="alert alert-success mb-0">
+                <strong>Đã xác nhận.</strong><div class="clinical-value mt-1"><c:out value="${r.doctor_review_notes}" /></div>
+                <div class="small mt-1">Thời điểm: <c:out value="${r.doctor_confirmed_at}" /></div></div>
+              </c:when><c:otherwise><div class="alert alert-secondary mb-0">Phiếu chưa ở trạng thái hợp lệ để xác nhận.</div></c:otherwise></c:choose>
+            </c:otherwise>
+          </c:choose>
+        </div>
+      </article>
+    </c:forEach>
+  </div></c:otherwise>
+</c:choose>
 
 <script>
-  // Tự động cuộn đến card kết quả tương ứng nếu có hash trong URL
-  (function() {
-    const hash = window.location.hash;
-    if (hash) {
-      const el = document.querySelector(hash);
-      if (el) { setTimeout(() => el.scrollIntoView({behavior:'smooth', block:'start'}), 200); }
+(function(){
+  document.querySelectorAll('[data-auto-dismiss="true"]').forEach(el=>setTimeout(()=>bootstrap.Alert.getOrCreateInstance(el).close(),4500));
+  document.querySelectorAll('img[id^="review-image-"]').forEach(img=>{
+    const id=img.id.substring('review-image-'.length), canvas=document.getElementById('review-overlay-'+id), source=document.getElementById('review-annotation-'+id);
+    function render(){
+      if(!img.naturalWidth||!canvas)return; const rect=img.getBoundingClientRect(); canvas.width=Math.round(rect.width);canvas.height=Math.round(rect.height);canvas.style.width=rect.width+'px';canvas.style.height=rect.height+'px';
+      const imageRatio=img.naturalWidth/img.naturalHeight, boxRatio=rect.width/rect.height;
+      const drawWidth=imageRatio>boxRatio?rect.width:rect.height*imageRatio;
+      const drawHeight=imageRatio>boxRatio?rect.width/imageRatio:rect.height;
+      const offsetX=(rect.width-drawWidth)/2, offsetY=(rect.height-drawHeight)/2;
+      let data;try{data=JSON.parse(source.value||'null')}catch(ignore){return}if(!data)return;const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height);ctx.strokeStyle='#2563eb';ctx.fillStyle='rgba(37,99,235,.16)';ctx.lineWidth=3;
+      if(Array.isArray(data.points)&&data.points.length>=3){ctx.beginPath();data.points.forEach((p,i)=>i?ctx.lineTo(offsetX+p.x*drawWidth,offsetY+p.y*drawHeight):ctx.moveTo(offsetX+p.x*drawWidth,offsetY+p.y*drawHeight));ctx.closePath();ctx.fill();ctx.stroke();}
+      else if(data.xMin!==undefined){ctx.strokeRect(offsetX+data.xMin*drawWidth,offsetY+data.yMin*drawHeight,(data.xMax-data.xMin)*drawWidth,(data.yMax-data.yMin)*drawHeight);}
     }
-  })();
+    img.addEventListener('load',render);if(img.complete)render();window.addEventListener('resize',render);
+  });
+  if(location.hash){const el=document.querySelector(location.hash);if(el)setTimeout(()=>el.scrollIntoView({block:'start'}),100);}
+})();
 </script>
 
 <%@ include file="../common/footer.jsp" %>

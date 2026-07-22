@@ -58,7 +58,7 @@
             <a href="${pageContext.request.contextPath}/admin/doctors/"
                class="${fn:contains(requestURI, '/admin/doctors') ? 'active' : ''}">
                 <i class="bi bi-person-badge-fill"></i>
-                <span>Quản Lý Bác Sĩ</span>
+                <span>Quản Lý Bác Sĩ lâm sàng</span>
             </a>
         </li> -->
         <!-- Dịch Vụ, Thuốc, Biểu Giá → Đã chuyển sang Manager -->

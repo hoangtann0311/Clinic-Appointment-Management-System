@@ -36,12 +36,12 @@ public class AdminUserServlet extends HttpServlet {
     /** Fallback cứng — dùng khi DB chưa sẵn sàng. Đồng bộ với seed data roles. */
     private static final Map<Integer, String> FALLBACK_ROLE_MAP = new LinkedHashMap<>();
     static {
-        FALLBACK_ROLE_MAP.put(1, "Quản Trị Viên");
-        FALLBACK_ROLE_MAP.put(2, "Bác Sĩ");
-        FALLBACK_ROLE_MAP.put(3, "Quản Lý");
-        FALLBACK_ROLE_MAP.put(4, "Nhân Viên");
-        FALLBACK_ROLE_MAP.put(5, "Bệnh Nhân");
-        FALLBACK_ROLE_MAP.put(6, "KTV Siêu Âm");
+        FALLBACK_ROLE_MAP.put(1, "Quản trị viên");
+        FALLBACK_ROLE_MAP.put(2, "Bác sĩ lâm sàng");
+        FALLBACK_ROLE_MAP.put(3, "Quản lý");
+        FALLBACK_ROLE_MAP.put(4, "Nhân viên lễ tân");
+        FALLBACK_ROLE_MAP.put(5, "Bệnh nhân");
+        FALLBACK_ROLE_MAP.put(6, "Bác sĩ Siêu âm");
     }
 
     /** Role ID của Admin và Patient — không tính vào nhân sự. */
@@ -79,10 +79,10 @@ public class AdminUserServlet extends HttpServlet {
             List<Role> roles = roleService.getAllRoles();
             if (roles != null && !roles.isEmpty()) {
                 for (Role r : roles) {
-                    roleMap.put(r.getId(), r.getRoleName());
+                    roleMap.put(r.getId(), r.getRoleNameDisplay());
                     // Tất cả role trừ Admin và Patient đều là nhân sự
                     if (r.getId() != ADMIN_ROLE_ID && r.getId() != PATIENT_ROLE_ID) {
-                        staffRoleMap.put(r.getId(), r.getRoleName());
+                        staffRoleMap.put(r.getId(), r.getRoleNameDisplay());
                         staffIds.add(r.getId());
                     }
                 }

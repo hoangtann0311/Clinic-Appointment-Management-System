@@ -37,6 +37,29 @@ public class Role implements Serializable {
         this.roleName = roleName;
     }
 
+    public String getRoleNameDisplay() {
+        if (roleName == null) {
+            switch (id) {
+                case 1: return "Quản trị viên";
+                case 2: return "Bác sĩ lâm sàng";
+                case 3: return "Quản lý";
+                case 4: return "Nhân viên lễ tân";
+                case 5: return "Bệnh nhân";
+                case 6: return "Bác sĩ Siêu âm";
+                default: return "—";
+            }
+        }
+        switch (roleName.trim()) {
+            case "Admin":       return "Quản trị viên";
+            case "Doctor":      return "Bác sĩ lâm sàng";
+            case "Manager":     return "Quản lý";
+            case "Staff":       return "Nhân viên lễ tân";
+            case "Patient":     return "Bệnh nhân";
+            case "Sonographer": return "Bác sĩ Siêu âm";
+            default:            return roleName;
+        }
+    }
+
     public String getDescription() {
         return description;
     }

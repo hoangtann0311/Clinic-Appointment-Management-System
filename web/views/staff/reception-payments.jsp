@@ -15,6 +15,8 @@
     <!-- Theme CSS -->
     <link href="${pageContext.request.contextPath}/assets/css/admin.css" rel="stylesheet">
     <link href="${pageContext.request.contextPath}/assets/css/staff.css" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/app-ui.css?v=1" rel="stylesheet">
+    <script src="${pageContext.request.contextPath}/assets/js/app-ui.js?v=1" charset="UTF-8" defer></script>
 </head>
 <body class="admin-body">
 
@@ -91,7 +93,7 @@
                 <a href="${pageContext.request.contextPath}/admin/reception/doctor-schedules"
                    class="${fn:contains(requestURI, 'doctor-schedules') ? 'active' : ''}">
                     <i class="bi bi-calendar-week"></i>
-                    <span>Lịch Trực Bác Sĩ</span>
+                    <span>Lịch trực Bác sĩ lâm sàng</span>
                 </a>
             </li>
             <li>
@@ -327,20 +329,29 @@
                                             <td>
                                                 <div class="d-flex gap-1 flex-wrap">
                                                     <c:choose>
-                                                        <c:when test="${inv.status == 'Unpaid' || inv.status == 'PendingConfirmation'}">
+                                                        <c:when test="${inv.status == 'PendingConfirmation'}">
                                                             <c:if test="${inv.status == 'PendingConfirmation'}">
                                                                 <button type="button" class="btn btn-sm btn-outline-info fw-bold d-inline-flex align-items-center gap-1"
-                                                                        onclick="openQRModal(${inv.id}, '${inv.patientName}', ${inv.totalAmount}, '${inv.appointmentId}', '${inv.transactionCode}', '${inv.invoiceType}', '${fn:escapeXml(inv.serviceName != null ? inv.serviceName : 'Phí khám thai tổng quát')}')">
+                                                                        data-invoice-id="${inv.id}" data-patient-name="<c:out value='${inv.patientName}' />"
+                                                                        data-amount="${inv.totalAmount}" data-appointment-id="${inv.appointmentId}"
+                                                                        data-transaction-code="<c:out value='${inv.transactionCode}' />" data-invoice-type="<c:out value='${inv.invoiceType}' />"
+                                                                        data-service-name="<c:out value='${inv.serviceName != null ? inv.serviceName : "Phí khám thai tổng quát"}' />"
+                                                                        onclick="openQRModalFromButton(this)">
                                                                     <i class="bi bi-qr-code-scan"></i> Xem QR
                                                                 </button>
                                                             </c:if>
                                                             <button type="button" class="btn btn-sm btn-outline-success fw-bold d-inline-flex align-items-center gap-1"
-                                                                    onclick="openPaymentModal(${inv.id}, '${inv.patientName}', ${inv.totalAmount}, '${inv.invoiceType}', '${inv.appointmentId}', '${inv.appointmentDate}', '${fn:escapeXml(inv.serviceName != null ? inv.serviceName : 'Phí khám thai tổng quát')}', '${inv.transactionCode}', '${inv.paymentMethod}', '${inv.proofImagePath}')">
+                                                                    data-invoice-id="${inv.id}" data-patient-name="<c:out value='${inv.patientName}' />"
+                                                                    data-amount="${inv.totalAmount}" data-invoice-type="<c:out value='${inv.invoiceType}' />"
+                                                                    data-appointment-id="${inv.appointmentId}" data-appointment-date="<c:out value='${inv.appointmentDate}' />"
+                                                                    data-service-name="<c:out value='${inv.serviceName != null ? inv.serviceName : "Phí khám thai tổng quát"}' />"
+                                                                    data-payment-method="<c:out value='${inv.paymentMethod}' />" onclick="openPaymentModalFromButton(this)">
                                                                 <i class="bi bi-credit-card"></i> Xác nhận Paid
                                                             </button>
                                                             <c:if test="${inv.invoiceType == 'PRESCRIPTION'}">
                                                                 <button type="button" class="btn btn-sm btn-outline-danger fw-bold d-inline-flex align-items-center gap-1"
-                                                                        onclick="confirmDecline(${inv.id}, '${inv.patientName}')">
+                                                                        data-invoice-id="${inv.id}" data-patient-name="<c:out value='${inv.patientName}' />"
+                                                                        onclick="confirmDeclineFromButton(this)">
                                                                     <i class="bi bi-x-circle"></i> Từ chối
                                                                 </button>
                                                             </c:if>
@@ -451,47 +462,11 @@
                         <div id="modalTestOrdersTable" class="mt-1"></div>
                     </div>
 
-                    <div id="modalTxInfo" style="display: none;" class="mb-3">
-                        <div class="alert alert-info py-2 px-3 mb-0" style="font-size:13px;">
-                            <span class="fw-bold"><i class="bi bi-info-circle me-1"></i>Thông tin thanh toán chuyển khoản:</span>
-                            <div class="mt-1">
-                                <strong>Mã giao dịch của BN:</strong> <code id="modalTxCode"></code><br>
-                                <strong>Phương thức đăng ký:</strong> <span id="modalTxMethod"></span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="modalProofImageBox" style="display: none;" class="mb-3">
-                        <label class="text-muted small fw-bold d-block mb-1">ẢNH MINH CHỨNG CHUYỂN KHOẢN (BỆNH NHÂN GỬI)</label>
-                        <a id="modalProofImageLink" href="#" target="_blank">
-                            <img id="modalProofImage" src="" alt="Ảnh minh chứng chuyển khoản"
-                                 class="img-fluid rounded-3 border" style="max-height: 280px;">
-                        </a>
-                        <div class="form-text">Bấm vào ảnh để xem kích thước đầy đủ.</div>
-                    </div>
-
-                    <div id="modalNoProofBox" style="display: none;" class="mb-3">
-                        <div class="alert alert-warning py-2 px-3 mb-0" style="font-size:13px;">
-                            <i class="bi bi-exclamation-triangle-fill me-1"></i>Bệnh nhân chưa gửi ảnh minh chứng chuyển khoản nào.
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label text-muted small fw-bold">PHƯƠNG THỨC THANH TOÁN THỰC TẾ</label>
-                        <div class="d-flex gap-4">
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="paymentMethod" id="methodCash" value="Cash" checked>
-                                <label class="form-check-label fw-bold text-dark" for="methodCash">
-                                    <i class="bi bi-cash me-1 text-success"></i> Tiền mặt (Cash)
-                                </label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="paymentMethod" id="methodTransfer" value="BankTransfer">
-                                <label class="form-check-label fw-bold text-dark" for="methodTransfer">
-                                    <i class="bi bi-bank me-1 text-primary"></i> Chuyển khoản (BankTransfer)
-                                </label>
-                            </div>
-                        </div>
+                    <input type="hidden" name="paymentMethod" id="modalPaymentMethod">
+                    <div class="alert alert-info py-2 px-3 mb-0 small">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Bệnh nhân đã chọn: <strong id="modalRequestedMethod"></strong>.
+                        Kiểm tra khoản thu thực tế rồi xác nhận để hoàn tất hóa đơn.
                     </div>
 
                 </div>
@@ -583,8 +558,20 @@
 
     // Modal helpers
     const paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
+
+    function escapeHtml(value) {
+        const node = document.createElement('span');
+        node.textContent = value == null ? '' : String(value);
+        return node.innerHTML;
+    }
+
+    function openPaymentModalFromButton(button) {
+        const d = button.dataset;
+        openPaymentModal(d.invoiceId, d.patientName, Number(d.amount), d.invoiceType,
+            d.appointmentId, d.appointmentDate, d.serviceName, d.paymentMethod);
+    }
     
-    function openPaymentModal(invoiceId, patientName, amount, type, appointmentId, appointmentDate, serviceName, transactionCode, paymentMethod, proofImagePath) {
+    function openPaymentModal(invoiceId, patientName, amount, type, appointmentId, appointmentDate, serviceName, paymentMethod) {
         document.getElementById('modalInvoiceId').value = invoiceId;
         document.getElementById('modalAppointmentId').value = appointmentId;
         document.getElementById('modalPatientName').textContent = patientName;
@@ -599,41 +586,10 @@
         document.getElementById('modalAppointmentDate').textContent = appointmentDate || '—';
         document.getElementById('modalServiceName').textContent = serviceName || '—';
 
-        // Ảnh minh chứng chuyển khoản do bệnh nhân gửi (nếu có)
-        const proofBox = document.getElementById('modalProofImageBox');
-        const noProofBox = document.getElementById('modalNoProofBox');
-        const proofImg = document.getElementById('modalProofImage');
-        const proofLink = document.getElementById('modalProofImageLink');
-        if (proofImagePath && proofImagePath.trim() !== '' && proofImagePath !== 'null') {
-            const fullUrl = '${pageContext.request.contextPath}' + proofImagePath;
-            proofImg.src = fullUrl;
-            proofLink.href = fullUrl;
-            proofBox.style.display = 'block';
-            noProofBox.style.display = 'none';
-        } else {
-            proofBox.style.display = 'none';
-            noProofBox.style.display = (paymentMethod === 'BankTransfer') ? 'block' : 'none';
-        }
-
-        // Display transaction details if the patient already paid online
-        const txInfo = document.getElementById('modalTxInfo');
-        const txCode = document.getElementById('modalTxCode');
-        const txMethod = document.getElementById('modalTxMethod');
-
-        if (transactionCode && transactionCode.trim() !== '' && transactionCode !== 'null') {
-            txInfo.style.display = 'block';
-            txCode.textContent = transactionCode;
-            txMethod.textContent = paymentMethod === 'BankTransfer' ? 'Chuyển khoản' : 'Tiền mặt';
-        } else {
-            txInfo.style.display = 'none';
-        }
-
-        // Pre-select payment method thực tế dựa theo phương thức bệnh nhân đã đăng ký
-        if (paymentMethod === 'BankTransfer') {
-            document.getElementById('methodTransfer').checked = true;
-        } else {
-            document.getElementById('methodCash').checked = true;
-        }
+        const normalizedMethod = paymentMethod === 'BankTransfer' ? 'BankTransfer' : 'Cash';
+        document.getElementById('modalPaymentMethod').value = normalizedMethod;
+        document.getElementById('modalRequestedMethod').textContent =
+            normalizedMethod === 'BankTransfer' ? 'Chuyển khoản' : 'Tiền mặt';
 
         // Reset prescription list
         const modalRxTable = document.getElementById('modalRxTable');
@@ -645,8 +601,8 @@
                 const lineTotal = (item.price * item.quantity);
                 html += '<tr>' +
                     '<td>' + (idx + 1) + '</td>' +
-                    '<td>' + (item.name || '') + '</td>' +
-                    '<td>' + (item.unit || '') + '</td>' +
+                    '<td>' + escapeHtml(item.name) + '</td>' +
+                    '<td>' + escapeHtml(item.unit) + '</td>' +
                     '<td class="text-center">' + item.quantity + '</td>' +
                     '<td class="text-end">' + new Intl.NumberFormat('vi-VN').format(item.price) + 'đ</td>' +
                     '<td class="text-end">' + new Intl.NumberFormat('vi-VN').format(lineTotal) + 'đ</td>' +
@@ -700,10 +656,18 @@
         document.getElementById('rejectApptId').value = apptId;
         document.getElementById('rejectInvoiceIdInput').value = invoiceId;
         document.getElementById('rejectReasonInput').value = reason;
-        document.getElementById('rejectPaymentForm').submit();
+        const rejectPaymentForm = document.getElementById('rejectPaymentForm');
+        if (window.CAMS && window.CAMS.preparePostForm) window.CAMS.preparePostForm(rejectPaymentForm);
+        rejectPaymentForm.submit();
     }
 
     const qrModal = new bootstrap.Modal(document.getElementById('qrModal'));
+
+    function openQRModalFromButton(button) {
+        const d = button.dataset;
+        openQRModal(d.invoiceId, d.patientName, Number(d.amount), d.appointmentId,
+            d.transactionCode, d.invoiceType, d.serviceName);
+    }
 
     function openQRModal(invoiceId, patientName, amount, appointmentId, transactionCode, invoiceType, serviceName) {
         const qrCodeDisplay = document.getElementById('qrCodeDisplay');
@@ -734,7 +698,7 @@
                          '<table class="table table-sm mb-0 mt-1" style="font-size:12px;">' +
                          '<thead><tr><th>Tên thuốc</th><th class="text-center">SL</th><th class="text-end">Đơn giá</th></tr></thead><tbody>';
             prescriptionItems.forEach(item => {
-                itemsHtml += '<tr><td>' + item.name + '</td><td class="text-center">' + item.quantity + '</td><td class="text-end">' + new Intl.NumberFormat('vi-VN').format(item.price) + 'đ</td></tr>';
+                itemsHtml += '<tr><td>' + escapeHtml(item.name) + '</td><td class="text-center">' + item.quantity + '</td><td class="text-end">' + new Intl.NumberFormat('vi-VN').format(item.price) + 'đ</td></tr>';
             });
             itemsHtml += '</tbody></table></div>';
         } else if (invoiceType === 'POST_EXAM' && testOrders.length > 0) {
@@ -743,12 +707,12 @@
                          '<table class="table table-sm mb-0 mt-1" style="font-size:12px;">' +
                          '<thead><tr><th>Tên dịch vụ</th><th class="text-end">Đơn giá</th></tr></thead><tbody>';
             testOrders.forEach(item => {
-                itemsHtml += '<tr><td>' + item.name + '</td><td class="text-end">' + new Intl.NumberFormat('vi-VN').format(item.price) + 'đ</td></tr>';
+                itemsHtml += '<tr><td>' + escapeHtml(item.name) + '</td><td class="text-end">' + new Intl.NumberFormat('vi-VN').format(item.price) + 'đ</td></tr>';
             });
             itemsHtml += '</tbody></table></div>';
         } else if (invoiceType === 'PRE_EXAM') {
             itemsHtml += '<div style="margin-top: 10px; border-top: 1px solid #e0e0e0; padding-top: 10px;">' +
-                         '<strong>Dịch vụ khám đăng ký:</strong> <span class="fw-bold">' + (serviceName || 'Khám thai định kỳ') + '</span>' +
+                         '<strong>Dịch vụ khám đăng ký:</strong> <span class="fw-bold">' + escapeHtml(serviceName || 'Khám thai định kỳ') + '</span>' +
                          '</div>';
         }
 
@@ -765,12 +729,12 @@
             '<div style="margin-top: 15px;">' +
                 '<div class="row">' +
                     '<div class="col-6">' +
-                        '<strong>Bệnh nhân:</strong> ' + patientName + '<br>' +
-                        '<strong>Mã GD:</strong> <code>' + (transactionCode || 'Chưa nhập') + '</code>' +
+                        '<strong>Bệnh nhân:</strong> ' + escapeHtml(patientName) + '<br>' +
+                        '<strong>Mã GD:</strong> <code>' + escapeHtml(transactionCode || 'Chưa nhập') + '</code>' +
                     '</div>' +
                     '<div class="col-6 text-end">' +
                         '<strong>Số tiền:</strong> <span class="text-danger fw-bold">' + formattedAmount + '</span><br>' +
-                        '<strong>Phân loại:</strong> <span class="badge bg-info text-dark">' + invoiceTypeLabel + '</span>' +
+                    '<strong>Phân loại:</strong> <span class="badge bg-info text-dark">' + escapeHtml(invoiceTypeLabel) + '</span>' +
                     '</div>' +
                 '</div>' +
                 itemsHtml +
@@ -789,8 +753,14 @@
     function confirmDecline(invoiceId, patientName) {
         if (confirm("Xác nhận sản phụ '" + patientName + "' từ chối mua đơn thuốc này? Trạng thái hóa đơn sẽ chuyển thành 'Từ chối mua thuốc' và đơn thuốc sẽ bị Hủy.")) {
             document.getElementById('declineInvoiceId').value = invoiceId;
-            document.getElementById('declineForm').submit();
+            const declineForm = document.getElementById('declineForm');
+            if (window.CAMS && window.CAMS.preparePostForm) window.CAMS.preparePostForm(declineForm);
+            declineForm.submit();
         }
+    }
+
+    function confirmDeclineFromButton(button) {
+        confirmDecline(button.dataset.invoiceId, button.dataset.patientName);
     }
 </script>
 

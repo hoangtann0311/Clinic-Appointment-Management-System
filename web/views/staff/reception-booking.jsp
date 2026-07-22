@@ -16,6 +16,8 @@
     <!-- Theme CSS -->
     <link href="${pageContext.request.contextPath}/assets/css/admin.css" rel="stylesheet">
     <link href="${pageContext.request.contextPath}/assets/css/staff.css" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/app-ui.css?v=1" rel="stylesheet">
+    <script src="${pageContext.request.contextPath}/assets/js/app-ui.js?v=1" charset="UTF-8" defer></script>
 </head>
 <body class="admin-body">
 
@@ -151,6 +153,7 @@
                     </div>
                 </c:if>
                 <form action="${pageContext.request.contextPath}/admin/reception/booking" method="post" onsubmit="return validateForm()">
+                    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
 
                     <!-- Patient Search & Info -->
                     <div class="row">
@@ -200,9 +203,9 @@
                     <!-- Appointment config -->
                     <div class="row">
                         <div class="col-md-6 cams-form-group">
-                            <label class="cams-form-label">Bác sĩ khám chỉ định <span class="text-danger">*</span></label>
+                            <label class="cams-form-label">Bác sĩ lâm sàng chỉ định <span class="text-danger">*</span></label>
                             <select name="doctorId" id="doctorId" class="cams-form-input" required onchange="onDoctorOrDateChanged()">
-                                <option value="" disabled ${empty param.doctorId ? 'selected' : ''}>-- Chọn bác sĩ --</option>
+                                <option value="" disabled ${empty param.doctorId ? 'selected' : ''}>-- Chọn Bác sĩ lâm sàng --</option>
 
                                 <c:forEach var="doc" items="${doctors}">
                                     <option value="${doc.id}" ${param.doctorId == doc.id ? 'selected' : ''}>
@@ -248,7 +251,7 @@
                                 <option value="" disabled ${empty param.timeSlot ? 'selected' : ''}>-- Chọn khung giờ --</option>
                             </select>
 
-                            <small class="text-muted mt-1 d-block">Chọn bác sĩ và ngày khám để tải các slot còn trống. Không áp dụng cho ca SOS.</small>
+                            <small class="text-muted mt-1 d-block">Chọn Bác sĩ lâm sàng và ngày khám để tải các slot còn trống. Không áp dụng cho ca SOS.</small>
                         </div>
                         <div class="col-md-4 cams-form-group">
                             <label class="cams-form-label">Tổng chi phí tạm tính</label>
@@ -374,7 +377,7 @@
         const slotSelect = document.getElementById('timeSlot');
 
         if (!doctorId || !date) {
-            slotSelect.innerHTML = '<option value="" selected>-- Chọn bác sĩ và ngày khám trước --</option>';
+            slotSelect.innerHTML = '<option value="" selected>-- Chọn Bác sĩ lâm sàng và ngày khám trước --</option>';
             return;
         }
 

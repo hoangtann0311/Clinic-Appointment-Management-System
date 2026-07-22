@@ -516,7 +516,7 @@
                                             <c:choose>
                                                 <c:when test="${tbl eq 'users'}"><i class="bi bi-people"></i> Người dùng</c:when>
                                                 <c:when test="${tbl eq 'roles'}"><i class="bi bi-shield-lock"></i> Vai trò</c:when>
-                                                <c:when test="${tbl eq 'doctors'}"><i class="bi bi-person-badge"></i> Bác sĩ</c:when>
+                                                <c:when test="${tbl eq 'doctors'}"><i class="bi bi-person-badge"></i> Bác sĩ lâm sàng</c:when>
                                                 <c:when test="${tbl eq 'patients'}"><i class="bi bi-heart"></i> Bệnh nhân</c:when>
                                                 <c:when test="${tbl eq 'services'}"><i class="bi bi-clipboard2-pulse"></i> Dịch vụ</c:when>
                                                 <c:when test="${tbl eq 'medicines'}"><i class="bi bi-capsule"></i> Thuốc</c:when>
@@ -536,7 +536,7 @@
                                                 <c:when test="${tbl eq 'test_orders'}"><i class="bi bi-clipboard-check"></i> Chỉ định siêu âm</c:when>
                                                 <c:when test="${tbl eq 'ai_analysis_results'}"><i class="bi bi-cpu"></i> Kết quả AI</c:when>
                                                 <c:when test="${tbl eq 'pregnancies'}"><i class="bi bi-heart-pulse"></i> Thai kỳ</c:when>
-                                                <c:when test="${tbl eq 'sonographers'}"><i class="bi bi-person-workspace"></i> KTV siêu âm</c:when>
+                                                <c:when test="${tbl eq 'sonographers'}"><i class="bi bi-person-workspace"></i> Bác sĩ Siêu âm</c:when>
                                                 <c:when test="${tbl eq 'prescription_items'}"><i class="bi bi-prescription2"></i> Chi tiết đơn thuốc</c:when>
                                                 <c:when test="${tbl eq 'invoice_items'}"><i class="bi bi-receipt-cutoff"></i> Chi tiết hoá đơn</c:when>
                                                 <c:when test="${tbl eq 'medicine_categories'}"><i class="bi bi-tags"></i> Danh mục thuốc</c:when>
@@ -740,7 +740,11 @@
         })
         .then(data => {
             if (data.error) {
-                body.innerHTML = '<div class="alert alert-danger m-3">' + data.error + '</div>';
+                body.replaceChildren();
+                const errorBox = document.createElement('div');
+                errorBox.className = 'alert alert-danger m-3';
+                errorBox.textContent = data.error;
+                body.appendChild(errorBox);
                 return;
             }
             body.innerHTML = renderDetail(data);
@@ -770,11 +774,11 @@
                 </div>
                 <div class="col-sm-6">
                     <div class="detail-label"><i class="bi bi-clock-fill me-1"></i> Thời gian</div>
-                    <div class="detail-value">` + (log.createdAtDisplay || '—') + `</div>
+                    <div class="detail-value">` + escapeHtml(log.createdAtDisplay || '—') + `</div>
                 </div>
                 <div class="col-sm-6">
                     <div class="detail-label"><i class="bi bi-globe2 me-1"></i> Địa chỉ IP</div>
-                    <div class="detail-value">` + ip + `</div>
+                    <div class="detail-value">` + escapeHtml(ip) + `</div>
                 </div>
                 <div class="col-sm-6">
                     <div class="detail-label"><i class="bi bi-grid-fill me-1"></i> Phân hệ / Bảng</div>

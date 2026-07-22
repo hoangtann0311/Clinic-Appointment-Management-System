@@ -1,30 +1,15 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <title>Danh Sách Yêu Cầu Siêu Âm - CAMS</title>
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Theme CSS -->
-    <link href="${pageContext.request.contextPath}/assets/css/admin.css" rel="stylesheet">
-</head>
-<body class="admin-body">
-
 <jsp:include page="../common/header.jsp" />
 
+<%-- CSS and document shell are provided once by common/header.jsp. --%>
 <!-- Page Title Row -->
 <div class="admin-page-header">
     <div class="admin-page-header-left">
         <h1 class="admin-page-title">Danh Sách Yêu Cầu Siêu Âm</h1>
         <div class="admin-page-subtitle">
-            Quản lý siêu âm &gt; Chỉ định từ bác sĩ phòng khám
+            Quản lý siêu âm &gt; Chỉ định từ Bác sĩ lâm sàng
         </div>
     </div>
 </div>
@@ -56,7 +41,7 @@
                 <label class="form-label text-muted small fw-bold">TÌM KIẾM</label>
                 <div class="input-group">
                     <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
-                    <input type="text" name="search" class="form-control border-start-0 ps-0" placeholder="Tên sản phụ, bác sĩ, mã SA..." value="${searchParam}">
+                    <input type="text" name="search" class="form-control border-start-0 ps-0" placeholder="Tên sản phụ, Bác sĩ lâm sàng, mã SA..." value="${searchParam}">
                 </div>
             </div>
             <div class="col-md-2">
@@ -66,7 +51,6 @@
                     <option value="Pending" ${statusParam == 'Pending' ? 'selected' : ''}>Chờ siêu âm</option>
                     <option value="InProgress" ${statusParam == 'InProgress' ? 'selected' : ''}>Đang siêu âm</option>
                     <option value="Uploaded" ${statusParam == 'Uploaded' ? 'selected' : ''}>Đã tải ảnh</option>
-                    <option value="Analyzing" ${statusParam == 'Analyzing' ? 'selected' : ''}>AI phân tích</option>
                     <option value="Completed" ${statusParam == 'Completed' ? 'selected' : ''}>Đã hoàn thành</option>
                     <option value="confirmed" ${statusParam == 'confirmed' ? 'selected' : ''}>Đã xác nhận</option>
                 </select>
@@ -170,7 +154,7 @@
                                     <td>
                                         <c:choose>
                                             <c:when test="${order.emergency}">
-                                                <span class="badge bg-danger text-white d-flex align-items-center gap-1 w-fit font-weight-bold" style="animation: pulse-sos 1s infinite;">
+                                                <span class="badge bg-danger text-white d-flex align-items-center gap-1 w-fit font-weight-bold sos-pulse">
                                                     <i class="bi bi-exclamation-triangle-fill"></i> KHẨN CẤP (SOS)
                                                 </span>
                                             </c:when>
@@ -253,19 +237,3 @@
 </div>
 
 <jsp:include page="../common/footer.jsp" />
-
-<style>
-    .table-danger-subtle {
-        background-color: #fff0f3 !important;
-    }
-    @keyframes pulse-sos {
-        0% { transform: scale(1); opacity: 1; }
-        50% { transform: scale(1.05); opacity: 0.9; }
-        100% { transform: scale(1); opacity: 1; }
-    }
-    .sos-blink {
-        border-left: 4px solid var(--rose-500) !important;
-    }
-</style>
-</body>
-</html>
