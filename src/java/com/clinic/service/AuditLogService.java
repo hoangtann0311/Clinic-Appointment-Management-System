@@ -43,7 +43,7 @@ public class AuditLogService {
         TABLE_NAME_LABELS.put("test_orders", "Chỉ Định Siêu Âm");
         TABLE_NAME_LABELS.put("ai_analysis_results", "Kết Quả AI");
         TABLE_NAME_LABELS.put("pregnancies", "Thai Kỳ");
-        TABLE_NAME_LABELS.put("sonographers", "Kỹ Thuật Viên Siêu Âm");
+        TABLE_NAME_LABELS.put("sonographers", "Bác Sĩ Siêu Âm");
         TABLE_NAME_LABELS.put("prescription_items", "Chi Tiết Đơn Thuốc");
         TABLE_NAME_LABELS.put("invoice_items", "Chi Tiết Hoá Đơn");
         TABLE_NAME_LABELS.put("medicine_categories", "Danh Mục Thuốc");

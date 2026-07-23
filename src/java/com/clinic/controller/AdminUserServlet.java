@@ -28,7 +28,7 @@ import java.util.*;
  * GET  → hiển thị danh sách + stats
  * POST → xử lý thêm / sửa / xoá / khoá-mở / reset-password / restore
  */
-@WebServlet(urlPatterns = {"/admin/users/", "/admin/users"})
+@WebServlet(urlPatterns = {"/admin/users/", "/admin/users", "/admin/staff/", "/admin/staff"})
 public class AdminUserServlet extends HttpServlet {
 
     private static final int PAGE_SIZE = 10;

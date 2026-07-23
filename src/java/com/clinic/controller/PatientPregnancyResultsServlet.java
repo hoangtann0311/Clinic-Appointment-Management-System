@@ -118,13 +118,17 @@ public class PatientPregnancyResultsServlet extends HttpServlet {
 
     /** Toàn bộ ảnh siêu âm + kết luận bác sĩ cho 1 hồ sơ khám (mỗi chỉ định siêu âm là 1 nhóm ảnh). */
     private List<Map<String, Object>> loadUltrasoundResults(int recordId) {
+        if (!new com.clinic.dao.UltrasoundReviewDAO().isSchemaSupported()) {
+            return new ArrayList<>();
+        }
         String orderSql =
             "SELECT to2.id AS order_id, to2.status AS order_status, to2.created_at AS ordered_at, " +
-            "       s.service_name, air.message AS doctor_conclusion " +
+            "       s.service_name, ur.conclusion AS doctor_conclusion " +
             "FROM test_orders to2 " +
             "JOIN services s ON s.id = to2.service_id " +
             "LEFT JOIN service_categories sc ON sc.id = s.category_id " +
-            "LEFT JOIN ai_analysis_results air ON air.test_order_id = to2.id " +
+            "JOIN ultrasound_reports ur ON ur.test_order_id = to2.id AND ur.is_current = 1 " +
+            "     AND ur.report_status = 'Signed' AND ur.doctor_confirmed_at IS NOT NULL " +
             "WHERE to2.medical_record_id = ? " +
             "  AND (sc.category_name LIKE N'%siêu âm%' " +
             "       OR sc.category_name LIKE N'%ultrasound%' " +
@@ -147,17 +151,19 @@ public class PatientPregnancyResultsServlet extends HttpServlet {
                 m.put("images", loadImages(c, orderId));
                 results.add(m);
             }
-        } catch (SQLException e) { e.printStackTrace(); }
+        } catch (SQLException e) {
+            System.err.println("[PatientPregnancyResultsServlet] Không thể đọc phiếu siêu âm đã công bố: " + e.getMessage());
+        }
         return results;
     }
 
-    private List<String> loadImages(Connection c, int orderId) throws SQLException {
-        List<String> images = new ArrayList<>();
-        String sql = "SELECT file_path FROM ultrasound_images WHERE test_order_id = ? ORDER BY uploaded_at ASC";
+    private List<Integer> loadImages(Connection c, int orderId) throws SQLException {
+        List<Integer> images = new ArrayList<>();
+        String sql = "SELECT id FROM ultrasound_images WHERE test_order_id = ? ORDER BY uploaded_at ASC";
         try (PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setInt(1, orderId);
             ResultSet rs = ps.executeQuery();
-            while (rs.next()) images.add(rs.getString("file_path"));
+            while (rs.next()) images.add(rs.getInt("id"));
         }
         return images;
     }

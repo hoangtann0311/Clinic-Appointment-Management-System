@@ -2,6 +2,7 @@ package com.clinic.dao;
 
 import com.clinic.config.DatabaseConfig;
 import com.clinic.model.User;
+import com.clinic.utils.EncryptionUtil;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -27,9 +28,9 @@ public class UserDAO {
 
     // ============================================================
     // SQL FRAGMENTS CHO MÃ HOÁ/GIẢI MÃ EMAIL & PHONE
-    // Passphrase: ClinicAppKey2026! (nên đọc từ config/biến môi trường)
+    // Passphrase chỉ được đọc từ cấu hình ngoài source.
     // ============================================================
-    private static final String DB_KEY = "ClinicAppKey2026!";
+    private static final String DB_KEY = EncryptionUtil.getPassphrase().replace("'", "''");
 
     /** Dùng trong SELECT: giải mã cột email thành NVARCHAR(100).
      *  Dùng NVARCHAR vì JDBC setString() gửi Unicode → ENCRYPTBYPASSPHRASE mã hoá UTF-16LE.
@@ -777,6 +778,43 @@ public class UserDAO {
             closeResources(conn, ps, rs);
         }
         return 0;
+    }
+
+    /** One aggregate query for role cards; never loads user rows into memory. */
+    public java.util.Map<Integer, Integer> countGroupedByRole(
+            String search, String statusFilter, boolean includeDeleted) {
+        String whereClause = includeDeleted ? "is_deleted = 1" : "is_deleted = 0";
+        StringBuilder sql = new StringBuilder(
+                "SELECT role_id, COUNT(*) AS total FROM users WHERE " + whereClause + " ");
+        if (search != null && !search.trim().isEmpty()) {
+            sql.append("AND (full_name LIKE ? OR ").append(WHERE_EMAIL_LIKE)
+                    .append(" OR ").append(WHERE_PHONE_LIKE).append(") ");
+        }
+        if (statusFilter != null && !statusFilter.trim().isEmpty()) {
+            sql.append("AND status = ? ");
+        }
+        sql.append("GROUP BY role_id");
+
+        java.util.Map<Integer, Integer> result = new java.util.LinkedHashMap<>();
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            int index = 1;
+            if (search != null && !search.trim().isEmpty()) {
+                String like = "%" + search.trim() + "%";
+                ps.setString(index++, like);
+                ps.setString(index++, like);
+                ps.setString(index++, like);
+            }
+            if (statusFilter != null && !statusFilter.trim().isEmpty()) {
+                ps.setString(index, statusFilter.trim());
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) result.put(rs.getInt("role_id"), rs.getInt("total"));
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Lỗi database khi thống kê users theo vai trò", e);
+        }
+        return result;
     }
 
     /**

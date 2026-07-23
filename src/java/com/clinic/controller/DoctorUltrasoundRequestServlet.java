@@ -54,9 +54,15 @@ public class DoctorUltrasoundRequestServlet extends HttpServlet {
 
         String apptIdStr = request.getParameter("apptId");
         String serviceIdStr = request.getParameter("serviceId");
-        boolean forceReorder = "1".equals(request.getParameter("force"))
-                || "true".equalsIgnoreCase(request.getParameter("force"));
         String reorderReason = request.getParameter("reorderReason");
+        if (reorderReason == null || reorderReason.isBlank()) {
+            reorderReason = request.getParameter("additionalReason");
+        }
+        reorderReason = reorderReason == null ? "" : reorderReason.trim();
+        if (reorderReason.length() > 500) {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Lý do chỉ định không được vượt quá 500 ký tự.");
+            return;
+        }
 
         if (apptIdStr == null || apptIdStr.trim().isEmpty()
                 || serviceIdStr == null || serviceIdStr.trim().isEmpty()) {
@@ -93,29 +99,48 @@ public class DoctorUltrasoundRequestServlet extends HttpServlet {
 
             // 1. Kiểm tra / tạo hồ sơ bệnh án
             MedicalRecord record = medicalRecordDAO.getByAppointmentId(apptId);
+            if (record == null || record.getId() <= 0) {
+                response.sendRedirect(request.getContextPath()
+                        + "/doctor/medical-records?apptId=" + apptId + "&error=saveRecordFirst");
+                return;
+            }
+            if (!"draft".equalsIgnoreCase(record.getStatus())) {
+                response.sendRedirect(request.getContextPath()
+                        + "/doctor/medical-records?apptId=" + apptId + "&error=recordClosed");
+                return;
+            }
+            if (!appointmentDAO.isConsultationInProgress(apptId, doctor.getId())) {
+                response.sendError(HttpServletResponse.SC_CONFLICT,
+                        "Chỉ được chỉ định siêu âm khi ca khám đang ở trạng thái Đang khám.");
+                return;
+            }
             // A service selected during booking belongs to PRE_EXAM and must
             // not be charged again when the doctor creates its clinical order.
             boolean includedInBookedAppointment = appointmentDAO.hasBookedService(apptId, serviceId);
-
-            int recordId;
-            if (record == null) {
-                MedicalRecord draft = new MedicalRecord();
-                draft.setAppointmentId(apptId);
-                draft.setClinicalNotes("Bác sĩ chỉ định siêu âm.");
-                draft.setFinalDiagnosis("Chờ kết quả siêu âm.");
-                draft.setTreatmentPlan("Thực hiện siêu âm.");
-                recordId = medicalRecordDAO.create(draft);
-                if (recordId <= 0) {
-                    throw new Exception("Không thể tự động tạo hồ sơ bệnh án.");
+            if (!includedInBookedAppointment) {
+                if (reorderReason.length() < 5) {
+                    response.sendError(HttpServletResponse.SC_BAD_REQUEST,
+                            "Chỉ định bổ sung cần có lý do lâm sàng (ít nhất 5 ký tự).");
+                    return;
                 }
-            } else {
-                recordId = record.getId();
+                if (!"1".equals(request.getParameter("confirmAdditional"))) {
+                    response.sendError(HttpServletResponse.SC_BAD_REQUEST,
+                            "Cần xác nhận đã giải thích chi phí dịch vụ bổ sung.");
+                    return;
+                }
             }
+
+            int recordId = record.getId();
 
             java.math.BigDecimal price = null;
             if (!includedInBookedAppointment) {
                 ServiceItem service = serviceDAO.findServiceById(serviceId);
-                price = service != null ? java.math.BigDecimal.valueOf(service.getPrice()) : new java.math.BigDecimal("250000.00");
+                if (service == null || service.getPrice() < 0) {
+                    response.sendError(HttpServletResponse.SC_CONFLICT,
+                            "Không đọc được giá dịch vụ hiện hành. Chỉ định chưa được tạo.");
+                    return;
+                }
+                price = java.math.BigDecimal.valueOf(service.getPrice());
             }
 
             // 2 & 3. Tạo chỉ định siêu âm và hóa đơn POST_EXAM trong cùng 1 database Transaction
@@ -148,8 +173,10 @@ public class DoctorUltrasoundRequestServlet extends HttpServlet {
                     + "&success=requested&billing=" + billing);
 
         } catch (Exception e) {
-            e.printStackTrace();
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Lỗi hệ thống khi xử lý chỉ định siêu âm: " + e.getMessage());
+            System.err.println("[DoctorUltrasoundRequestServlet] requestId="
+                    + request.getAttribute("requestId") + " error=" + e.getClass().getSimpleName());
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                    "Không thể xử lý chỉ định siêu âm. Vui lòng dùng mã đối chiếu để liên hệ hỗ trợ.");
         }
     }
 }

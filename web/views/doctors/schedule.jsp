@@ -384,6 +384,7 @@
 
             <form method="post" action="${pageContext.request.contextPath}/doctor/schedules"
                   id="createForm" novalidate>
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                 <input type="hidden" name="action" value="create">
 
                 <div class="modal-body p-4">
@@ -519,6 +520,7 @@
                 </p>
                 <form method="post" action="${pageContext.request.contextPath}/doctor/schedules"
                       id="cancelForm">
+                    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                     <input type="hidden" name="action" value="cancel">
                     <input type="hidden" name="id" id="cancelScheduleId" value="">
                     <div class="d-flex gap-2 justify-content-center">

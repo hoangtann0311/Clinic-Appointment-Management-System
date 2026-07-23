@@ -42,7 +42,7 @@ public class DoctorPrescriptionListServlet extends HttpServlet {
             "SELECT p.id, p.prescription_code, p.status, p.created_at, " +
             "       pt.full_name AS patient_name, pt.id AS patient_id, " +
             "       CONVERT(varchar, a.appointment_date, 23) AS appointment_date, " +
-            "       mr.id AS record_id, mr.final_diagnosis, " +
+            "       mr.id AS record_id, a.id AS appointment_id, mr.final_diagnosis, " +
             "       (SELECT COUNT(*) FROM prescription_items pi WHERE pi.prescription_id = p.id) AS item_count " +
             "FROM prescriptions p " +
             "JOIN medical_records mr ON p.medical_record_id = mr.id " +
@@ -72,6 +72,7 @@ public class DoctorPrescriptionListServlet extends HttpServlet {
                 row.patientId       = rs.getInt("patient_id");
                 row.appointmentDate = rs.getString("appointment_date");
                 row.recordId        = rs.getInt("record_id");
+                row.appointmentId   = rs.getInt("appointment_id");
                 row.finalDiagnosis  = rs.getString("final_diagnosis");
                 row.itemCount       = rs.getInt("item_count");
                 rows.add(row);
@@ -105,6 +106,7 @@ public class DoctorPrescriptionListServlet extends HttpServlet {
         public int    patientId;
         public String appointmentDate;
         public int    recordId;
+        public int    appointmentId;
         public String finalDiagnosis;
         public int    itemCount;
 
@@ -116,6 +118,7 @@ public class DoctorPrescriptionListServlet extends HttpServlet {
         public int    getPatientId()       { return patientId; }
         public String getAppointmentDate() { return appointmentDate; }
         public int    getRecordId()        { return recordId; }
+        public int    getAppointmentId()   { return appointmentId; }
         public String getFinalDiagnosis()  { return finalDiagnosis; }
         public int    getItemCount()       { return itemCount; }
     }

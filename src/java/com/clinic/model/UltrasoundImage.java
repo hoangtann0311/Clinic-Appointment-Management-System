@@ -19,6 +19,8 @@ public class UltrasoundImage implements Serializable {
     private String contentType;
     private int uploadedBy;
     private Timestamp uploadedAt;
+    private Integer imageWidth;
+    private Integer imageHeight;
 
     // Transient
     private String uploaderName;
@@ -97,6 +99,11 @@ public class UltrasoundImage implements Serializable {
     public void setUploadedAt(Timestamp uploadedAt) {
         this.uploadedAt = uploadedAt;
     }
+
+    public Integer getImageWidth() { return imageWidth; }
+    public void setImageWidth(Integer imageWidth) { this.imageWidth = imageWidth; }
+    public Integer getImageHeight() { return imageHeight; }
+    public void setImageHeight(Integer imageHeight) { this.imageHeight = imageHeight; }
 
     public String getUploaderName() {
         return uploaderName;

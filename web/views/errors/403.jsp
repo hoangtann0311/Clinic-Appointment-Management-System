@@ -12,16 +12,17 @@
                 <h1 class="display-4 fw-bold text-danger">403</h1>
                 <h4 class="fw-semibold mb-2">
                     <c:choose>
-                        <c:when test="${not empty errorTitle}">${errorTitle}</c:when>
+                        <c:when test="${not empty errorTitle}"><c:out value="${errorTitle}" /></c:when>
                         <c:otherwise>Truy Cập Bị Từ Chối</c:otherwise>
                     </c:choose>
                 </h4>
                 <p class="text-muted mb-4">
                     <c:choose>
-                        <c:when test="${not empty errorDetail}">${errorDetail}</c:when>
+                        <c:when test="${not empty errorDetail}"><c:out value="${errorDetail}" /></c:when>
                         <c:otherwise>Bạn không có quyền truy cập vào trang này.</c:otherwise>
                     </c:choose>
                 </p>
+                <p class="small text-muted">Mã đối chiếu: <code><c:out value="${requestId}" /></code></p>
             </div>
             <div class="d-flex justify-content-center gap-2">
                 <a href="javascript:history.back()" class="btn btn-outline-secondary">

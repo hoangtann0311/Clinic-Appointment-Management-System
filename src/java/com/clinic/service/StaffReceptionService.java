@@ -186,7 +186,7 @@ public class StaffReceptionService {
 
         Integer foundSlotId = null;
         if (startTime != null) {
-            String findSlotSql = "SELECT id FROM time_slots WHERE doctor_id = ? AND work_date = ? AND start_time = ? AND status = 'AVAILABLE'";
+            String findSlotSql = "SELECT id FROM time_slots WHERE doctor_id = ? AND work_date = ? AND start_time = CAST(? AS time) AND status = 'AVAILABLE'";
             try (Connection conn = DatabaseConfig.getConnection();
                  PreparedStatement ps = conn.prepareStatement(findSlotSql)) {
                 ps.setInt(1, doctor.getId());
@@ -234,14 +234,12 @@ public class StaffReceptionService {
         if (foundSlotId != null) appointment.setSlotId(foundSlotId);
 
         // 9. Cấp số SOS nếu là ca cấp cứu
-        if (finalEmergency) {
-            int nextSosNum = appointmentDAO.getNextSosQueueNumber(appDate);
-            appointment.setQueueNumber("SOS-" + String.format("%02d", nextSosNum));
-        }
-
         // 10. Lưu lịch hẹn và giữ slot trong cùng một transaction để tránh đặt trùng.
         if (finalEmergency) {
-            appointment = appointmentDAO.createAppointment(appointment);
+            appointment = appointmentDAO.createEmergencyAppointmentWithQueue(appointment);
+            if (appointment == null) {
+                throw new IllegalArgumentException("Không thể tạo ca SOS: bệnh nhân đã có ca SOS hoạt động hoặc hàng đợi đang bận.");
+            }
         } else {
             int patientUserId = getUserIdForPatient(patient.getId());
             appointment = appointmentDAO.createStaffAppointmentWithHeldSlot(
@@ -512,12 +510,10 @@ public class StaffReceptionService {
                 "Emergency_SOS"
         );
 
-        LocalDate today = LocalDate.now();
-
-        int nextSosNum = appointmentDAO.getNextSosQueueNumber(today);
-        appointment.setQueueNumber("SOS-" + String.format("%02d", nextSosNum));
-
-        appointment = appointmentDAO.createAppointment(appointment);
+        appointment = appointmentDAO.createEmergencyAppointmentWithQueue(appointment);
+        if (appointment == null) {
+            throw new IllegalArgumentException("Không thể tạo ca SOS: bệnh nhân đã có ca SOS hoạt động hoặc hàng đợi đang bận.");
+        }
 
         if (appointment != null) {
             auditLogDAO.logAction(
@@ -548,22 +544,66 @@ public class StaffReceptionService {
                 throw new IllegalArgumentException("Chỉ ca Emergency_SOS mới được tắt cảnh báo.");
             }
 
-            LocalDate appDate = apt.getAppointmentDate() != null ? apt.getAppointmentDate() : LocalDate.now();
-            int nextNum = appointmentDAO.getNextNormalQueueNumber(appDate);
-            String normalQueueNum = "STT-" + String.format("%02d", nextNum);
-            appointmentDAO.updateCheckIn(appointmentId, "Waiting", normalQueueNum);
+            AppointmentDAO.SosDismissResult result = appointmentDAO.dismissEmergencySos(appointmentId);
+            if (!result.isSuccess()) {
+                throw new IllegalArgumentException("Ca SOS đã thay đổi trạng thái hoặc không thể đưa về hàng đợi.");
+            }
 
             auditLogDAO.logAction(
-                    "Giải tỏa cảnh báo SOS ca #" + id + " - chuyển Emergency_SOS -> Waiting, cấp số thường " + normalQueueNum,
+                    "Giải tỏa cảnh báo SOS ca #" + id + " - chuyển Emergency_SOS -> "
+                            + result.getRestoredStatus() + ", cấp số thường " + result.getQueueNumber(),
                     "Staff",
                     "appointments",
                     "Emergency_SOS",
-                    "Waiting"
+                    result.getRestoredStatus()
             );
 
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException("Mã ca SOS không hợp lệ.");
         }
+    }
+
+    /** Upgrades an existing same-day clinical appointment to SOS. */
+    public String activateEmergencySosForAppointment(String id, String symptoms) {
+        final int appointmentId;
+        try {
+            appointmentId = Integer.parseInt(id);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Vui lòng chọn bệnh nhân trong hàng đợi.");
+        }
+        String reason = symptoms == null ? "" : symptoms.trim();
+        if (reason.length() < 5 || reason.length() > 500) {
+            throw new IllegalArgumentException("Tình trạng khẩn cấp phải từ 5 đến 500 ký tự.");
+        }
+
+        Appointment appointment = appointmentDAO.findAppointmentById(appointmentId);
+        if (appointment == null || appointment.getAppointmentDate() == null
+                || !appointment.getAppointmentDate().equals(LocalDate.now())) {
+            throw new IllegalArgumentException("Chỉ có thể kích hoạt SOS cho ca khám trong ngày hôm nay.");
+        }
+        String oldStatus = appointment.getStatus();
+        if (!("Confirmed".equalsIgnoreCase(oldStatus)
+                || "Waiting".equalsIgnoreCase(oldStatus)
+                || "InProgress".equalsIgnoreCase(oldStatus))) {
+            throw new IllegalArgumentException("Chỉ ca Confirmed, Waiting hoặc InProgress mới có thể chuyển sang SOS.");
+        }
+
+        int patientId = appointment.getPatientId();
+        String queueNumber = appointmentDAO.activateEmergencySosForAppointment(
+                appointmentId, patientId, reason);
+        if (queueNumber == null) {
+            throw new IllegalArgumentException("Không thể kích hoạt SOS: bệnh nhân đã có ca SOS đang hoạt động hoặc trạng thái vừa thay đổi.");
+        }
+
+        auditLogDAO.logAction(
+                "Kích hoạt SOS cho ca #" + appointmentId + ", cấp số " + queueNumber,
+                "Staff", "appointments", oldStatus, "Emergency_SOS");
+        if (appointment.getPatient() != null) {
+            sendMockZaloMessage(appointment.getPatient(),
+                    "Hệ thống CAMS: Ca khám của bạn đã được chuyển sang cấp cứu "
+                            + queueNumber + ". Nhân viên y tế đang ưu tiên tiếp nhận.");
+        }
+        return queueNumber;
     }
 
     // --- Simulated Zalo Server Webhook persisted to database ---
@@ -818,7 +858,7 @@ public class StaffReceptionService {
         if (slot == null || !slot.contains("-")) return null;
         try {
             java.time.LocalTime start = java.time.LocalTime.parse(slot.split("-")[0].trim());
-            String sql = "SELECT id FROM time_slots WHERE doctor_id = ? AND work_date = ? AND start_time = ? "
+            String sql = "SELECT id FROM time_slots WHERE doctor_id = ? AND work_date = ? AND start_time = CAST(? AS time) "
                     + "AND (status = 'AVAILABLE' OR (id = ? AND status IN ('HELD', 'WAITING_VERIFICATION')))";
             try (Connection conn = DatabaseConfig.getConnection();
                  PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -1006,20 +1046,34 @@ public class StaffReceptionService {
         if (invoice == null) {
             throw new IllegalArgumentException("Không tìm thấy hóa đơn cần từ chối.");
         }
-        if ("Paid".equalsIgnoreCase(invoice.getStatus())) {
-            throw new IllegalArgumentException("Hóa đơn này đã được thanh toán, không thể từ chối.");
+        if (!"PendingConfirmation".equalsIgnoreCase(invoice.getStatus())) {
+            throw new IllegalArgumentException("Chỉ có thể từ chối yêu cầu đang chờ Staff xác nhận.");
         }
 
         java.sql.Timestamp now = new java.sql.Timestamp(System.currentTimeMillis());
         String note = (reason == null || reason.trim().isEmpty()) ? "Từ chối minh chứng thanh toán" : reason.trim();
-        boolean success = invoiceDAO.updatePaymentStatus(invoiceId, "Rejected", invoice.getPaymentMethod(),
-                invoice.getTransactionCode(), note, rejectedBy, now);
-
-        if (success && invoice.getAppointmentId() != null) {
-            if ("PRE_EXAM".equalsIgnoreCase(invoice.getInvoiceType())) {
-                appointmentDAO.rejectAppointmentAfterPaymentRejected(invoice.getAppointmentId());
+        boolean success;
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                success = invoiceDAO.updatePaymentStatus(conn, invoiceId, "Rejected", invoice.getPaymentMethod(),
+                        invoice.getTransactionCode(), note, rejectedBy, now);
+                if (success && "PRE_EXAM".equalsIgnoreCase(invoice.getInvoiceType())) {
+                    success = invoice.getAppointmentId() != null
+                            && appointmentDAO.rejectAppointmentAfterPaymentRejected(conn, invoice.getAppointmentId());
+                }
+                if (success) conn.commit(); else conn.rollback();
+            } catch (SQLException ex) {
+                conn.rollback();
+                throw ex;
+            } finally {
+                conn.setAutoCommit(true);
             }
+        } catch (SQLException ex) {
+            throw new IllegalStateException("Không thể từ chối thanh toán một cách an toàn.", ex);
+        }
 
+        if (success) {
             auditLogDAO.logAction(
                     "Từ chối thanh toán hóa đơn " + invoice.getInvoiceType() + " #" + invoiceId + " — Lý do: " + note,
                     "Staff",
@@ -1049,28 +1103,17 @@ public class StaffReceptionService {
             throw new IllegalArgumentException("Yêu cầu thanh toán chưa ở trạng thái chờ Staff xác nhận.");
         }
 
-        if (paymentMethod == null || paymentMethod.trim().isEmpty()) {
-            throw new IllegalArgumentException("Thiếu phương thức thanh toán bệnh nhân đã gửi.");
+        // The chosen method is immutable after the patient sends the request.
+        // Never trust the method posted by the staff form; use the invoice.
+        if (invoice.getPaymentMethod() == null || invoice.getPaymentMethod().trim().isEmpty()) {
+            throw new IllegalArgumentException("Hóa đơn chưa có phương thức thanh toán do bệnh nhân chọn.");
         }
-        paymentMethod = paymentMethod.trim();
-
+        paymentMethod = invoice.getPaymentMethod().trim();
         if (!"Cash".equalsIgnoreCase(paymentMethod) && !"BankTransfer".equalsIgnoreCase(paymentMethod)) {
-            throw new IllegalArgumentException("Phương thức thanh toán không hợp lệ.");
+            throw new IllegalArgumentException("Phương thức thanh toán trên hóa đơn không hợp lệ.");
         }
 
-        if (invoice.getPaymentMethod() == null
-                || !paymentMethod.equalsIgnoreCase(invoice.getPaymentMethod().trim())) {
-            throw new IllegalArgumentException("Không thể thay đổi phương thức sau khi bệnh nhân gửi yêu cầu.");
-        }
-
-        // A bank transfer is confirmed only after the patient has submitted it
-        // with proof. Reception may verify it, but must not create one itself.
-        if ("BankTransfer".equalsIgnoreCase(paymentMethod)
-                && (invoice.getProofImagePath() == null || invoice.getProofImagePath().trim().isEmpty())) {
-            throw new IllegalArgumentException("Cần có ảnh minh chứng chuyển khoản trước khi xác nhận.");
-        }
-
-        String patientReference = firstNonBlank(transactionCode, invoice.getTransactionCode());
+        String patientReference = firstNonBlank(null, invoice.getTransactionCode());
         // A receipt code belongs to the staff approval event.  It is generated
         // for both methods so Manager revenue/audit always has a stable key.
         String finalTxCode = createReceiptCode(paymentMethod, invoiceId);

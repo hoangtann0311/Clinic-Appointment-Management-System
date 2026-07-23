@@ -28,7 +28,7 @@ import java.io.IOException;
  *
  * <p>Chạy ĐẦU TIÊN trong filter chain để headers được set trước khi response được ghi.
  */
-@WebFilter("/*")
+// @WebFilter("/*")
 public class SecurityHeadersFilter implements Filter {
 
     @Override
@@ -61,6 +61,8 @@ public class SecurityHeadersFilter implements Filter {
             httpRes.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, private");
             httpRes.setHeader("Pragma", "no-cache");
             httpRes.setHeader("Expires", "0");
+        } else if (path.startsWith("/assets/")) {
+            httpRes.setHeader("Cache-Control", "public, max-age=86400");
         }
 
         // ── Strict-Transport-Security (chỉ khi chạy HTTPS) ──

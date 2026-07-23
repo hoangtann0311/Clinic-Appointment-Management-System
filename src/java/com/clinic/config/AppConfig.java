@@ -9,6 +9,7 @@ import java.util.Properties;
 public class AppConfig {
 
     private static final Properties props = new Properties();
+    private static final String RUNTIME_AI_TOKEN = java.util.UUID.randomUUID().toString();
 
     static {
         try (InputStream input = AppConfig.class.getClassLoader().getResourceAsStream("config.properties")) {
@@ -24,6 +25,11 @@ public class AppConfig {
         String externalPath = System.getProperty("ocss.config.file");
         if (externalPath == null || externalPath.isBlank()) {
             externalPath = System.getenv("OCSS_CONFIG_FILE");
+        }
+        if (externalPath == null || externalPath.isBlank()) {
+            externalPath = System.getProperty("user.home")
+                    + java.io.File.separator + ".ocss"
+                    + java.io.File.separator + "config.properties";
         }
         if (externalPath != null && !externalPath.isBlank()) {
             java.io.File extFile = new java.io.File(externalPath.trim());
@@ -81,6 +87,22 @@ public class AppConfig {
 
     public static int getAiReadTimeout() {
         return getInt("ai.engine.readTimeout", 30000);
+    }
+
+    public static String getAiInternalToken() {
+        return get("ai.engine.internalToken", RUNTIME_AI_TOKEN);
+    }
+
+    public static String getAiPythonCommand() {
+        return get("ai.python.command", "py");
+    }
+
+    public static String getAiPythonScript() {
+        return get("ai.python.script", "");
+    }
+
+    public static long getAiProcessTimeout() {
+        return getLong("ai.python.timeoutMs", 30000L);
     }
 
     // Upload settings

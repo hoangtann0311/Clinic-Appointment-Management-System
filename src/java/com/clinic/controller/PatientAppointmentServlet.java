@@ -117,16 +117,18 @@ public class PatientAppointmentServlet extends HttpServlet {
                 if (sosSymptoms == null || sosSymptoms.isBlank()) {
                     sosSymptoms = "Bệnh nhân báo động khẩn cấp SOS.";
                 }
+                sosSymptoms = sosSymptoms.trim();
+                if (sosSymptoms.length() > 500) {
+                    request.getSession().setAttribute("bookingError", "Mô tả SOS không được vượt quá 500 ký tự.");
+                    response.sendRedirect(request.getContextPath() + "/patient/appointments");
+                    return;
+                }
 
-                // Get next SOS number
-                int nextSosNum = appointmentDAO.getNextSosQueueNumber(java.time.LocalDate.now());
-                String queueNum = "SOS-" + String.format("%02d", nextSosNum);
+                String queueNum = appointmentDAO.activateEmergencySosForAppointment(
+                        appointmentId, patientId, sosSymptoms);
+                boolean ok = queueNum != null;
 
-                boolean ok = appointmentDAO.activateEmergencySosForAppointment(appointmentId, queueNum);
-
-                // Cập nhật triệu chứng vào lịch hẹn
                 if (ok) {
-                    appointmentDAO.updateSymptoms(appointmentId, sosSymptoms);
                     
                     // Gửi thông báo khẩn cấp cho bác sĩ phụ trách
                     try {

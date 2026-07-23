@@ -7,7 +7,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quản Lý Lịch Trực Bác Sĩ — CAMS Manager</title>
+    <title>Quản lý lịch trực Bác sĩ lâm sàng — CAMS Quản lý</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
           rel="stylesheet"
@@ -340,11 +340,11 @@
     <div class="admin-page-header">
         <div>
             <h1 class="admin-page-title">
-                <i class="bi bi-calendar-check me-2" style="color:#9c0f6e;"></i>Duyệt Lịch Trực Bác Sĩ
+                <i class="bi bi-calendar-check me-2" style="color:#9c0f6e;"></i>Duyệt Lịch Trực Bác sĩ lâm sàng
             </h1>
             <div class="admin-page-subtitle">
                 <i class="bi bi-people-fill"></i>
-                Quản lý, duyệt và từ chối các yêu cầu đăng ký lịch trực của bác sĩ
+                Quản lý, duyệt và từ chối các yêu cầu đăng ký lịch trực của Bác sĩ lâm sàng
             </div>
         </div>
     </div>
@@ -402,7 +402,7 @@
                 </c:when>
                 <c:when test="${success eq 'rejected'}">
                     <i class="bi bi-x-circle-fill me-2 fs-5"></i>
-                    <div><strong>Đã từ chối!</strong> Lịch trực #${param.id} đã bị từ chối. Bác sĩ sẽ nhận được thông báo kèm lý do.</div>
+                    <div><strong>Đã từ chối!</strong> Lịch trực #${param.id} đã bị từ chối. Bác sĩ lâm sàng sẽ nhận được thông báo kèm lý do.</div>
                 </c:when>
                 <c:otherwise>
                     <i class="bi bi-check-circle-fill me-2 fs-5"></i>
@@ -433,7 +433,7 @@
                     <option value="REJECTED" ${statusFilter eq 'REJECTED' ? 'selected' : ''}>🔴 Đã từ chối</option>
                 </select>
                 <select name="doctorId" class="form-select">
-                    <option value="">Tất cả bác sĩ</option>
+                    <option value="">Tất cả Bác sĩ lâm sàng</option>
                     <c:forEach var="doc" items="${doctors}">
                         <option value="${doc.id}" ${doctorIdFilter eq doc.id.toString() ? 'selected' : ''}>
                             ${fn:escapeXml(doc.fullName)} <c:if test="${not empty doc.specialization}">(${fn:escapeXml(doc.specialization)})</c:if>
@@ -474,7 +474,7 @@
                     <thead>
                         <tr>
                             <th>STT</th>
-                            <th>Bác Sĩ</th>
+                            <th>Bác sĩ lâm sàng</th>
                             <th>Chuyên Khoa</th>
                             <th>Ngày Trực</th>
                             <th>Ca Trực</th>
@@ -678,11 +678,11 @@
                     </label>
                     <textarea name="rejectionReason" id="rejectionReason"
                               class="form-control" rows="4" maxlength="500"
-                              placeholder="Nhập lý do từ chối (tối thiểu 10 ký tự). Ví dụ: Ca trực đã đủ nhân sự, Bác sĩ có lịch làm việc khác trùng giờ..."
+                              placeholder="Nhập lý do từ chối (tối thiểu 10 ký tự). Ví dụ: Ca trực đã đủ nhân sự, Bác sĩ lâm sàng có lịch làm việc khác trùng giờ..."
                               required></textarea>
                     <div class="form-text">
                         <i class="bi bi-info-circle me-1"></i>
-                        Lý do từ chối sẽ được gửi đến bác sĩ để đảm bảo tính minh bạch. Tối thiểu 10 ký tự.
+                        Lý do từ chối sẽ được gửi đến Bác sĩ lâm sàng để đảm bảo tính minh bạch. Tối thiểu 10 ký tự.
                     </div>
                     <div id="rejectError" class="text-danger mt-2" style="font-size:0.82rem;display:none;"></div>
 
@@ -839,7 +839,7 @@
                 <div class="mt-3 p-3" style="background:#f5f5f5;border-radius:var(--r-sm);font-size:0.85rem;">
                     <strong><i class="bi bi-lightbulb-fill me-1" style="color:#f9a825;"></i>Hướng dẫn:</strong>
                     <ul class="mb-0 mt-2">
-                        <li>Chuyển từng bệnh nhân sang bác sĩ khác có lịch trực cùng ngày</li>
+                        <li>Chuyển từng bệnh nhân sang Bác sĩ lâm sàng khác có lịch trực cùng ngày</li>
                         <li>Hoặc đổi lịch hẹn của bệnh nhân sang ngày khác</li>
                         <li>Sau khi xử lý xong tất cả bệnh nhân, quay lại đây để hủy lịch trực</li>
                     </ul>
@@ -990,7 +990,7 @@ function confirmApproval(id, doctorName, shiftLabel) {
 // ── Open reject modal ──
 function openRejectModal(id, doctorName, shiftLabel) {
     document.getElementById('rejectScheduleId').value = id;
-    document.getElementById('rejectDoctorName').innerHTML = '<i class="bi bi-person-badge me-1"></i>' + doctorName;
+    document.getElementById('rejectDoctorName').textContent = doctorName;
     document.getElementById('rejectShiftLabel').textContent = shiftLabel;
     document.getElementById('rejectionReason').value = '';
     document.getElementById('rejectError').style.display = 'none';
@@ -1023,7 +1023,7 @@ function openRejectModal(id, doctorName, shiftLabel) {
 // ── Open cancel modal ──
 function openCancelModal(id, doctorName, shiftLabel) {
     document.getElementById('cancelScheduleId').value = id;
-    document.getElementById('cancelDoctorName').innerHTML = '<i class="bi bi-person-badge me-1"></i>' + doctorName;
+    document.getElementById('cancelDoctorName').textContent = doctorName;
     document.getElementById('cancelShiftLabel').textContent = shiftLabel;
     document.getElementById('cancellationReason').value = '';
     document.getElementById('cancelError').style.display = 'none';

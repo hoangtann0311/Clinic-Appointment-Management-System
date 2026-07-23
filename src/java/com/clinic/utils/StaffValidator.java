@@ -80,6 +80,22 @@ public class StaffValidator {
 
         if (!isEmergency && isEmpty(timeSlot)) {
             errors.add("Vui lòng chọn khung giờ khám.");
+        } else if (!isEmergency && !isEmpty(timeSlot) && !isEmpty(appointmentDate)) {
+            try {
+                LocalDate appDate = LocalDate.parse(appointmentDate);
+                if (appDate.isEqual(LocalDate.now())) {
+                    String[] parts = timeSlot.split("-");
+                    if (parts.length > 0) {
+                        String startStr = parts[0].trim();
+                        java.time.LocalTime startTime = java.time.LocalTime.parse(startStr);
+                        if (startTime.isBefore(java.time.LocalTime.now())) {
+                            errors.add("Khung giờ chọn (" + startStr + ") đã trôi qua. Vui lòng chọn khung giờ khác.");
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // Ignore parsing issues
+            }
         }
 
         if (isEmpty(symptoms)) {

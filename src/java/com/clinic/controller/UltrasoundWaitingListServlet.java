@@ -20,9 +20,7 @@ import java.util.List;
  */
 @WebServlet(urlPatterns = {
     "/sonographer/waiting-list",
-    "/sonographer/waiting-list/",
-    "/admin/sonographer/waiting-list",
-    "/admin/sonographer/waiting-list/"
+    "/sonographer/waiting-list/"
 })
 public class UltrasoundWaitingListServlet extends HttpServlet {
 
@@ -120,7 +118,7 @@ public class UltrasoundWaitingListServlet extends HttpServlet {
         }
 
         User user = (User) session.getAttribute("user");
-        if (user.getRoleId() != 1 && user.getRoleId() != 6) {
+        if (user.getRoleId() != 6) {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             request.setAttribute("errorTitle", "Truy Cập Bị Từ Chối");
             request.setAttribute("errorDetail", "Bạn không có quyền truy cập danh sách chờ siêu âm.");

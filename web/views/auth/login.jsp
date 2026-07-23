@@ -209,8 +209,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <%-- ========== Google Sign-In Configuration ========== --%>
 <%--
-  Client ID được load từ application scope (set bởi GoogleConfigListener từ web.xml).
-  Mỗi developer/máy chủ cấu hình Client ID riêng trong web.xml.
+  Client ID được load từ application scope bởi GoogleConfigListener.
+  Mỗi môi trường cấu hình qua system property, biến môi trường hoặc file cấu hình ngoài source.
 --%>
 <c:set var="googleClientId" value="${applicationScope.googleClientId}" />
 
@@ -284,12 +284,7 @@ window.addEventListener('load', function() {
                     width: 320
                 }
             );
-
-            console.log('Google Sign-In initialized. Origin: ' + window.location.origin);
-            console.log('Neu Google Sign-In khong hoat dong, hay them origin nay vao Google Cloud Console:');
-            console.log('  Authorized JavaScript origins: ' + window.location.origin);
         } catch (e) {
-            console.warn('Google Sign-In init failed:', e.message);
             showGoogleSetupGuide();
         }
     } else {
@@ -302,20 +297,11 @@ window.addEventListener('load', function() {
  */
 function showGoogleSetupGuide() {
     var btnContainer = document.getElementById('googleSignInButton');
-    var origin = window.location.origin;
-    var ctxPath = '${pageContext.request.contextPath}';
 
     btnContainer.innerHTML =
         '<div class="alert alert-info text-start small mb-0 w-100" style="border-radius:8px;">' +
-        '<strong><i class="bi bi-info-circle me-1"></i>Huong dan cau hinh Google Sign-In:</strong><br>' +
-        '1. Vao <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a><br>' +
-        '2. Tao OAuth 2.0 Client ID (Web application)<br>' +
-        '3. Them <strong>Authorized JavaScript origins</strong>:<br>' +
-        '   <code class="text-dark">' + origin + '</code><br>' +
-        '4. Them <strong>Authorized redirect URIs</strong>:<br>' +
-        '   <code class="text-dark">' + origin + ctxPath + '/google-login-server</code><br>' +
-        '5. Copy Client ID vao <code class="text-dark">web.xml</code> → <code class="text-dark">google.client.id</code><br>' +
-        '<small class="text-muted">(Sau do restart lai server)</small>' +
+        '<strong><i class="bi bi-info-circle me-1"></i>Đăng nhập Google tạm thời chưa khả dụng.</strong><br>' +
+        'Vui lòng đăng nhập bằng email và mật khẩu hoặc liên hệ bộ phận hỗ trợ.' +
         '</div>';
 }
 </script>
@@ -328,7 +314,7 @@ function showGoogleSetupGuide() {
 <div id="googleNotConfigured" class="alert alert-light border text-muted text-center small mb-0" style="position:relative;z-index:10;border-radius:8px;">
     <i class="bi bi-google me-1"></i>
     Google Sign-In chưa được cấu hình.<br>
-    <small>Thêm <code>google.client.id</code> vào <code>web.xml</code> để kích hoạt.</small>
+    <small>Thiết lập <code>GOOGLE_CLIENT_ID</code> trong cấu hình runtime để kích hoạt.</small>
 </div>
 </c:if>
 

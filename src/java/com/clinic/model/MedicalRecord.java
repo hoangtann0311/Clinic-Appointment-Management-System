@@ -60,6 +60,8 @@ public class MedicalRecord {
     private String  symptoms;
     private String  lastMenstrualPeriod;
     private Integer pregnancyId;
+    private String  patientPhone;
+    private String  patientDob;
 
     public MedicalRecord() {}
 
@@ -177,6 +179,12 @@ public class MedicalRecord {
 
     public Integer getPregnancyId() { return pregnancyId; }
     public void setPregnancyId(Integer v) { this.pregnancyId = v; }
+
+    public String getPatientPhone() { return patientPhone; }
+    public void setPatientPhone(String v) { this.patientPhone = v; }
+
+    public String getPatientDob() { return patientDob; }
+    public void setPatientDob(String v) { this.patientDob = v; }
 
     /** Tiện ích: hiển thị tuổi thai */
     public String getGestationalAgeDisplay() {

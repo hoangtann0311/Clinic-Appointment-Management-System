@@ -1,21 +1,11 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <title>Model AI - CAMS</title>
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+<jsp:include page="../common/header.jsp" />
+
+<%-- CSS and document shell are provided once by common/header.jsp. --%>
     <!-- Prism.js Tomorrow Night Theme for premium code highlighting -->
     <link href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
-    <!-- Theme CSS -->
-    <link href="${pageContext.request.contextPath}/assets/css/admin.css" rel="stylesheet">
     <style>
         /* Fix horizontal scrollbar and optimize responsiveness */
         html, body {
@@ -74,11 +64,6 @@
             letter-spacing: 0.05em;
         }
     </style>
-</head>
-<body class="admin-body">
-
-<jsp:include page="../common/header.jsp" />
-
 <div class="admin-page-header">
     <div class="admin-page-header-left">
         <h1 class="admin-page-title">Cấu Hình & Mã Nguồn Model AI</h1>
@@ -114,7 +99,7 @@
                     <li class="list-group-item d-flex justify-content-between align-items-start py-3">
                         <div class="ms-2 me-auto">
                             <div class="fw-bold">Tải ảnh siêu âm đầu vào</div>
-                            Ảnh siêu âm tử cung được KTV tải lên hệ thống chẩn đoán.
+                            Ảnh siêu âm tử cung được Bác sĩ Siêu âm tải lên hệ thống phân tích.
                         </div>
                     </li>
                     <li class="list-group-item d-flex justify-content-between align-items-start py-3">
@@ -526,13 +511,9 @@ class UNetSmall(nn.Module):
     </div>
 </div>
 
-<jsp:include page="../common/footer.jsp" />
-
 <!-- Prism.js Script for syntax highlighting -->
 <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
-<!-- Bootstrap 5 Bundle with Popper -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
     function copyCode(elementId) {
@@ -553,5 +534,5 @@ class UNetSmall(nn.Module):
         });
     }
 </script>
-</body>
-</html>
+
+<jsp:include page="../common/footer.jsp" />

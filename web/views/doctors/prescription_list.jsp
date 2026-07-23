@@ -118,9 +118,9 @@
                                         </c:choose>
                                     </td>
                                     <td class="text-end pe-4">
-                                        <a href="${pageContext.request.contextPath}/doctor/prescriptions?recordId=${rx.recordId}"
+                                        <a href="${pageContext.request.contextPath}/doctor/medical-records?apptId=${rx.appointmentId}"
                                            class="btn btn-sm btn-outline-danger rounded-pill">
-                                            <i class="bi bi-eye me-1"></i>Xem / Sửa
+                                            <i class="bi bi-eye me-1"></i>Xem hồ sơ và đơn
                                         </a>
                                     </td>
                                 </tr>

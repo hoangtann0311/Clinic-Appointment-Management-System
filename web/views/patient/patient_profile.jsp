@@ -35,6 +35,7 @@
             <div class="card-body p-4">
                 <form method="post" action="${pageContext.request.contextPath}/patient/profile" novalidate>
                     <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                    <input type="hidden" name="zaloUserId" value="${not empty patient ? patient.zaloUserId : ''}">
 
                     <div class="row g-4">
                         <%-- Thông tin cơ bản --%>
@@ -66,19 +67,6 @@
                             <input type="date" id="dateOfBirth" name="dateOfBirth" class="form-control"
                                    value="${not empty patient.dateOfBirth ? patient.dateOfBirth : ''}"
                                    max="${pageContext.request.servletContext.getAttribute('today')}">
-                        </div>
-
-                        <div class="col-md-6">
-                            <label for="zaloUserId" class="form-label fw-semibold">Zalo User ID</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light" style="background:#0068ff!important;">
-                                    <i class="bi bi-chat-fill text-white"></i>
-                                </span>
-                                <input type="text" id="zaloUserId" name="zaloUserId" class="form-control"
-                                       value="${not empty patient ? patient.zaloUserId : ''}"
-                                       placeholder="ID Zalo để nhận thông báo">
-                            </div>
-                            <div class="form-text">Dùng để nhận thông báo lịch hẹn qua Zalo.</div>
                         </div>
 
                         <%-- Thông tin tài khoản (chỉ đọc) --%>

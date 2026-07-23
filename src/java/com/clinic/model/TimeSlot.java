@@ -54,10 +54,21 @@ public class TimeSlot implements Serializable {
     // ── Convenience methods ──
 
     /**
+     * Check if the slot starts in the past relative to the current server system time.
+     */
+    public boolean isPast() {
+        if (workDate == null || startTime == null) return false;
+        java.time.LocalDate localDate = workDate.toLocalDate();
+        java.time.LocalTime localTime = startTime.toLocalTime();
+        java.time.LocalDateTime slotDateTime = java.time.LocalDateTime.of(localDate, localTime);
+        return java.time.LocalDateTime.now().isAfter(slotDateTime);
+    }
+
+    /**
      * @return true nếu slot còn trống, có thể đặt lịch.
      */
     public boolean isAvailable() {
-        return status == SlotStatus.AVAILABLE;
+        return status == SlotStatus.AVAILABLE && !isPast();
     }
 
     /**
@@ -80,7 +91,7 @@ public class TimeSlot implements Serializable {
      * nhưng bị khóa, không cho chọn — tránh gây hiểu lầm "mất khung giờ do lỗi hệ thống".
      */
     public boolean isSelectable() {
-        return status == SlotStatus.AVAILABLE;
+        return status == SlotStatus.AVAILABLE && !isPast();
     }
 
     /**

@@ -84,7 +84,7 @@ public class DoctorPatientHistoryServlet extends HttpServlet {
         }
 
         // Lịch sử tất cả hồ sơ bệnh án của bệnh nhân này (toàn hệ thống, không giới hạn bác sĩ)
-        List<MedicalRecord> records = dao.getByPatientId(patientId);
+        List<MedicalRecord> records = dao.getClinicalHistoryForDoctor(patientId, doctorId);
 
         // Danh sách thai kỳ của bệnh nhân (mới nhất trước)
         List<Pregnancy> pregnancies = pregnancyDAO.getByPatientId(patientId);

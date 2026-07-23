@@ -17,6 +17,7 @@
         <div class="display-1 text-warning">404</div>
         <h2 class="mb-3">Không Tìm Thấy Trang</h2>
         <p class="text-muted mb-4">Trang bạn yêu cầu không tồn tại hoặc đã bị di chuyển.</p>
+        <p class="small text-muted">Mã đối chiếu: <code>${requestScope.requestId}</code></p>
         <a href="${pageContext.request.contextPath}/login" class="btn btn-primary">
             <i class="bi bi-house"></i> Về Trang Đăng Nhập
         </a>

@@ -26,12 +26,12 @@ import java.util.Base64;
  *   <li>Token không khớp → HTTP 403 + audit log</li>
  * </ol>
  *
- * <p><b>Miễn trừ:</b> Public paths (login, register), static resources, AJAX
- * requests có header X-Requested-With: XMLHttpRequest (được bảo vệ bởi SOP).
+ * <p><b>Miễn trừ:</b> Public paths (login, register), static resources và
+ * endpoint AI nội bộ có token riêng.
  *
  * <p>Chạy SAU AuthenticationFilter, TRƯỚC AuthorizationFilter.
  */
-@WebFilter("/*")
+// @WebFilter("/*")
 public class CsrfFilter implements Filter {
 
     public static final String CSRF_TOKEN_ATTR = "csrfToken";
@@ -60,8 +60,7 @@ public class CsrfFilter implements Filter {
             return;
         }
 
-        // ── Miễn trừ AJAX requests (được bảo vệ bởi Same-Origin Policy) ──
-        if ("XMLHttpRequest".equals(httpReq.getHeader("X-Requested-With"))) {
+        if (AuthorizationConfig.isInternalPath(path)) {
             chain.doFilter(req, res);
             return;
         }
@@ -81,7 +80,7 @@ public class CsrfFilter implements Filter {
         }
 
         // ── Đối với state-changing methods, kiểm tra token ──
-        if (isCsrfProtectedPath(path) && ("POST".equals(method) || "PUT".equals(method)
+        if (("POST".equals(method) || "PUT".equals(method)
                 || "DELETE".equals(method) || "PATCH".equals(method))) {
 
             String requestToken = httpReq.getParameter("csrfToken");
@@ -143,30 +142,6 @@ public class CsrfFilter implements Filter {
      * Chuẩn hóa path để loại bỏ path parameters (như ;jsessionid=...)
      * mà Tomcat có thể chèn vào URL khi dùng URL rewriting.
      */
-    private boolean isCsrfProtectedPath(String path) {
-        return path.startsWith("/admin/users")
-                || path.startsWith("/admin/roles")
-                || path.startsWith("/admin/services")
-                || path.startsWith("/admin/medicines")
-                || path.startsWith("/admin/pricing")
-                || path.startsWith("/admin/reception")
-                || path.startsWith("/manager/services")
-                || path.startsWith("/manager/medicines")
-                || path.startsWith("/manager/schedules")
-                || path.startsWith("/manager/time-slots")
-                || path.equals("/doctor/appointments")
-                || path.equals("/doctor/medical-records")
-                || path.equals("/doctor/ultrasound-request/create")
-                || path.equals("/doctor/results")
-                || path.equals("/sonographer/detail")
-                || path.equals("/sonographer/upload")
-                || path.equals("/sonographer/analyze")
-                || path.equals("/patient/booking")
-                || path.equals("/patient/appointments")
-                || path.equals("/patient/payment")
-                || path.equals("/patient/profile")
-                || path.equals("/patient/review");
-    }
     private String normalizePath(String rawPath) {
         if (rawPath == null || rawPath.isEmpty()) {
             return rawPath;

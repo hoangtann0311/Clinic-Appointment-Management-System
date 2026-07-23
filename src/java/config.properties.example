@@ -24,7 +24,16 @@ ai.engine.baseUrl=http://localhost:8080/ClinicAppointmentManagementSystem/mock-a
 ai.engine.analyzePath=
 ai.engine.connectTimeout=5000
 ai.engine.readTimeout=30000
+# Khuyến nghị đặt token trong file cấu hình ngoài WAR. Nếu bỏ trống, ứng dụng
+# tự sinh token theo vòng đời JVM để bảo vệ mock engine nội bộ.
+# ai.engine.internalToken=replace-with-a-long-random-secret
+ai.python.command=py
+ai.python.script=C:\\path\\to\\AI_Ultrasound_Fibroid\\predict_for_web.py
+ai.python.timeoutMs=30000
 
 # Configuration for Ultrasound File Uploads
 ultrasound.uploadDirectory=uploads/ultrasound
+
+# Bắt buộc trong production; đặt trong file cấu hình ngoài source hoặc biến môi trường.
+# db.encryption.key=replace-with-the-existing-database-encryption-key
 ultrasound.maxFileSize=10485760

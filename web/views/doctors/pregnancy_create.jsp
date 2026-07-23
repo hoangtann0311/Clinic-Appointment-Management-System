@@ -41,6 +41,7 @@
                         Nếu lần khám này thuộc cùng thai kỳ đó, hãy gắn vào thay vì tạo mới.
                     </p>
                     <form method="post" action="${pageContext.request.contextPath}/doctor/pregnancy">
+                        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                         <input type="hidden" name="action" value="create">
                         <input type="hidden" name="apptId" value="${apptId}">
                         <input type="hidden" name="linkExistingId" value="${suggestion.id}">
@@ -59,6 +60,7 @@
                 </h6>
 
                 <form method="post" action="${pageContext.request.contextPath}/doctor/pregnancy">
+                    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                     <input type="hidden" name="action" value="create">
                     <input type="hidden" name="apptId" value="${apptId}">
 

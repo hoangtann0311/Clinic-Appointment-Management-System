@@ -1,5 +1,7 @@
 package com.clinic.utils;
 
+import com.clinic.config.AppConfig;
+
 /**
  * Tiện ích mã hoá/giải mã email và phone trong database.
  * Sử dụng ENCRYPTBYPASSPHRASE/DECRYPTBYPASSPHRASE của SQL Server.
@@ -16,15 +18,20 @@ public class EncryptionUtil {
      * Trong production, nên đọc từ System.getenv("DB_ENCRYPTION_KEY")
      * hoặc từ file cấu hình.
      */
-    private static final String PASSPHRASE = "ClinicAppKey2026!";
-
     /**
      * Lấy passphrase hiện tại.
      * Ưu tiên biến môi trường CLINIC_DB_ENCRYPTION_KEY.
      */
     public static String getPassphrase() {
+        String systemKey = System.getProperty("clinic.db.encryption.key");
+        if (systemKey != null && !systemKey.isBlank()) return systemKey.trim();
         String envKey = System.getenv("CLINIC_DB_ENCRYPTION_KEY");
-        return (envKey != null && !envKey.isEmpty()) ? envKey : PASSPHRASE;
+        if (envKey != null && !envKey.isBlank()) return envKey.trim();
+        String configKey = AppConfig.get("db.encryption.key", null);
+        if (configKey != null && !configKey.isBlank()) return configKey.trim();
+        throw new IllegalStateException(
+                "Thiếu khóa mã hóa database. Hãy cấu hình clinic.db.encryption.key, "
+                        + "CLINIC_DB_ENCRYPTION_KEY hoặc db.encryption.key trong file cấu hình ngoài source.");
     }
 
     /**

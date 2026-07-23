@@ -4,13 +4,14 @@
 <footer class="cams-app-footer">
     <div class="container text-center">
         <p class="cams-app-footer-copyright">&copy; 2026 Hệ thống Quản lý Lịch hẹn CAMS. Bảo lưu mọi quyền.</p>
-        <p class="cams-app-footer-tagline">Hành trình chăm sóc và đồng hành cùng mẹ &amp; bé</p>
+        <p class="cams-app-footer-tagline">Hành trình chăm sóc sức khoẻ toàn diện cho bạn và gia đình</p>
     </div>
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
         crossorigin="anonymous"></script>
+<script src="${pageContext.request.contextPath}/assets/js/app-ui.js?v=2" charset="UTF-8"></script>
 
 <script>
 function openSidebar() {

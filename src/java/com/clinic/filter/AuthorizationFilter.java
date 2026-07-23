@@ -64,7 +64,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * @see AuthorizationConfig
  * @see AuthenticationFilter
  */
-@WebFilter("/*")
+// @WebFilter("/*")
 public class AuthorizationFilter implements Filter {
 
     /**
@@ -108,10 +108,16 @@ public class AuthorizationFilter implements Filter {
             return;
         }
 
+        // Endpoint AI nội bộ có cơ chế loopback + token riêng trong servlet.
+        if (AuthorizationConfig.isInternalPath(path)) {
+            chain.doFilter(req, res);
+            return;
+        }
+
         // ── Session check — nếu không có user thì pass (đã bị AuthFilter chặn) ──
         HttpSession session = httpReq.getSession(false);
         if (session == null || session.getAttribute(AuthorizationConfig.SESSION_USER) == null) {
-            chain.doFilter(req, res);
+            httpRes.sendRedirect(ctx + "/login");
             return;
         }
 
@@ -174,9 +180,10 @@ public class AuthorizationFilter implements Filter {
         String requiredPermission = AuthorizationConfig.findRequiredPermission(path);
 
         if (requiredPermission == null) {
-            // Legacy routes are already protected by AuthenticationFilter's role-prefix checks.
-            // Keep them available until every existing endpoint has a database-backed permission key.
-            chain.doFilter(req, res);
+            logAccess(httpReq, user, path, "Từ chối", "URL không có trong whitelist");
+            send403(httpReq, httpRes, path,
+                "Chức năng chưa được cấp quyền truy cập.",
+                "Đường dẫn không nằm trong danh sách chức năng được phép.");
             return;
         }
 
@@ -190,12 +197,15 @@ public class AuthorizationFilter implements Filter {
             AuthorizationConfig.SESSION_PERMISSIONS);
 
         if (userPermissions == null || userPermissions.isEmpty()) {
-            // Older login flows may not have populated permission keys yet. The role-zone check above still applies.
-            chain.doFilter(req, res);
+            logAccess(httpReq, user, path, "Từ chối", "Phiên không có dữ liệu quyền");
+            send403(httpReq, httpRes, path,
+                "Không thể xác minh quyền truy cập.",
+                "Vui lòng đăng xuất, đăng nhập lại hoặc liên hệ quản trị viên.");
             return;
         }
 
-        boolean hasPermission = userPermissions.contains(requiredPermission);
+        boolean hasPermission = AuthorizationConfig.AUTHENTICATED_ONLY.equals(requiredPermission)
+                || userPermissions.contains(requiredPermission);
 
         if (!hasPermission) {
             // Không có permission → TỪ CHỐI
@@ -322,11 +332,9 @@ public class AuthorizationFilter implements Filter {
         } catch (SQLException e) {
             System.err.println(">>> [AUTHZ] Failed to reload permissions for user #"
                 + userId + ": " + e.getMessage());
-            // Nếu DB lỗi, vẫn cho phép tiếp tục với session hiện tại
-            // để tránh khóa tất cả người dùng khi DB gặp sự cố
-            session.setAttribute(AuthorizationConfig.SESSION_PERM_VERSION,
-                                 GLOBAL_PERMISSIONS_VERSION.get());
-            return true;
+            // Fail closed: không dùng quyền cũ khi hệ thống không thể kiểm tra
+            // role/trạng thái hiện hành trong database.
+            return false;
 
         } finally {
             // Đóng resources

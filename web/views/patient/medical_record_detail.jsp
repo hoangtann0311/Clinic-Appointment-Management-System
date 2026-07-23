@@ -229,7 +229,7 @@
     </div> <%-- Đóng col-md-6 đơn thuốc --%>
 </div> <%-- Đóng row g-4 chính --%>
 
-<%-- ══════════ Kết Quả Siêu Âm & AI (Cột 12 ngang bên dưới) ══════════ --%>
+<%-- Chỉ phiếu siêu âm đã được Bác sĩ lâm sàng xác nhận mới có trong usOrders. --%>
 <c:if test="${not empty usOrders}">
     <div class="row g-4 mt-2">
         <div class="col-12">
@@ -257,108 +257,45 @@
                             </p>
 
                             <c:set var="imgs" value="${orderImages[order.orderId]}"/>
-                            <c:set var="aiResult" value="${orderAiResults[order.orderId]}"/>
-
-                            <c:choose>
-                                <%-- AI output is never published directly to the patient. --%>
-                                <c:when test="${order.status == 'confirmed'}">
+                            <c:set var="report" value="${orderReports[order.orderId]}"/>
                             <div class="row g-3 patient-ultrasound-result">
-                                <%-- Cột chứa các ảnh (gốc và AI) --%>
                                 <div class="col-md-5">
                                     <div class="row g-2">
-                                        <%-- Ảnh siêu âm gốc --%>
                                         <c:if test="${not empty imgs}">
-                                            <div class="col-6">
+                                            <div class="col-12">
                                                 <div class="text-muted small mb-1 fw-semibold"><i class="bi bi-image me-1"></i>Ảnh siêu âm trong phiếu kết quả</div>
                                                 <c:forEach var="img" items="${imgs}">
-                                                    <a href="javascript:void(0);" onclick="viewLargeImage('${pageContext.request.contextPath}/${img.filePath}')" title="Xem ảnh gốc">
-                                                        <img src="${pageContext.request.contextPath}/${img.filePath}" alt="Ảnh siêu âm gốc"
+                                                    <a href="javascript:void(0);" onclick="viewLargeImage('${pageContext.request.contextPath}/medical/ultrasound-image?id=${img.id}')" title="Xem ảnh gốc">
+                                                        <img loading="lazy" src="${pageContext.request.contextPath}/medical/ultrasound-image?id=${img.id}" alt="Ảnh siêu âm gốc"
                                                              style="width:100%; height:130px; object-fit:cover; border-radius:8px; border:1px solid #dee2e6;"
                                                              onerror="this.src='${pageContext.request.contextPath}/assets/img/us_placeholder.png'">
                                                     </a>
                                                 </c:forEach>
                                             </div>
                                         </c:if>
-
-                                        <%-- Ảnh kỹ thuật nội bộ: không hiển thị ở cổng bệnh nhân --%>
-                                        <c:if test="${not empty aiResult && not empty aiResult.resultImage}">
-                                            <div class="col-6 patient-ai-internal">
-                                                <div class="text-muted small mb-1 fw-semibold"><i class="bi bi-cpu me-1"></i>Ảnh kỹ thuật nội bộ</div>
-                                                <a href="javascript:void(0);" onclick="viewLargeImage('${pageContext.request.contextPath}/${aiResult.resultImage}')" title="Xem ảnh AI">
-                                                    <img src="${pageContext.request.contextPath}/${aiResult.resultImage}" alt="Ảnh phân tích AI"
-                                                         style="width:100%; height:130px; object-fit:cover; border-radius:8px; border:1px solid #dee2e6;"
-                                                         onerror="this.src='${pageContext.request.contextPath}/assets/img/us_placeholder.png'">
-                                                </a>
-                                            </div>
-                                        </c:if>
                                     </div>
                                 </div>
 
-                                <%-- Cột thông tin kết luận & gợi ý AI --%>
                                 <div class="col-md-7">
                                     <div class="patient-report-title fw-bold mb-2">
-                                        <i class="bi bi-file-earmark-medical me-1"></i>Phiếu kết quả siêu âm đã được bác sĩ xác nhận
+                                        <i class="bi bi-file-earmark-medical me-1"></i>Phiếu kết quả siêu âm đã được Bác sĩ Siêu âm ký
                                     </div>
-                                    <c:if test="${not empty aiResult}">
+                                    <c:if test="${not empty report}">
                                         <div class="rounded-3 p-3 h-100" style="background:#f0f8ff;border:1px solid #b8d4f0;">
-                                            <div class="fw-bold small mb-2 text-primary">
-                                                <i class="bi bi-cpu-fill me-1 text-info"></i>Thông tin kỹ thuật nội bộ
-                                            </div>
-                                            
-                                            <%-- Kết luận Bác sĩ --%>
-                                            <c:choose>
-                                                <c:when test="${order.status == 'confirmed'}">
-                                                    <p class="mb-2 small"><strong>Kết luận và hướng dẫn của Bác sĩ:</strong> <span class="fw-bold text-success"><c:out value="${aiResult.message}"/></span></p>
-                                                    <div class="mb-3">
-                                                        <span class="badge bg-success text-white small" style="font-size:0.75rem;">
-                                                            <i class="bi bi-patch-check-fill me-1"></i>Đã được Bác sĩ xác nhận & chốt kết luận
-                                                        </span>
-                                                    </div>
-                                                </c:when>
-                                                <c:otherwise>
-                                                    <p class="mb-3 small text-muted"><strong>Trạng thái:</strong> Đang chờ Bác sĩ khám chốt kết luận cuối cùng.</p>
-                                                </c:otherwise>
-                                            </c:choose>
-
-                                            <%-- Chỉ số AI tham khảo --%>
-                                            <div class="border-top pt-2 mt-2">
-                                                <div class="small fw-semibold text-secondary mb-1">Tham khảo kết quả phân tích AI:</div>
-                                                <p class="mb-1 small">
-                                                    <strong>Kết quả phát hiện:</strong> 
-                                                    <c:choose>
-                                                        <c:when test="${aiResult.detected}">
-                                                            <span class="text-danger fw-bold"><i class="bi bi-exclamation-triangle-fill me-1"></i>Phát hiện vùng nghi ngờ U xơ tử cung</span>
-                                                        </c:when>
-                                                        <c:otherwise>
-                                                            <span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Không phát hiện vùng bất thường</span>
-                                                        </c:otherwise>
-                                                    </c:choose>
-                                                </p>
-                                                <c:if test="${aiResult.confidence > 0}">
-                                                    <p class="mb-0 small text-muted">
-                                                        <strong>Độ tin cậy của AI:</strong> <fmt:formatNumber value="${aiResult.confidence}" pattern="0.0"/>%
-                                                    </p>
-                                                </c:if>
-                                            </div>
+                                            <div class="small text-muted">Mô tả hình ảnh</div><p class="small"><c:out value="${report.imageDescription}"/></p>
+                                            <div class="small text-muted">Nhận xét chuyên môn</div><p class="small"><c:out value="${report.professionalFindings}"/></p>
+                                            <div class="small text-muted">Kết luận siêu âm</div><p class="fw-bold text-success"><c:out value="${report.conclusion}"/></p>
+                                            <span class="badge bg-success"><i class="bi bi-patch-check-fill me-1"></i>Đã ký bởi <c:out value="${report.signedName}"/></span>
                                         </div>
                                     </c:if>
 
-                                    <c:if test="${empty imgs && empty aiResult}">
+                                    <c:if test="${empty imgs && empty report}">
                                         <p class="text-muted small fst-italic h-100 d-flex align-items-center justify-content-center border rounded-3 p-3">
-                                            Chưa có ảnh siêu âm hoặc kết quả AI cho lần này.
+                                            Chưa có phiếu kết quả siêu âm chính thức.
                                         </p>
                                     </c:if>
                                 </div>
                             </div>
-                                </c:when>
-                                <c:otherwise>
-                                    <div class="patient-result-pending rounded-3 p-4 text-center">
-                                        <i class="bi bi-hourglass-split d-block mb-2"></i>
-                                        <strong>Kết quả siêu âm đang chờ bác sĩ xác nhận</strong>
-                                        <p class="mb-0 mt-1 small">Ảnh và thông tin hỗ trợ của AI chỉ được sử dụng nội bộ. Phiếu kết quả chính thức sẽ hiển thị tại đây sau khi bác sĩ xem xét và ký xác nhận.</p>
-                                    </div>
-                                </c:otherwise>
-                            </c:choose>
                         </div>
                     </c:forEach>
                 </div>

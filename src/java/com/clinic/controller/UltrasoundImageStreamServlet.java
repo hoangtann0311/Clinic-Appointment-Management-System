@@ -20,7 +20,7 @@ import java.nio.file.Files;
  * Servlet bảo vệ quyền truy cập và phục vụ luồng byte của ảnh siêu âm y tế.
  * Thay thế việc truy cập URL tĩnh trực tiếp qua thư mục public /uploads/ultrasound.
  */
-@WebServlet("/sonographer/image")
+@WebServlet("/medical/ultrasound-image")
 public class UltrasoundImageStreamServlet extends HttpServlet {
 
     private final UltrasoundOrderService orderService = new UltrasoundOrderService();
@@ -29,7 +29,8 @@ public class UltrasoundImageStreamServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        User user = (User) request.getSession().getAttribute("user");
+        User user = request.getSession(false) == null ? null
+                : (User) request.getSession(false).getAttribute("user");
         if (user == null) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Yêu cầu đăng nhập.");
             return;
@@ -73,8 +74,6 @@ public class UltrasoundImageStreamServlet extends HttpServlet {
                     && orderService.checkSonographerOwnership(orderId, user.getId());
         } else if (roleId == 2) { // Doctor: chỉ xem ca thuộc bác sĩ chỉ định (check d.user_id = sessionUser.id)
             authorized = orderService.checkDoctorOwnership(orderId, user.getId());
-        } else if (roleId == 1) { // Admin: quyền xem quản trị read-only
-            authorized = true;
         } else if (roleId == 5) { // Patient: chỉ xem ca thuộc bệnh nhân và đã Confirmed (check p.user_id = sessionUser.id)
             authorized = orderService.checkPatientOwnership(orderId, user.getId());
         }
@@ -87,14 +86,20 @@ public class UltrasoundImageStreamServlet extends HttpServlet {
         // Xử lý và kiểm tra đường dẫn file vật lý trên đĩa
         String relativeUploadDir = AppConfig.getUploadDirectory();
         String realPath = getServletContext().getRealPath("");
+        if (realPath == null) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND, "Không xác định được vùng lưu trữ ảnh y tế.");
+            return;
+        }
         String uploadPath = realPath + File.separator + relativeUploadDir;
 
         File targetFile = new File(uploadPath, img.getStoredFilename());
+        File allowedUploadRoot = new File(uploadPath);
         if (!targetFile.exists()) {
             // Thử tìm trong thư mục source nếu đang chạy trong môi trường Tomcat/IDE dev
             if (realPath != null && (realPath.contains("build\\web") || realPath.contains("build/web"))) {
                 String sourceUploadPath = realPath.replace("build\\web", "web").replace("build/web", "web") + File.separator + relativeUploadDir;
                 targetFile = new File(sourceUploadPath, img.getStoredFilename());
+                allowedUploadRoot = new File(sourceUploadPath);
             }
         }
 
@@ -105,8 +110,9 @@ public class UltrasoundImageStreamServlet extends HttpServlet {
 
         // Kiểm tra chống Path Traversal bằng Canonical Path
         try {
-            File uploadDirFile = new File(uploadPath).getCanonicalFile();
-            if (!targetFile.getCanonicalFile().getPath().startsWith(uploadDirFile.getPath())) {
+            File uploadDirFile = allowedUploadRoot.getCanonicalFile();
+            String rootPath = uploadDirFile.getPath() + File.separator;
+            if (!targetFile.getCanonicalFile().getPath().startsWith(rootPath)) {
                 System.err.println("[UltrasoundImageStreamServlet] PHÁT HIỆN TẤN CÔNG PATH TRAVERSAL: " + targetFile.getPath());
                 response.sendError(HttpServletResponse.SC_FORBIDDEN, "Đường dẫn tệp không hợp lệ.");
                 return;

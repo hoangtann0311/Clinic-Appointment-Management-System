@@ -541,7 +541,7 @@ public class AdminDashboardDAO {
         boolean hasDateFilter = (from != null && to != null);
         StringBuilder sql = new StringBuilder(
             "SELECT TOP (?) u.id, u.full_name, "
-            + "CONVERT(NVARCHAR(100), DECRYPTBYPASSPHRASE('ClinicAppKey2026!', u.email)) AS email, "
+            + com.clinic.utils.EncryptionUtil.decryptEmailSql("u.email") + " AS email, "
             + "ISNULL(r.role_name, N'Chưa gán') AS role_name, u.status, u.created_at "
             + "FROM users u "
             + "LEFT JOIN roles r ON u.role_id = r.id "

@@ -115,9 +115,8 @@ public class PatientBookingService {
      *
      * @param userId     users.id của tài khoản đang đăng nhập (dùng để book slot)
      * @param slotId     time_slots.id được chọn
-     * @param serviceIds dịch vụ bổ sung TUỲ CHỌN (có thể null/rỗng — không bắt buộc phải chọn).
-     *                   Phí khám bác sĩ (base fee) được tính riêng từ slot/doctor, không phụ
-     *                   thuộc vào danh sách này.
+     * @param serviceIds ít nhất một dịch vụ khám mà bệnh nhân chủ động chọn.
+     *                   Phí khám bác sĩ (base fee) vẫn được tính riêng từ slot/doctor.
      * @param symptoms   triệu chứng (bắt buộc — theo BA 4.2)
      * @param lmpStr     ngày kinh cuối cùng, định dạng yyyy-MM-dd (có thể rỗng)
      * @param errors     map lỗi để trả về cho UI (key -&gt; message)
@@ -149,10 +148,15 @@ public class PatientBookingService {
             return null;
         }
 
-        // 2. Dịch vụ bổ sung là TUỲ CHỌN — nếu có chọn thì từng dịch vụ phải tồn tại
-        if (serviceIds == null) serviceIds = new int[0];
+        // 2. Một lịch khám phải nêu rõ ít nhất một dịch vụ; không tạo lịch
+        // chỉ có bác sĩ/slot nhưng thiếu mục đích dịch vụ.
+        if (serviceIds == null || serviceIds.length == 0) {
+            errors.put("serviceIds", "Vui lòng chọn ít nhất một dịch vụ khám.");
+            return null;
+        }
+        java.util.Set<Integer> uniqueServiceIds = new java.util.HashSet<>();
         for (int sid : serviceIds) {
-            if (serviceDAO.findServiceById(sid) == null) {
+            if (sid <= 0 || !uniqueServiceIds.add(sid) || serviceDAO.findServiceById(sid) == null) {
                 errors.put("serviceIds", "Có dịch vụ bổ sung không tồn tại, vui lòng chọn lại.");
                 return null;
             }

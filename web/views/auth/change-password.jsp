@@ -38,6 +38,7 @@
                   method="post"
                   novalidate
                   onsubmit="return validateChangePasswordForm()">
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
 
                 <%-- Mật khẩu hiện tại --%>
                 <div class="mb-3">
