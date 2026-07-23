@@ -145,7 +145,7 @@ public class GoogleAuthService {
     public GoogleUserInfo exchangeAuthCode(String code, String redirectUri) throws GoogleAuthException {
         if (!GoogleConfig.isServerSideConfigured()) {
             throw new GoogleAuthException(
-                    "Server-side Google login chưa được cấu hình. Cần google.client.secret trong web.xml.");
+                    "Server-side Google login chưa được cấu hình trên máy chủ.");
         }
 
         HttpURLConnection conn = null;

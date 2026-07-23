@@ -183,6 +183,12 @@ public class DoctorScheduleService {
             case "NOT_FOUND":
                 errors.put("general", result.getErrorMessage());
                 break;
+            case "CONFLICT":
+                errors.put("conflict", result.getErrorMessage());
+                break;
+            case "FULL_SLOTS":
+                errors.put("full_slots", result.getErrorMessage());
+                break;
             case "SYSTEM_ERROR":
                 errors.put("general", result.getErrorMessage());
                 break;

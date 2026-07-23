@@ -69,7 +69,7 @@
                     <c:when test="${success == 'ThanhToanChoXacNhan'}">
                         <c:choose>
                             <c:when test="${invoice.paymentMethod == 'Cash'}">Đã đăng ký thanh toán tiền mặt. Vui lòng đến quầy lễ tân để nộp tiền và nhận xác nhận.</c:when>
-                            <c:otherwise>Đã gửi minh chứng chuyển khoản. Vui lòng chờ nhân viên xác minh giao dịch.</c:otherwise>
+                            <c:otherwise>Đã gửi yêu cầu thanh toán chuyển khoản. Vui lòng chờ nhân viên xác nhận giao dịch.</c:otherwise>
                         </c:choose>
                     </c:when>
                     <c:otherwise>${success}</c:otherwise>
@@ -93,7 +93,7 @@
                     <p class="text-muted mb-4">Bạn đã thanh toán hóa đơn này thành công.</p>
                     <div class="invoice-hero d-inline-block text-start mb-4" style="min-width:320px;">
                         <div class="row g-3">
-                            <div class="col-6"><span class="text-muted small">Bác sĩ</span><div class="fw-bold">BS. ${appointment.doctorName}</div></div>
+                            <div class="col-6"><span class="text-muted small">Bác sĩ lâm sàng</span><div class="fw-bold">BS. ${appointment.doctorName}</div></div>
                             <div class="col-6"><span class="text-muted small">Ngày khám</span><div class="fw-bold">${appointment.appointmentDate}</div></div>
                             <div class="col-6"><span class="text-muted small">Giờ khám</span><div class="fw-bold">${appointment.timeSlot}</div></div>
                             <div class="col-6"><span class="text-muted small">Dịch vụ</span><div class="fw-bold">${appointment.serviceName}</div></div>
@@ -190,14 +190,14 @@
                 <div class="card-body text-center py-5">
                     <i class="bi bi-hourglass-split text-warning" style="font-size:4rem;"></i>
                     <h3 class="fw-bold mt-3">
-                        ${invoice.paymentMethod == 'Cash' ? 'Chờ Thanh Toán Tại Quầy' : 'Chờ Xác Minh Chuyển Khoản'}
+                        ${invoice.paymentMethod == 'Cash' ? 'Chờ Thanh Toán Tại Quầy' : 'Chờ Lễ Tân Xác Nhận Chuyển Khoản'}
                     </h3>
                     <p class="text-muted mb-4">
-                        ${invoice.paymentMethod == 'Cash' ? 'Bạn đã đăng ký thanh toán tiền mặt. Vui lòng đến quầy lễ tân để nộp tiền; nhân viên sẽ xác nhận sau khi thu tiền.' : 'Minh chứng chuyển khoản đã được ghi nhận. Nhân viên sẽ xác minh giao dịch sớm.'}
+                        ${invoice.paymentMethod == 'Cash' ? 'Bạn đã đăng ký thanh toán tiền mặt. Vui lòng đến quầy lễ tân để nộp tiền; nhân viên sẽ xác nhận sau khi thu tiền.' : 'Yêu cầu chuyển khoản đã được ghi nhận. Nhân viên sẽ kiểm tra giao dịch và xác nhận sớm.'}
                     </p>
                         <div class="invoice-hero d-inline-block text-start mb-4" style="min-width:320px;">
                             <div class="row g-3">
-                                <div class="col-6"><span class="text-muted small">Bác sĩ</span><div class="fw-bold">BS. ${appointment.doctorName}</div></div>
+                                <div class="col-6"><span class="text-muted small">Bác sĩ lâm sàng</span><div class="fw-bold">BS. ${appointment.doctorName}</div></div>
                                 <div class="col-6"><span class="text-muted small">Ngày khám</span><div class="fw-bold">${appointment.appointmentDate}</div></div>
                                 <div class="col-6"><span class="text-muted small">Giờ khám</span><div class="fw-bold">${appointment.timeSlot}</div></div>
                                 <div class="col-6"><span class="text-muted small">Dịch vụ</span><div class="fw-bold"><c:choose><c:when test="${not empty appointment.serviceName}">${appointment.serviceName}</c:when><c:otherwise>Khám lâm sàng (${appointment.doctor.specialization})</c:otherwise></c:choose></div></div>
@@ -298,7 +298,7 @@
                 <div class="card-body">
                         <div class="invoice-hero">
                             <div class="row g-3 mb-3">
-                                <div class="col-md-6"><span class="text-muted small">Bác sĩ</span><div class="fw-bold">BS. ${appointment.doctorName}</div></div>
+                                <div class="col-md-6"><span class="text-muted small">Bác sĩ lâm sàng</span><div class="fw-bold">BS. ${appointment.doctorName}</div></div>
                                 <div class="col-md-6"><span class="text-muted small">Ngày khám</span><div class="fw-bold">${appointment.appointmentDate}</div></div>
                                 <div class="col-md-6"><span class="text-muted small">Giờ khám</span><div class="fw-bold">${appointment.timeSlot}</div></div>
                                 <div class="col-md-6"><span class="text-muted small">Dịch vụ</span><div class="fw-bold"><c:choose><c:when test="${not empty appointment.serviceName}">${appointment.serviceName}</c:when><c:otherwise>Khám lâm sàng (${appointment.doctor.specialization})</c:otherwise></c:choose></div></div>
@@ -392,7 +392,7 @@
                         </div>
                     </c:if>
 
-                    <form method="post" action="${pageContext.request.contextPath}/patient/payment" id="paymentForm" enctype="multipart/form-data">
+                    <form method="post" action="${pageContext.request.contextPath}/patient/payment" id="paymentForm">
                         <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                         <input type="hidden" name="invoiceId" value="${invoice.id}">
 
@@ -447,25 +447,8 @@
                                 </table>
                             </div>
 
-                            <div class="mb-3">
-                                <label for="transactionCode" class="form-label fw-semibold">
-                                    Mã tham chiếu hoặc nội dung chuyển khoản <span class="text-danger">*</span>
-                                </label>
-                                <input type="text" id="transactionCode" name="transactionCode" class="form-control"
-                                       maxlength="100" placeholder="VD: MB240721123 hoặc ${transferContent}">
-                                <div class="form-text">Nhập mã giao dịch ngân hàng hoặc nội dung chuyển khoản để lễ tân đối chiếu cùng ảnh minh chứng.</div>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="proofImage" class="form-label fw-semibold">
-                                    Ảnh chụp màn hình chuyển khoản <span class="text-danger">*</span>
-                                </label>
-                                <input type="file" id="proofImage" name="proofImage"
-                                       class="form-control" accept="image/png,image/jpeg,image/jpg">
-                                <div class="form-text">Tải lên ảnh chụp màn hình giao dịch chuyển khoản để nhân viên đối chiếu và xác nhận.</div>
-                                <div id="proofPreviewBox" class="mt-2" style="display:none;">
-                                    <img id="proofPreviewImg" src="" alt="Xem trước ảnh" class="img-fluid rounded-3 border" style="max-height: 220px;">
-                                </div>
+                            <div class="alert alert-info mb-0 small">
+                                Sau khi chuyển khoản, hãy gửi yêu cầu. Nhân viên lễ tân sẽ kiểm tra và xác nhận thanh toán.
                             </div>
                         </div>
 
@@ -509,7 +492,7 @@ function showMethod(method) {
     if (submitButton) {
         submitButton.innerHTML = method === 'cash'
             ? '<i class="bi bi-send-fill me-2"></i>Gửi yêu cầu thanh toán tiền mặt'
-            : '<i class="bi bi-send-fill me-2"></i>Gửi xác minh chuyển khoản';
+            : '<i class="bi bi-send-fill me-2"></i>Gửi yêu cầu thanh toán chuyển khoản';
     }
 }
 
@@ -520,37 +503,7 @@ document.getElementById('paymentForm') && document.getElementById('paymentForm')
         alert('Vui lòng chọn phương thức thanh toán.');
         return;
     }
-    if (method.value === 'BankTransfer') {
-        var referenceInput = document.getElementById('transactionCode');
-        if (!referenceInput || referenceInput.value.trim().length < 4) {
-            e.preventDefault();
-            alert('Vui lòng nhập mã tham chiếu hoặc nội dung chuyển khoản (ít nhất 4 ký tự).');
-            if (referenceInput) referenceInput.focus();
-            return;
-        }
-        var fileInput = document.getElementById('proofImage');
-        if (!fileInput.files || fileInput.files.length === 0) {
-            e.preventDefault();
-            alert('Vui lòng tải lên ảnh chụp màn hình chuyển khoản.');
-            fileInput.focus();
-        }
-    }
 });
-
-var proofImageInput = document.getElementById('proofImage');
-if (proofImageInput) {
-    proofImageInput.addEventListener('change', function() {
-        var box = document.getElementById('proofPreviewBox');
-        var img = document.getElementById('proofPreviewImg');
-        if (this.files && this.files[0]) {
-            var reader = new FileReader();
-            reader.onload = function(e) { img.src = e.target.result; box.style.display = 'block'; };
-            reader.readAsDataURL(this.files[0]);
-        } else {
-            box.style.display = 'none';
-        }
-    });
-}
 
 <c:if test="${not empty holdExpiresAtMillis}">
 (function() {

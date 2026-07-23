@@ -16,6 +16,8 @@
     <!-- Theme CSS -->
     <link href="${pageContext.request.contextPath}/assets/css/admin.css" rel="stylesheet">
     <link href="${pageContext.request.contextPath}/assets/css/staff.css" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/app-ui.css?v=1" rel="stylesheet">
+    <script src="${pageContext.request.contextPath}/assets/js/app-ui.js?v=1" charset="UTF-8" defer></script>
 </head>
 <body class="admin-body">
 
@@ -137,7 +139,7 @@
 
         <div class="admin-card">
             <div class="card-header">
-                <h5><i class="bi bi-pencil-square"></i> Điều chỉnh thời gian, bác sĩ hoặc gói khám</h5>
+                <h5><i class="bi bi-pencil-square"></i> Điều chỉnh thời gian, Bác sĩ lâm sàng hoặc gói khám</h5>
             </div>
             <div class="card-body">
                 <c:if test="${not empty errors}">
@@ -171,7 +173,7 @@
                     <!-- Appointment config -->
                     <div class="row">
                         <div class="col-md-6 cams-form-group">
-                            <label class="cams-form-label">Bác sĩ khám chỉ định <span class="text-danger">*</span></label>
+                            <label class="cams-form-label">Bác sĩ lâm sàng chỉ định <span class="text-danger">*</span></label>
                             <select name="doctorId" id="doctorId" class="cams-form-input" required onchange="onDoctorOrDateChanged()">
                                 <c:forEach var="doc" items="${doctors}">
                                     <option value="${doc.id}" ${(apt.doctor != null && apt.doctor.id eq doc.id) ? 'selected' : ''}>

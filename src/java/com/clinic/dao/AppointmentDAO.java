@@ -177,6 +177,118 @@ public class AppointmentDAO {
     }
 
     /**
+     * Creates a Staff SOS appointment and assigns its daily queue number in the
+     * same transaction. The application lock prevents concurrent reception
+     * requests from receiving the same SOS number.
+     */
+    public Appointment createEmergencyAppointmentWithQueue(Appointment app) {
+        if (app == null || app.getPatient() == null || app.getPatient().getId() <= 0
+                || app.getAppointmentDate() == null) {
+            return null;
+        }
+
+        String insertSql = "INSERT INTO appointments (patient_id, doctor_id, appointment_date, booking_source, symptoms, "
+                + "last_menstrual_period, is_emergency, status, service_id, time_slot, queue_number, slot_id) "
+                + "VALUES (?, ?, ?, 'Staff', ?, ?, 1, 'Emergency_SOS', ?, ?, ?, NULL)";
+
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            conn.setAutoCommit(false);
+            conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+            try {
+                // The deployed SQL login cannot use sp_getapplock. Locking the
+                // stable Staff role row provides a small, database-backed mutex
+                // for the low-volume SOS allocation transaction.
+                try (PreparedStatement lockPs = conn.prepareStatement(
+                        "SELECT id FROM roles WITH (UPDLOCK, HOLDLOCK) WHERE id = 4")) {
+                    try (ResultSet rs = lockPs.executeQuery()) {
+                        if (!rs.next()) throw new SQLException("Khong the khoa hang doi SOS.");
+                    }
+                }
+
+                // Serialize SOS creation for this patient and reject a second
+                // active emergency even when two Staff requests arrive together.
+                try (PreparedStatement patientLock = conn.prepareStatement(
+                        "SELECT id FROM patients WITH (UPDLOCK, HOLDLOCK) WHERE id = ?")) {
+                    patientLock.setInt(1, app.getPatient().getId());
+                    try (ResultSet rs = patientLock.executeQuery()) {
+                        if (!rs.next()) throw new SQLException("Ho so benh nhan khong ton tai.");
+                    }
+                }
+                try (PreparedStatement duplicatePs = conn.prepareStatement(
+                        "SELECT TOP 1 id FROM appointments WITH (UPDLOCK, HOLDLOCK) "
+                                + "WHERE patient_id = ? AND status = 'Emergency_SOS'")) {
+                    duplicatePs.setInt(1, app.getPatient().getId());
+                    try (ResultSet rs = duplicatePs.executeQuery()) {
+                        if (rs.next()) {
+                            conn.rollback();
+                            return null;
+                        }
+                    }
+                }
+
+                int nextQueueNumber;
+                try (PreparedStatement queuePs = conn.prepareStatement(
+                        "SELECT ISNULL(MAX(TRY_CAST(SUBSTRING(queue_number, 5, 10) AS INT)), 0) + 1 "
+                                + "FROM appointments WITH (UPDLOCK, HOLDLOCK) "
+                                + "WHERE appointment_date = ? AND queue_number LIKE 'SOS-%'")) {
+                    queuePs.setDate(1, Date.valueOf(app.getAppointmentDate()));
+                    try (ResultSet rs = queuePs.executeQuery()) {
+                        if (!rs.next()) throw new SQLException("Khong cap duoc so SOS.");
+                        nextQueueNumber = rs.getInt(1);
+                    }
+                }
+
+                String queueNumber = "SOS-" + String.format("%02d", nextQueueNumber);
+                try (PreparedStatement insertPs = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS)) {
+                    insertPs.setInt(1, app.getPatient().getId());
+                    if (app.getDoctor() != null && app.getDoctor().getId() > 0) {
+                        insertPs.setInt(2, app.getDoctor().getId());
+                    } else {
+                        insertPs.setNull(2, java.sql.Types.INTEGER);
+                    }
+                    insertPs.setDate(3, Date.valueOf(app.getAppointmentDate()));
+                    insertPs.setString(4, app.getSymptoms());
+                    if (app.getLastMenstrualPeriod() != null) {
+                        insertPs.setDate(5, Date.valueOf(app.getLastMenstrualPeriod()));
+                    } else {
+                        insertPs.setNull(5, java.sql.Types.DATE);
+                    }
+                    if (app.getService() != null && app.getService().getId() > 0) {
+                        insertPs.setInt(6, app.getService().getId());
+                    } else {
+                        insertPs.setNull(6, java.sql.Types.INTEGER);
+                    }
+                    insertPs.setTime(7, parseTimeSlot(app.getTimeSlot()));
+                    insertPs.setString(8, queueNumber);
+                    if (insertPs.executeUpdate() != 1) {
+                        throw new SQLException("Khong tao duoc lich SOS.");
+                    }
+                    try (ResultSet keys = insertPs.getGeneratedKeys()) {
+                        if (!keys.next()) throw new SQLException("Khong doc duoc ma lich SOS.");
+                        app.setId(keys.getInt(1));
+                    }
+                }
+
+                app.setQueueNumber(queueNumber);
+                app.setEmergency(true);
+                app.setStatus("Emergency_SOS");
+                conn.commit();
+                return app;
+            } catch (SQLException e) {
+                conn.rollback();
+                System.err.println("[AppointmentDAO] createEmergencyAppointmentWithQueue ERROR: " + e.getMessage());
+                return null;
+            } finally {
+                try { conn.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED); } catch (SQLException ignored) { }
+                try { conn.setAutoCommit(true); } catch (SQLException ignored) { }
+            }
+        } catch (SQLException e) {
+            System.err.println("[AppointmentDAO] createEmergencyAppointmentWithQueue ERROR: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
      * Checks whether a service was selected when the appointment was booked.
      * Both current appointment_services rows and legacy appointments.service_id
      * rows are supported.
@@ -502,16 +614,191 @@ public class AppointmentDAO {
         }
     }
 
-    public boolean activateEmergencySosForAppointment(int appointmentId, String queueNumber) {
-        String sql = "UPDATE appointments SET status = 'Emergency_SOS', is_emergency = 1, queue_number = ? WHERE id = ?";
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, queueNumber);
-            ps.setInt(2, appointmentId);
-            return ps.executeUpdate() > 0;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
+    public String activateEmergencySosForAppointment(int appointmentId, int patientId, String symptoms) {
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            conn.setAutoCommit(false);
+            conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+            try {
+                // One stable mutex serializes both number allocation and the
+                // per-patient active-SOS check across every SOS entry point.
+                try (PreparedStatement lockPs = conn.prepareStatement(
+                        "SELECT id FROM roles WITH (UPDLOCK, HOLDLOCK) WHERE id = 4")) {
+                    try (ResultSet rs = lockPs.executeQuery()) {
+                        if (!rs.next()) throw new SQLException("Không thể khóa hàng đợi SOS.");
+                    }
+                }
+                try (PreparedStatement patientLock = conn.prepareStatement(
+                        "SELECT id FROM patients WITH (UPDLOCK, HOLDLOCK) WHERE id = ?")) {
+                    patientLock.setInt(1, patientId);
+                    try (ResultSet rs = patientLock.executeQuery()) {
+                        if (!rs.next()) {
+                            conn.rollback();
+                            return null;
+                        }
+                    }
+                }
+
+                String currentStatus = null;
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "SELECT status FROM appointments WITH (UPDLOCK, HOLDLOCK) "
+                                + "WHERE id = ? AND patient_id = ? AND appointment_date = CAST(GETDATE() AS date)")) {
+                    ps.setInt(1, appointmentId);
+                    ps.setInt(2, patientId);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) currentStatus = rs.getString(1);
+                    }
+                }
+                if (currentStatus == null || !("Confirmed".equalsIgnoreCase(currentStatus)
+                        || "Waiting".equalsIgnoreCase(currentStatus)
+                        || "InProgress".equalsIgnoreCase(currentStatus))) {
+                    conn.rollback();
+                    return null;
+                }
+
+                try (PreparedStatement duplicate = conn.prepareStatement(
+                        "SELECT TOP 1 id FROM appointments WITH (UPDLOCK, HOLDLOCK) "
+                                + "WHERE patient_id = ? AND status = 'Emergency_SOS' AND id <> ?")) {
+                    duplicate.setInt(1, patientId);
+                    duplicate.setInt(2, appointmentId);
+                    try (ResultSet rs = duplicate.executeQuery()) {
+                        if (rs.next()) {
+                            conn.rollback();
+                            return null;
+                        }
+                    }
+                }
+
+                int next;
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "SELECT ISNULL(MAX(TRY_CAST(SUBSTRING(queue_number, 5, 10) AS INT)), 0) + 1 "
+                                + "FROM appointments WITH (UPDLOCK, HOLDLOCK) "
+                                + "WHERE appointment_date = CAST(GETDATE() AS date) AND queue_number LIKE 'SOS-%'")) {
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (!rs.next()) throw new SQLException("Không cấp được số SOS.");
+                        next = rs.getInt(1);
+                    }
+                }
+                String queueNumber = "SOS-" + String.format("%02d", next);
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "UPDATE appointments SET status = 'Emergency_SOS', is_emergency = 1, "
+                                + "queue_number = ?, symptoms = ? WHERE id = ? AND patient_id = ? AND status = ?")) {
+                    ps.setString(1, queueNumber);
+                    ps.setString(2, symptoms);
+                    ps.setInt(3, appointmentId);
+                    ps.setInt(4, patientId);
+                    ps.setString(5, currentStatus);
+                    if (ps.executeUpdate() != 1) {
+                        conn.rollback();
+                        return null;
+                    }
+                }
+                conn.commit();
+                return queueNumber;
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                try { conn.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED); } catch (SQLException ignored) { }
+                try { conn.setAutoCommit(true); } catch (SQLException ignored) { }
+            }
+        } catch (SQLException e) {
+            System.err.println("[AppointmentDAO] activate SOS failed: " + e.getMessage());
+            return null;
+        }
+    }
+
+    public static final class SosDismissResult {
+        private final boolean success;
+        private final String restoredStatus;
+        private final String queueNumber;
+
+        public SosDismissResult(boolean success, String restoredStatus, String queueNumber) {
+            this.success = success;
+            this.restoredStatus = restoredStatus;
+            this.queueNumber = queueNumber;
+        }
+
+        public boolean isSuccess() { return success; }
+        public String getRestoredStatus() { return restoredStatus; }
+        public String getQueueNumber() { return queueNumber; }
+    }
+
+    /**
+     * Atomically dismisses one active SOS, removes the SOS queue number and
+     * restores the patient to the appropriate normal workflow. A case that
+     * already has a draft medical record remains InProgress; other accepted
+     * emergencies return to Waiting.
+     */
+    public SosDismissResult dismissEmergencySos(int appointmentId) {
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            conn.setAutoCommit(false);
+            conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+            try {
+                try (PreparedStatement lockPs = conn.prepareStatement(
+                        "SELECT id FROM roles WITH (UPDLOCK, HOLDLOCK) WHERE id = 4")) {
+                    try (ResultSet rs = lockPs.executeQuery()) {
+                        if (!rs.next()) throw new SQLException("Không thể khóa hàng đợi tiếp nhận.");
+                    }
+                }
+
+                Date appointmentDate = null;
+                boolean hasActiveRecord = false;
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "SELECT a.appointment_date, CASE WHEN EXISTS ("
+                                + "SELECT 1 FROM medical_records mr WHERE mr.appointment_id = a.id "
+                                + "AND LOWER(LTRIM(RTRIM(ISNULL(mr.status,'')))) = 'draft') "
+                                + "THEN 1 ELSE 0 END AS has_active_record "
+                                + "FROM appointments a WITH (UPDLOCK, HOLDLOCK) "
+                                + "WHERE a.id = ? AND a.status = 'Emergency_SOS'")) {
+                    ps.setInt(1, appointmentId);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (!rs.next()) {
+                            conn.rollback();
+                            return new SosDismissResult(false, null, null);
+                        }
+                        appointmentDate = rs.getDate("appointment_date");
+                        hasActiveRecord = rs.getBoolean("has_active_record");
+                    }
+                }
+
+                int next;
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "SELECT ISNULL(MAX(TRY_CAST(SUBSTRING(queue_number, 5, 10) AS INT)), 0) + 1 "
+                                + "FROM appointments WITH (UPDLOCK, HOLDLOCK) "
+                                + "WHERE appointment_date = ? AND queue_number LIKE 'STT-%'")) {
+                    ps.setDate(1, appointmentDate);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (!rs.next()) throw new SQLException("Không cấp được số hàng đợi thường.");
+                        next = rs.getInt(1);
+                    }
+                }
+
+                String restoredStatus = hasActiveRecord ? "InProgress" : "Waiting";
+                String queueNumber = "STT-" + String.format("%02d", next);
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "UPDATE appointments SET status = ?, is_emergency = 0, queue_number = ? "
+                                + "WHERE id = ? AND status = 'Emergency_SOS'")) {
+                    ps.setString(1, restoredStatus);
+                    ps.setString(2, queueNumber);
+                    ps.setInt(3, appointmentId);
+                    if (ps.executeUpdate() != 1) {
+                        conn.rollback();
+                        return new SosDismissResult(false, null, null);
+                    }
+                }
+                conn.commit();
+                return new SosDismissResult(true, restoredStatus, queueNumber);
+            } catch (SQLException e) {
+                conn.rollback();
+                System.err.println("[AppointmentDAO] dismiss SOS failed: " + e.getMessage());
+                return new SosDismissResult(false, null, null);
+            } finally {
+                try { conn.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED); } catch (SQLException ignored) { }
+                try { conn.setAutoCommit(true); } catch (SQLException ignored) { }
+            }
+        } catch (SQLException e) {
+            System.err.println("[AppointmentDAO] dismiss SOS failed: " + e.getMessage());
+            return new SosDismissResult(false, null, null);
         }
     }
 
@@ -583,7 +870,7 @@ public class AppointmentDAO {
         String sql = "SELECT COUNT(*) FROM appointments " +
                 "WHERE doctor_id = ? " +
                 "AND appointment_date = ? " +
-                "AND time_slot = ? " +
+                "AND time_slot = CAST(? AS time) " +
                 "AND status NOT IN ('Cancelled', 'NoShow') ";
 
         if (excludeAppointmentId != null) {
@@ -663,18 +950,20 @@ public class AppointmentDAO {
     }
 
     public boolean confirmPreExamPayment(Connection conn, int appointmentId) throws SQLException {
-        String apptSql = "UPDATE appointments SET status = 'Confirmed' WHERE id = ? AND status = 'Pending'";
+        String apptSql = "UPDATE appointments SET status = CASE WHEN status = 'Pending' THEN 'Confirmed' ELSE status END "
+                + "WHERE id = ? AND status IN ('Pending','Confirmed')";
         try (PreparedStatement ps = conn.prepareStatement(apptSql)) {
             ps.setInt(1, appointmentId);
-            ps.executeUpdate();
+            if (ps.executeUpdate() != 1) return false;
         }
 
-        String slotSql = "UPDATE time_slots SET status = 'BOOKED', updated_at = GETDATE() WHERE id = (SELECT slot_id FROM appointments WHERE id = ?)";
+        String slotSql = "UPDATE time_slots SET status = 'BOOKED', held_until = NULL, updated_at = GETDATE() "
+                + "WHERE id = (SELECT slot_id FROM appointments WHERE id = ?) "
+                + "AND status IN ('HELD','WAITING_VERIFICATION','BOOKED')";
         try (PreparedStatement ps = conn.prepareStatement(slotSql)) {
             ps.setInt(1, appointmentId);
-            ps.executeUpdate();
+            return ps.executeUpdate() == 1;
         }
-        return true;
     }
 
     /**
@@ -687,16 +976,14 @@ public class AppointmentDAO {
      * Nhờ vậy giao diện đặt lịch của bệnh nhân khác có thể phân biệt rõ "đang chờ duyệt"
      * và "đã đặt hẳn", thay vì hiển thị nhầm là đã kín ngay khi mới gửi thanh toán.
      */
-    public void finalizeHoldOnPaymentSubmit(int appointmentId) {
-        String sql =
-            "UPDATE time_slots SET status = 'WAITING_VERIFICATION', held_until = NULL, updated_at = GETDATE() " +
-            "WHERE id = (SELECT slot_id FROM appointments WHERE id = ?) AND status = 'HELD'";
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+    public boolean finalizeHoldOnPaymentSubmit(Connection conn, int appointmentId) throws SQLException {
+        String sql = "UPDATE time_slots SET status = 'WAITING_VERIFICATION', held_until = NULL, updated_at = GETDATE() "
+                + "WHERE id = (SELECT slot_id FROM appointments WHERE id = ?) AND status = 'HELD' "
+                + "AND EXISTS (SELECT 1 FROM appointments WHERE id = ? AND status = 'Pending')";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, appointmentId);
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
+            ps.setInt(2, appointmentId);
+            return ps.executeUpdate() == 1;
         }
     }
 
@@ -726,34 +1013,22 @@ public class AppointmentDAO {
      * Staff TỪ CHỐI thanh toán: huỷ lịch hẹn (nếu đang Pending) và nhả slot về AVAILABLE
      * để người khác có thể đặt lại. Gọi từ StaffReceptionService.rejectPayment().
      */
-    public void rejectAppointmentAfterPaymentRejected(int appointmentId) {
-        Connection conn = null;
-        try {
-            conn = DatabaseConfig.getConnection();
-            conn.setAutoCommit(false);
+    public boolean rejectAppointmentAfterPaymentRejected(Connection conn, int appointmentId)
+            throws SQLException {
+        try (PreparedStatement cancelAppt = conn.prepareStatement(
+                "UPDATE appointments SET status = 'Cancelled' "
+                        + "WHERE id = ? AND status IN ('Pending','Confirmed')")) {
+            cancelAppt.setInt(1, appointmentId);
+            if (cancelAppt.executeUpdate() != 1) return false;
+        }
 
-            try (PreparedStatement cancelAppt = conn.prepareStatement(
-                    "UPDATE appointments SET status = 'Cancelled' WHERE id = ? AND status IN ('Pending','Confirmed')")) {
-                cancelAppt.setInt(1, appointmentId);
-                cancelAppt.executeUpdate();
-            }
-
-            try (PreparedStatement releaseSlot = conn.prepareStatement(
-                    "UPDATE time_slots SET status = 'AVAILABLE', booked_by = NULL, booked_at = NULL, held_until = NULL, updated_at = GETDATE() " +
-                    "WHERE id = (SELECT slot_id FROM appointments WHERE id = ?)")) {
-                releaseSlot.setInt(1, appointmentId);
-                releaseSlot.executeUpdate();
-            }
-
-            conn.commit();
-        } catch (SQLException e) {
-            e.printStackTrace();
-            if (conn != null) { try { conn.rollback(); } catch (SQLException ex) {} }
-        } finally {
-            if (conn != null) {
-                try { conn.setAutoCommit(true); } catch (SQLException e) {}
-                DatabaseConfig.closeConnection(conn);
-            }
+        try (PreparedStatement releaseSlot = conn.prepareStatement(
+                "UPDATE time_slots SET status = 'AVAILABLE', booked_by = NULL, booked_at = NULL, "
+                        + "held_until = NULL, updated_at = GETDATE() "
+                        + "WHERE id = (SELECT slot_id FROM appointments WHERE id = ?) "
+                        + "AND status IN ('HELD','WAITING_VERIFICATION','BOOKED')")) {
+            releaseSlot.setInt(1, appointmentId);
+            return releaseSlot.executeUpdate() == 1;
         }
     }
 
@@ -916,21 +1191,6 @@ public class AppointmentDAO {
         return false;
     }
 
-    /** Completes a consultation only after it has been started by the assigned doctor. */
-    public boolean completeConsultation(int appointmentId, int doctorId) {
-        String sql = "UPDATE appointments SET status = 'Completed' "
-                + "WHERE id = ? AND doctor_id = ? AND status = 'InProgress'";
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, appointmentId);
-            ps.setInt(2, doctorId);
-            return ps.executeUpdate() > 0;
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
-
     /** Protects clinical documentation from being created before check-in. */
     public boolean isConsultationInProgress(int appointmentId, int doctorId) {
         String sql = "SELECT 1 FROM appointments WHERE id = ? AND doctor_id = ? AND status = 'InProgress'";
@@ -943,6 +1203,38 @@ public class AppointmentDAO {
             e.printStackTrace();
         }
         return false;
+    }
+
+    /** Completes a consultation. */
+    public boolean completeConsultation(int appointmentId, int doctorId) {
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            return completeConsultation(conn, appointmentId, doctorId);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean completeConsultation(Connection conn, int appointmentId, int doctorId) throws SQLException {
+        String sql = "UPDATE appointments SET status = 'Completed' WHERE id = ? AND doctor_id = ? AND status = 'InProgress'";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, appointmentId);
+            ps.setInt(2, doctorId);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    /** Locks the consultation row using the same order as clinical child writes. */
+    public boolean lockConsultationInProgress(Connection conn, int appointmentId, int doctorId)
+            throws SQLException {
+        String sql = "SELECT status FROM appointments WITH (UPDLOCK, HOLDLOCK) WHERE id = ? AND doctor_id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, appointmentId);
+            ps.setInt(2, doctorId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() && "InProgress".equalsIgnoreCase(rs.getString(1));
+            }
+        }
     }
 
 
@@ -1196,7 +1488,7 @@ public class AppointmentDAO {
             selectSlotPs = null;
 
             // Kiểm tra trùng lịch hẹn của chính bệnh nhân trong cùng ngày và giờ khám
-            String checkDupSql = "SELECT COUNT(*) FROM appointments WHERE patient_id = ? AND appointment_date = ? AND time_slot = ? AND status NOT IN ('Cancelled', 'NoShow')";
+            String checkDupSql = "SELECT COUNT(*) FROM appointments WHERE patient_id = ? AND appointment_date = ? AND time_slot = CAST(? AS time) AND status NOT IN ('Cancelled', 'NoShow')";
             try (PreparedStatement checkPs = conn.prepareStatement(checkDupSql)) {
                 checkPs.setInt(1, patientId);
                 checkPs.setDate(2, workDate);
@@ -1407,16 +1699,42 @@ public class AppointmentDAO {
             conn.setAutoCommit(false);
             conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
 
+            // 0. Xác định trạng thái của lịch hẹn cũ và hóa đơn trước khám để đặt trạng thái slot mới phù hợp
+            String getApptStatusSql = "SELECT a.status AS appt_status, i.status AS inv_status "
+                    + "FROM appointments a "
+                    + "LEFT JOIN invoices i ON a.id = i.appointment_id AND i.invoice_type = 'PRE_EXAM' "
+                    + "WHERE a.id = ?";
+            String targetSlotStatus = "HELD";
+            boolean needHoldUntil = true;
+            try (PreparedStatement statusPs = conn.prepareStatement(getApptStatusSql)) {
+                statusPs.setInt(1, appointmentId);
+                try (ResultSet rs = statusPs.executeQuery()) {
+                    if (rs.next()) {
+                        String apptStatus = rs.getString("appt_status");
+                        String invStatus = rs.getString("inv_status");
+                        if ("Confirmed".equalsIgnoreCase(apptStatus) || "Paid".equalsIgnoreCase(invStatus)) {
+                            targetSlotStatus = "BOOKED";
+                            needHoldUntil = false;
+                        } else if ("PendingConfirmation".equalsIgnoreCase(invStatus)) {
+                            targetSlotStatus = "WAITING_VERIFICATION";
+                            needHoldUntil = false;
+                        }
+                    }
+                }
+            }
+
             // 1. Book new slot
             String updateNewSlotSql = "UPDATE time_slots SET "
-                    + "status = 'BOOKED', "
+                    + "status = ?, "
                     + "booked_by = ?, "
                     + "booked_at = GETDATE(), "
+                    + "held_until = " + (needHoldUntil ? "DATEADD(MINUTE, 15, GETDATE())" : "NULL") + ", "
                     + "updated_at = GETDATE() "
                     + "WHERE id = ? AND status = 'AVAILABLE'";
             updateNewSlotPs = conn.prepareStatement(updateNewSlotSql);
-            updateNewSlotPs.setInt(1, userId);
-            updateNewSlotPs.setInt(2, newSlotId);
+            updateNewSlotPs.setString(1, targetSlotStatus);
+            updateNewSlotPs.setInt(2, userId);
+            updateNewSlotPs.setInt(3, newSlotId);
             int rowsUpdated = updateNewSlotPs.executeUpdate();
 
             if (rowsUpdated == 0) {
@@ -1430,9 +1748,10 @@ public class AppointmentDAO {
                     + "status = 'AVAILABLE', "
                     + "booked_by = NULL, "
                     + "booked_at = NULL, "
+                    + "held_until = NULL, "
                     + "notes = ?, "
                     + "updated_at = GETDATE() "
-                    + "WHERE id = ? AND status = 'BOOKED'";
+                    + "WHERE id = ? AND status IN ('BOOKED', 'HELD', 'WAITING_VERIFICATION')";
             updateOldSlotPs = conn.prepareStatement(updateOldSlotSql);
             updateOldSlotPs.setString(1, "Bệnh nhân đổi sang slot #" + newSlotId);
             updateOldSlotPs.setInt(2, oldSlotId);

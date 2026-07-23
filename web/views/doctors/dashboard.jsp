@@ -6,7 +6,7 @@
 <%-- ── Banner ──────────────────────────────────────────────────────────── --%>
 <div class="row mb-4">
     <div class="col-12">
-        <div class="card border-0 bg-primary bg-gradient text-white rounded-4">
+        <div class="card border-0 bg-primary bg-gradient text-white rounded-4 clinical-page-hero">
             <div class="card-body p-4 p-md-5">
                 <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
                     <div>
@@ -18,7 +18,7 @@
                         </p>
                     </div>
                     <span class="badge bg-light text-primary fs-6 px-3 py-2 rounded-pill">
-                        <i class="bi bi-person-badge me-1"></i>Bác Sĩ
+                        <i class="bi bi-person-badge me-1"></i>Bác sĩ lâm sàng
                     </span>
                 </div>
             </div>
@@ -29,7 +29,7 @@
 <%-- ── Thống kê nhanh hôm nay ─────────────────────────────────────────── --%>
 <div class="row g-3 mb-4">
     <div class="col-6 col-md-3">
-        <div class="card border-0 rounded-4 text-center p-3 h-100" style="background:#e8f4fd;">
+        <div class="card border-0 rounded-4 text-center p-3 h-100 clinical-kpi clinical-kpi--muted" style="background:#e8f4fd;">
             <div class="fs-1 fw-bold text-primary">
                 <c:out value="${empty todayCounts['pending'] ? 0 : todayCounts['pending']}"/>
             </div>
@@ -37,7 +37,7 @@
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card border-0 rounded-4 text-center p-3 h-100" style="background:#e8fdf0;">
+        <div class="card border-0 rounded-4 text-center p-3 h-100 clinical-kpi clinical-kpi--success" style="background:#e8fdf0;">
             <div class="fs-1 fw-bold text-success">
                 <c:out value="${empty todayCounts['confirmed'] ? 0 : todayCounts['confirmed']}"/>
             </div>
@@ -45,7 +45,7 @@
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card border-0 rounded-4 text-center p-3 h-100" style="background:#f0eaff;">
+        <div class="card border-0 rounded-4 text-center p-3 h-100 clinical-kpi" style="background:#f0eaff;">
             <div class="fs-1 fw-bold" style="color:#7c3aed;">
                 <c:out value="${empty todayCounts['success'] ? 0 : todayCounts['success']}"/>
             </div>
@@ -53,7 +53,7 @@
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card border-0 rounded-4 text-center p-3 h-100" style="background:#fff8e1;">
+        <div class="card border-0 rounded-4 text-center p-3 h-100 clinical-kpi clinical-kpi--warning" style="background:#fff8e1;">
             <div class="fs-1 fw-bold text-warning">${totalRecords}</div>
             <div class="small text-muted mt-1"><i class="bi bi-journal-medical me-1"></i>Tổng hồ sơ</div>
         </div>

@@ -64,7 +64,7 @@ public class GoogleServerLoginServlet extends HttpServlet {
             // Bắt đầu OAuth flow → redirect đến Google
             if (!GoogleConfig.isConfigured()) {
                 request.getSession().setAttribute("errorMessage",
-                        "Google Login chưa được cấu hình. Vui lòng cấu hình google.client.id trong web.xml.");
+                        "Google Login chưa được cấu hình trên máy chủ.");
                 response.sendRedirect(request.getContextPath() + "/login");
                 return;
             }
@@ -167,7 +167,7 @@ public class GoogleServerLoginServlet extends HttpServlet {
             case 1: return "/admin/dashboard";
             case 2: return "/doctor/dashboard";
             case 3: return "/manager/dashboard";
-            case 4: return "/staff/dashboard";
+            case 4: return "/admin/reception";
             case 5: return "/home";
             case 6: return "/sonographer/dashboard";
             default: return "/home";

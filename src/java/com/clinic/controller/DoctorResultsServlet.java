@@ -65,8 +65,10 @@ public class DoctorResultsServlet extends HttpServlet {
             return;
         }
 
+        UltrasoundOrderService orderService = new UltrasoundOrderService();
+        boolean reviewSchemaSupported = orderService.isReviewSchemaSupported();
         // Load kết quả siêu âm
-        List<Map<String,Object>> ultrasoundResults = loadUltrasoundResults(recordId);
+        List<Map<String,Object>> ultrasoundResults = loadUltrasoundResults(recordId, reviewSchemaSupported);
         // Load thông tin hồ sơ (tên BN, ngày khám)
         Map<String,String> recordInfo = loadRecordInfo(recordId);
 
@@ -74,6 +76,7 @@ public class DoctorResultsServlet extends HttpServlet {
         req.setAttribute("recordInfo",         recordInfo);
         req.setAttribute("ultrasoundResults",  ultrasoundResults);
         req.setAttribute("doctorName",         user.getFullName());
+        req.setAttribute("reviewSchemaSupported", reviewSchemaSupported);
         req.getRequestDispatcher("/views/doctors/doctor_results.jsp").forward(req, resp);
     }
 
@@ -142,7 +145,7 @@ public class DoctorResultsServlet extends HttpServlet {
 
         // Thực hiện xác nhận
         UltrasoundOrderService orderService = new UltrasoundOrderService();
-        boolean success = orderService.confirmUltrasoundResult(orderId, doctorMsg);
+        boolean success = orderService.confirmUltrasoundResult(orderId, user.getId(), doctorMsg);
 
         if (success) {
             resp.sendRedirect(req.getContextPath() + "/doctor/results?recordId=" + recordId + "&success=confirmed#us-order-" + orderId);
@@ -152,41 +155,59 @@ public class DoctorResultsServlet extends HttpServlet {
     }
 
     // ── Kết quả siêu âm ─────────────────────────────────────────────────────
-    private List<Map<String,Object>> loadUltrasoundResults(int recordId) {
-        // Query đúng bảng: test_orders → ultrasound_images (ảnh gốc) + ai_analysis_results (kết quả AI)
+    private List<Map<String,Object>> loadUltrasoundResults(int recordId, boolean reviewSchemaSupported) {
+        String reportColumns = reviewSchemaSupported
+                ? "       ann.annotation_data, ann.annotation_type, ann.review_status, ann.rejection_reason, "
+                  + "       ur.image_description, ur.professional_findings, ur.conclusion AS sonographer_conclusion, "
+                  + "       ur.report_status, ur.signed_name, ur.signed_at, ur.doctor_review_notes, ur.doctor_confirmed_at, "
+                : "       CAST(NULL AS nvarchar(max)) AS annotation_data, CAST(NULL AS nvarchar(30)) AS annotation_type, "
+                  + "       CAST(NULL AS nvarchar(30)) AS review_status, CAST(NULL AS nvarchar(500)) AS rejection_reason, "
+                  + "       CAST(NULL AS nvarchar(max)) AS image_description, CAST(NULL AS nvarchar(max)) AS professional_findings, "
+                  + "       CAST(NULL AS nvarchar(max)) AS sonographer_conclusion, CAST(NULL AS nvarchar(20)) AS report_status, "
+                  + "       CAST(NULL AS nvarchar(200)) AS signed_name, CAST(NULL AS datetime2) AS signed_at, "
+                  + "       CAST(NULL AS nvarchar(2000)) AS doctor_review_notes, CAST(NULL AS datetime2) AS doctor_confirmed_at, ";
+        String reviewJoins = reviewSchemaSupported
+                ? "LEFT JOIN ultrasound_reports ur ON ur.test_order_id = to2.id AND ur.is_current = 1 "
+                  + "AND ur.report_status = 'Signed' AND ur.signed_at IS NOT NULL "
+                  + "LEFT JOIN ultrasound_annotations ann ON ann.order_id = to2.id AND ann.is_current = 1 "
+                  + "AND ur.id IS NOT NULL "
+                : "";
+        String preferredImageOrder = reviewSchemaSupported
+                ? "CASE WHEN ann.image_id IS NOT NULL AND img.id = ann.image_id THEN 0 ELSE 1 END, "
+                : "";
         String sql =
             "SELECT to2.id AS id, " +
             "       to2.id AS order_id, to2.status AS order_status, " +
             "       to2.created_at AS ordered_at, " +
             "       s.service_name, " +
-            // Ảnh gốc từ ultrasound_images (lấy ảnh đầu tiên)
-            "       ui.file_path AS raw_image_url, " +
+            // Ảnh gốc phải là chính ảnh mà phiếu/vùng duyệt đã ký tham chiếu.
+            "       ui.id AS raw_image_id, ui.file_path AS raw_image_url, " +
             // Kết quả AI từ ai_analysis_results
             "       air.result_image AS ai_processed_image_url, " +
             "       air.message AS ai_suggested_label, " +
             "       air.confidence AS ai_confidence_score, " +
+            "       air.xmin, air.ymin, air.xmax, air.ymax, " + reportColumns +
             // Sonographer (người upload ảnh)
             "       uploader.full_name AS sonographer_name " +
             "FROM test_orders to2 " +
             "JOIN services s ON s.id = to2.service_id " +
             "LEFT JOIN service_categories sc ON sc.id = s.category_id " +
-            // Lấy ảnh đầu tiên đã upload
+            reviewJoins +
+            // Khi đã có phiếu, ưu tiên tuyệt đối annotation.image_id; chỉ
+            // fallback ảnh upload đầu tiên cho ca chưa có phiếu.
             "OUTER APPLY ( " +
-            "    SELECT TOP 1 file_path " +
-            "    FROM ultrasound_images " +
-            "    WHERE test_order_id = to2.id " +
-            "    ORDER BY uploaded_at ASC " +
-            ") ui " +
-            // Kết quả phân tích AI
-            "LEFT JOIN ai_analysis_results air ON air.test_order_id = to2.id " +
-            // Tên sonographer (người upload)
-            "OUTER APPLY ( " +
-            "    SELECT TOP 1 u.full_name " +
+            "    SELECT TOP 1 img.id, img.file_path, img.uploaded_by " +
             "    FROM ultrasound_images img " +
-            "    JOIN users u ON u.id = img.uploaded_by " +
             "    WHERE img.test_order_id = to2.id " +
-            "    ORDER BY img.uploaded_at ASC " +
-            ") uploader " +
+            "    ORDER BY " + preferredImageOrder + "img.uploaded_at ASC, img.id ASC " +
+            ") ui " +
+            // Chỉ lấy AI result thành công được tạo từ đúng ảnh ở trên.
+            "OUTER APPLY (SELECT TOP 1 * FROM ai_analysis_results ar " +
+            "             WHERE ar.test_order_id = to2.id AND ar.status = 'Success' " +
+            "               AND REPLACE(LTRIM(RTRIM(ar.input_image)), CHAR(92), '/') " +
+            "                   = REPLACE(LTRIM(RTRIM(ui.file_path)), CHAR(92), '/') " +
+            "             ORDER BY ar.analyzed_at DESC, ar.id DESC) air " +
+            "LEFT JOIN users uploader ON uploader.id = ui.uploaded_by " +
             "WHERE to2.medical_record_id = ? " +
             "  AND (sc.category_name LIKE N'%siêu âm%' " +
             "       OR sc.category_name LIKE N'%ultrasound%' " +
@@ -216,7 +237,9 @@ public class DoctorResultsServlet extends HttpServlet {
                 info.put("appointmentDate", rs.getString("appointment_date"));
                 info.put("finalDiagnosis",  rs.getString("final_diagnosis"));
             }
-        } catch (SQLException e) { e.printStackTrace(); }
+        } catch (SQLException e) {
+            System.err.println("[DoctorResultsServlet] Không thể đọc thông tin hồ sơ: " + e.getMessage());
+        }
         return info;
     }
 
@@ -236,7 +259,9 @@ public class DoctorResultsServlet extends HttpServlet {
                 }
                 list.add(row);
             }
-        } catch (SQLException e) { e.printStackTrace(); }
+        } catch (SQLException e) {
+            System.err.println("[DoctorResultsServlet] Không thể đọc kết quả siêu âm: " + e.getMessage());
+        }
         return list;
     }
 
@@ -247,7 +272,9 @@ public class DoctorResultsServlet extends HttpServlet {
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) return rs.getInt("id");
             }
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            System.err.println("[DoctorResultsServlet] Không thể xác định hồ sơ bác sĩ: " + e.getMessage());
+        }
         return null;
     }
 }

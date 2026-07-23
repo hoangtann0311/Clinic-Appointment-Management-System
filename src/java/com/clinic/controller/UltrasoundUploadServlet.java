@@ -20,7 +20,7 @@ import java.util.Collection;
 import java.util.UUID;
 
 /**
- * Servlet xử lý upload ảnh siêu âm (Sonographer)
+ * Servlet xử lý upload ảnh siêu âm (Bác sĩ Siêu âm)
  */
 @WebServlet("/sonographer/upload")
 @MultipartConfig(
@@ -41,7 +41,8 @@ public class UltrasoundUploadServlet extends HttpServlet {
             return;
         }
 
-        User user = (User) request.getSession().getAttribute("user");
+        User user = request.getSession(false) == null ? null
+                : (User) request.getSession(false).getAttribute("user");
         if (user == null || user.getRoleId() != 6) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền thực hiện.");
             return;
@@ -71,7 +72,7 @@ public class UltrasoundUploadServlet extends HttpServlet {
 
         if (!orderService.isReadyForSonographer(orderId) || !orderService.checkSonographerOwnership(orderId, user.getId())) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN,
-                    "Bạn không có quyền tải ảnh cho ca siêu âm này (Đã được phụ trách bởi KTV khác).");
+                    "Bạn không có quyền tải ảnh cho ca siêu âm này (Đã được phụ trách bởi Bác sĩ Siêu âm khác).");
             return;
         }
 
@@ -84,11 +85,18 @@ public class UltrasoundUploadServlet extends HttpServlet {
         // Đường dẫn thư mục upload
         String relativeUploadDir = AppConfig.getUploadDirectory();
         String realPath = getServletContext().getRealPath("");
+        if (realPath == null) {
+            response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE,
+                    "Không xác định được vùng lưu trữ ảnh siêu âm.");
+            return;
+        }
         String uploadPath = realPath + File.separator + relativeUploadDir;
         
         File uploadDirFile = new File(uploadPath);
-        if (!uploadDirFile.exists()) {
-            uploadDirFile.mkdirs();
+        if (!uploadDirFile.exists() && !uploadDirFile.mkdirs()) {
+            response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE,
+                    "Không thể chuẩn bị vùng lưu trữ ảnh siêu âm.");
+            return;
         }
 
         // Đường dẫn thư mục nguồn (source) để tránh mất ảnh khi redeploy/rebuild
@@ -113,34 +121,32 @@ public class UltrasoundUploadServlet extends HttpServlet {
                     String originalFileName = getFileName(part);
                     if (originalFileName == null || originalFileName.isEmpty()) continue;
 
-                    // Kiểm tra định dạng file
-                    String contentType = part.getContentType();
-                    if (contentType == null || (!contentType.equals("image/jpeg") && !contentType.equals("image/png") && !contentType.equals("image/jpg"))) {
+                    if (part.getSize() > AppConfig.getMaxFileSize()) {
+                        response.sendError(HttpServletResponse.SC_BAD_REQUEST,
+                                "Kích thước file vượt quá giới hạn cho phép.");
+                        return;
+                    }
+
+                    // MIME/đuôi file chỉ là dữ liệu do client khai báo. Nội dung
+                    // thực tế vẫn phải được ImageIO nhận diện đúng là JPEG/PNG.
+                    String declaredContentType = part.getContentType();
+                    if (declaredContentType == null || (!declaredContentType.equals("image/jpeg") && !declaredContentType.equals("image/png") && !declaredContentType.equals("image/jpg"))) {
                         response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId 
                                 + "&error=" + java.net.URLEncoder.encode("Chỉ hỗ trợ file ảnh định dạng JPEG, JPG hoặc PNG.", "UTF-8"));
                         return;
                     }
 
-                    // Kiểm tra nội dung file thực sự là ảnh (chống giả mạo đuôi file)
-                    try (java.io.InputStream is = part.getInputStream()) {
-                        java.awt.image.BufferedImage imgCheck = javax.imageio.ImageIO.read(is);
-                        if (imgCheck == null) {
-                            response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId 
-                                    + "&error=" + java.net.URLEncoder.encode("Nội dung file tải lên không phải là hình ảnh hợp lệ.", "UTF-8"));
-                            return;
-                        }
-                    } catch (Exception ex) {
+                    ValidatedImage validated;
+                    try {
+                        validated = validateJpegOrPng(part, originalFileName, declaredContentType);
+                    } catch (IllegalArgumentException ex) {
                         response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId 
-                                + "&error=" + java.net.URLEncoder.encode("Không thể đọc định dạng hình ảnh.", "UTF-8"));
+                                    + "&error=" + java.net.URLEncoder.encode(ex.getMessage(), "UTF-8"));
                         return;
                     }
-
-                    // Kiểm tra kích thước file
-                    if (part.getSize() > AppConfig.getMaxFileSize()) {
-                        response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId 
-                                + "&error=" + java.net.URLEncoder.encode("Kích thước file không được vượt quá 10MB.", "UTF-8"));
-                        return;
-                    }
+                    int naturalWidth = validated.width;
+                    int naturalHeight = validated.height;
+                    String contentType = validated.contentType;
 
                     // Kiểm tra xem file ảnh trùng lặp đã được tải lên trước đó chưa (cùng tên và cùng dung lượng)
                     boolean isDuplicate = false;
@@ -160,7 +166,7 @@ public class UltrasoundUploadServlet extends HttpServlet {
                     }
 
                     // Tạo tên file ngẫu nhiên để tránh trùng
-                    String extension = originalFileName.lastIndexOf(".") >= 0 ? originalFileName.substring(originalFileName.lastIndexOf(".")) : ".jpg";
+                    String extension = "image/png".equals(contentType) ? ".png" : ".jpg";
                     String storedFileName = UUID.randomUUID().toString() + extension;
                     File targetFile = new File(uploadPath, storedFileName);
 
@@ -179,13 +185,14 @@ public class UltrasoundUploadServlet extends HttpServlet {
                     part.write(filePath);
 
                     // Đồng thời lưu vào thư mục source để tránh bị xóa khi NetBeans tự động redeploy/rebuild
+                    String sourceFilePath = null;
                     if (sourceUploadPath != null) {
                         try {
                             File sourceDir = new File(sourceUploadPath);
                             if (!sourceDir.exists()) {
                                 sourceDir.mkdirs();
                             }
-                            String sourceFilePath = sourceUploadPath + File.separator + storedFileName;
+                            sourceFilePath = sourceUploadPath + File.separator + storedFileName;
                             java.nio.file.Files.copy(
                                 java.nio.file.Paths.get(filePath),
                                 java.nio.file.Paths.get(sourceFilePath),
@@ -206,8 +213,19 @@ public class UltrasoundUploadServlet extends HttpServlet {
                     img.setFileSize(part.getSize());
                     img.setContentType(contentType);
                     img.setUploadedBy(user.getId());
+                    img.setImageWidth(naturalWidth);
+                    img.setImageHeight(naturalHeight);
 
-                    orderService.uploadUltrasoundImage(img);
+                    if (!orderService.uploadUltrasoundImage(img)) {
+                        targetFile.delete();
+                        if (sourceFilePath != null) {
+                            try { java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(sourceFilePath)); }
+                            catch (Exception ignored) { }
+                        }
+                        response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId
+                                + "&error=" + java.net.URLEncoder.encode("Ca siêu âm đã thay đổi trạng thái; ảnh chưa được lưu.", "UTF-8"));
+                        return;
+                    }
                     fileUploaded = true;
                 }
             }
@@ -223,21 +241,80 @@ public class UltrasoundUploadServlet extends HttpServlet {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
-            response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId 
-                    + "&error=" + java.net.URLEncoder.encode("Lỗi hệ thống khi tải ảnh lên: " + e.getMessage(), "UTF-8"));
+            System.err.println("[UltrasoundUploadServlet] requestId=" + request.getAttribute("requestId")
+                    + " error=" + e.getClass().getSimpleName());
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                    "Không thể tải ảnh. Vui lòng dùng mã đối chiếu để liên hệ hỗ trợ.");
         }
     }
 
     private String getFileName(Part part) {
-        String contentDisposition = part.getHeader("content-disposition");
-        for (String token : contentDisposition.split(";")) {
-            if (token.trim().startsWith("filename")) {
-                String filename = token.substring(token.indexOf("=") + 2, token.length() - 1);
-                // Xử lý đường dẫn IE
-                return Paths.get(filename).getFileName().toString();
+        String submitted = part.getSubmittedFileName();
+        if (submitted == null || submitted.isBlank()) return null;
+        try { return Paths.get(submitted).getFileName().toString(); }
+        catch (Exception ignored) { return null; }
+    }
+
+    private ValidatedImage validateJpegOrPng(Part part, String originalFileName,
+                                              String declaredContentType) {
+        String lowerName = originalFileName == null ? "" : originalFileName.toLowerCase(java.util.Locale.ROOT);
+        try (java.io.InputStream input = part.getInputStream();
+             javax.imageio.stream.ImageInputStream imageInput = javax.imageio.ImageIO.createImageInputStream(input)) {
+            if (imageInput == null) throw new IllegalArgumentException("Nội dung file không phải ảnh JPG/PNG hợp lệ.");
+            java.util.Iterator<javax.imageio.ImageReader> readers = javax.imageio.ImageIO.getImageReaders(imageInput);
+            if (!readers.hasNext()) throw new IllegalArgumentException("Nội dung file không phải ảnh JPG/PNG hợp lệ.");
+
+            javax.imageio.ImageReader reader = readers.next();
+            try {
+                reader.setInput(imageInput, true, true);
+                String format = reader.getFormatName().toUpperCase(java.util.Locale.ROOT);
+                boolean jpeg = "JPEG".equals(format) || "JPG".equals(format);
+                boolean png = "PNG".equals(format);
+                if (!jpeg && !png) {
+                    throw new IllegalArgumentException("Chỉ chấp nhận nội dung ảnh JPEG/JPG hoặc PNG thực sự.");
+                }
+                if ((jpeg && !(lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg")))
+                        || (png && !lowerName.endsWith(".png"))) {
+                    throw new IllegalArgumentException("Đuôi file không khớp với định dạng ảnh thực tế.");
+                }
+                String normalizedDeclared = "image/jpg".equals(declaredContentType)
+                        ? "image/jpeg" : declaredContentType;
+                String actualContentType = png ? "image/png" : "image/jpeg";
+                if (!actualContentType.equals(normalizedDeclared)) {
+                    throw new IllegalArgumentException("Loại nội dung file không khớp với ảnh thực tế.");
+                }
+
+                int width = reader.getWidth(0);
+                int height = reader.getHeight(0);
+                if (width <= 0 || height <= 0 || (long) width * height > 40_000_000L) {
+                    throw new IllegalArgumentException("Kích thước ảnh không hợp lệ hoặc vượt giới hạn an toàn.");
+                }
+                // Force a real decode so a header-only/truncated fake image is
+                // rejected before any bytes are persisted.
+                java.awt.image.BufferedImage decoded = reader.read(0);
+                if (decoded == null || decoded.getWidth() != width || decoded.getHeight() != height) {
+                    throw new IllegalArgumentException("Không thể giải mã đầy đủ nội dung ảnh.");
+                }
+                return new ValidatedImage(width, height, actualContentType);
+            } finally {
+                reader.dispose();
             }
+        } catch (IllegalArgumentException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new IllegalArgumentException("Không thể đọc định dạng hình ảnh.");
         }
-        return null;
+    }
+
+    private static final class ValidatedImage {
+        private final int width;
+        private final int height;
+        private final String contentType;
+
+        private ValidatedImage(int width, int height, String contentType) {
+            this.width = width;
+            this.height = height;
+            this.contentType = contentType;
+        }
     }
 }

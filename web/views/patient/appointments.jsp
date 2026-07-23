@@ -50,7 +50,7 @@
                         <tr>
                             <th class="appointment-date">Ngày khám</th>
                             <th class="appointment-time">Giờ</th>
-                            <th class="appointment-doctor">Bác sĩ</th>
+                            <th class="appointment-doctor">Bác sĩ lâm sàng</th>
                             <th class="appointment-service">Dịch vụ</th>
                             <th class="appointment-symptoms">Triệu chứng</th>
                             <th class="appointment-status-cell">Trạng thái</th>
@@ -67,45 +67,77 @@
                                 <td class="appointment-symptoms" title="${a.symptoms}"><span><c:out value="${a.symptoms}"/></span></td>
                                 <td class="appointment-status-cell">
                                     <div class="appointment-status-line">
+                                    <c:set var="statusLower" value="${fn:toLowerCase(a.status)}" />
                                     <c:choose>
-                                        <c:when test="${a.status == 'Confirmed'}">
+                                        <c:when test="${statusLower == 'confirmed'}">
                                             <span class="appointment-status-chip status-confirmed">Đã xác nhận</span>
                                         </c:when>
-                                        <c:when test="${a.status == 'Pending'}">
+                                        <c:when test="${statusLower == 'pending'}">
                                             <span class="appointment-status-chip status-pending">Chờ duyệt</span>
                                         </c:when>
-                                        <c:when test="${a.status == 'Waiting'}">
+                                        <c:when test="${statusLower == 'waiting'}">
                                             <span class="appointment-status-chip status-waiting">Chờ khám</span>
                                         </c:when>
-                                        <c:when test="${a.status == 'Emergency_SOS'}">
+                                        <c:when test="${statusLower == 'emergency_sos'}">
                                             <span class="appointment-status-chip status-sos">Khẩn cấp</span>
                                         </c:when>
-                                        <c:when test="${a.status == 'SUCCESS'}">
+                                        <c:when test="${statusLower == 'success' || statusLower == 'completed'}">
                                             <span class="appointment-status-chip status-success">Hoàn thành</span>
                                         </c:when>
-                                        <c:when test="${a.status == 'Cancelled'}">
+                                        <c:when test="${statusLower == 'inprogress'}">
+                                            <span class="appointment-status-chip status-waiting" style="background:#e0f2fe;color:#0369a1;">Đang khám</span>
+                                        </c:when>
+                                        <c:when test="${statusLower == 'cancelled'}">
                                             <span class="appointment-status-chip status-cancelled">Đã huỷ</span>
                                         </c:when>
-                                        <c:when test="${a.status == 'NoShow'}">
+                                        <c:when test="${statusLower == 'noshow'}">
                                             <span class="appointment-status-chip status-no-show">Vắng mặt</span>
                                         </c:when>
                                         <c:otherwise>
                                             <span class="appointment-status-chip status-neutral">${a.status}</span>
                                         </c:otherwise>
                                     </c:choose>
-                                    <c:if test="${a.preExamPaymentStatus == 'Paid'}">
+                                    <%-- Chỉ hiển thị trạng thái thanh toán trước khám khi lịch hẹn ở giai đoạn chưa khám --%>
+                                    <c:if test="${(statusLower == 'pending' || statusLower == 'confirmed') && a.preExamPaymentStatus == 'Paid'}">
                                         <span class="appointment-payment-chip payment-paid">Đã thanh toán</span>
                                     </c:if>
                                     <c:if test="${a.preExamPaymentStatus == 'PendingConfirmation'}">
                                         <span class="appointment-payment-chip payment-pending" title="Chờ nhân viên xác nhận thanh toán">Chờ thanh toán</span>
                                     </c:if>
-                                    <c:if test="${a.preExamPaymentStatus == 'Unpaid' && (a.status == 'Pending' || a.status == 'Confirmed')}">
+                                    <c:if test="${a.preExamPaymentStatus == 'Unpaid' && (statusLower == 'pending' || statusLower == 'confirmed')}">
                                         <span class="appointment-payment-chip payment-unpaid">Chưa thanh toán</span>
                                     </c:if>
                                     </div>
                                 </td>
                                 <td class="appointment-actions text-end">
-                                    <div class="d-flex flex-nowrap justify-content-end gap-1">
+                                    <div class="d-flex flex-nowrap justify-content-end gap-1 flex-wrap" style="max-width: 320px;">
+                                        <%-- Thanh toán trước khám (Pending/Confirmed và chưa thanh toán) --%>
+                                        <c:if test="${a.preExamPaymentStatus == 'Unpaid' && (a.status == 'Pending' || a.status == 'Confirmed')}">
+                                            <a href="${pageContext.request.contextPath}/patient/payment?appointmentId=${a.id}&type=PRE_EXAM"
+                                               class="btn btn-sm btn-success fw-bold text-white"
+                                               title="Thanh toán phí khám trước khi khám">
+                                                <i class="bi bi-credit-card me-1"></i>Thanh toán
+                                            </a>
+                                        </c:if>
+
+                                        <%-- Thanh toán phí dịch vụ phát sinh (nếu có hóa đơn post-exam chưa thanh toán) --%>
+                                        <c:if test="${not empty postExamInvoices[a.id]}">
+                                            <a href="${pageContext.request.contextPath}/patient/payment?appointmentId=${a.id}&type=POST_EXAM"
+                                               class="btn btn-sm btn-outline-info fw-bold"
+                                               title="Thanh toán chi phí dịch vụ/cận lâm sàng phát sinh">
+                                                <i class="bi bi-receipt me-1"></i>Đóng phí DV
+                                            </a>
+                                        </c:if>
+
+                                        <%-- Thanh toán đơn thuốc (nếu có hóa đơn đơn thuốc chưa thanh toán) --%>
+                                        <c:if test="${not empty prescriptionInvoices[a.id]}">
+                                            <a href="${pageContext.request.contextPath}/patient/payment?appointmentId=${a.id}&type=PRESCRIPTION"
+                                               class="btn btn-sm btn-outline-success fw-bold"
+                                               title="Thanh toán đơn thuốc bác sĩ đã kê">
+                                                <i class="bi bi-capsule me-1"></i>Mua thuốc
+                                            </a>
+                                        </c:if>
+
                                         <%-- Đổi lịch (Pending/Confirmed) --%>
                                         <c:if test="${a.status == 'Pending' || a.status == 'Confirmed'}">
                                             <a href="${pageContext.request.contextPath}/patient/booking?rescheduleId=${a.id}"
@@ -114,10 +146,6 @@
                                                  <i class="bi bi-arrow-repeat me-1"></i>Đổi lịch
                                             </a>
                                         </c:if>
-
-                                        <%-- Đã bỏ toàn bộ nút Thanh toán ở trang Lịch Hẹn — người dùng đã có mục
-                                             riêng "Thanh Toán Của Tôi" trên menu để xử lý thanh toán, không cần
-                                             lặp lại ở đây nữa. Badge trạng thái thanh toán ở cột "Trạng thái" vẫn giữ. --%>
 
                                         <%-- Huỷ (Pending/Confirmed) --%>
                                         <c:if test="${a.status == 'Pending' || a.status == 'Confirmed'}">
@@ -158,18 +186,14 @@
                                             </c:when>
                                         </c:choose>
 
-                                         <%-- Đã bỏ nút "Thanh toán" chung (trùng với nút "Thanh toán trước khám" ở trên
-                                              nhưng thiếu điều kiện kiểm tra preExamPaymentStatus, khiến nút vẫn hiện
-                                              dù đã thanh toán rồi). 3 nút Thanh toán theo loại hoá đơn phía trên đã đủ. --%>
-
                                         <%-- Đánh giá bác sĩ (chỉ khi hoàn thành) --%>
-                                        <c:if test="${a.status == 'SUCCESS'}">
+                                        <c:if test="${statusLower == 'success' || statusLower == 'completed'}">
                                             <button type="button"
                                                     class="btn btn-sm btn-outline-primary"
                                                     data-bs-toggle="modal"
                                                     data-bs-target="#reviewModal"
                                                     data-appt-id="${a.id}"
-                                                    data-doctor="${a.doctorName}"
+                                                    data-doctor="${a.doctor.fullName}"
                                                     title="Đánh giá bác sĩ">
                                                 <i class="bi bi-star me-1"></i>Đánh giá
                                             </button>

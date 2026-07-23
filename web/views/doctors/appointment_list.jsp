@@ -7,7 +7,7 @@
 <%-- ── Banner tiêu đề ────────────────────────────────────────────────── --%>
 <div class="row mb-4">
     <div class="col-12">
-        <div class="card border-0 bg-primary bg-gradient text-white rounded-4">
+        <div class="card border-0 bg-primary bg-gradient text-white rounded-4 clinical-page-hero">
             <div class="card-body p-4">
                 <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
                     <div>
@@ -39,7 +39,7 @@
 <%-- ── Thống kê nhanh hôm nay ────────────────────────────────────────── --%>
 <div class="row g-3 mb-4">
     <div class="col-6 col-md-4">
-        <div class="card border-0 rounded-4 h-100 text-center p-3" style="background:#e8fdf0;">
+        <div class="card border-0 rounded-4 h-100 text-center p-3 clinical-kpi clinical-kpi--success" style="background:#e8fdf0;">
             <div class="fs-1 fw-bold text-success">
                 <c:out value="${empty todayCounts['confirmed'] ? 0 : todayCounts['confirmed']}"/>
             </div>
@@ -47,7 +47,7 @@
         </div>
     </div>
     <div class="col-6 col-md-4">
-        <div class="card border-0 rounded-4 h-100 text-center p-3" style="background:#f0eaff;">
+        <div class="card border-0 rounded-4 h-100 text-center p-3 clinical-kpi" style="background:#f0eaff;">
             <div class="fs-1 fw-bold" style="color:#7c3aed;">
                 <c:out value="${empty todayCounts['success'] ? 0 : todayCounts['success']}"/>
             </div>
@@ -55,7 +55,7 @@
         </div>
     </div>
     <div class="col-6 col-md-4">
-        <div class="card border-0 rounded-4 h-100 text-center p-3" style="background:#fdf0f0;">
+        <div class="card border-0 rounded-4 h-100 text-center p-3 clinical-kpi clinical-kpi--danger" style="background:#fdf0f0;">
             <div class="fs-1 fw-bold text-danger">
                 <c:out value="${empty todayCounts['cancelled'] ? 0 : todayCounts['cancelled']}"/>
             </div>
@@ -216,7 +216,7 @@
                                         </c:choose>
                                     </td>
 
-                                    <%-- Bác sĩ chỉ được bắt đầu ca đã check-in; hoàn tất chỉ diễn ra khi lưu bệnh án chính thức. --%>
+                                    <%-- Bác sĩ lâm sàng chỉ được bắt đầu ca đã check-in; hoàn tất chỉ diễn ra khi lưu bệnh án chính thức. --%>
                                     <td>
                                         <c:choose>
                                             <c:when test="${fn:toLowerCase(appt.status) == 'waiting' || fn:toLowerCase(appt.status) == 'emergency_sos'}">

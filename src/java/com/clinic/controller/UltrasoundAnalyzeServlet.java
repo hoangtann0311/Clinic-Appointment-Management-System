@@ -12,7 +12,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 /**
- * Servlet tiếp nhận yêu cầu phân tích ảnh bằng AI (Sonographer)
+ * Servlet tiếp nhận yêu cầu phân tích ảnh bằng AI (Bác sĩ Siêu âm)
  */
 @WebServlet("/sonographer/analyze")
 public class UltrasoundAnalyzeServlet extends HttpServlet {
@@ -51,7 +51,7 @@ public class UltrasoundAnalyzeServlet extends HttpServlet {
         try {
             if (!orderService.isReadyForSonographer(orderId) || !orderService.checkSonographerOwnership(orderId, user.getId())) {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN,
-                        "Bạn không có quyền phân tích AI cho ca siêu âm này (Đã được phụ trách bởi KTV khác).");
+                        "Bạn không có quyền phân tích AI cho ca siêu âm này (Đã được phụ trách bởi Bác sĩ Siêu âm khác).");
                 return;
             }
             boolean success = orderService.runAiAnalysis(orderId, user.getId());
@@ -62,9 +62,9 @@ public class UltrasoundAnalyzeServlet extends HttpServlet {
                         + "&error=" + java.net.URLEncoder.encode("Phân tích AI thất bại hoặc kết nối AI Engine bị lỗi. Vui lòng kiểm tra lại.", "UTF-8"));
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            System.err.println("[UltrasoundAnalyzeServlet] Phân tích AI không hoàn tất: " + e.getClass().getSimpleName());
             response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId 
-                    + "&error=" + java.net.URLEncoder.encode("Lỗi hệ thống khi gọi phân tích AI: " + e.getMessage(), "UTF-8"));
+                    + "&error=aiUnavailable");
         }
     }
 }

@@ -271,7 +271,7 @@ public class DoctorScheduleDAO {
             .append("AND ds.work_date = ? ")
             .append("AND ds.status = 'APPROVED' ")
             // Kiểm tra trùng khung giờ: start_time < new_end AND end_time > new_start
-            .append("AND ds.start_time < ? AND ds.end_time > ? ");
+            .append("AND ds.start_time < CAST(? AS time) AND ds.end_time > CAST(? AS time) ");
 
         if (excludeId != null) {
             sql.append("AND ds.id <> ? ");
@@ -308,7 +308,7 @@ public class DoctorScheduleDAO {
      */
     public int countApprovedInSameShift(Date workDate, Time startTime, Time endTime) {
         String sql = "SELECT COUNT(*) AS total FROM doctor_schedules "
-                   + "WHERE work_date = ? AND start_time = ? AND end_time = ? "
+                   + "WHERE work_date = ? AND start_time = CAST(? AS time) AND end_time = CAST(? AS time) "
                    + "AND status = 'APPROVED'";
 
         Connection conn = null;
@@ -501,7 +501,7 @@ public class DoctorScheduleDAO {
               + "WHERE doctor_id = ? "
               + "AND work_date = ? "
               + "AND status IN ('PENDING', 'APPROVED') "
-              + "AND start_time < ? AND end_time > ? ");
+              + "AND start_time < CAST(? AS time) AND end_time > CAST(? AS time) ");
 
         if (excludeId != null) {
             sql.append("AND id <> ? ");
@@ -545,7 +545,7 @@ public class DoctorScheduleDAO {
         String sql = "SELECT COUNT(*) AS total FROM appointments "
                    + "WHERE doctor_id = ? "
                    + "AND appointment_date = ? "
-                   + "AND time_slot = ? "
+                   + "AND time_slot = CAST(? AS time) "
                    + "AND status NOT IN ('cancelled', 'CANCELLED')";
 
         Connection conn = null;
@@ -605,49 +605,124 @@ public class DoctorScheduleDAO {
     }
 
     public ApproveResult approveAtomic(int scheduleId, int approvedBy) {
-        String sql = "UPDATE doctor_schedules SET status = 'APPROVED', is_approved = 1, approved_by = ?, approved_at = GETDATE(), updated_at = GETDATE() WHERE id = ? AND status = 'PENDING'";
         Connection conn = null;
-        PreparedStatement ps = null;
         try {
             conn = DatabaseConfig.getConnection();
             conn.setAutoCommit(false);
+            conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
 
-            ps = conn.prepareStatement(sql);
-            ps.setInt(1, approvedBy);
-            ps.setInt(2, scheduleId);
-            int rows = ps.executeUpdate();
-            if (rows > 0) {
-                // Lấy thông tin schedule để sinh slots
-                String getSql = "SELECT doctor_id, work_date, start_time, end_time FROM doctor_schedules WHERE id = ?";
-                try (PreparedStatement getPs = conn.prepareStatement(getSql)) {
-                    getPs.setInt(1, scheduleId);
-                    try (ResultSet getRs = getPs.executeQuery()) {
-                        if (getRs.next()) {
-                            int doctorId = getRs.getInt("doctor_id");
-                            Date workDate = getRs.getDate("work_date");
-                            Time startTime = getRs.getTime("start_time");
-                            Time endTime = getRs.getTime("end_time");
+            int doctorId;
+            Date workDate;
+            try (PreparedStatement seedPs = conn.prepareStatement(
+                    "SELECT doctor_id, work_date FROM doctor_schedules WHERE id = ?")) {
+                seedPs.setInt(1, scheduleId);
+                try (ResultSet rs = seedPs.executeQuery()) {
+                    if (!rs.next()) {
+                        conn.rollback();
+                        return new ApproveResult(false, 0, "NOT_FOUND", "Lịch trực không tồn tại.");
+                    }
+                    doctorId = rs.getInt("doctor_id");
+                    workDate = rs.getDate("work_date");
+                }
+            }
 
-                            // Sinh slots trong cùng connection/transaction
-                            int slotsGenerated = new TimeSlotDAO().generateSlots(scheduleId, doctorId, workDate, startTime, endTime, conn);
+            // The deployed SQL login cannot use sp_getapplock. Approvals are
+            // low-volume, so the stable Manager role row is a database-backed
+            // mutex covering conflict, capacity, state change and slot creation.
+            try (PreparedStatement lockPs = conn.prepareStatement(
+                    "SELECT id FROM roles WITH (UPDLOCK, HOLDLOCK) WHERE id = 3")) {
+                try (ResultSet rs = lockPs.executeQuery()) {
+                    if (!rs.next()) throw new SQLException("Không thể khóa quy trình duyệt lịch trực.");
+                }
+            }
 
-                            conn.commit();
-                            return new ApproveResult(true, slotsGenerated, null, null);
+            Time startTime;
+            Time endTime;
+            int maxSlots;
+            try (PreparedStatement schedulePs = conn.prepareStatement(
+                    "SELECT doctor_id, work_date, start_time, end_time, max_slots, status "
+                            + "FROM doctor_schedules WITH (UPDLOCK, HOLDLOCK) WHERE id = ?")) {
+                schedulePs.setInt(1, scheduleId);
+                try (ResultSet rs = schedulePs.executeQuery()) {
+                    if (!rs.next()) {
+                        conn.rollback();
+                        return new ApproveResult(false, 0, "NOT_FOUND", "Lịch trực không tồn tại.");
+                    }
+                    if (!"PENDING".equalsIgnoreCase(rs.getString("status"))) {
+                        conn.rollback();
+                        return new ApproveResult(false, 0, "ALREADY_PROCESSED", "Lịch trực đã được xử lý.");
+                    }
+                    doctorId = rs.getInt("doctor_id");
+                    workDate = rs.getDate("work_date");
+                    startTime = rs.getTime("start_time");
+                    endTime = rs.getTime("end_time");
+                    maxSlots = rs.getInt("max_slots");
+                }
+            }
+
+            try (PreparedStatement conflictPs = conn.prepareStatement(
+                    "SELECT TOP 1 id FROM doctor_schedules WITH (UPDLOCK, HOLDLOCK) "
+                            + "WHERE doctor_id = ? AND work_date = ? AND status = 'APPROVED' "
+                            + "AND start_time < CAST(? AS time) AND end_time > CAST(? AS time) AND id <> ?")) {
+                conflictPs.setInt(1, doctorId);
+                conflictPs.setDate(2, workDate);
+                conflictPs.setTime(3, endTime);
+                conflictPs.setTime(4, startTime);
+                conflictPs.setInt(5, scheduleId);
+                try (ResultSet rs = conflictPs.executeQuery()) {
+                    if (rs.next()) {
+                        conn.rollback();
+                        return new ApproveResult(false, 0, "CONFLICT", "Bác sĩ đã có lịch trực được duyệt trùng thời gian.");
+                    }
+                }
+            }
+
+            if (maxSlots > 0) {
+                try (PreparedStatement capacityPs = conn.prepareStatement(
+                        "SELECT COUNT(*) FROM doctor_schedules WITH (UPDLOCK, HOLDLOCK) "
+                                + "WHERE work_date = ? AND start_time = CAST(? AS time) AND end_time = CAST(? AS time) AND status = 'APPROVED'")) {
+                    capacityPs.setDate(1, workDate);
+                    capacityPs.setTime(2, startTime);
+                    capacityPs.setTime(3, endTime);
+                    try (ResultSet rs = capacityPs.executeQuery()) {
+                        if (rs.next() && rs.getInt(1) >= maxSlots) {
+                            conn.rollback();
+                            return new ApproveResult(false, 0, "FULL_SLOTS", "Ca trực đã đủ số lượng bác sĩ tối đa.");
                         }
                     }
                 }
             }
-            if (conn != null) {
-                conn.rollback();
+
+            try (PreparedStatement approvePs = conn.prepareStatement(
+                    "UPDATE doctor_schedules SET status = 'APPROVED', is_approved = 1, approved_by = ?, "
+                            + "approved_at = GETDATE(), updated_at = GETDATE() WHERE id = ? AND status = 'PENDING'")) {
+                approvePs.setInt(1, approvedBy);
+                approvePs.setInt(2, scheduleId);
+                if (approvePs.executeUpdate() != 1) {
+                    conn.rollback();
+                    return new ApproveResult(false, 0, "ALREADY_PROCESSED", "Lịch trực đã được xử lý.");
+                }
             }
-            return new ApproveResult(false, 0, "ALREADY_PROCESSED", "Lịch trực đã được xử lý hoặc không tồn tại.");
+
+            int slotsGenerated = new TimeSlotDAO().generateSlots(
+                    scheduleId, doctorId, workDate, startTime, endTime, conn);
+            if (slotsGenerated <= 0) {
+                conn.rollback();
+                return new ApproveResult(false, 0, "SYSTEM_ERROR", "Không thể sinh khung giờ cho lịch trực.");
+            }
+            conn.commit();
+            return new ApproveResult(true, slotsGenerated, null, null);
         } catch (SQLException e) {
             if (conn != null) {
                 try { conn.rollback(); } catch (SQLException ex) {}
             }
             return new ApproveResult(false, 0, "SYSTEM_ERROR", e.getMessage());
         } finally {
-            closeResources(conn, ps, null);
+            if (conn != null) {
+                try { conn.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED); } catch (SQLException ignored) { }
+                try { conn.setAutoCommit(true); } catch (SQLException ignored) { }
+            }
+            closeResources(conn, null, null);
         }
     }
 

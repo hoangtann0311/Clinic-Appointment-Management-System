@@ -257,7 +257,7 @@
                         <tr>
                             <th>STT</th>
                             <th>Sản phụ</th>
-                            <th>Bác sĩ</th>
+                            <th>Bác sĩ lâm sàng</th>
                             <th>Tuổi thai</th>
                             <th>Dịch vụ</th>
                             <th>Triệu chứng</th>
@@ -354,6 +354,7 @@
                                             <form action="${pageContext.request.contextPath}/admin/reception/sos/dismiss"
                                                   method="post"
                                                   style="display:inline;">
+                                                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                                 <input type="hidden" name="id" value="${apt.id}">
                                                 <button type="submit" class="btn-cams btn-cams-sos btn-sm">
                                                     <i class="bi bi-shield-fill-exclamation"></i> ĐÓN TIẾP KHẨN
@@ -368,6 +369,7 @@
                                                         <form action="${pageContext.request.contextPath}/admin/reception/checkin"
                                                               method="post"
                                                               style="display:inline;">
+                                                            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                                             <input type="hidden" name="id" value="${apt.id}">
                                                             <button type="submit" class="btn-cams btn-cams-primary btn-sm">
                                                                 <i class="bi bi-check-circle"></i> CHECK-IN
@@ -394,6 +396,7 @@
                                                       method="post"
                                                       style="display:inline;"
                                                       onsubmit="return confirm('Bạn có chắc chắn muốn hủy lịch hẹn khám này?')">
+                                                    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                                     <input type="hidden" name="id" value="${apt.id}">
                                                     <button type="submit" class="btn-action btn-action-delete">
                                                         <i class="bi bi-x-circle"></i> HỦY
@@ -404,7 +407,7 @@
 
                                         <c:when test="${statusLower == 'waiting'}">
                                             <span class="text-success fw-bold text-nowrap">
-                                                <i class="bi bi-person-fill-check"></i> Đang đợi bác sĩ
+                                                <i class="bi bi-person-fill-check"></i> Đang đợi Bác sĩ lâm sàng
                                             </span>
                                         </c:when>
 

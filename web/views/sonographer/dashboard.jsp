@@ -53,7 +53,7 @@
 
     <!-- PENDING -->
     <div class="col-xl col-md-4 col-sm-6">
-        <div class="card kpi-card kpi-pending">
+        <div class="card clinical-kpi kpi-card kpi-pending">
             <div class="card-body">
                 <div class="kpi-icon">
                     <i class="bi bi-hourglass-split"></i>
@@ -70,7 +70,7 @@
 
     <!-- IN PROGRESS -->
     <div class="col-xl col-md-4 col-sm-6">
-        <div class="card kpi-card kpi-inprogress">
+        <div class="card clinical-kpi kpi-card kpi-inprogress">
             <div class="card-body">
                 <div class="kpi-icon">
                     <i class="bi bi-play-circle"></i>
@@ -87,41 +87,24 @@
 
     <!-- UPLOADED -->
     <div class="col-xl col-md-4 col-sm-6">
-        <div class="card kpi-card kpi-uploaded">
+        <div class="card clinical-kpi kpi-card kpi-uploaded clinical-kpi--warning">
             <div class="card-body">
                 <div class="kpi-icon">
                     <i class="bi bi-cloud-upload"></i>
                 </div>
                 <div class="kpi-content">
                     <div class="kpi-value">${totalUploaded}</div>
-                    <div class="kpi-label">Đã Tải Ảnh (Chờ AI)</div>
-                    <div class="kpi-sub"><i class="bi bi-cpu"></i> Chờ AI xử lý</div>
+                    <div class="kpi-label">Đã tải ảnh</div>
+                    <div class="kpi-sub"><i class="bi bi-cpu"></i> Chờ AI hoặc duyệt ảnh</div>
                 </div>
                 <a href="${pageContext.request.contextPath}/sonographer/waiting-list?status=Uploaded" class="stretched-link"></a>
             </div>
         </div>
     </div>
 
-    <!-- ANALYZING -->
-    <div class="col-xl col-md-4 col-sm-6">
-        <div class="card kpi-card kpi-analyzing">
-            <div class="card-body">
-                <div class="kpi-icon">
-                    <i class="bi bi-cpu" style="animation: spin 3s infinite linear;"></i>
-                </div>
-                <div class="kpi-content">
-                    <div class="kpi-value">${totalAnalyzing}</div>
-                    <div class="kpi-label">AI Đang Phân Tích</div>
-                    <div class="kpi-sub"><i class="bi bi-gear-fill" style="animation: spin 6s infinite linear;"></i> Đang phân tích</div>
-                </div>
-                <a href="${pageContext.request.contextPath}/sonographer/waiting-list?status=Analyzing" class="stretched-link"></a>
-            </div>
-        </div>
-    </div>
-
     <!-- COMPLETED -->
     <div class="col-xl col-md-4 col-sm-6">
-        <div class="card kpi-card kpi-completed">
+        <div class="card clinical-kpi kpi-card kpi-completed clinical-kpi--success">
             <div class="card-body">
                 <div class="kpi-icon">
                     <i class="bi bi-check-circle"></i>
@@ -153,7 +136,7 @@
                         <th>Mã Yêu Cầu</th>
                         <th>Sản Phụ</th>
                         <th>Dịch Vụ Chỉ Định</th>
-                        <th>Bác Sĩ Chỉ Định</th>
+                        <th>Bác sĩ lâm sàng chỉ định</th>
                         <th>Mức Ưu Tiên</th>
                         <th>Trạng Thái</th>
                         <th>Hành Động</th>
@@ -320,14 +303,6 @@
     .kpi-uploaded .kpi-icon {
         background: #fffbeb;
         color: #d97706;
-    }
-
-    .kpi-analyzing {
-        border-left: 4px solid #0dcaf0 !important;
-    }
-    .kpi-analyzing .kpi-icon {
-        background: #e0f7fa;
-        color: #00838f;
     }
 
     .kpi-completed {

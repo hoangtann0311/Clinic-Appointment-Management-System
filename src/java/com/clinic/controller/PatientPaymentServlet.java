@@ -1,6 +1,5 @@
 package com.clinic.controller;
 
-import com.clinic.config.AppConfig;
 import com.clinic.dao.AppointmentDAO;
 import com.clinic.dao.InvoiceDAO;
 import com.clinic.dao.MedicalRecordDAO;
@@ -13,11 +12,9 @@ import com.clinic.model.PrescriptionItem;
 import com.clinic.model.User;
 
 import jakarta.servlet.ServletException;
-import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 
-import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.Connection;
@@ -27,15 +24,9 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.Normalizer;
 import java.util.List;
-import java.util.UUID;
 import java.util.regex.Pattern;
 
 @WebServlet("/patient/payment")
-@MultipartConfig(
-    fileSizeThreshold = 1024 * 1024 * 2, // 2MB
-    maxFileSize = 1024 * 1024 * 10,      // 10MB
-    maxRequestSize = 1024 * 1024 * 50    // 50MB
-)
 public class PatientPaymentServlet extends HttpServlet {
 
     private final InvoiceDAO invoiceDAO = new InvoiceDAO();
@@ -257,8 +248,6 @@ public class PatientPaymentServlet extends HttpServlet {
 
         String invoiceIdStr = request.getParameter("invoiceId");
         String paymentMethod = request.getParameter("paymentMethod");
-        String transactionCode = request.getParameter("transactionCode"); // vẫn cho phép, nhưng không bắt buộc nữa
-
         if (invoiceIdStr == null || invoiceIdStr.trim().isEmpty() || paymentMethod == null || paymentMethod.trim().isEmpty()) {
             response.sendRedirect(request.getContextPath() + "/patient/appointments?bookingError=ThieuThongTinThanhToan");
             return;
@@ -304,49 +293,25 @@ public class PatientPaymentServlet extends HttpServlet {
                 return;
             }
 
-            String status = "PendingConfirmation";
-            String proofImagePath = null;
-
-            if ("BankTransfer".equalsIgnoreCase(paymentMethod)) {
-                transactionCode = transactionCode == null ? "" : transactionCode.trim();
-                if (transactionCode.length() < 4 || transactionCode.length() > 100) {
-                    response.sendRedirect(request.getContextPath() + "/patient/payment?appointmentId=" + invoice.getAppointmentId()
-                            + "&type=" + invoice.getInvoiceType() + "&error="
-                            + java.net.URLEncoder.encode("Vui lòng nhập mã tham chiếu hoặc nội dung chuyển khoản từ 4 đến 100 ký tự.", "UTF-8"));
-                    return;
+            // The patient selects a method only. Reception verifies the actual
+            // payment and is the sole authority that records it as paid.
+            boolean ok;
+            try (Connection conn = com.clinic.config.DatabaseConfig.getConnection()) {
+                conn.setAutoCommit(false);
+                try {
+                    ok = invoiceDAO.submitPaymentDetails(conn, invoiceId, paymentMethod, "");
+                    if (ok && "PRE_EXAM".equalsIgnoreCase(invoice.getInvoiceType())) {
+                        ok = appointmentDAO.finalizeHoldOnPaymentSubmit(conn, invoice.getAppointmentId());
+                    }
+                    if (ok) conn.commit(); else conn.rollback();
+                } catch (SQLException ex) {
+                    conn.rollback();
+                    throw ex;
+                } finally {
+                    conn.setAutoCommit(true);
                 }
-                Part filePart = request.getPart("proofImage");
-                if (filePart == null || filePart.getSize() <= 0) {
-                    response.sendRedirect(request.getContextPath() + "/patient/payment?appointmentId=" + invoice.getAppointmentId() + "&type=" + invoice.getInvoiceType() + "&error=" + java.net.URLEncoder.encode("Vui lòng tải lên ảnh chụp màn hình chuyển khoản.", "UTF-8"));
-                    return;
-                }
-
-                String contentType = filePart.getContentType();
-                if (contentType == null || (!contentType.equals("image/jpeg") && !contentType.equals("image/png") && !contentType.equals("image/jpg"))) {
-                    response.sendRedirect(request.getContextPath() + "/patient/payment?appointmentId=" + invoice.getAppointmentId() + "&type=" + invoice.getInvoiceType() + "&error=" + java.net.URLEncoder.encode("Chỉ hỗ trợ ảnh định dạng JPEG, JPG hoặc PNG.", "UTF-8"));
-                    return;
-                }
-                if (filePart.getSize() > AppConfig.getMaxFileSize()) {
-                    response.sendRedirect(request.getContextPath() + "/patient/payment?appointmentId=" + invoice.getAppointmentId() + "&type=" + invoice.getInvoiceType() + "&error=" + java.net.URLEncoder.encode("Kích thước ảnh không được vượt quá 10MB.", "UTF-8"));
-                    return;
-                }
-
-                proofImagePath = saveProofImage(filePart);
-                if (proofImagePath == null) {
-                    response.sendRedirect(request.getContextPath() + "/patient/payment?appointmentId=" + invoice.getAppointmentId() + "&type=" + invoice.getInvoiceType() + "&error=" + java.net.URLEncoder.encode("Lỗi khi lưu ảnh, vui lòng thử lại.", "UTF-8"));
-                    return;
-                }
-            } else if ("Cash".equalsIgnoreCase(paymentMethod)) {
-                transactionCode = "";
             }
-
-            boolean ok = invoiceDAO.submitPaymentDetailsWithProof(invoiceId, paymentMethod, transactionCode, proofImagePath, status);
             if (ok) {
-                // Bệnh nhân đã gửi thanh toán trong thời hạn giữ chỗ 15 phút → chốt slot BOOKED hẳn,
-                // không để background job nhả nhầm slot trong lúc chờ Staff duyệt.
-                if ("PRE_EXAM".equalsIgnoreCase(invoice.getInvoiceType())) {
-                    appointmentDAO.finalizeHoldOnPaymentSubmit(invoice.getAppointmentId());
-                }
                 response.sendRedirect(request.getContextPath() + "/patient/payment?appointmentId=" + invoice.getAppointmentId() + "&type=" + invoice.getInvoiceType() + "&success=ThanhToanChoXacNhan");
             } else {
                 response.sendRedirect(request.getContextPath() + "/patient/payment?appointmentId=" + invoice.getAppointmentId() + "&type=" + invoice.getInvoiceType() + "&error=LoiCapNhatThanhToan");
@@ -358,67 +323,4 @@ public class PatientPaymentServlet extends HttpServlet {
         }
     }
 
-    /** Lưu ảnh minh chứng chuyển khoản vào thư mục uploads/payment_proofs riêng (tách khỏi ultrasound). */
-    private String saveProofImage(Part filePart) {
-        try {
-            String relativeUploadDir = "uploads/payment_proofs";
-            String realPath = getServletContext().getRealPath("");
-            String uploadPath = realPath + File.separator + relativeUploadDir;
-
-            File uploadDirFile = new File(uploadPath);
-            if (!uploadDirFile.exists()) uploadDirFile.mkdirs();
-
-            String originalFileName = getFileName(filePart);
-            String extension = ".jpg";
-            if (originalFileName != null && originalFileName.contains(".")) {
-                extension = originalFileName.substring(originalFileName.lastIndexOf("."));
-            }
-            String storedFileName = UUID.randomUUID().toString() + extension;
-            String filePath = uploadPath + File.separator + storedFileName;
-            filePart.write(filePath);
-
-            // Mirror sang thư mục nguồn web/ để không bị mất ảnh khi "ant clean" xoá build/
-            // (build/web bị xoá và tạo lại từ web/ mỗi lần rebuild — xem log build của dự án).
-            String sourceUploadPath = null;
-            if (realPath != null) {
-                if (realPath.contains("build" + File.separator + "web")) {
-                    sourceUploadPath = realPath.replace("build" + File.separator + "web", "web") + File.separator + relativeUploadDir;
-                } else if (realPath.contains("build\\web")) {
-                    sourceUploadPath = realPath.replace("build\\web", "web") + File.separator + relativeUploadDir;
-                } else if (realPath.contains("build/web")) {
-                    sourceUploadPath = realPath.replace("build/web", "web") + File.separator + relativeUploadDir;
-                }
-            }
-            if (sourceUploadPath != null) {
-                try {
-                    File sourceDir = new File(sourceUploadPath);
-                    if (!sourceDir.exists()) sourceDir.mkdirs();
-                    java.nio.file.Files.copy(
-                        java.nio.file.Paths.get(filePath),
-                        java.nio.file.Paths.get(sourceUploadPath + File.separator + storedFileName),
-                        java.nio.file.StandardCopyOption.REPLACE_EXISTING
-                    );
-                } catch (Exception mirrorEx) {
-                    System.err.println("[PatientPaymentServlet] Không mirror được ảnh sang web/ nguồn: " + mirrorEx.getMessage());
-                }
-            }
-
-            // Đường dẫn có dấu "/" đầu — JSP dùng ${pageContext.request.contextPath}${invoice.proofImagePath}
-            return "/" + relativeUploadDir + "/" + storedFileName;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
-
-    private String getFileName(Part part) {
-        String header = part.getHeader("content-disposition");
-        if (header == null) return null;
-        for (String token : header.split(";")) {
-            if (token.trim().startsWith("filename")) {
-                return token.substring(token.indexOf('=') + 1).trim().replace("\"", "");
-            }
-        }
-        return null;
-    }
 }

@@ -147,7 +147,7 @@
                                             </c:otherwise>
                                         </c:choose>
                                         <div class="text-muted small mt-1">
-                                            <i class="bi bi-person-fill-gear me-1"></i>Bác sĩ: BS. <c:out value="${inv.doctorName != null ? inv.doctorName : 'Chưa chỉ định'}"/>
+                                            <i class="bi bi-person-fill-gear me-1"></i>Bác sĩ lâm sàng: BS. <c:out value="${inv.doctorName != null ? inv.doctorName : 'Chưa chỉ định'}"/>
                                         </div>
                                     </td>
                                     <td>
@@ -170,7 +170,7 @@
                                             <c:when test="${inv.status == 'PendingConfirmation'}">
                                                 <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
                                                     <i class="bi bi-clock-history me-1"></i>
-                                                    ${inv.paymentMethod == 'Cash' ? 'Chờ thu tiền tại quầy' : 'Chờ xác minh chuyển khoản'}
+                                                    ${inv.paymentMethod == 'Cash' ? 'Chờ thu tiền tại quầy' : 'Chờ lễ tân xác nhận chuyển khoản'}
                                                 </span>
                                             </c:when>
                                             <c:when test="${inv.status == 'DeclinedPurchase'}">

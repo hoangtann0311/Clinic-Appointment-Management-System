@@ -56,13 +56,13 @@
             <div class="row align-items-center g-5">
                 <div class="col-lg-7 text-start">
                     <div class="hero-tag">
-                        <i class="bi bi-stars"></i> Trợ lý Y tế & Quản lý Thai kỳ Thế hệ mới
+                        <i class="bi bi-stars"></i> Trợ lý Y tế & Đặt Lịch Khám Thông Minh Thế hệ mới
                     </div>
                     <h1 class="hero-title">
-                        Hành Trình Làm Mẹ An Nhiên,<br>Trọn Vẹn Cùng <span>CAMS</span>
+                        Hành Trình Chăm Sóc Sức Khỏe,<br>Trọn Vẹn Cùng <span>CAMS</span>
                     </h1>
                     <p class="hero-sub">
-                        Hệ thống quản lý phòng khám sản phụ khoa & chăm sóc thai sản thông minh. Đồng hành cùng mẹ suốt 40 tuần thai kỳ với trải nghiệm đặt lịch nhanh chóng, nhắc lịch khám tự động và cảnh báo cấp cứu SOS 24/7.
+                        Hệ thống quản lý phòng khám và đặt lịch chăm sóc sức khỏe thông minh. Đồng hành cùng bạn trên mọi hành trình sức khỏe với trải nghiệm đặt lịch nhanh chóng, nhắc lịch khám tự động và cảnh báo cấp cứu SOS 24/7.
                     </p>
                     <div class="d-flex flex-wrap gap-3">
                         <a href="${pageContext.request.contextPath}/register" class="btn-home-primary px-4 py-3 fs-6">
@@ -357,8 +357,8 @@
                         <i class="bi bi-clipboard2-heart-fill"></i> CAMS
                     </a>
                     <p class="small">
-                        Hệ thống quản lý đặt lịch khám & chăm sóc thai kỳ thông minh CAMS.<br>
-                        Tận tâm chăm sóc — Đồng hành cùng mẹ vì sự phát triển toàn diện của bé.
+                        Hệ thống quản lý đặt lịch khám & chăm sóc sức khỏe thông minh CAMS.<br>
+                        Tận tâm chăm sóc — Đồng hành cùng bạn vì cuộc sống khỏe mạnh và trọn vẹn của cả gia đình.
                     </p>
                     <p class="small text-white">Hotline cấp cứu: <strong>1900 123 456 (24/7)</strong></p>
                 </div>
@@ -366,7 +366,7 @@
                     <h6>Về phòng khám</h6>
                     <ul class="footer-links">
                         <li><a href="#features">Tính năng chính</a></li>
-                        <li><a href="#benefits">Lợi ích sản phụ</a></li>
+                        <li><a href="#benefits">Lợi ích khách hàng</a></li>
                         <li><a href="#doctors">Đội ngũ chuyên gia</a></li>
                     </ul>
                 </div>

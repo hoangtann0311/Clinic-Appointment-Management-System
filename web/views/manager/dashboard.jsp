@@ -515,7 +515,7 @@
                 <i class="bi bi-stars"></i>
                 Xin chào, ${sessionScope.user.fullName}!
             </h2>
-            <p>Trung tâm điều hành phòng khám — theo dõi bệnh nhân, lịch hẹn, doanh thu, hiệu suất bác sĩ và dịch vụ y tế.</p>
+            <p>Trung tâm điều hành phòng khám — theo dõi bệnh nhân, lịch hẹn, doanh thu, hiệu suất Bác sĩ lâm sàng và dịch vụ y tế.</p>
         </div>
         <span class="badge-role">
             <i class="bi bi-briefcase-fill"></i>
@@ -583,7 +583,7 @@
                     <div class="kpi-icon"><i class="bi bi-person-badge-fill"></i></div>
                     <div class="kpi-content">
                         <div class="kpi-value">${not empty doctorsWorking ? doctorsWorking : 0}</div>
-                        <div class="kpi-label"><c:choose><c:when test="${isCustomRange}">BS (${dateToFormatted})</c:when><c:otherwise>Bác Sĩ Có Lịch</c:otherwise></c:choose></div>
+                        <div class="kpi-label"><c:choose><c:when test="${isCustomRange}">BS (${dateToFormatted})</c:when><c:otherwise>Bác sĩ lâm sàng có lịch trực</c:otherwise></c:choose></div>
                         <div class="kpi-sub"><i class="bi bi-check-circle"></i> Đã duyệt lịch</div>
                     </div>
                 </div>
@@ -857,8 +857,8 @@
                     <h5>
                         <i class="bi bi-trophy-fill"></i>
                         <c:choose>
-                            <c:when test="${isCustomRange}">Hiệu Suất Bác Sĩ (${dateRangeLabel})</c:when>
-                            <c:otherwise>Hiệu Suất Bác Sĩ</c:otherwise>
+                            <c:when test="${isCustomRange}">Hiệu suất Bác sĩ lâm sàng (${dateRangeLabel})</c:when>
+                            <c:otherwise>Hiệu suất Bác sĩ lâm sàng</c:otherwise>
                         </c:choose>
                     </h5>
                 </div>
@@ -870,7 +870,7 @@
                                     <thead>
                                         <tr>
                                             <th>#</th>
-                                            <th>Bác Sĩ</th>
+                                            <th>Bác sĩ lâm sàng</th>
                                             <th>Chuyên Khoa</th>
                                             <th class="text-center" title="Ca hoàn thành">Hoàn Thành</th>
                                             <th class="text-center" title="Ca đã hủy">Hủy</th>
@@ -938,7 +938,7 @@
                             <div class="admin-table-wrapper">
                                 <table class="admin-table compact">
                                     <thead>
-                                        <tr><th>Bác Sĩ</th><th>Giờ</th><th>Slots</th><th>Trạng Thái</th></tr>
+                                        <tr><th>Bác sĩ lâm sàng</th><th>Giờ</th><th>Slots</th><th>Trạng Thái</th></tr>
                                     </thead>
                                     <tbody>
                                         <c:forEach var="sch" items="${todaySchedules}">
@@ -973,7 +973,7 @@
                             <div class="admin-empty-state">
                                 <i class="bi bi-calendar-x"></i>
                                 <h6>Chưa có lịch làm việc</h6>
-                                <p>Hôm nay chưa có bác sĩ nào đăng ký lịch.</p>
+                                <p>Hôm nay chưa có Bác sĩ lâm sàng nào đăng ký lịch trực.</p>
                             </div>
                         </c:otherwise>
                     </c:choose>
@@ -1225,7 +1225,7 @@
                         </a>
                         <a href="${pageContext.request.contextPath}/manager/schedules/" class="quick-action-btn">
                             <span class="quick-action-icon"><i class="bi bi-calendar-check"></i></span>
-                            <span class="quick-action-text"><span>Duyệt Lịch Trực</span><small>Phê duyệt lịch làm việc bác sĩ</small></span>
+                            <span class="quick-action-text"><span>Duyệt Lịch Trực Bác sĩ lâm sàng</span><small>Phê duyệt lịch làm việc Bác sĩ lâm sàng</small></span>
                         </a>
                         <a href="${pageContext.request.contextPath}/manager/statistics/" class="quick-action-btn">
                             <span class="quick-action-icon"><i class="bi bi-file-earmark-bar-graph"></i></span>
@@ -1306,7 +1306,7 @@
                         <div style="background:var(--c-surface);border:1px solid var(--c-outline-variant);border-radius:var(--r-md);padding:1rem;text-align:center;">
                             <span style="font-size:1.5rem;color:#3b82f6;display:block;margin-bottom:0.4rem;"><i class="bi bi-3-circle-fill"></i></span>
                             <div style="font-size:0.72rem;font-weight:600;color:var(--c-muted);text-transform:uppercase;letter-spacing:0.05em;">Lịch Trực</div>
-                            <div style="font-size:0.67rem;color:var(--c-muted);margin-top:0.15rem;">Duyệt &amp; quản lý lịch bác sĩ</div>
+                            <div style="font-size:0.67rem;color:var(--c-muted);margin-top:0.15rem;">Duyệt &amp; quản lý lịch Bác sĩ lâm sàng</div>
                         </div>
                     </div>
                 </div>

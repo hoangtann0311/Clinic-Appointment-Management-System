@@ -20,7 +20,7 @@ public class MedicalRecordDAO {
     // ────────────────────────────────────────────────────────────────────────
 
     private static final String BASE_SELECT =
-        "SELECT mr.id, mr.appointment_id, mr.clinical_notes, mr.final_diagnosis, mr.created_at, " +
+        "SELECT mr.id, mr.appointment_id, mr.clinical_notes, mr.final_diagnosis, mr.created_at, mr.status, " +
         "  mr.weight_kg, mr.blood_pressure, mr.pulse_bpm, mr.temperature_c, mr.height_cm, " +
         "  mr.gestational_age_weeks, mr.gestational_age_days, mr.fundal_height_cm, " +
         "  mr.fetal_heart_rate, mr.fetal_presentation, mr.fetal_position, mr.fetal_movement, " +
@@ -28,6 +28,8 @@ public class MedicalRecordDAO {
         "  mr.edema, mr.proteinuria, mr.vaginal_bleeding, mr.uterine_contractions, mr.risk_flags_json, " +
         "  mr.treatment_plan, mr.next_appointment_date, mr.referred_to, " +
         "  pt.full_name AS patient_name, " +
+        "  pt.phone_number AS patient_phone, " +
+        "  CONVERT(varchar, pt.date_of_birth, 23)            AS patient_dob, " +
         "  a.patient_id AS patient_id, " +
         "  CONVERT(varchar, a.appointment_date, 23)          AS appointment_date, " +
         "  CONVERT(varchar, a.time_slot, 108)                AS time_slot, " +
@@ -108,6 +110,43 @@ public class MedicalRecordDAO {
         return list;
     }
 
+    public List<MedicalRecord> getReleasedByPatientId(int patientId) {
+        String sql = BASE_SELECT + "WHERE a.patient_id = ? "
+                + "AND LOWER(LTRIM(RTRIM(ISNULL(mr.status, '')))) = 'final' "
+                + "AND UPPER(LTRIM(RTRIM(ISNULL(a.status, '')))) IN ('SUCCESS', 'COMPLETED') "
+                + "ORDER BY mr.created_at DESC";
+        List<MedicalRecord> list = new ArrayList<>();
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, patientId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) list.add(mapRow(rs));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    public List<MedicalRecord> getClinicalHistoryForDoctor(int patientId, int doctorId) {
+        String sql = BASE_SELECT + "WHERE a.patient_id = ? AND (a.doctor_id = ? OR ("
+                + "LOWER(LTRIM(RTRIM(ISNULL(mr.status, '')))) = 'final' "
+                + "AND UPPER(LTRIM(RTRIM(ISNULL(a.status, '')))) IN ('SUCCESS', 'COMPLETED'))) "
+                + "ORDER BY mr.created_at DESC";
+        List<MedicalRecord> list = new ArrayList<>();
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, patientId);
+            ps.setInt(2, doctorId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) list.add(mapRow(rs));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
     public boolean appointmentBelongsToDoctor(int apptId, int doctorId) {
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(
@@ -130,20 +169,26 @@ public class MedicalRecordDAO {
     }
 
     public boolean hasBlockingUltrasoundOrdersForAppointment(int appointmentId) {
-        String sql = "SELECT 1 FROM test_orders o "
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            return hasBlockingUltrasoundOrdersForAppointment(conn, appointmentId);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return true;
+        }
+    }
+
+    public boolean hasBlockingUltrasoundOrdersForAppointment(Connection conn, int appointmentId)
+            throws SQLException {
+        String sql = "SELECT 1 FROM test_orders o WITH (UPDLOCK, HOLDLOCK) "
                 + "JOIN medical_records mr ON mr.id = o.medical_record_id "
                 + "WHERE mr.appointment_id = ? "
                 + "AND LOWER(LTRIM(RTRIM(ISNULL(o.status, '')))) NOT IN ('confirmed', 'cancelled')";
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, appointmentId);
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next();
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
-        return false;
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -151,6 +196,15 @@ public class MedicalRecordDAO {
     // ────────────────────────────────────────────────────────────────────────
 
     public int create(MedicalRecord mr) {
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            return create(conn, mr);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return -1;
+        }
+    }
+
+    public int create(Connection conn, MedicalRecord mr) throws SQLException {
         String sql =
             "INSERT INTO medical_records (" +
             "  appointment_id, clinical_notes, final_diagnosis, created_at, " +
@@ -159,16 +213,16 @@ public class MedicalRecordDAO {
             "  fetal_heart_rate, fetal_presentation, fetal_position, fetal_movement, " +
             "  cervical_dilation_cm, cervical_effacement, amniotic_fluid, presentation_station, " +
             "  edema, proteinuria, vaginal_bleeding, uterine_contractions, risk_flags_json, " +
-            "  treatment_plan, next_appointment_date, referred_to" +
-            ") VALUES (?,?,?,?,  ?,?,?,?,?,  ?,?,?,  ?,?,?,?,  ?,?,?,?,  ?,?,?,?,?,  ?,?,?)";
+            "  treatment_plan, next_appointment_date, referred_to, status" +
+            ") VALUES (?,?,?,?,  ?,?,?,?,?,  ?,?,?,  ?,?,?,?,  ?,?,?,?,  ?,?,?,?,?,  ?,?,?,?)";
 
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            bindParams(ps, mr, true, false);
+        try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            bindParams(ps, mr, true, true);
             ps.executeUpdate();
-            ResultSet keys = ps.getGeneratedKeys();
-            if (keys.next()) return keys.getInt(1);
-        } catch (SQLException e) { e.printStackTrace(); }
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                if (keys.next()) return keys.getInt(1);
+            }
+        }
         return -1;
     }
 
@@ -177,6 +231,15 @@ public class MedicalRecordDAO {
     // ────────────────────────────────────────────────────────────────────────
 
     public boolean update(MedicalRecord mr) {
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            return update(conn, mr);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean update(Connection conn, MedicalRecord mr) throws SQLException {
         String sql =
             "UPDATE medical_records SET " +
             "  clinical_notes=?, final_diagnosis=?, " +
@@ -186,15 +249,14 @@ public class MedicalRecordDAO {
             "  cervical_dilation_cm=?, cervical_effacement=?, amniotic_fluid=?, presentation_station=?, " +
             "  edema=?, proteinuria=?, vaginal_bleeding=?, uterine_contractions=?, risk_flags_json=?, " +
             "  treatment_plan=?, next_appointment_date=?, referred_to=?, status=? " +
-            "WHERE id=?";
+            "WHERE id=? AND appointment_id=?";
 
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
             bindParams(ps, mr, false, true);
             ps.setInt(28, mr.getId());
+            ps.setInt(29, mr.getAppointmentId());
             return ps.executeUpdate() > 0;
-        } catch (SQLException e) { e.printStackTrace(); }
-        return false;
+        }
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -311,6 +373,8 @@ public class MedicalRecordDAO {
         // JOIN fields
         try { mr.setPatientId(rs.getInt("patient_id")); } catch (SQLException ignored) {}
         mr.setPatientName(rs.getString("patient_name"));
+        try { mr.setPatientPhone(rs.getString("patient_phone")); } catch (SQLException ignored) {}
+        try { mr.setPatientDob(rs.getString("patient_dob")); } catch (SQLException ignored) {}
         mr.setAppointmentDate(rs.getString("appointment_date"));
         mr.setTimeSlot(rs.getString("time_slot"));
         mr.setSymptoms(rs.getString("symptoms"));

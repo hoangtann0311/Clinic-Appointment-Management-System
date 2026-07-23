@@ -64,6 +64,12 @@
 <c:if test="${not empty errors.general}">
     <div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill me-2"></i>${errors.general}</div>
 </c:if>
+<c:if test="${not empty errors.slotId || not empty errors.serviceIds}">
+    <div class="alert alert-danger" data-cams-toast>
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <c:out value="${not empty errors.slotId ? errors.slotId : errors.serviceIds}"/>
+    </div>
+</c:if>
 
 <div class="row g-4">
     <%-- ══════════ CỘT TRÁI: bộ lọc + danh sách bác sĩ ══════════ --%>
@@ -72,11 +78,11 @@
             <div class="card-body">
                 <div class="row g-3 align-items-end">
                     <div class="col-md-7">
-                        <label class="form-label fw-semibold small">Tìm theo tên bác sĩ</label>
+                        <label class="form-label fw-semibold small">Tìm theo tên Bác sĩ lâm sàng</label>
                         <div class="input-group">
                             <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
                             <input type="text" id="doctorSearchInput" class="form-control"
-                                   placeholder="Nhập tên bác sĩ hoặc chuyên khoa...">
+                                   placeholder="Nhập tên Bác sĩ lâm sàng hoặc chuyên khoa...">
                         </div>
                     </div>
                     <div class="col-md-5">
@@ -139,7 +145,7 @@
             </c:forEach>
         </div>
         <div id="noDoctorFound" class="text-center text-muted py-4" style="display:none;">
-            Không tìm thấy bác sĩ phù hợp.
+            Không tìm thấy Bác sĩ lâm sàng phù hợp.
         </div>
     </div>
 
@@ -151,7 +157,7 @@
 
                 <div id="summaryEmpty" class="text-center text-muted py-4">
                     <i class="bi bi-calendar3 d-block mb-2" style="font-size:2rem;opacity:.3;"></i>
-                    Vui lòng chọn bác sĩ và giờ khám để xem chi tiết.
+                    Vui lòng chọn Bác sĩ lâm sàng và giờ khám để xem chi tiết.
                 </div>
 
                 <form method="post" action="${pageContext.request.contextPath}/patient/booking" id="bookingForm" style="display:none;">
@@ -163,7 +169,7 @@
 
                     <ul class="list-unstyled small mb-3">
                         <li class="d-flex justify-content-between py-1 border-bottom">
-                            <span class="text-muted">Bác sĩ</span>
+                            <span class="text-muted">Bác sĩ lâm sàng</span>
                             <strong id="summaryDoctorName">—</strong>
                         </li>
                         <li class="d-flex justify-content-between py-1 border-bottom">
@@ -180,13 +186,13 @@
                     <c:if test="${empty rescheduleId}">
                         <ul class="list-unstyled small mb-3">
                             <li class="d-flex justify-content-between py-1 border-bottom">
-                                <span class="text-muted">Phí khám bác sĩ</span>
+                                <span class="text-muted">Phí khám Bác sĩ lâm sàng</span>
                                 <strong id="summaryBasePrice">—</strong>
                             </li>
                         </ul>
 
                         <div class="mb-3">
-                            <label class="form-label fw-semibold small d-block">Dịch vụ bổ sung <span class="text-muted fw-normal">(tuỳ chọn)</span></label>
+                            <label class="form-label fw-semibold small d-block">Dịch vụ khám <span class="text-danger">*</span></label>
                             <c:forEach var="s" items="${services}">
                                 <div class="form-check">
                                     <input class="form-check-input addon-service-checkbox" type="checkbox"
@@ -196,9 +202,9 @@
                                     </label>
                                 </div>
                             </c:forEach>
-                            <c:if test="${not empty errors.serviceIds}">
-                                <div class="text-danger small mt-1">${errors.serviceIds}</div>
-                            </c:if>
+                            <div id="serviceSelectionError" class="text-danger small mt-1" ${empty errors.serviceIds ? 'hidden' : ''}>
+                                <c:out value="${errors.serviceIds}"/>
+                            </div>
                         </div>
 
                         <div class="d-flex justify-content-between align-items-center py-2 px-2 mb-3 rounded-3" style="background:#fff0f5;">
@@ -250,7 +256,7 @@
     const doctorCards = document.querySelectorAll('.doctor-card-wrapper');
     const noDoctorFound = document.getElementById('noDoctorFound');
 
-    // ── Lọc bác sĩ theo tên/chuyên khoa (client-side) ──
+    // ── Lọc Bác sĩ lâm sàng theo tên/chuyên khoa (client-side) ──
     searchInput.addEventListener('input', function () {
         const kw = this.value.trim().toLowerCase();
         let visible = 0;
@@ -262,14 +268,14 @@
         noDoctorFound.style.display = visible === 0 ? '' : 'none';
     });
 
-    // ── Xổ / ẩn khung giờ của 1 bác sĩ ──
+    // ── Xổ / ẩn khung giờ của 1 Bác sĩ lâm sàng ──
     document.querySelectorAll('.toggle-doctor-btn').forEach(function (btn) {
         btn.addEventListener('click', function () {
             const doctorId = this.dataset.doctorId;
             const panel = document.getElementById('panel-doctor-' + doctorId);
             const isOpen = panel.style.display === 'block';
 
-            // Đóng tất cả panel khác đang mở (chỉ mở 1 bác sĩ tại 1 thời điểm)
+            // Đóng tất cả panel khác đang mở (chỉ mở 1 Bác sĩ lâm sàng tại 1 thời điểm)
             document.querySelectorAll('.doctor-panel').forEach(p => p.style.display = 'none');
             document.querySelectorAll('.toggle-doctor-btn').forEach(b => {
                 b.textContent = 'Chọn';
@@ -318,7 +324,7 @@
 
     function renderSlots(slots, doctorId, doctorName, date, container) {
         if (!slots || slots.length === 0) {
-            container.innerHTML = '<div class="text-muted small">Bác sĩ không còn khung giờ trống vào ngày này. Vui lòng chọn ngày khác.</div>';
+            container.innerHTML = '<div class="text-muted small">Bác sĩ lâm sàng không còn khung giờ trống vào ngày này. Vui lòng chọn ngày khác.</div>';
             return;
         }
 
@@ -392,10 +398,16 @@
     function showSlotNotice(container, status, time, mine) {
         const notice = container.querySelector('.slot-notice');
         if (!notice) return;
-        notice.innerHTML = '<div class="alert ' + (mine ? 'alert-info' : 'alert-warning') + ' d-flex align-items-center gap-2 mb-0 py-2 px-3 small">' +
-            '<i class="bi bi-lock-fill"></i>' +
-            '<span><strong>' + time + '</strong> — ' + slotStatusText(status, mine) + '</span>' +
-            '</div>';
+        const box = document.createElement('div');
+        box.className = 'alert ' + (mine ? 'alert-info' : 'alert-warning') + ' d-flex align-items-center gap-2 mb-0 py-2 px-3 small';
+        const icon = document.createElement('i');
+        icon.className = 'bi bi-lock-fill';
+        const text = document.createElement('span');
+        const strong = document.createElement('strong');
+        strong.textContent = time;
+        text.append(strong, document.createTextNode(' — ' + slotStatusText(status, mine)));
+        box.append(icon, text);
+        notice.replaceChildren(box);
         notice.style.display = 'block';
     }
 
@@ -450,7 +462,7 @@
         updateTotalPrice();
     }
 
-    // ── Tính lại tổng tiền = phí khám bác sĩ + tổng dịch vụ bổ sung đã tick ──
+    // ── Tính lại tổng tiền = phí khám Bác sĩ lâm sàng + tổng dịch vụ bổ sung đã tick ──
     function updateTotalPrice() {
         const totalEl = document.getElementById('summaryTotalPrice');
         if (!totalEl) return;
@@ -463,10 +475,32 @@
     }
 
     document.querySelectorAll('.addon-service-checkbox').forEach(function (cb) {
-        cb.addEventListener('change', updateTotalPrice);
+        cb.addEventListener('change', function () {
+            updateTotalPrice();
+            if (document.querySelector('.addon-service-checkbox:checked')) {
+                const error = document.getElementById('serviceSelectionError');
+                if (error) error.hidden = true;
+            }
+        });
     });
 
-    // ── Nếu đổi ngày sau khi đã mở 1 bác sĩ -> tải lại slot cho ngày mới ──
+    const bookingForm = document.getElementById('bookingForm');
+    if (bookingForm) bookingForm.addEventListener('submit', function (event) {
+        if (!document.querySelector('.addon-service-checkbox:checked')) {
+            event.preventDefault();
+            const error = document.getElementById('serviceSelectionError');
+            if (error) {
+                error.textContent = 'Vui lòng chọn ít nhất một dịch vụ khám.';
+                error.hidden = false;
+                error.scrollIntoView({block: 'center', behavior: 'smooth'});
+            }
+            if (window.CAMS && window.CAMS.notify) {
+                window.CAMS.notify('Vui lòng chọn ít nhất một dịch vụ khám.', 'warning');
+            }
+        }
+    });
+
+    // ── Nếu đổi ngày sau khi đã mở 1 Bác sĩ lâm sàng -> tải lại slot cho ngày mới ──
     dateInput.addEventListener('change', function () {
         const openPanel = document.querySelector('.doctor-panel[style*="block"]');
         if (openPanel) {
@@ -477,7 +511,7 @@
         loadAllDoctorPriceRanges();
     });
 
-    // ── Hiển thị "Từ X - Yđ" dưới tên mỗi bác sĩ theo ngày đang chọn ──
+    // ── Hiển thị "Từ X - Yđ" dưới tên mỗi Bác sĩ lâm sàng theo ngày đang chọn ──
     function loadAllDoctorPriceRanges() {
         const date = dateInput.value;
         document.querySelectorAll('.toggle-doctor-btn').forEach(function (btn) {

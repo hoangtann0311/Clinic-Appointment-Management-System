@@ -79,6 +79,7 @@
     <div class="card-body" style="padding: 1.5rem !important;">
         <form method="post" action="${pageContext.request.contextPath}/doctor/profile"
               id="profileForm" enctype="multipart/form-data" novalidate>
+            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
 
             <div class="row g-3 mb-3">
                 <div class="col-md-6">
@@ -209,6 +210,7 @@
             </div>
             <form method="post" action="${pageContext.request.contextPath}/change-password"
                   id="changePasswordForm" novalidate>
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                 <div class="modal-body p-4">
 
                     <%-- Flash lỗi từ server --%>

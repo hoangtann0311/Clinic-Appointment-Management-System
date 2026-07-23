@@ -42,7 +42,7 @@
                         </strong>
                     </div>
                     <div class="mb-2 pb-2 border-bottom">
-                        <small class="d-block text-muted">Bác sĩ khám</small>
+                        <small class="d-block text-muted">Bác sĩ lâm sàng</small>
                         <strong>BS. ${visitInfo.doctorName}</strong>
                     </div>
 
@@ -121,8 +121,8 @@
                                         <div class="row g-2 mb-3">
                                             <c:forEach var="img" items="${us.images}" varStatus="imgLoop">
                                                 <div class="col-6 col-md-4">
-                                                    <a href="${img}" target="_blank">
-                                                        <img src="${img}" alt="Ảnh siêu âm ${imgLoop.index + 1}"
+                                                    <a href="${pageContext.request.contextPath}/medical/ultrasound-image?id=${img}" target="_blank">
+                                                        <img src="${pageContext.request.contextPath}/medical/ultrasound-image?id=${img}" alt="Ảnh siêu âm ${imgLoop.index + 1}"
                                                              class="img-fluid rounded-3 border w-100"
                                                              style="aspect-ratio: 1/1; object-fit: cover;">
                                                     </a>
@@ -133,7 +133,7 @@
                                 </c:choose>
 
                                 <div class="p-3 rounded-3" style="background: var(--pt-pink-50, #fff6fb); border: 1px solid var(--pt-outline, #f0dae5);">
-                                    <h6 class="fw-bold small mb-2" style="color: var(--pt-pink-700);">🩺 KẾT LUẬN CỦA BÁC SĨ</h6>
+                                    <h6 class="fw-bold small mb-2" style="color: var(--pt-pink-700);">🩺 KẾT LUẬN CỦA BÁC SĨ LÂM SÀNG</h6>
                                     <p class="mb-0 small">
                                         ${not empty us.doctorConclusion ? us.doctorConclusion : 'Chưa ghi nhận bất thường.'}
                                     </p>

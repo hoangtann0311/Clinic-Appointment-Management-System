@@ -235,7 +235,7 @@ body.admin-body { font-family: var(--font-body); background: var(--c-bg); color:
                         <c:otherwise><i class="bi bi-person-fill"></i></c:otherwise>
                     </c:choose>
                 </span>
-                ${role.roleName}
+                ${role.roleNameDisplay}
             </a>
         </c:forEach>
     </div>
@@ -248,7 +248,7 @@ body.admin-body { font-family: var(--font-body); background: var(--c-bg); color:
             <div class="role-info-card">
                 <h4>
                     <i class="bi bi-person-badge-fill"></i>
-                    ${role.roleName}
+                    ${role.roleNameDisplay}
                 </h4>
                 <p>${not empty role.description ? role.description : 'Chưa có mô tả cho vai trò này.'}</p>
                 <div class="role-info-meta">
@@ -353,7 +353,7 @@ body.admin-body { font-family: var(--font-body); background: var(--c-bg); color:
                 <div class="save-bar">
                     <div class="save-hint">
                         <i class="bi bi-info-circle-fill"></i>
-                        <span>Chọn quyền phù hợp cho vai trò <strong>${role.roleName}</strong>. Nhấn <strong>"Lưu Phân Quyền"</strong> để áp dụng thay đổi.</span>
+                        <span>Chọn quyền phù hợp cho vai trò <strong>${role.roleNameDisplay}</strong>. Nhấn <strong>"Lưu Phân Quyền"</strong> để áp dụng thay đổi.</span>
                     </div>
                     <div class="d-flex gap-2">
                         <button type="button" class="btn btn-outline-pink" onclick="resetForm('${role.id}')">

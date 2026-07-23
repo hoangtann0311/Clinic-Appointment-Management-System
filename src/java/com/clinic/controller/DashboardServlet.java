@@ -49,7 +49,7 @@ public class DashboardServlet extends HttpServlet {
         ROLE_NAMES.put(3, "Quản Lý");
         ROLE_NAMES.put(4, "Nhân Viên");
         ROLE_NAMES.put(5, "Bệnh Nhân");
-        ROLE_NAMES.put(6, "Kỹ Thuật Viên Siêu Âm");
+        ROLE_NAMES.put(6, "Bác Sĩ Siêu Âm");
     }
 
     @Override
@@ -465,7 +465,6 @@ public class DashboardServlet extends HttpServlet {
         int pending = orderService.countOrders(null, "Pending", filterDate, null);
         int inProgress = orderService.countOrders(null, "InProgress", filterDate, null);
         int uploaded = orderService.countOrders(null, "Uploaded", filterDate, null);
-        int analyzing = orderService.countOrders(null, "Analyzing", filterDate, null);
         int completed = orderService.countOrders(null, "Completed", filterDate, null)
                 + orderService.countOrders(null, "confirmed", filterDate, null);
         int emergency = orderService.countOrders(null, null, filterDate, true);
@@ -476,7 +475,6 @@ public class DashboardServlet extends HttpServlet {
         request.setAttribute("totalPending", pending);
         request.setAttribute("totalInProgress", inProgress);
         request.setAttribute("totalUploaded", uploaded);
-        request.setAttribute("totalAnalyzing", analyzing);
         request.setAttribute("totalCompletedToday", completed);
         request.setAttribute("totalEmergencyToday", emergency);
         request.setAttribute("recentOrders", recentOrders);

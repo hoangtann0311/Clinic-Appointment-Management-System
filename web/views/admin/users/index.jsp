@@ -194,14 +194,14 @@
         <a href="${pageContext.request.contextPath}/admin/dashboard" class="admin-topbar-brand">
             <i class="bi bi-hospital-fill"></i>
             CAMS
-            <span class="brand-badge">Admin</span>
+            <span class="brand-badge">Quản trị viên</span>
         </a>
     </div>
     <div class="admin-topbar-right">
         <div class="admin-topbar-user d-none d-md-flex">
             <div class="admin-avatar-sm">${fn:substring(sessionScope.user.fullName, 0, 1)}</div>
             <span>${sessionScope.user.fullName}</span>
-            <span class="admin-topbar-role"><i class="bi bi-shield-check me-1"></i>Admin</span>
+            <span class="admin-topbar-role"><i class="bi bi-shield-check me-1"></i>Quản trị viên</span>
         </div>
         <a href="${pageContext.request.contextPath}/logout" class="admin-topbar-logout">
             <i class="bi bi-box-arrow-right"></i>
@@ -249,9 +249,9 @@
                 <i class="bi bi-heart-pulse-fill"></i>
             </div>
             <div class="stat-card-body">
-                <div class="stat-card-label">Bác Sĩ</div>
+                <div class="stat-card-label">Bác sĩ lâm sàng</div>
                 <div class="stat-card-value">${countDoctor}</div>
-                <div class="stat-card-sub">Doctor</div>
+                <div class="stat-card-sub">Bác sĩ lâm sàng</div>
             </div>
         </div>
         <div class="stat-card">
@@ -271,7 +271,7 @@
             <div class="stat-card-body">
                 <div class="stat-card-label">Nhân Viên</div>
                 <div class="stat-card-value">${countStaffOnly}</div>
-                <div class="stat-card-sub">Staff</div>
+                <div class="stat-card-sub">Nhân viên lễ tân</div>
             </div>
         </div>
         <div class="stat-card">
@@ -279,9 +279,9 @@
                 <i class="bi bi-soundwave"></i>
             </div>
             <div class="stat-card-body">
-                <div class="stat-card-label">KTV Siêu Âm</div>
+                <div class="stat-card-label">Bác sĩ Siêu âm</div>
                 <div class="stat-card-value">${countSono}</div>
-                <div class="stat-card-sub">Sonographer</div>
+                <div class="stat-card-sub">Bác sĩ Siêu âm</div>
             </div>
         </div>
     </div>
@@ -496,7 +496,7 @@
                                             </c:choose>
                                             <span class="badge-role-tag ${roleClass}">
                                                 <i class="bi ${roleIcon}"></i>
-                                                ${not empty u.roleName ? u.roleName : roleMap[u.roleId]}
+                                                ${not empty u.roleNameDisplay ? u.roleNameDisplay : roleMap[u.roleId]}
                                             </span>
                                         </td>
                                         <td>
@@ -734,7 +734,7 @@
                         </div>
                         <div class="col-12 doctor-fields" id="addDoctorFields" style="display: none;">
                             <hr class="my-2 text-muted">
-                            <h6 class="fw-bold text-primary mb-3"><i class="bi bi-hospital me-1"></i>Hồ sơ Bác sĩ (Bắt buộc khi chọn role Doctor)</h6>
+                            <h6 class="fw-bold text-primary mb-3"><i class="bi bi-hospital me-1"></i>Hồ sơ Bác sĩ lâm sàng (Bắt buộc khi chọn vai trò Bác sĩ lâm sàng)</h6>
                             <div class="row g-3">
                                 <div class="col-md-5">
                                     <label class="form-label fw-semibold">Chuyên khoa <span class="text-danger">*</span></label>
@@ -838,11 +838,14 @@
                             <label class="form-label fw-semibold">
                                 <i class="bi bi-unlock-fill me-1" style="font-size:0.65rem;color:var(--pink-500);"></i>Vai trò
                             </label>
-                            <select name="roleId" id="editRoleId" class="form-select ${not empty editErrors['roleId'] ? 'is-invalid' : ''}">
+                            <input type="hidden" name="roleId" id="editRoleId" value="${formEditRoleId}">
+                            <select id="editRoleIdDisplay" class="form-select" disabled
+                                    aria-describedby="editRoleHelp">
                                 <c:forEach var="entry" items="${roleMap}">
                                     <option value="${entry.key}" ${not empty formEditRoleId ? (entry.key == formEditRoleId ? 'selected' : '') : ''}>${entry.value}</option>
                                 </c:forEach>
                             </select>
+                            <div id="editRoleHelp" class="form-text">Không đổi vai trò của tài khoản đã có để bảo toàn hồ sơ nghiệp vụ.</div>
                             <c:if test="${not empty editErrors['roleId']}">
                                 <div class="invalid-feedback">${editErrors['roleId']}</div>
                             </c:if>
@@ -862,7 +865,7 @@
                         </div>
                         <div class="col-12 doctor-fields" id="editDoctorFields" style="display: none;">
                             <hr class="my-2 text-muted">
-                            <h6 class="fw-bold text-primary mb-3"><i class="bi bi-hospital me-1"></i>Hồ sơ Bác sĩ (Bắt buộc khi chọn role Doctor)</h6>
+                            <h6 class="fw-bold text-primary mb-3"><i class="bi bi-hospital me-1"></i>Hồ sơ Bác sĩ lâm sàng (Bắt buộc khi chọn vai trò Bác sĩ lâm sàng)</h6>
                             <div class="row g-3">
                                 <div class="col-md-5">
                                     <label class="form-label fw-semibold">Chuyên khoa <span class="text-danger">*</span></label>
@@ -1021,13 +1024,19 @@ function toggleDoctorFields() {
     var addRoleSelect = document.querySelector('#addUserModal select[name="roleId"]');
     var addDoctorFields = document.getElementById('addDoctorFields');
     if (addRoleSelect && addDoctorFields) {
-        addDoctorFields.style.display = (addRoleSelect.value == '2') ? 'block' : 'none';
+        var addIsDoctor = addRoleSelect.value == '2';
+        addDoctorFields.style.display = addIsDoctor ? 'block' : 'none';
+        var addSpecialization = addDoctorFields.querySelector('[name="specialization"]');
+        if (addSpecialization) addSpecialization.required = addIsDoctor;
     }
 
     var editRoleSelect = document.getElementById('editRoleId');
     var editDoctorFields = document.getElementById('editDoctorFields');
     if (editRoleSelect && editDoctorFields) {
-        editDoctorFields.style.display = (editRoleSelect.value == '2') ? 'block' : 'none';
+        var editIsDoctor = editRoleSelect.value == '2';
+        editDoctorFields.style.display = editIsDoctor ? 'block' : 'none';
+        var editSpecialization = editDoctorFields.querySelector('[name="specialization"]');
+        if (editSpecialization) editSpecialization.required = editIsDoctor;
     }
 }
 document.addEventListener('DOMContentLoaded', function() {
@@ -1047,6 +1056,7 @@ function openEditModal(id, fullName, email, phone, roleId, status) {
     document.getElementById('editEmail').value = email || '';
     document.getElementById('editPhone').value = phone || '';
     document.getElementById('editRoleId').value = roleId;
+    document.getElementById('editRoleIdDisplay').value = roleId;
     document.getElementById('editStatus').value = status;
 
     toggleDoctorFields();

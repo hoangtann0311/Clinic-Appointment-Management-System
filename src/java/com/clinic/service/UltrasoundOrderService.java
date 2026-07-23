@@ -5,11 +5,15 @@ import com.clinic.config.DatabaseConfig;
 import com.clinic.dao.UltrasoundOrderDAO;
 import com.clinic.dao.UltrasoundImageDAO;
 import com.clinic.dao.AiAnalysisResultDAO;
+import com.clinic.dao.UltrasoundReviewDAO;
 import com.clinic.model.UltrasoundWaitingPatient;
 import com.clinic.model.UltrasoundImage;
 import com.clinic.model.AiAnalysisResult;
+import com.clinic.model.UltrasoundAnnotation;
+import com.clinic.model.UltrasoundReport;
 
 import java.math.BigDecimal;
+import java.io.File;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -45,11 +49,13 @@ public class UltrasoundOrderService {
     private final UltrasoundOrderDAO ultrasoundOrderDAO;
     private final UltrasoundImageDAO ultrasoundImageDAO;
     private final AiAnalysisResultDAO aiAnalysisResultDAO;
+    private final UltrasoundReviewDAO ultrasoundReviewDAO;
 
     public UltrasoundOrderService() {
         this.ultrasoundOrderDAO = new UltrasoundOrderDAO();
         this.ultrasoundImageDAO = new UltrasoundImageDAO();
         this.aiAnalysisResultDAO = new AiAnalysisResultDAO();
+        this.ultrasoundReviewDAO = new UltrasoundReviewDAO();
     }
 
     public List<UltrasoundWaitingPatient> getWaitingPatients(String sortBy, String sortDir) {
@@ -81,21 +87,6 @@ public class UltrasoundOrderService {
         return ultrasoundOrderDAO.countAll(search, status, date, isEmergency);
     }
 
-    /**
-     * Cập nhật trạng thái thủ công (có kiểm tra quy tắc chuyển đổi)
-     */
-    public boolean updateOrderStatus(int orderId, String targetStatus) {
-        UltrasoundWaitingPatient order = ultrasoundOrderDAO.getById(orderId);
-        if (order == null || !ultrasoundOrderDAO.isReadyForSonographer(orderId)) return false;
-
-        if (!checkTransition(order.getStatus(), targetStatus)) {
-            System.err.println("[UltrasoundOrderService] Trạng thái chuyển đổi không hợp lệ: " + order.getStatus() + " -> " + targetStatus);
-            return false;
-        }
-
-        return ultrasoundOrderDAO.updateStatus(orderId, targetStatus);
-    }
-
     public boolean startUltrasoundOrder(int orderId, int sonographerUserId) {
         if (!ultrasoundOrderDAO.isReadyForSonographer(orderId)) return false;
         return ultrasoundOrderDAO.startUltrasoundOrder(orderId, sonographerUserId);
@@ -113,28 +104,94 @@ public class UltrasoundOrderService {
         return ultrasoundOrderDAO.checkPatientOwnership(orderId, patientUserId);
     }
 
-    public boolean completeSonographerResult(int orderId, String sonographerNotes) {
-        if (!isSonographerOwnershipSupported()) return false;
-        UltrasoundWaitingPatient order = ultrasoundOrderDAO.getById(orderId);
-        if (order == null || !ultrasoundOrderDAO.isReadyForSonographer(orderId)) return false;
-        if (sonographerNotes == null || sonographerNotes.trim().isEmpty()) return false;
-
-        // Lưu nhận xét chuyên môn của Sonographer vào ai_analysis_results nếu có hoặc cập nhật status
-        AiAnalysisResult aiResult = aiAnalysisResultDAO.getByTestOrderId(orderId);
-        if (aiResult != null) {
-            aiResult.setMessage(sonographerNotes.trim());
-            aiAnalysisResultDAO.deleteByTestOrderId(orderId);
-            aiAnalysisResultDAO.insert(aiResult);
-        }
-
-        return ultrasoundOrderDAO.updateStatus(orderId, "Completed");
+    public boolean isReviewSchemaSupported() {
+        return ultrasoundReviewDAO.isSchemaSupported();
     }
 
-    /**
-     * Tạo chỉ định siêu âm mới (được gọi từ Doctor)
-     */
-    public int createUltrasoundRequest(int medicalRecordId, int doctorId, int serviceId) {
-        return createUltrasoundRequest(medicalRecordId, doctorId, serviceId, false, null);
+    public UltrasoundAnnotation getCurrentAnnotation(int orderId) {
+        return ultrasoundReviewDAO.getCurrentAnnotation(orderId);
+    }
+
+    public UltrasoundReport getCurrentReport(int orderId) {
+        return ultrasoundReviewDAO.getCurrentReport(orderId);
+    }
+
+    public boolean saveSonographerReview(int orderId, int actorUserId, String signedName,
+                                         int imageId, int imageWidth, int imageHeight,
+                                         String reviewStatus, String annotationData,
+                                         String rejectionReason, String imageDescription,
+                                         String professionalFindings, String conclusion,
+                                         boolean sign) {
+        if (!isSonographerOwnershipSupported() || !isReviewSchemaSupported()
+                || !checkSonographerOwnership(orderId, actorUserId)
+                || !ultrasoundOrderDAO.isReadyForSonographer(orderId)) return false;
+
+        UltrasoundWaitingPatient order = ultrasoundOrderDAO.getById(orderId);
+        UltrasoundImage storedImage = ultrasoundImageDAO.getById(imageId);
+        if (order == null || !"Uploaded".equalsIgnoreCase(order.getStatus())
+                || storedImage == null || storedImage.getTestOrderId() != orderId
+                || storedImage.getImageWidth() == null || storedImage.getImageHeight() == null
+                || storedImage.getImageWidth() <= 0 || storedImage.getImageHeight() <= 0) return false;
+        // Không tin naturalWidth/naturalHeight từ hidden input; dùng metadata đã
+        // kiểm tra bằng ImageIO và lưu cùng ảnh lúc upload.
+        imageWidth = storedImage.getImageWidth();
+        imageHeight = storedImage.getImageHeight();
+
+        String review = trimToLimit(reviewStatus, 30);
+        String reason = trimToLimit(rejectionReason, 500);
+        String description = trimToLimit(imageDescription, 8000);
+        String findings = trimToLimit(professionalFindings, 8000);
+        String finalConclusion = trimToLimit(conclusion, 8000);
+        if (!Set.of("Accepted", "Corrected", "Rejected").contains(review)) return false;
+        if (sign && (description.length() < 5 || findings.length() < 5 || finalConclusion.length() < 10)) {
+            return false;
+        }
+
+        String source;
+        String type;
+        String data;
+        Integer acceptedAiResultId = null;
+        if ("Accepted".equals(review)) {
+            AiAnalysisResult ai = aiAnalysisResultDAO
+                    .getSuccessfulByImagePath(orderId, storedImage.getFilePath());
+            if (ai == null || !ai.isDetected() || !isValidBoundingBox(ai, storedImage)) return false;
+            source = "AI";
+            type = "BoundingBox";
+            data = normalizedBoundingBox(ai, imageWidth, imageHeight);
+            acceptedAiResultId = ai.getId();
+        } else if ("Corrected".equals(review)) {
+            if (!isValidNormalizedPolygon(annotationData)) return false;
+            source = "Sonographer";
+            type = "Polygon";
+            data = annotationData.trim();
+        } else {
+            if (reason.length() < 5) return false;
+            source = "Sonographer";
+            if (annotationData != null && !annotationData.isBlank()) {
+                if (!isValidNormalizedPolygon(annotationData)) return false;
+                type = "Polygon";
+                data = annotationData.trim();
+            } else {
+                type = "None";
+                data = null;
+            }
+        }
+
+        return ultrasoundReviewDAO.saveReviewAndReport(orderId, actorUserId,
+                trimToLimit(signedName, 200), imageId, source, type, data,
+                acceptedAiResultId, imageWidth, imageHeight, review, reason.isEmpty() ? null : reason,
+                description, findings, finalConclusion, sign);
+    }
+
+    /** True only when the selected database image has an acceptable AI bounding box. */
+    public boolean hasAcceptableAiResultForImage(int orderId, int imageId) {
+        UltrasoundImage image = ultrasoundImageDAO.getById(imageId);
+        if (image == null || image.getTestOrderId() != orderId
+                || image.getImageWidth() == null || image.getImageHeight() == null
+                || image.getImageWidth() <= 0 || image.getImageHeight() <= 0) return false;
+        AiAnalysisResult ai = aiAnalysisResultDAO
+                .getSuccessfulByImagePath(orderId, image.getFilePath());
+        return ai != null && ai.isDetected() && isValidBoundingBox(ai, image);
     }
 
     /**
@@ -147,6 +204,34 @@ public class UltrasoundOrderService {
         try {
             conn = DatabaseConfig.getConnection();
             conn.setAutoCommit(false);
+
+            // Khóa theo cùng thứ tự với luồng chốt hồ sơ để không thể tạo chỉ
+            // định mới đồng thời với việc chuyển appointment sang Completed.
+            String appointmentState = null;
+            try (java.sql.PreparedStatement ps = conn.prepareStatement(
+                    "SELECT status FROM appointments WITH (UPDLOCK, ROWLOCK) WHERE id = ? AND doctor_id = ?")) {
+                ps.setInt(1, apptId);
+                ps.setInt(2, doctorId);
+                try (java.sql.ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) appointmentState = rs.getString(1);
+                }
+            }
+            if (!"InProgress".equalsIgnoreCase(appointmentState)) {
+                conn.rollback();
+                return -1;
+            }
+            try (java.sql.PreparedStatement ps = conn.prepareStatement(
+                    "SELECT status FROM medical_records WITH (UPDLOCK, ROWLOCK) "
+                            + "WHERE id = ? AND appointment_id = ?")) {
+                ps.setInt(1, medicalRecordId);
+                ps.setInt(2, apptId);
+                try (java.sql.ResultSet rs = ps.executeQuery()) {
+                    if (!rs.next() || !"draft".equalsIgnoreCase(rs.getString(1))) {
+                        conn.rollback();
+                        return -1;
+                    }
+                }
+            }
 
             // 1. Kiểm tra active order với UPDLOCK, HOLDLOCK
             UltrasoundWaitingPatient activeOrder = ultrasoundOrderDAO.findActiveOrder(conn, medicalRecordId, serviceId);
@@ -178,7 +263,7 @@ public class UltrasoundOrderService {
             return orderId;
         } catch (Exception e) {
             if (conn != null) {
-                try { conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); }
+                try { conn.rollback(); } catch (SQLException ignored) { }
             }
             System.err.println("[UltrasoundOrderService] createUltrasoundRequestInTransaction ERROR: " + e.getMessage());
             return -1;
@@ -191,48 +276,58 @@ public class UltrasoundOrderService {
     }
 
     /**
-     * Prevents accidental duplicate ultrasound orders. A doctor can intentionally
-     * re-order an active service only after supplying a clinical reason.
-     */
-    public int createUltrasoundRequest(int medicalRecordId, int doctorId, int serviceId,
-                                       boolean forceReorder, String reorderReason) {
-        UltrasoundWaitingPatient activeOrder = ultrasoundOrderDAO.findActiveOrder(medicalRecordId, serviceId);
-        if (activeOrder != null && !forceReorder) {
-            return ACTIVE_ORDER_EXISTS;
-        }
-        String reason = reorderReason == null ? null : reorderReason.trim();
-        if (activeOrder != null && (reason == null || reason.isEmpty())) {
-            throw new IllegalArgumentException("Cần nêu lý do khi chỉ định lại dịch vụ siêu âm đang xử lý.");
-        }
-        return ultrasoundOrderDAO.insert(medicalRecordId, doctorId, serviceId, "Pending",
-                activeOrder == null ? null : reason);
-    }
-
-    /**
      * Thêm hình ảnh siêu âm do Sonographer tải lên và tự động chuyển sang Uploaded
      */
     public boolean uploadUltrasoundImage(UltrasoundImage img) {
-        if (!isSonographerOwnershipSupported()) {
+        if (!isSonographerOwnershipSupported() || img == null || img.getTestOrderId() <= 0
+                || img.getUploadedBy() <= 0 || !ultrasoundOrderDAO.isReadyForSonographer(img.getTestOrderId())) {
             return false;
         }
-        if (img == null || img.getTestOrderId() <= 0) {
+
+        Connection conn = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            conn.setAutoCommit(false);
+            String state = null;
+            try (java.sql.PreparedStatement ps = conn.prepareStatement(
+                    "SELECT status FROM test_orders WITH (UPDLOCK, ROWLOCK) "
+                            + "WHERE id = ? AND sonographer_user_id = ?")) {
+                ps.setInt(1, img.getTestOrderId());
+                ps.setInt(2, img.getUploadedBy());
+                try (java.sql.ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) state = rs.getString(1);
+                }
+            }
+            if (!"InProgress".equalsIgnoreCase(state) && !"Uploaded".equalsIgnoreCase(state)) {
+                conn.rollback();
+                return false;
+            }
+            if (ultrasoundImageDAO.insert(conn, img) <= 0) {
+                conn.rollback();
+                return false;
+            }
+            if ("InProgress".equalsIgnoreCase(state)) {
+                try (java.sql.PreparedStatement ps = conn.prepareStatement(
+                        "UPDATE test_orders SET status = 'Uploaded' WHERE id = ? "
+                                + "AND sonographer_user_id = ? AND UPPER(LTRIM(RTRIM(ISNULL(status, '')))) = 'INPROGRESS'")) {
+                    ps.setInt(1, img.getTestOrderId());
+                    ps.setInt(2, img.getUploadedBy());
+                    if (ps.executeUpdate() != 1) {
+                        conn.rollback();
+                        return false;
+                    }
+                }
+            }
+            conn.commit();
+            return true;
+        } catch (SQLException e) {
+            if (conn != null) try { conn.rollback(); } catch (SQLException ignored) { }
+            System.err.println("[UltrasoundOrderService] upload metadata failed: " + e.getClass().getSimpleName());
             return false;
+        } finally {
+            if (conn != null) try { conn.setAutoCommit(true); } catch (SQLException ignored) { }
+            DatabaseConfig.closeConnection(conn);
         }
-        UltrasoundWaitingPatient order = ultrasoundOrderDAO.getById(img.getTestOrderId());
-        if (!ultrasoundOrderDAO.isReadyForSonographer(img.getTestOrderId())) {
-            return false;
-        }
-        if (order == null || (!"InProgress".equalsIgnoreCase(order.getStatus())
-                && !"Uploaded".equalsIgnoreCase(order.getStatus()))) {
-            return false;
-        }
-        int imgId = ultrasoundImageDAO.insert(img);
-        if (imgId > 0) {
-            // Chỉ chuyển bước lần đầu; ảnh bổ sung không được thay đổi ca đã chốt.
-            return "Uploaded".equalsIgnoreCase(order.getStatus())
-                    || ultrasoundOrderDAO.updateStatus(img.getTestOrderId(), "Uploaded");
-        }
-        return false;
     }
 
     /**
@@ -246,6 +341,27 @@ public class UltrasoundOrderService {
         return ultrasoundImageDAO.getById(imageId);
     }
 
+    /** Backfills trusted dimensions for images uploaded before V13. */
+    public boolean ensureImageDimensions(UltrasoundImage image, String deployedWebRoot) {
+        if (image == null) return false;
+        if (image.getImageWidth() != null && image.getImageHeight() != null
+                && image.getImageWidth() > 0 && image.getImageHeight() > 0) return true;
+        if (deployedWebRoot == null || image.getStoredFilename() == null) return false;
+        try {
+            File root = new File(deployedWebRoot, AppConfig.getUploadDirectory()).getCanonicalFile();
+            File file = new File(root, image.getStoredFilename()).getCanonicalFile();
+            if (!file.getPath().startsWith(root.getPath() + File.separator) || !file.isFile()) return false;
+            java.awt.image.BufferedImage decoded = javax.imageio.ImageIO.read(file);
+            if (decoded == null || decoded.getWidth() <= 0 || decoded.getHeight() <= 0
+                    || (long) decoded.getWidth() * decoded.getHeight() > 40_000_000L) return false;
+            image.setImageWidth(decoded.getWidth());
+            image.setImageHeight(decoded.getHeight());
+            return ultrasoundImageDAO.updateDimensions(image.getId(), decoded.getWidth(), decoded.getHeight());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     public boolean isSonographerOwnershipSupported() {
         return ultrasoundOrderDAO.isSonographerOwnershipSupported();
     }
@@ -256,12 +372,9 @@ public class UltrasoundOrderService {
     public boolean runAiAnalysis(int orderId, int actorUserId) {
         if (!isSonographerOwnershipSupported()) return false;
         UltrasoundWaitingPatient order = ultrasoundOrderDAO.getById(orderId);
-        if (order == null || !ultrasoundOrderDAO.isReadyForSonographer(orderId)) return false;
-
-        // Kiểm tra quy tắc chuyển trạng thái
-        if (!checkTransition(order.getStatus(), "Analyzing")) {
-            return false;
-        }
+        if (order == null || !ultrasoundOrderDAO.isReadyForSonographer(orderId)
+                || !checkSonographerOwnership(orderId, actorUserId)
+                || !"Uploaded".equalsIgnoreCase(order.getStatus())) return false;
 
         // Lấy danh sách ảnh đã tải lên
         List<UltrasoundImage> images = ultrasoundImageDAO.getByTestOrderId(orderId);
@@ -270,21 +383,17 @@ public class UltrasoundOrderService {
             return false;
         }
 
-        // Cập nhật trạng thái sang Analyzing
-        ultrasoundOrderDAO.updateStatus(orderId, "Analyzing");
-
         // Chọn ảnh đầu tiên làm ảnh đầu vào cho AI
         UltrasoundImage targetImg = images.get(0);
         String inputImagePath = targetImg.getFilePath();
 
         // Chuẩn bị URL AI Engine
         String aiUrl = AppConfig.getAiBaseUrl() + AppConfig.getAiAnalyzePath();
-        System.out.println("[UltrasoundOrderService] Đang gửi yêu cầu phân tích tới AI Engine tại: " + aiUrl);
-
         // Tạo JSON body đơn giản
         String jsonPayload = String.format(
             "{\"image_path\":\"%s\",\"order_id\":%d,\"original_filename\":\"%s\"}",
-            inputImagePath.replace("\\", "/"), orderId, targetImg.getOriginalFilename()
+            escapeJson(inputImagePath.replace("\\", "/")), orderId,
+            escapeJson(targetImg.getOriginalFilename())
         );
 
         HttpClient client = HttpClient.newBuilder()
@@ -295,11 +404,20 @@ public class UltrasoundOrderService {
                 .uri(URI.create(aiUrl))
                 .timeout(Duration.ofMillis(AppConfig.getAiReadTimeout()))
                 .header("Content-Type", "application/json; charset=UTF-8")
+                .header("X-OCSS-AI-Key", AppConfig.getAiInternalToken())
                 .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
                 .build();
 
         AiAnalysisResult result = new AiAnalysisResult();
         result.setTestOrderId(orderId);
+        result.setStatus("Analyzing");
+        result.setInputImage(inputImagePath);
+        result.setAnalyzedAt(new Timestamp(System.currentTimeMillis()));
+        long staleAfterMillis = Math.max(60_000L,
+                (long) AppConfig.getAiConnectTimeout() + AppConfig.getAiReadTimeout() + 30_000L);
+        int aiRunId = aiAnalysisResultDAO.beginRun(orderId, inputImagePath, staleAfterMillis);
+        if (aiRunId <= 0) return false;
+        result.setId(aiRunId);
 
         try {
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
@@ -307,8 +425,6 @@ public class UltrasoundOrderService {
             int statusCode = response.statusCode();
 
             if (statusCode == 200 && responseBody != null) {
-                System.out.println("[UltrasoundOrderService] AI Response: " + responseBody);
-                
                 String status = extractJsonField(responseBody, "status");
                 if ("Success".equalsIgnoreCase(status) || "Ok".equalsIgnoreCase(status)) {
                     boolean detected = "true".equalsIgnoreCase(extractJsonField(responseBody, "detected"));
@@ -317,10 +433,18 @@ public class UltrasoundOrderService {
                     if (confidence.compareTo(BigDecimal.ONE) <= 0 && confidence.compareTo(BigDecimal.ZERO) > 0) {
                         confidence = confidence.multiply(new BigDecimal("100"));
                     }
+                    if (confidence.compareTo(BigDecimal.ZERO) < 0 || confidence.compareTo(new BigDecimal("100")) > 0) {
+                        throw new IllegalArgumentException("Độ tin cậy AI nằm ngoài khoảng hợp lệ.");
+                    }
                     String message = extractJsonField(responseBody, "message");
                     String resultImage = extractJsonField(responseBody, "resultImage");
                     String maskImage = extractJsonField(responseBody, "maskImage");
                     String rawMaskImage = extractJsonField(responseBody, "rawMaskImage");
+                    if (!isAllowedAiOutputPath(resultImage, orderId)
+                            || !isAllowedAiOutputPath(maskImage, orderId)
+                            || !isAllowedAiOutputPath(rawMaskImage, orderId)) {
+                        throw new IllegalArgumentException("AI trả về đường dẫn output không hợp lệ.");
+                    }
                     
                     String xminStr = extractJsonField(responseBody, "xmin");
                     String yminStr = extractJsonField(responseBody, "ymin");
@@ -339,17 +463,14 @@ public class UltrasoundOrderService {
                     if (yminStr != null) result.setYmin(Integer.parseInt(yminStr));
                     if (xmaxStr != null) result.setXmax(Integer.parseInt(xmaxStr));
                     if (ymaxStr != null) result.setymax(Integer.parseInt(ymaxStr));
+                    if (detected && !isValidBoundingBox(result, targetImg)) {
+                        throw new IllegalArgumentException("Vùng AI không hợp lệ so với ảnh gốc.");
+                    }
                     result.setAnalyzedAt(new Timestamp(System.currentTimeMillis()));
 
-                    // Xóa kết quả AI cũ nếu có
-                    aiAnalysisResultDAO.deleteByTestOrderId(orderId);
-                    // Lưu kết quả AI mới
-                    aiAnalysisResultDAO.insert(result);
-
-                    // khi AI phân tích thành công, lưu AI status "Success" nhưng KHÔNG tự động hoàn thành order!
-                    // Order giữ trạng thái Uploaded để Sonographer nhập nhận xét chuyên môn và bấm Hoàn thành.
-                    ultrasoundOrderDAO.updateStatus(orderId, "Uploaded");
-                    return true;
+                    // AI chỉ cập nhật bản ghi phân tích. Chỉ Bác sĩ Siêu âm ký mới
+                    // được phép chuyển test_orders từ Uploaded sang Completed.
+                    return aiAnalysisResultDAO.update(result);
                 } else {
                     throw new Exception("AI Engine trả về lỗi: " + extractJsonField(responseBody, "errorMessage"));
                 }
@@ -357,18 +478,13 @@ public class UltrasoundOrderService {
                 throw new Exception("AI HTTP Status code: " + statusCode);
             }
         } catch (Exception e) {
-            System.err.println("[UltrasoundOrderService] Lỗi khi gọi AI Engine: " + e.getMessage());
+            System.err.println("[UltrasoundOrderService] AI analysis failed: " + e.getClass().getSimpleName());
             
             // Lưu kết quả lỗi vào DB
             result.setStatus("Failed");
-            result.setErrorMessage(e.getMessage());
+            result.setErrorMessage("AI Engine tạm thời không thể hoàn tất phân tích.");
             result.setAnalyzedAt(new Timestamp(System.currentTimeMillis()));
-            
-            aiAnalysisResultDAO.deleteByTestOrderId(orderId);
-            aiAnalysisResultDAO.insert(result);
-
-            // Rollback trạng thái về Uploaded để kỹ thuật viên có thể bấm phân tích lại
-            ultrasoundOrderDAO.updateStatus(orderId, "Uploaded");
+            aiAnalysisResultDAO.update(result);
             return false;
         }
     }
@@ -381,87 +497,90 @@ public class UltrasoundOrderService {
     }
 
     /**
+     * Returns the successful AI run bound to one concrete stored ultrasound
+     * image.  Clinical screens must use this lookup instead of the newest run
+     * of the order, otherwise a later analysis of another image can be shown
+     * next to a signed annotation that belongs to the previous image.
+     */
+    public AiAnalysisResult getAiResultForImage(int testOrderId, int imageId) {
+        UltrasoundImage image = ultrasoundImageDAO.getById(imageId);
+        if (image == null || image.getTestOrderId() != testOrderId) return null;
+        return aiAnalysisResultDAO.getSuccessfulByImagePath(testOrderId, image.getFilePath());
+    }
+
+    /**
      * Bác sĩ xác nhận kết quả phân tích AI và ghi kết luận chính thức.
      * Cập nhật trạng thái đơn từ Completed → confirmed
      * và lưu kết luận chính thức của bác sĩ vào trường message.
      */
-    public boolean confirmUltrasoundResult(int orderId, String doctorMessage) {
-        UltrasoundWaitingPatient order = ultrasoundOrderDAO.getById(orderId);
-        if (order == null) return false;
-        if (doctorMessage == null || doctorMessage.trim().isEmpty()) return false;
-
-        // Cho phép xác nhận từ Completed, Uploaded hoặc Failed (đảm bảo luồng khám không bị gián đoạn khi AI lỗi)
-        if (!"Completed".equalsIgnoreCase(order.getStatus()) 
-                && !"Uploaded".equalsIgnoreCase(order.getStatus())
-                && !"Failed".equalsIgnoreCase(order.getStatus())) {
-            System.err.println("[UltrasoundOrderService] confirmUltrasoundResult: Đơn " + orderId
-                    + " không thể xác nhận ở trạng thái hiện tại: " + order.getStatus());
-            return false;
-        }
-
-        // Kiểm tra xem đã có bản ghi trong bảng ai_analysis_results chưa
-        AiAnalysisResult existingResult = aiAnalysisResultDAO.getByTestOrderId(orderId);
-        if (existingResult == null) {
-            // Nếu chưa có (ví dụ AI lỗi hoặc không chạy AI), tạo một bản ghi rỗng để lưu kết luận của bác sĩ
-            AiAnalysisResult newResult = new AiAnalysisResult();
-            newResult.setTestOrderId(orderId);
-            newResult.setStatus("ManualConfirmed"); // Đánh dấu là bác sĩ xác nhận thủ công
-            newResult.setDetected(false); // Mặc định
-            newResult.setConfidence(BigDecimal.ZERO);
-            newResult.setMessage(doctorMessage != null ? doctorMessage.trim() : "Bác sĩ chốt kết luận thủ công.");
-            
-            // Lấy ảnh gốc đầu tiên làm ảnh đầu vào nếu có
-            List<UltrasoundImage> images = ultrasoundImageDAO.getByTestOrderId(orderId);
-            if (!images.isEmpty()) {
-                newResult.setInputImage(images.get(0).getFilePath());
-                newResult.setResultImage(images.get(0).getFilePath()); // Dùng ảnh gốc làm ảnh kết quả luôn
-            }
-            newResult.setAnalyzedAt(new Timestamp(System.currentTimeMillis()));
-            aiAnalysisResultDAO.insert(newResult);
-        } else {
-            // Nếu đã có, chỉ cần cập nhật nội dung kết luận của bác sĩ
-            if (doctorMessage != null && !doctorMessage.trim().isEmpty()) {
-                aiAnalysisResultDAO.updateMessage(orderId, doctorMessage.trim());
-            }
-        }
-
-        // Cập nhật trạng thái đơn siêu âm thành 'Confirmed'
-        return ultrasoundOrderDAO.updateStatus(orderId, "Confirmed");
+    public boolean confirmUltrasoundResult(int orderId, int doctorUserId, String doctorMessage) {
+        String notes = trimToLimit(doctorMessage, 2000);
+        if (notes.length() < 20) return false;
+        return ultrasoundReviewDAO.confirmSignedReport(orderId, doctorUserId, notes);
     }
 
-    /**
-     * Kiểm tra quy tắc chuyển đổi trạng thái của máy trạng thái
-     */
-    public boolean checkTransition(String currentStatus, String targetStatus) {
-        if (currentStatus == null) return "Pending".equalsIgnoreCase(targetStatus);
-        
-        currentStatus = currentStatus.trim();
-        targetStatus = targetStatus.trim();
-        
-        if (currentStatus.equalsIgnoreCase(targetStatus)) return true;
-        
-        if ("Cancelled".equalsIgnoreCase(targetStatus)) {
-            return !"Completed".equalsIgnoreCase(currentStatus);
+    private String normalizedBoundingBox(AiAnalysisResult ai, int width, int height) {
+        double x1 = clamp(ai.getXmin() / (double) width);
+        double y1 = clamp(ai.getYmin() / (double) height);
+        double x2 = clamp(ai.getXmax() / (double) width);
+        double y2 = clamp(ai.getymax() / (double) height);
+        return String.format(java.util.Locale.ROOT,
+                "{\"xMin\":%.6f,\"yMin\":%.6f,\"xMax\":%.6f,\"yMax\":%.6f}",
+                Math.min(x1, x2), Math.min(y1, y2), Math.max(x1, x2), Math.max(y1, y2));
+    }
+
+    private double clamp(double value) {
+        return Math.max(0d, Math.min(1d, value));
+    }
+
+    private boolean isValidNormalizedPolygon(String json) {
+        if (json == null || json.isBlank() || json.length() > 20000) return false;
+        String compact = json.trim();
+        if (!compact.startsWith("{\"points\":[") || !compact.endsWith("]}")) return false;
+        Pattern pair = Pattern.compile("\\{\\s*\"x\"\\s*:\\s*(-?(?:\\d+(?:\\.\\d+)?|\\.\\d+))\\s*,\\s*\"y\"\\s*:\\s*(-?(?:\\d+(?:\\.\\d+)?|\\.\\d+))\\s*}");
+        Matcher matcher = pair.matcher(compact);
+        int count = 0;
+        while (matcher.find()) {
+            double x = Double.parseDouble(matcher.group(1));
+            double y = Double.parseDouble(matcher.group(2));
+            if (!Double.isFinite(x) || !Double.isFinite(y) || x < 0 || x > 1 || y < 0 || y > 1) return false;
+            count++;
         }
-        
-        switch (currentStatus.toLowerCase()) {
-            case "pending":
-            case "waiting":
-            case "ordered":
-                return "inprogress".equalsIgnoreCase(targetStatus);
-            case "inprogress":
-                return "uploaded".equalsIgnoreCase(targetStatus);
-            case "uploaded":
-                return "analyzing".equalsIgnoreCase(targetStatus) || "uploaded".equalsIgnoreCase(targetStatus);
-            case "analyzing":
-                return "completed".equalsIgnoreCase(targetStatus) || "uploaded".equalsIgnoreCase(targetStatus);
-            case "completed":
-                return "confirmed".equalsIgnoreCase(targetStatus);
-            case "confirmed":
-                return false;
-            default:
-                return false;
+        String structureOnly = pair.matcher(compact).replaceAll("P")
+                .replaceAll("\\s+", "");
+        return count >= 3 && structureOnly.matches("\\{\"points\":\\[P(?:,P)*]}" );
+    }
+
+    private String trimToLimit(String value, int maxLength) {
+        if (value == null) return "";
+        String trimmed = value.trim();
+        return trimmed.length() <= maxLength ? trimmed : trimmed.substring(0, maxLength);
+    }
+
+    private String escapeJson(String value) {
+        if (value == null) return "";
+        return value.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\r", "\\r")
+                .replace("\n", "\\n");
+    }
+
+    private boolean isAllowedAiOutputPath(String path, int orderId) {
+        if (path == null || path.isBlank()) return true;
+        String normalized = path.replace('\\', '/');
+        return normalized.startsWith("uploads/ai-results/" + orderId + "/")
+                && !normalized.contains("../") && !normalized.contains("/..")
+                && normalized.length() <= 1000;
+    }
+
+    private boolean isValidBoundingBox(AiAnalysisResult result, UltrasoundImage image) {
+        Integer x1 = result.getXmin(), y1 = result.getYmin(), x2 = result.getXmax(), y2 = result.getymax();
+        if (x1 == null || y1 == null || x2 == null || y2 == null
+                || x1 < 0 || y1 < 0 || x2 <= x1 || y2 <= y1) return false;
+        if (image.getImageWidth() != null && image.getImageHeight() != null) {
+            return x2 <= image.getImageWidth() && y2 <= image.getImageHeight();
         }
+        return true;
     }
 
     public String normalizeSortBy(String sortBy) {

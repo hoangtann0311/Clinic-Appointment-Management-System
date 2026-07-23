@@ -109,6 +109,32 @@ public class NotificationHelper {
         }
     }
 
+    /** Notifies the clinical doctor after the ultrasound specialist signs a report. */
+    public static void ultrasoundReportSigned(int medicalRecordId, String serviceName) {
+        String sql = "SELECT d.user_id, p.full_name "
+                + "FROM medical_records mr "
+                + "JOIN appointments a ON a.id = mr.appointment_id "
+                + "JOIN doctors d ON d.id = a.doctor_id "
+                + "JOIN patients p ON p.id = a.patient_id "
+                + "WHERE mr.id = ?";
+        try (Connection c = DatabaseConfig.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, medicalRecordId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    dao.create(rs.getInt("user_id"),
+                            "Kết quả siêu âm đã sẵn sàng",
+                            "Bác sĩ Siêu âm đã ký kết quả "
+                                    + (serviceName == null || serviceName.isBlank() ? "siêu âm" : serviceName)
+                                    + " của bệnh nhân " + rs.getString("full_name")
+                                    + ". Vui lòng xem kết quả để hoàn thiện hồ sơ bệnh án.");
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[NotificationHelper] ultrasoundReportSigned ERROR: " + e.getMessage());
+        }
+    }
+
     // ── Helpers ─────────────────────────────────────────────────────────────
 
     /** Lấy user_id của bác sĩ từ doctor.id */

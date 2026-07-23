@@ -17,12 +17,7 @@
         <div class="display-1 text-danger">500</div>
         <h2 class="mb-3">Lỗi Máy Chủ</h2>
         <p class="text-muted mb-4">Đã xảy ra lỗi không mong muốn. Vui lòng thử lại sau.</p>
-        <% if (exception != null) { %>
-        <div class="alert alert-danger text-start mx-auto" style="max-width: 600px;">
-            <strong><%= exception.getClass().getName() %>:</strong>
-            <%= exception.getMessage() %>
-        </div>
-        <% } %>
+        <p class="small text-muted">Mã đối chiếu: <code>${requestScope.requestId}</code></p>
         <a href="${pageContext.request.contextPath}/" class="btn btn-primary">
             <i class="bi bi-house"></i> Về Trang Chủ
         </a>

@@ -237,7 +237,7 @@
             <c:otherwise>Tạo Hồ Sơ Bệnh Án Mới</c:otherwise>
           </c:choose>
         </h3>
-        <p class="mb-0 opacity-75">Bác sĩ khám: ${doctorName} — Chuyên khoa Phụ Sản</p>
+        <p class="mb-0 opacity-75">Bác sĩ lâm sàng: ${doctorName} — Chuyên khoa Phụ Sản</p>
       </div>
       <div class="d-flex gap-2">
         <a href="${pageContext.request.contextPath}/doctor/medical-records" class="btn btn-light btn-sm rounded-pill px-3">
@@ -256,54 +256,57 @@
     <div class="col-lg-3">
       <div class="card rounded-4 border-0 shadow-sm mb-4">
         <div class="card-body p-4">
-          <div class="text-center mb-3">
+                              <div class="text-center mb-3">
             <div class="rounded-circle bg-success bg-opacity-10 text-success fw-bold d-flex align-items-center justify-content-center mx-auto mb-2"
                  style="width:56px;height:56px;font-size:1.3rem;">
               ${fn:toUpperCase(fn:substring(record.patientName,0,1))}
             </div>
-            <h6 class="fw-bold mb-0">${record.patientName}</h6>
+            <h6 class="fw-bold mb-1">${record.patientName}</h6>
+            <span class="badge bg-secondary-subtle text-secondary small px-2 py-1">Mã BN: #P-${record.patientId > 0 ? record.patientId : 'N/A'}</span>
           </div>
-          <hr class="my-2">
-          <div class="info-item">
-            <span class="label">Ngày hẹn</span>
-            <span class="value"><i class="bi bi-calendar3 me-1 text-success"></i>${record.appointmentDate}</span>
-          </div>
-          <div class="info-item">
-            <span class="label">Giờ khám</span>
-            <span class="value"><i class="bi bi-clock me-1 text-success"></i>
-              <c:out value="${not empty record.timeSlot ? record.timeSlot : '—'}"/>
-            </span>
-          </div>
-          <div class="info-item">
-            <span class="label">Kinh cuối (LMP)</span>
-            <span class="value" id="lmpDisplay">
-              <c:out value="${not empty record.lastMenstrualPeriod ? record.lastMenstrualPeriod : '—'}"/>
-            </span>
-          </div>
-          <div class="info-item">
-            <span class="label">Triệu chứng lúc đặt lịch</span>
-            <span class="value small" style="white-space:pre-wrap;">
-              <c:out value="${not empty record.symptoms ? record.symptoms : '(không ghi nhận)'}"/>
-            </span>
-          </div>
-          <c:if test="${record.pregnancyId != null}">
-            <div class="info-item">
-              <span class="label">Hồ sơ thai kỳ</span>
-              <span class="value">
-                <a href="${pageContext.request.contextPath}/doctor/pregnancy?id=${record.pregnancyId}"
-                   class="text-decoration-none">
-                  <i class="bi bi-heart-pulse-fill text-danger me-1"></i>Xem theo dõi thai kỳ
-                </a>
-              </span>
+          <hr class="my-3 opacity-50">
+
+          <div class="d-flex flex-column gap-2 mb-3">
+            <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light">
+              <span class="text-muted small fw-medium">Số điện thoại</span>
+              <span class="fw-semibold text-dark small">${not empty patientPhone ? patientPhone : '—'}</span>
             </div>
-          </c:if>
-          <c:if test="${record.id > 0}">
-            <hr class="my-2">
-            <div class="info-item">
-              <span class="label">Ngày tạo hồ sơ</span>
-              <span class="value small text-muted">${record.createdAt}</span>
+            <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light">
+              <span class="text-muted small fw-medium">Ngày sinh</span>
+              <span class="fw-semibold text-dark small">${not empty patientDob ? patientDob : '—'}</span>
             </div>
-          </c:if>
+            <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light">
+              <span class="text-muted small fw-medium">Ngày khám</span>
+              <span class="fw-semibold text-dark small"><i class="bi bi-calendar3 me-1 text-success"></i>${record.appointmentDate}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light">
+              <span class="text-muted small fw-medium">Giờ khám</span>
+              <span class="fw-semibold text-dark small"><i class="bi bi-clock me-1 text-success"></i><c:out value="${not empty record.timeSlot ? record.timeSlot : '—'}"/></span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light">
+              <span class="text-muted small fw-medium">Kinh cuối (LMP)</span>
+              <span class="fw-semibold text-dark small" id="lmpDisplay"><c:out value="${not empty record.lastMenstrualPeriod ? record.lastMenstrualPeriod : '—'}"/></span>
+            </div>
+            <div class="py-1 border-bottom border-light">
+              <span class="text-muted small fw-medium d-block mb-1">Triệu chứng lúc đặt lịch</span>
+              <div class="p-2 bg-light rounded text-dark small" style="white-space:pre-wrap; line-height: 1.4; text-align: left;">
+                <c:out value="${not empty record.symptoms ? record.symptoms : '(không ghi nhận)'}"/>
+              </div>
+            </div>
+            <c:if test="${record.id > 0}">
+              <div class="d-flex justify-content-between align-items-center py-1">
+                <span class="text-muted small fw-medium">Ngày tạo hồ sơ</span>
+                <span class="text-muted small">
+                  <c:choose>
+                    <c:when test="${not empty record.createdAt}">
+                      ${fn:substring(record.createdAt, 8, 10)}/${fn:substring(record.createdAt, 5, 7)}/${fn:substring(record.createdAt, 0, 4)} ${fn:substring(record.createdAt, 11, 16)}
+                    </c:when>
+                    <c:otherwise>—</c:otherwise>
+                  </c:choose>
+                </span>
+              </div>
+            </c:if>
+          </div>
 
           <%-- Khối Chỉ định / Xem kết quả siêu âm --%>
           <hr class="my-3">
@@ -468,7 +471,7 @@
                   </c:when>
                   <c:otherwise>
                     <span class="badge bg-light text-secondary border">
-                      <i class="bi bi-pencil me-1"></i>Nguồn: Bác sĩ nhập thủ công
+                      <i class="bi bi-pencil me-1"></i>Nguồn: Bác sĩ lâm sàng nhập thủ công
                     </span>
                   </c:otherwise>
                 </c:choose>
@@ -650,7 +653,7 @@
 
             <%-- ═══ TAB 4: CHẨN ĐOÁN & KẾ HOẠCH ═══ --%>
             <div id="tab4" style="display:none;">
-              
+
               <%-- Card A: Chẩn đoán --%>
               <div class="card border-0 bg-light rounded-3 mb-4">
                 <div class="card-body">
@@ -697,24 +700,25 @@
                       0 loại thuốc
                     </span>
                   </div>
-                  <p class="text-muted small mb-2">Bỏ trống nếu không kê đơn. Bác sĩ chỉ thêm dòng thuốc khi thực sự cho đơn.</p>
+                  <p class="text-muted small mb-2">Bỏ trống nếu không kê đơn. Bác sĩ lâm sàng chỉ thêm dòng thuốc khi thực sự cho đơn.</p>
 
-                  <div class="table-responsive mb-2">
-                    <table class="table rx-table bg-white align-middle mb-0 rounded-3 border" id="rxMedicineTable">
-                      <thead class="table-light">
-                        <tr>
-                          <th style="min-width:240px;">Tên thuốc</th>
-                          <th style="width:110px;">Số lượng</th>
-                          <th style="min-width:200px;">Liều dùng / Hướng dẫn <span class="req-star">*</span></th>
-                          <th style="width:44px;"></th>
-                        </tr>
-                      </thead>
-                      <tbody id="rxMedicineRows">
-                        <c:choose>
-                          <c:when test="${not empty prescription and not empty prescription.items}">
-                            <c:forEach var="item" items="${prescription.items}">
-                              <tr class="rx-medicine-row">
-                                <td>
+                                    <div class="border rounded-3 p-3 bg-white mb-2" id="rxMedicineArea">
+                    <!-- Header hàng (chỉ hiển thị trên desktop) -->
+                    <div class="row g-2 mb-2 d-none d-md-flex fw-bold text-muted border-bottom pb-2 small">
+                      <div class="col-md-5">Tên thuốc</div>
+                      <div class="col-md-2">Số lượng</div>
+                      <div class="col-md-4">Liều dùng / Hướng dẫn <span class="text-danger">*</span></div>
+                      <div class="col-md-1 text-end">Xóa</div>
+                    </div>
+
+                    <div id="rxMedicineRows">
+                      <c:choose>
+                        <c:when test="${not empty prescription and not empty prescription.items}">
+                          <c:forEach var="item" items="${prescription.items}">
+                            <div class="rx-medicine-row border-bottom py-3 py-md-2">
+                              <div class="row g-2 align-items-start">
+                                <div class="col-md-5 col-12">
+                                  <label class="form-label small fw-semibold text-muted d-md-none mb-1">Tên thuốc</label>
                                   <select name="medicineId[]"
                                           class="form-select form-select-sm rounded-3 rx-med-dropdown"
                                           <c:if test="${not canEditRecord}">disabled</c:if>>
@@ -730,25 +734,27 @@
                                     </c:forEach>
                                   </select>
                                   <div class="rx-med-desc-hint text-muted small mt-1" style="font-size:.75rem;"></div>
-                                </td>
-                                <td>
+                                </div>
+                                <div class="col-md-2 col-6">
+                                  <label class="form-label small fw-semibold text-muted d-md-none mb-1">Số lượng</label>
                                   <div class="input-group input-group-sm">
                                     <input type="number" name="quantity[]"
                                            class="form-control rounded-start-3 text-center"
                                            value="${item.quantity}" min="1" max="9999"
                                            <c:if test="${not canEditRecord}">disabled</c:if>>
-                                    <span class="input-group-text rx-unit-suffix rounded-end-3">${item.medicineUnit}</span>
+                                    <span class="input-group-text rx-unit-suffix rounded-end-3 text-truncate" style="max-width: 60px;">${item.medicineUnit}</span>
                                   </div>
-                                </td>
-                                <td>
+                                </div>
+                                <div class="col-md-4 col-6">
+                                  <label class="form-label small fw-semibold text-muted d-md-none mb-1">Liều dùng / Hướng dẫn *</label>
                                   <input type="text" name="dosage[]"
                                          class="form-control form-control-sm rounded-3"
                                          value="${item.dosage}"
                                          autocomplete="off"
                                          placeholder="VD: 2 viên/ngày, sáng-tối"
                                          <c:if test="${not canEditRecord}">disabled</c:if>>
-                                </td>
-                                <td class="text-center">
+                                </div>
+                                <div class="col-md-1 col-12 align-self-start text-end pt-md-1">
                                   <c:if test="${canEditRecord}">
                                     <button type="button"
                                             class="btn btn-sm btn-outline-danger rounded-circle rx-remove-row"
@@ -756,16 +762,13 @@
                                       <i class="bi bi-x"></i>
                                     </button>
                                   </c:if>
-                                </td>
-                              </tr>
-                            </c:forEach>
-                          </c:when>
-                          <c:otherwise>
-                            <%-- Bác sĩ bấm "Thêm thuốc" nếu kê đơn --%>
-                          </c:otherwise>
-                        </c:choose>
-                      </tbody>
-                    </table>
+                                </div>
+                              </div>
+                            </div>
+                          </c:forEach>
+                        </c:when>
+                      </c:choose>
+                    </div>
                   </div>
 
                   <c:if test="${canEditRecord}">
@@ -777,43 +780,48 @@
               </div>
 
               <template id="rxRowTemplate">
-                <tr class="rx-medicine-row">
-                  <td>
-                    <select name="medicineId[]" class="form-select form-select-sm rounded-3 rx-med-dropdown">
-                      <option value="">— Chọn thuốc —</option>
-                      <c:forEach var="med" items="${medicines}">
-                        <option value="${med.id}"
-                                data-unit="${med.unit}"
-                                data-stock="${med.stockQuantity}"
-                                data-desc="${med.description}">
-                          ${med.name}<c:if test="${not empty med.categoryName}"> [${med.categoryName}]</c:if>
-                        </option>
-                      </c:forEach>
-                    </select>
-                    <div class="rx-med-desc-hint text-muted small mt-1" style="font-size:.75rem;"></div>
-                  </td>
-                  <td>
-                    <div class="input-group input-group-sm">
-                      <input type="number" name="quantity[]"
-                             class="form-control rounded-start-3 text-center"
-                             value="1" min="1" max="9999">
-                      <span class="input-group-text rx-unit-suffix rounded-end-3">—</span>
+                <div class="rx-medicine-row border-bottom py-3 py-md-2">
+                  <div class="row g-2 align-items-start">
+                    <div class="col-md-5 col-12">
+                      <label class="form-label small fw-semibold text-muted d-md-none mb-1">Tên thuốc</label>
+                      <select name="medicineId[]" class="form-select form-select-sm rounded-3 rx-med-dropdown">
+                        <option value="">— Chọn thuốc —</option>
+                        <c:forEach var="med" items="${medicines}">
+                          <option value="${med.id}"
+                                  data-unit="${med.unit}"
+                                  data-stock="${med.stockQuantity}"
+                                  data-desc="${med.description}">
+                            ${med.name}<c:if test="${not empty med.categoryName}"> [${med.categoryName}]</c:if>
+                          </option>
+                        </c:forEach>
+                      </select>
+                      <div class="rx-med-desc-hint text-muted small mt-1" style="font-size:.75rem;"></div>
                     </div>
-                  </td>
-                  <td>
-                    <input type="text" name="dosage[]"
-                           class="form-control form-control-sm rounded-3"
-                           autocomplete="off"
-                           placeholder="VD: 2 viên/ngày, sáng-tối">
-                  </td>
-                  <td class="text-center">
-                    <button type="button"
-                            class="btn btn-sm btn-outline-danger rounded-circle rx-remove-row"
-                            style="width:30px;height:30px;padding:0;">
-                      <i class="bi bi-x"></i>
-                    </button>
-                  </td>
-                </tr>
+                    <div class="col-md-2 col-6">
+                      <label class="form-label small fw-semibold text-muted d-md-none mb-1">Số lượng</label>
+                      <div class="input-group input-group-sm">
+                        <input type="number" name="quantity[]"
+                               class="form-control rounded-start-3 text-center"
+                               value="1" min="1" max="9999">
+                        <span class="input-group-text rx-unit-suffix rounded-end-3 text-truncate" style="max-width: 60px;">—</span>
+                      </div>
+                    </div>
+                    <div class="col-md-4 col-6">
+                      <label class="form-label small fw-semibold text-muted d-md-none mb-1">Liều dùng / Hướng dẫn *</label>
+                      <input type="text" name="dosage[]"
+                             class="form-control form-control-sm rounded-3"
+                             autocomplete="off"
+                             placeholder="VD: 2 viên/ngày, sáng-tối">
+                    </div>
+                    <div class="col-md-1 col-12 align-self-start text-end pt-md-1">
+                      <button type="button"
+                              class="btn btn-sm btn-outline-danger rounded-circle rx-remove-row"
+                              style="width:30px;height:30px;padding:0;">
+                        <i class="bi bi-x"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </template>
 
             </div>
@@ -1089,8 +1097,8 @@
     }
     updateCount();
 
-    function bindDescHint(sel) {
-      const row = sel.closest('tr');
+        function bindDescHint(sel) {
+      const row = sel.closest('.rx-medicine-row');
 
       function refresh() {
         const opt    = sel.options[sel.selectedIndex];
@@ -1139,7 +1147,7 @@
     tbody.addEventListener('click', (e) => {
       const btn = e.target.closest('.rx-remove-row');
       if (!btn) return;
-      btn.closest('tr').remove();
+      btn.closest('.rx-medicine-row').remove();
       updateCount();
     });
   })();

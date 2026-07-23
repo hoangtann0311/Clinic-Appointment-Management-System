@@ -54,15 +54,16 @@ public class PatientMedicalRecordServlet extends HttpServlet {
                 response.sendError(HttpServletResponse.SC_BAD_REQUEST, "ID hồ sơ không hợp lệ."); return;
             }
 
-            MedicalRecord record = recordDAO.getById(recordId);
+            MedicalRecord ownedRecord = recordDAO.getById(recordId);
             // 1. Không tồn tại hoặc KHÔNG thuộc quyền sở hữu của Patient hiện tại -> trả HTTP 404
-            if (record == null || record.getPatientId() != patientId) {
+            if (ownedRecord == null || ownedRecord.getPatientId() != patientId) {
                 response.sendError(HttpServletResponse.SC_NOT_FOUND, "Không tìm thấy hồ sơ bệnh án.");
                 return;
             }
 
-            // 2. Hồ sơ thuộc về Patient nhưng chưa đủ điều kiện công bố (đang ở trạng thái draft)
-            if ("draft".equalsIgnoreCase(record.getStatus())) {
+            // 2. Chỉ công bố khi cả hồ sơ đã final và ca khám đã hoàn tất.
+            MedicalRecord record = recordDAO.getByIdAndPatientId(recordId, patientId);
+            if (record == null) {
                 request.setAttribute("unreleasedNotice", "Hồ sơ bệnh án này đang trong quá trình xử lý và chưa được bác sĩ công bố.");
                 request.setAttribute("mode", "unreleased");
                 request.getRequestDispatcher("/views/patient/medical_record_detail.jsp").forward(request, response);
@@ -71,29 +72,30 @@ public class PatientMedicalRecordServlet extends HttpServlet {
 
             Prescription prescription = prescriptionDAO.getByMedicalRecordId(recordId);
 
-            // Retrieve ultrasound orders, images, and AI findings
-            List<com.clinic.model.UltrasoundWaitingPatient> usOrders = new com.clinic.dao.UltrasoundOrderDAO().getByMedicalRecordId(recordId);
+            // Chỉ công bố chỉ định đã được bác sĩ lâm sàng xác nhận. Không tải
+            // hoặc truyền dữ liệu AI nội bộ vào request của bệnh nhân.
+            List<com.clinic.model.UltrasoundWaitingPatient> allUsOrders = new com.clinic.dao.UltrasoundOrderDAO().getByMedicalRecordId(recordId);
+            List<com.clinic.model.UltrasoundWaitingPatient> usOrders = new java.util.ArrayList<>();
             java.util.Map<Integer, List<com.clinic.model.UltrasoundImage>> orderImages = new java.util.HashMap<>();
-            java.util.Map<Integer, com.clinic.model.AiAnalysisResult> orderAiResults = new java.util.HashMap<>();
-            
+            java.util.Map<Integer, com.clinic.model.UltrasoundReport> orderReports = new java.util.HashMap<>();
             com.clinic.dao.UltrasoundImageDAO imgDAO = new com.clinic.dao.UltrasoundImageDAO();
-            com.clinic.dao.AiAnalysisResultDAO aiDAO = new com.clinic.dao.AiAnalysisResultDAO();
-            
-            for (com.clinic.model.UltrasoundWaitingPatient order : usOrders) {
+            com.clinic.dao.UltrasoundReviewDAO reviewDAO = new com.clinic.dao.UltrasoundReviewDAO();
+
+            for (com.clinic.model.UltrasoundWaitingPatient order : allUsOrders) {
+                if (!"Confirmed".equalsIgnoreCase(order.getStatus())) continue;
+                com.clinic.model.UltrasoundReport report = reviewDAO.getCurrentReport(order.getOrderId());
+                if (report == null || report.getDoctorConfirmedAt() == null) continue;
+                usOrders.add(order);
                 List<com.clinic.model.UltrasoundImage> images = imgDAO.getByTestOrderId(order.getOrderId());
                 orderImages.put(order.getOrderId(), images);
-                
-                com.clinic.model.AiAnalysisResult aiRes = aiDAO.getByTestOrderId(order.getOrderId());
-                if (aiRes != null) {
-                    orderAiResults.put(order.getOrderId(), aiRes);
-                }
+                orderReports.put(order.getOrderId(), report);
             }
 
             request.setAttribute("record",       record);
             request.setAttribute("prescription", prescription);
             request.setAttribute("usOrders", usOrders);
             request.setAttribute("orderImages", orderImages);
-            request.setAttribute("orderAiResults", orderAiResults);
+            request.setAttribute("orderReports", orderReports);
             request.setAttribute("mode",         "detail");
             request.getRequestDispatcher("/views/patient/medical_record_detail.jsp")
                    .forward(request, response);
@@ -102,7 +104,7 @@ public class PatientMedicalRecordServlet extends HttpServlet {
             // Danh sách tất cả hồ sơ
             List<MedicalRecord> records = java.util.Collections.emptyList();
             if (patientId > 0) {
-                records = recordDAO.getByPatientId(patientId);
+                records = recordDAO.getReleasedByPatientId(patientId);
             }
             request.setAttribute("records", records);
             request.setAttribute("mode",    "list");

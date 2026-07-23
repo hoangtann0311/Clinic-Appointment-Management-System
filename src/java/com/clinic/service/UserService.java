@@ -53,6 +53,15 @@ public class UserService {
         }
     }
 
+    public Map<Integer, Integer> countUsersByRole(String search, String statusFilter, boolean includeDeleted) {
+        try {
+            return userDAO.countGroupedByRole(search, statusFilter, includeDeleted);
+        } catch (Exception e) {
+            System.err.println("[UserService] countUsersByRole ERROR: " + e.getMessage());
+            return Collections.emptyMap();
+        }
+    }
+
     /** Cập nhật trạng thái user */
     public boolean updateStatus(int userId, String newStatus) {
         return userDAO.updateStatus(userId, newStatus);
@@ -155,6 +164,10 @@ public class UserService {
             errors.put("roleId", "Vai trò được chọn không hợp lệ (ID=" + roleId + "). Vui lòng chọn vai trò khác.");
             return false;
         }
+        if (roleId == ROLE_DOCTOR) {
+            errors.put("roleId", "Tài khoản Bác sĩ phải được tạo kèm hồ sơ chuyên môn.");
+            return false;
+        }
 
         // Tự động sinh username từ email (phần trước @) — nhất quán với AuthService
         String baseUsername = trimmedEmail.substring(0, trimmedEmail.indexOf('@'));
@@ -186,22 +199,32 @@ public class UserService {
                 + ", email=" + trimmedEmail + ", roleId=" + roleId
                 + ", status=" + u.getStatus());
 
+        Connection conn = null;
         try {
-            int newId = userDAO.insert(u);
+            conn = DatabaseConfig.getConnection();
+            conn.setAutoCommit(false);
+            int newId = userDAO.insert(conn, u);
             System.out.println("[UserService] createUser SUCCESS: id=" + newId
                     + ", username=" + generatedUsername + ", roleId=" + roleId);
 
             // ── Tự động tạo record cho Patient nếu tạo từ luồng chung ──
             if (roleId == ROLE_PATIENT) {
-                insertPatient(newId, trimmedName, trimmedPhone);
+                insertPatient(conn, newId, trimmedName, trimmedPhone);
             }
 
+            conn.commit();
             return true;
         } catch (Exception e) {
+            if (conn != null) {
+                try { conn.rollback(); } catch (SQLException ignored) { }
+            }
             System.err.println("[UserService] createUser FAILED: " + e.getMessage());
-            e.printStackTrace(System.err);
-            errors.put("general", "Lỗi khi tạo người dùng: " + e.getMessage());
+            errors.put("general", "Không thể tạo đầy đủ tài khoản và hồ sơ vai trò.");
             return false;
+        } finally {
+            if (conn != null) {
+                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ignored) { }
+            }
         }
     }
 
@@ -465,27 +488,16 @@ public class UserService {
      * Thêm bệnh nhân vào bảng patients.
      * Dùng SQL trực tiếp vì chưa có PatientDAO riêng.
      */
-    private void insertPatient(int userId, String fullName, String phone) {
+    private void insertPatient(Connection conn, int userId, String fullName, String phone)
+            throws SQLException {
         String sql = "INSERT INTO patients (user_id, full_name, phone_number) VALUES (?, ?, ?)";
-        Connection conn = null;
-        PreparedStatement ps = null;
-        try {
-            conn = DatabaseConfig.getConnection();
-            ps = conn.prepareStatement(sql);
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, userId);
             ps.setString(2, fullName);
             ps.setString(3, phone);
-            int rows = ps.executeUpdate();
-            if (rows > 0) {
-                System.out.println("[UserService] Đã tạo patient record: userId=" + userId);
-            } else {
-                System.err.println("[UserService] CẢNH BÁO: Không tạo được patient record cho userId=" + userId);
+            if (ps.executeUpdate() != 1) {
+                throw new SQLException("Không tạo được patient profile.");
             }
-        } catch (SQLException e) {
-            System.err.println("[UserService] Lỗi insert patient: " + e.getMessage());
-        } finally {
-            if (ps != null) { try { ps.close(); } catch (SQLException e) { } }
-            DatabaseConfig.closeConnection(conn);
         }
     }
 

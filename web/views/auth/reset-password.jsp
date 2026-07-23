@@ -45,7 +45,7 @@
                 <div class="auth-mockup-header"><i class="bi bi-shield-check me-1"></i> Bảo mật tài khoản</div>
                 <div class="auth-mockup-row">
                     <i class="bi bi-check-circle-fill"></i>
-                    <span class="auth-mockup-text">Mật khẩu mới được mã hóa bảo mật chuẩn SHA-256</span>
+                    <span class="auth-mockup-text">Mật khẩu mới được băm an toàn bằng BCrypt</span>
                 </div>
                 <div class="auth-mockup-row">
                     <i class="bi bi-check-circle-fill"></i>

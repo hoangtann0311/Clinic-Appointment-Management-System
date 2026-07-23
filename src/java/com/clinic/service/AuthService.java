@@ -110,15 +110,29 @@ public class AuthService {
         System.out.println("[AuthService] register: fullName=" + fullName
                 + ", email=" + email + ", roleId=" + ROLE_PATIENT);
 
-        // Bước 7: Insert vào database
-        int generatedId = userDAO.insert(newUser);
+        // Bước 7: users + patients phải cùng thành công hoặc cùng rollback.
+        int generatedId;
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                generatedId = userDAO.insert(conn, newUser);
+                insertPatientRecord(conn, generatedId, fullName, phone);
+                conn.commit();
+            } catch (Exception ex) {
+                conn.rollback();
+                errors.put("general", "Không thể tạo đầy đủ hồ sơ bệnh nhân. Vui lòng thử lại.");
+                return null;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (SQLException ex) {
+            errors.put("general", "Không thể kết nối cơ sở dữ liệu. Vui lòng thử lại.");
+            return null;
+        }
         newUser.setId(generatedId);
 
         System.out.println("[AuthService] register SUCCESS: id=" + generatedId
                 + ", username=" + generatedUsername + ", roleId=" + ROLE_PATIENT);
-
-        // ── Tự động tạo record trong bảng patients ──
-        insertPatientRecord(generatedId, fullName, phone);
 
         // Bước 8: Gửi email xác thực (trong thread riêng, không chặn response)
         // Nếu email chưa được cấu hình, link sẽ được in ra console (dev mode)
@@ -255,27 +269,16 @@ public class AuthService {
      * Tự động tạo record trong bảng patients sau khi đăng ký thành công.
      * Không làm fail registration nếu insert này gặp lỗi.
      */
-    private void insertPatientRecord(int userId, String fullName, String phone) {
+    private void insertPatientRecord(Connection conn, int userId, String fullName, String phone)
+            throws SQLException {
         String sql = "INSERT INTO patients (user_id, full_name, phone_number) VALUES (?, ?, ?)";
-        Connection conn = null;
-        PreparedStatement ps = null;
-        try {
-            conn = DatabaseConfig.getConnection();
-            ps = conn.prepareStatement(sql);
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, userId);
             ps.setString(2, fullName);
             ps.setString(3, phone);
-            int rows = ps.executeUpdate();
-            if (rows > 0) {
-                System.out.println("[AuthService] Đã tạo patient record: userId=" + userId);
-            } else {
-                System.err.println("[AuthService] CẢNH BÁO: Không tạo được patient record cho userId=" + userId);
+            if (ps.executeUpdate() != 1) {
+                throw new SQLException("Không tạo được patient profile.");
             }
-        } catch (SQLException e) {
-            System.err.println("[AuthService] Lỗi insert patient: " + e.getMessage());
-        } finally {
-            if (ps != null) { try { ps.close(); } catch (SQLException e) { } }
-            DatabaseConfig.closeConnection(conn);
         }
     }
 }

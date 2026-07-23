@@ -138,6 +138,7 @@
                     <i class="bi bi-pencil-square me-1 text-primary"></i>Cập nhật thai kỳ
                 </h6>
                 <form method="post" action="${pageContext.request.contextPath}/doctor/pregnancy">
+                    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                     <input type="hidden" name="action" value="update">
                     <input type="hidden" name="id" value="${pregnancy.id}">
 
@@ -272,7 +273,7 @@
                                            class="btn btn-sm btn-outline-primary rounded-pill">
                                             <i class="bi bi-eye me-1"></i>Xem hồ sơ
                                         </a>
-                                        <a href="${pageContext.request.contextPath}/doctor/prescriptions?recordId=${visit.recordId}"
+                                        <a href="${pageContext.request.contextPath}/doctor/medical-records?apptId=${visit.appointmentId}"
                                            class="btn btn-sm btn-outline-danger rounded-pill">
                                             <i class="bi bi-prescription2 me-1"></i>Đơn thuốc
                                         </a>

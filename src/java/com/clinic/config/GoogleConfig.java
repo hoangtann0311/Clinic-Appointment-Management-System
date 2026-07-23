@@ -1,11 +1,11 @@
 package com.clinic.config;
 
 /**
- * Cấu hình Google OAuth 2.0 — runtime config được load từ web.xml context-param.
+ * Cấu hình Google OAuth 2.0 — runtime config không chứa credential trong source.
  *
  * Giá trị được khởi tạo bởi GoogleConfigListener (ServletContextListener)
- * khi ứng dụng startup. Mỗi developer/máy chủ tự cấu hình Client ID riêng
- * trong web.xml mà không cần sửa code Java.
+ * khi ứng dụng startup. Mỗi môi trường tự cấu hình Client ID/Secret bằng
+ * system property hoặc biến môi trường.
  *
  * Fallback: nếu không có listener, đọc từ System property:
  *   -Dgoogle.client.id=xxx.apps.googleusercontent.com

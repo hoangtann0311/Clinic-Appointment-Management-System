@@ -22,7 +22,7 @@ import java.util.*;
  * GET  → hiển thị danh sách biểu giá (dịch vụ + thuốc) với phân trang + tìm kiếm + lọc
  * POST → xử lý sửa giá (từng mục hoặc hàng loạt)
  */
-@WebServlet(urlPatterns = {"/admin/pricing/", "/admin/pricing"})
+@WebServlet(urlPatterns = {"/admin/pricing/", "/admin/pricing", "/manager/pricing/", "/manager/pricing"})
 public class AdminPriceServlet extends HttpServlet {
 
     private static final int PAGE_SIZE = 12;
@@ -39,6 +39,12 @@ public class AdminPriceServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
+
+        String path = req.getServletPath();
+        if (path.startsWith("/manager/pricing")) {
+            resp.sendRedirect(req.getContextPath() + "/admin/pricing/");
+            return;
+        }
 
         String tab = req.getParameter("tab"); // "services" hoặc "medicines"
         if (tab == null || tab.isEmpty()) tab = "services";
@@ -87,6 +93,12 @@ public class AdminPriceServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
+
+        String path = req.getServletPath();
+        if (path.startsWith("/manager/pricing")) {
+            resp.sendRedirect(req.getContextPath() + "/admin/pricing/");
+            return;
+        }
 
         String action = req.getParameter("action");
         String tab = req.getParameter("tab");

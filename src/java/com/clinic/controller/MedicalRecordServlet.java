@@ -97,7 +97,14 @@ public class MedicalRecordServlet extends HttpServlet {
         String recordIdStr = req.getParameter("recordId");
 
         if (apptIdStr == null || apptIdStr.isBlank()) { error(req, resp, "Thiếu appointmentId."); return; }
-        int apptId = Integer.parseInt(apptIdStr);
+        int apptId;
+        try {
+            apptId = Integer.parseInt(apptIdStr.trim());
+            if (apptId <= 0) throw new NumberFormatException();
+        } catch (NumberFormatException e) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "appointmentId không hợp lệ.");
+            return;
+        }
 
         if (!dao.appointmentBelongsToDoctor(apptId, doctorId)) {
             resp.sendError(HttpServletResponse.SC_FORBIDDEN); return;
@@ -108,6 +115,23 @@ public class MedicalRecordServlet extends HttpServlet {
             errorOnPost(req, resp, apptId, null, null,
                     "Chỉ có thể cập nhật bệnh án khi ca khám đang ở trạng thái Đang khám.");
             return;
+        }
+
+        MedicalRecord existingRecord = dao.getByAppointmentId(apptId);
+        if (recordIdStr != null && !recordIdStr.isBlank()) {
+            int submittedRecordId;
+            try {
+                submittedRecordId = Integer.parseInt(recordIdStr.trim());
+            } catch (NumberFormatException e) {
+                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "recordId không hợp lệ.");
+                return;
+            }
+            if (submittedRecordId <= 0 || existingRecord == null
+                    || existingRecord.getId() != submittedRecordId) {
+                resp.sendError(HttpServletResponse.SC_CONFLICT,
+                        "Hồ sơ đã thay đổi hoặc không thuộc lịch hẹn này. Vui lòng tải lại.");
+                return;
+            }
         }
 
         // Load info ca khám để lấy appointmentDate chuẩn
@@ -131,9 +155,7 @@ public class MedicalRecordServlet extends HttpServlet {
         // Đọc thông tin từ form trước để có thể giữ nguyên dữ liệu nếu xảy ra lỗi
         MedicalRecord mr = new MedicalRecord();
         mr.setAppointmentId(apptId);
-        if (recordIdStr != null && !recordIdStr.isBlank()) {
-            try { mr.setId(Integer.parseInt(recordIdStr.trim())); } catch (Exception ignored) {}
-        }
+        if (existingRecord != null) mr.setId(existingRecord.getId());
 
         String finalDiagnosis = req.getParameter("finalDiagnosis");
         mr.setFinalDiagnosis(finalDiagnosis != null ? finalDiagnosis.trim() : "");
@@ -177,12 +199,11 @@ public class MedicalRecordServlet extends HttpServlet {
             mr.setPresentationStation(req.getParameter("presentationStation"));
             mr.setAmnioticFluid(req.getParameter("amnioticFluid"));
         } else {
-            MedicalRecord existingDB = dao.getByAppointmentId(apptId);
-            if (existingDB != null) {
-                mr.setCervicalDilationCm(existingDB.getCervicalDilationCm());
-                mr.setCervicalEffacement(existingDB.getCervicalEffacement());
-                mr.setPresentationStation(existingDB.getPresentationStation());
-                mr.setAmnioticFluid(existingDB.getAmnioticFluid());
+            if (existingRecord != null) {
+                mr.setCervicalDilationCm(existingRecord.getCervicalDilationCm());
+                mr.setCervicalEffacement(existingRecord.getCervicalEffacement());
+                mr.setPresentationStation(existingRecord.getPresentationStation());
+                mr.setAmnioticFluid(existingRecord.getAmnioticFluid());
             }
         }
 
@@ -384,57 +405,74 @@ public class MedicalRecordServlet extends HttpServlet {
 
         boolean isDraft = isDraftEarly;
 
-        // ── Lưu hồ sơ ───────────────────────────────────────────────────────
-        boolean success;
-        int finalRecordId;
-        if (mr.getId() > 0) {
-            finalRecordId = mr.getId();
-            mr.setStatus(isDraft ? "draft" : "final");
-            success = dao.update(mr);
-            if (success && !isDraft) {
-                appointmentDAO.completeConsultation(apptId, doctorId);
-            }
-        } else {
-            mr.setStatus(isDraft ? "draft" : "final");
-            finalRecordId = dao.create(mr);
-            success = finalRecordId > 0;
-            if (success && !isDraft) {
-                appointmentDAO.completeConsultation(apptId, doctorId);
-            }
-        }
-
-        // ── Lưu đơn thuốc kèm theo ──────────────────────────────────────────
-        if (success && !prescriptionItems.isEmpty()) {
-            Prescription existing = prescriptionDAO.getByMedicalRecordId(finalRecordId);
-            if (existing != null) {
-                prescriptionDAO.replaceItems(existing.getId(), prescriptionItems);
-            } else {
-                String code = "RX-" + LocalDateTime.now()
-                        .format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
-                int newPrescriptionId = prescriptionDAO.create(finalRecordId, code);
-                if (newPrescriptionId > 0) {
-                    prescriptionDAO.replaceItems(newPrescriptionId, prescriptionItems);
-                }
-            }
-        }
-
-        // ── BR §4.8: Tự động tạo / cập nhật hóa đơn thuốc PRESCRIPTION khi hoàn thành khám ──
-        if (success && !isDraft && !prescriptionItems.isEmpty()) {
+        // Hồ sơ, đơn thuốc, hóa đơn và trạng thái lịch hẹn là một đơn vị nghiệp vụ.
+        // Chỉ commit khi toàn bộ các bước đều thành công.
+        boolean success = false;
+        int finalRecordId = -1;
+        String transactionError = "Lưu hồ sơ thất bại. Vui lòng thử lại.";
+        mr.setStatus(isDraft ? "draft" : "final");
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            conn.setAutoCommit(false);
             try {
-                java.math.BigDecimal totalMedAmount = calculatePrescriptionTotal(prescriptionItems);
-                if (totalMedAmount.compareTo(java.math.BigDecimal.ZERO) > 0) {
-                    handlePrescriptionInvoice(apptId, totalMedAmount);
+                if (!appointmentDAO.lockConsultationInProgress(conn, apptId, doctorId)) {
+                    throw new SQLException("APPOINTMENT_STATE_CONFLICT");
                 }
-            } catch (Exception ex) {
-                // Không để lỗi hóa đơn chặn luồng chính — log để theo dõi.
-                System.err.println("[MedicalRecordServlet] upsertPrescriptionInvoice failed: " + ex.getMessage());
+                if (mr.getId() > 0) {
+                    finalRecordId = mr.getId();
+                    if (!dao.update(conn, mr)) throw new SQLException("MEDICAL_RECORD_UPDATE_CONFLICT");
+                } else {
+                    finalRecordId = dao.create(conn, mr);
+                    if (finalRecordId <= 0) throw new SQLException("MEDICAL_RECORD_CREATE_FAILED");
+                }
+
+                Integer prescriptionId = prescriptionDAO.findIdByMedicalRecordId(conn, finalRecordId);
+                if (prescriptionId != null || !prescriptionItems.isEmpty()) {
+                    if (prescriptionId == null) {
+                        String code = "RX-" + LocalDateTime.now()
+                                .format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS"));
+                        prescriptionId = prescriptionDAO.create(conn, finalRecordId, code);
+                    }
+                    if (prescriptionId == null || prescriptionId <= 0
+                            || !prescriptionDAO.replaceItems(conn, prescriptionId, prescriptionItems)) {
+                        throw new SQLException("PRESCRIPTION_SAVE_FAILED");
+                    }
+                }
+
+                if (!isDraft) {
+                    if (dao.hasBlockingUltrasoundOrdersForAppointment(conn, apptId)) {
+                        throw new SQLException("ULTRASOUND_PENDING");
+                    }
+                    if (!prescriptionItems.isEmpty()) {
+                        java.math.BigDecimal total = calculatePrescriptionTotal(conn, prescriptionItems);
+                        if (total.signum() > 0
+                                && invoiceDAO.upsertPrescriptionInvoice(conn, apptId, total) <= 0) {
+                            throw new SQLException("PRESCRIPTION_INVOICE_FAILED");
+                        }
+                    } else {
+                        invoiceDAO.cancelUnsubmittedPrescriptionInvoices(conn, apptId);
+                    }
+                    if (!appointmentDAO.completeConsultation(conn, apptId, doctorId)) {
+                        throw new SQLException("APPOINTMENT_STATE_CONFLICT");
+                    }
+                }
+
+                conn.commit();
+                success = true;
+            } catch (SQLException ex) {
+                try { conn.rollback(); } catch (SQLException rollbackEx) { ex.addSuppressed(rollbackEx); }
+                if ("ULTRASOUND_PENDING".equals(ex.getMessage())) {
+                    transactionError = "Chưa thể chốt hồ sơ: còn chỉ định siêu âm chưa được Bác sĩ Siêu âm xác nhận hoặc hủy hợp lệ.";
+                }
+                System.err.println("[MedicalRecordServlet] transaction rolled back: " + ex.getMessage());
+            } finally {
+                try { conn.setAutoCommit(true); } catch (SQLException ignored) {}
             }
+        } catch (SQLException ex) {
+            System.err.println("[MedicalRecordServlet] database error: " + ex.getMessage());
         }
-
-
 
         if (!success) {
-            errorOnPost(req, resp, apptId, mr, prescriptionItems, "Lưu hồ sơ thất bại. Vui lòng thử lại.");
+            errorOnPost(req, resp, apptId, mr, prescriptionItems, transactionError);
             return;
         }
 
@@ -548,6 +586,9 @@ public class MedicalRecordServlet extends HttpServlet {
         if (record != null && record.getId() > 0) {
             prescription = prescriptionDAO.getByMedicalRecordId(record.getId());
         }
+        req.setAttribute("hasBlockingUltrasound",
+                record != null && record.getId() > 0
+                        && dao.hasBlockingUltrasoundOrdersForAppointment(apptId));
 
         List<Service> allUltrasound = serviceDAO.findUltrasoundServices();
         List<Service> bookedUltrasound = new ArrayList<>();
@@ -563,6 +604,8 @@ public class MedicalRecordServlet extends HttpServlet {
         User user = (User) req.getSession().getAttribute("user");
         String doctorName = user != null ? user.getFullName() : "";
 
+        req.setAttribute("patientPhone", record != null ? record.getPatientPhone() : "");
+        req.setAttribute("patientDob", record != null ? record.getPatientDob() : "");
         req.setAttribute("record", record);
         req.setAttribute("apptId", apptId);
         req.setAttribute("doctorName", doctorName);
@@ -593,11 +636,14 @@ public class MedicalRecordServlet extends HttpServlet {
         mr.setAppointmentId(apptId);
         String sql =
             "SELECT pt.full_name AS patient_name, " +
+            "  pt.phone_number AS patient_phone, " +
+            "  CONVERT(varchar, pt.date_of_birth, 23) AS patient_dob, " +
             "  CONVERT(varchar, a.appointment_date, 23) AS appointment_date, " +
             "  CONVERT(varchar, a.time_slot, 108) AS time_slot, " +
             "  a.symptoms, " +
             "  CONVERT(varchar, a.last_menstrual_period, 23) AS last_menstrual_period, " +
-            "  a.pregnancy_id " +
+            "  a.pregnancy_id, " +
+            "  a.patient_id " +
             "FROM appointments a JOIN patients pt ON a.patient_id = pt.id WHERE a.id = ?";
         try (Connection c = DatabaseConfig.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
@@ -605,11 +651,14 @@ public class MedicalRecordServlet extends HttpServlet {
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
                 mr.setPatientName(rs.getString("patient_name"));
+                mr.setPatientPhone(rs.getString("patient_phone"));
+                mr.setPatientDob(rs.getString("patient_dob"));
                 mr.setAppointmentDate(rs.getString("appointment_date"));
                 mr.setTimeSlot(rs.getString("time_slot"));
                 mr.setSymptoms(rs.getString("symptoms"));
                 mr.setLastMenstrualPeriod(rs.getString("last_menstrual_period"));
                 int pid = rs.getInt("pregnancy_id"); if (!rs.wasNull()) mr.setPregnancyId(pid);
+                mr.setPatientId(rs.getInt("patient_id"));
             }
         } catch (Exception e) { e.printStackTrace(); }
         return mr;
@@ -663,7 +712,8 @@ public class MedicalRecordServlet extends HttpServlet {
      * @param items danh sách thuốc trong đơn
      * @return tổng tiền BigDecimal (>= 0)
      */
-    private java.math.BigDecimal calculatePrescriptionTotal(List<PrescriptionItem> items) {
+    private java.math.BigDecimal calculatePrescriptionTotal(Connection conn, List<PrescriptionItem> items)
+            throws SQLException {
         if (items == null || items.isEmpty()) return java.math.BigDecimal.ZERO;
 
         java.math.BigDecimal total = java.math.BigDecimal.ZERO;
@@ -679,8 +729,7 @@ public class MedicalRecordServlet extends HttpServlet {
         }
 
         String sql = "SELECT id, price FROM medicines WHERE id IN (" + placeholders + ")";
-        try (java.sql.Connection conn = com.clinic.config.DatabaseConfig.getConnection();
-             java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
             int idx = 1;
             for (int mid : qtyMap.keySet()) ps.setInt(idx++, mid);
             java.sql.ResultSet rs = ps.executeQuery();
@@ -691,46 +740,7 @@ public class MedicalRecordServlet extends HttpServlet {
                     total = total.add(price.multiply(new java.math.BigDecimal(qtyMap.get(mid))));
                 }
             }
-        } catch (Exception e) {
-            System.err.println("[MedicalRecordServlet] calculatePrescriptionTotal error: " + e.getMessage());
         }
         return total;
-    }
-
-    /**
-     * Keeps an already paid/declined prescription invoice immutable. If the
-     * prescription is increased afterwards, only the difference becomes a new
-     * unpaid invoice; otherwise the current unpaid invoice is updated in place.
-     */
-    private void handlePrescriptionInvoice(int appointmentId, java.math.BigDecimal newTotal) {
-        if (newTotal == null) {
-            newTotal = java.math.BigDecimal.ZERO;
-        }
-
-        com.clinic.model.Invoice existing = invoiceDAO.getByAppointmentIdAndType(appointmentId, "PRESCRIPTION");
-        if (existing == null) {
-            invoiceDAO.upsertPrescriptionInvoice(appointmentId, newTotal);
-            return;
-        }
-
-        String status = existing.getStatus() == null ? "" : existing.getStatus();
-        if ("Paid".equalsIgnoreCase(status) || "DeclinedPurchase".equalsIgnoreCase(status)) {
-            java.math.BigDecimal oldTotal = existing.getTotalAmount() == null
-                    ? java.math.BigDecimal.ZERO : existing.getTotalAmount();
-            java.math.BigDecimal difference = newTotal.subtract(oldTotal);
-            if (difference.compareTo(java.math.BigDecimal.ZERO) <= 0) {
-                return;
-            }
-            com.clinic.model.Invoice newInvoice = new com.clinic.model.Invoice();
-            newInvoice.setAppointmentId(appointmentId);
-            newInvoice.setTotalAmount(difference);
-            newInvoice.setStatus("Unpaid");
-            newInvoice.setInvoiceType("PRESCRIPTION");
-            newInvoice.setCreatedAt(new java.sql.Timestamp(System.currentTimeMillis()));
-            invoiceDAO.insert(newInvoice);
-            return;
-        }
-
-        invoiceDAO.upsertPrescriptionInvoice(appointmentId, newTotal);
     }
 }

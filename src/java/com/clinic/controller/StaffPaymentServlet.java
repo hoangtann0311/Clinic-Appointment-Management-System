@@ -56,35 +56,32 @@ public class StaffPaymentServlet extends HttpServlet {
         if (totalPages <= 0) totalPages = 1;
 
         Map<Integer, String> prescriptionItemsJson = new HashMap<>();
-        for (Invoice inv : invoices) {
-            if ("PRESCRIPTION".equalsIgnoreCase(inv.getInvoiceType())) {
-                try {
-                    com.clinic.dao.MedicalRecordDAO recordDAO = new com.clinic.dao.MedicalRecordDAO();
-                    com.clinic.model.MedicalRecord record = recordDAO.getByAppointmentId(inv.getAppointmentId());
-                    if (record != null && record.getId() > 0) {
-                        com.clinic.dao.PrescriptionDAO prescriptionDAO = new com.clinic.dao.PrescriptionDAO();
-                        com.clinic.model.Prescription prescription = prescriptionDAO.getByMedicalRecordId(record.getId());
-                        if (prescription != null && prescription.getId() > 0) {
-                            List<PrescriptionItem> items = prescriptionDAO.getItemsByPrescriptionId(prescription.getId());
-                            StringBuilder json = new StringBuilder("[");
-                            for (int i = 0; i < items.size(); i++) {
-                                PrescriptionItem item = items.get(i);
-                                if (i > 0) json.append(",");
-                                json.append("{")
-                                    .append("\"name\":\"").append(escapeJson(item.getMedicineName() != null ? item.getMedicineName() : "")).append("\",")
-                                    .append("\"unit\":\"").append(escapeJson(item.getMedicineUnit() != null ? item.getMedicineUnit() : "")).append("\",")
-                                    .append("\"quantity\":").append(item.getQuantity()).append(",")
-                                    .append("\"price\":").append(item.getPrice() != null ? item.getPrice() : 0)
-                                    .append("}");
-                            }
-                            json.append("]");
-                            prescriptionItemsJson.put(inv.getId(), json.toString());
-                        }
-                    }
-                } catch (Exception e) {
-                    System.err.println("[StaffPaymentServlet] load prescription items failed for invoice " + inv.getId() + ": " + e.getMessage());
-                }
+        List<Integer> prescriptionInvoiceIds = new java.util.ArrayList<>();
+        for (Invoice invoice : invoices) {
+            if ("PRESCRIPTION".equalsIgnoreCase(invoice.getInvoiceType())) {
+                prescriptionInvoiceIds.add(invoice.getId());
             }
+        }
+        try {
+            Map<Integer, List<PrescriptionItem>> itemsByInvoice =
+                    new com.clinic.dao.PrescriptionDAO().getItemsByInvoiceIds(prescriptionInvoiceIds);
+            for (Map.Entry<Integer, List<PrescriptionItem>> entry : itemsByInvoice.entrySet()) {
+                StringBuilder json = new StringBuilder("[");
+                List<PrescriptionItem> items = entry.getValue();
+                for (int i = 0; i < items.size(); i++) {
+                    PrescriptionItem item = items.get(i);
+                    if (i > 0) json.append(",");
+                    json.append("{")
+                        .append("\"name\":\"").append(escapeJson(item.getMedicineName() != null ? item.getMedicineName() : "")).append("\",")
+                        .append("\"unit\":\"").append(escapeJson(item.getMedicineUnit() != null ? item.getMedicineUnit() : "")).append("\",")
+                        .append("\"quantity\":").append(item.getQuantity()).append(",")
+                        .append("\"price\":").append(item.getPrice() != null ? item.getPrice() : 0)
+                        .append("}");
+                }
+                prescriptionItemsJson.put(entry.getKey(), json.append("]").toString());
+            }
+        } catch (Exception e) {
+            System.err.println("[StaffPaymentServlet] bulk prescription detail load failed: " + e.getMessage());
         }
 
         request.setAttribute("invoices", invoices);
@@ -173,8 +170,13 @@ public class StaffPaymentServlet extends HttpServlet {
         if (s == null) return "";
         return s.replace("\\", "\\\\")
                .replace("\"", "\\\"")
+               .replace("<", "\\u003c")
+               .replace(">", "\\u003e")
+               .replace("&", "\\u0026")
                .replace("\n", "\\n")
                .replace("\r", "\\r")
-               .replace("\t", "\\t");
+               .replace("\t", "\\t")
+               .replace("\u2028", "\\u2028")
+               .replace("\u2029", "\\u2029");
     }
 }

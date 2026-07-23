@@ -318,7 +318,7 @@ public class InvoiceDAO {
     }
 
     public boolean submitPaymentDetails(int id, String paymentMethod, String transactionCode, String status) {
-        String sql = "UPDATE invoices SET payment_method = ?, transaction_code = ?, status = ? "
+        String sql = "UPDATE invoices SET payment_method = ?, transaction_code = ?, proof_image_path = NULL, status = ? "
                 + "WHERE id = ? AND (status = 'Unpaid' OR (status = 'Rejected' AND invoice_type <> 'PRE_EXAM'))";
         Connection conn = null;
         PreparedStatement ps = null;
@@ -338,30 +338,17 @@ public class InvoiceDAO {
         }
     }
 
-    /**
-     * Giống submitPaymentDetails nhưng lưu kèm đường dẫn ảnh minh chứng chuyển khoản
-     * (bệnh nhân tải ảnh lên thay vì tự gõ mã giao dịch).
-     */
-    public boolean submitPaymentDetailsWithProof(int id, String paymentMethod, String transactionCode,
-                                                  String proofImagePath, String status) {
-        String sql = "UPDATE invoices SET payment_method = ?, transaction_code = ?, proof_image_path = ?, status = ? " +
-                     "WHERE id = ? AND (status = 'Unpaid' OR (status = 'Rejected' AND invoice_type <> 'PRE_EXAM'))";
-        Connection conn = null;
-        PreparedStatement ps = null;
-        try {
-            conn = DatabaseConfig.getConnection();
-            ps = conn.prepareStatement(sql);
+    public boolean submitPaymentDetails(Connection conn, int id, String paymentMethod,
+                                        String transactionCode) throws SQLException {
+        String sql = "UPDATE invoices SET payment_method = ?, transaction_code = ?, "
+                + "proof_image_path = NULL, status = 'PendingConfirmation' "
+                + "WHERE id = ? AND (status = 'Unpaid' "
+                + "OR (status = 'Rejected' AND invoice_type <> 'PRE_EXAM'))";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, paymentMethod);
             ps.setString(2, transactionCode);
-            ps.setString(3, proofImagePath);
-            ps.setString(4, status);
-            ps.setInt(5, id);
-            return ps.executeUpdate() > 0;
-        } catch (SQLException e) {
-            System.err.println("[InvoiceDAO] submitPaymentDetailsWithProof ERROR: " + e.getMessage());
-            return false;
-        } finally {
-            closeResources(conn, ps, null);
+            ps.setInt(3, id);
+            return ps.executeUpdate() == 1;
         }
     }
 
@@ -482,6 +469,66 @@ public class InvoiceDAO {
             closeResources(conn, ps, rs);
         }
         return -1;
+    }
+
+    /**
+     * Transaction-aware variant used while finalizing a medical record. The
+     * caller owns commit/rollback so the record, prescription, invoice and
+     * appointment status cannot diverge.
+     */
+    public int upsertPrescriptionInvoice(Connection conn, int appointmentId,
+                                         java.math.BigDecimal totalAmount) throws SQLException {
+        String selectSql = "SELECT TOP 1 id, status, total_amount FROM invoices WITH (UPDLOCK, HOLDLOCK) "
+                + "WHERE appointment_id = ? AND UPPER(invoice_type) = 'PRESCRIPTION' ORDER BY id DESC";
+        try (PreparedStatement ps = conn.prepareStatement(selectSql)) {
+            ps.setInt(1, appointmentId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    int id = rs.getInt("id");
+                    String status = rs.getString("status");
+                    if ("Paid".equalsIgnoreCase(status) || "DeclinedPurchase".equalsIgnoreCase(status)) {
+                        java.math.BigDecimal oldTotal = rs.getBigDecimal("total_amount");
+                        if (oldTotal == null) oldTotal = java.math.BigDecimal.ZERO;
+                        java.math.BigDecimal difference = totalAmount.subtract(oldTotal);
+                        return difference.signum() > 0
+                                ? insertPrescriptionInvoice(conn, appointmentId, difference)
+                                : id;
+                    }
+                    try (PreparedStatement update = conn.prepareStatement(
+                            "UPDATE invoices SET total_amount = ? WHERE id = ? "
+                                    + "AND status NOT IN ('Paid', 'DeclinedPurchase')")) {
+                        update.setBigDecimal(1, totalAmount);
+                        update.setInt(2, id);
+                        return update.executeUpdate() == 1 ? id : -1;
+                    }
+                }
+            }
+        }
+        return insertPrescriptionInvoice(conn, appointmentId, totalAmount);
+    }
+
+    private int insertPrescriptionInvoice(Connection conn, int appointmentId,
+                                          java.math.BigDecimal totalAmount) throws SQLException {
+        String sql = "INSERT INTO invoices (appointment_id, total_amount, status, invoice_type, created_at) "
+                + "VALUES (?, ?, 'Unpaid', 'PRESCRIPTION', GETDATE())";
+        try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setInt(1, appointmentId);
+            ps.setBigDecimal(2, totalAmount);
+            if (ps.executeUpdate() != 1) return -1;
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                return keys.next() ? keys.getInt(1) : -1;
+            }
+        }
+    }
+
+    public void cancelUnsubmittedPrescriptionInvoices(Connection conn, int appointmentId)
+            throws SQLException {
+        String sql = "UPDATE invoices SET status = 'Cancelled' WHERE appointment_id = ? "
+                + "AND UPPER(invoice_type) = 'PRESCRIPTION' AND status = 'Unpaid'";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, appointmentId);
+            ps.executeUpdate();
+        }
     }
 
     /**

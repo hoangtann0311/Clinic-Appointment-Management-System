@@ -94,7 +94,7 @@
                 <a href="${pageContext.request.contextPath}/admin/reception/doctor-schedules"
                    class="${fn:contains(requestURI, 'doctor-schedules') ? 'active' : ''}">
                     <i class="bi bi-calendar-week"></i>
-                    <span>Lịch Trực Bác Sĩ</span>
+                    <span>Lịch trực Bác sĩ lâm sàng</span>
                 </a>
             </li>
             <li>
@@ -136,6 +136,16 @@
             </div>
         </div>
 
+        <c:if test="${not empty param.success}">
+            <div class="alert alert-success alert-dismissible fade show" data-cams-toast role="status">
+                <c:choose>
+                    <c:when test="${param.success == 'activated'}">Đã kích hoạt SOS và cấp số <strong><c:out value="${param.queue}"/></strong>.</c:when>
+                    <c:otherwise>Đã giải tỏa SOS và đưa bệnh nhân về đúng hàng đợi.</c:otherwise>
+                </c:choose>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+            </div>
+        </c:if>
+
         <!-- Layout split -->
         <div class="row">
             <div class="col-md-7">
@@ -174,6 +184,7 @@
                                             </td>
                                             <td>
                                                 <form action="${pageContext.request.contextPath}/admin/reception/sos/dismiss" method="post">
+                                                    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                                     <input type="hidden" name="id" value="${apt.id}">
                                                     <button type="submit" class="btn btn-danger btn-sm fw-bold px-2 py-1"><i class="bi bi-shield-fill-check"></i> TIẾP NHẬN</button>
                                                 </form>
@@ -207,50 +218,27 @@
                                 </ul>
                             </div>
                         </c:if>
-                        <p class="text-muted font-size-13 mb-3">Sử dụng trong trường hợp sản phụ đến trực tiếp tại quầy trong trạng thái nguy kịch để ngay lập tức chèn lên đầu hàng đợi và gửi chuông cảnh báo tới các bác sĩ trưởng ca.</p>
+                        <p class="text-muted font-size-13 mb-3">Chọn đúng ca khám hôm nay đang ở trạng thái Confirmed, Waiting hoặc InProgress. Hệ thống sẽ khóa theo bệnh nhân, cấp duy nhất một số SOS và không tạo thêm lịch hẹn rời.</p>
                         <form action="${pageContext.request.contextPath}/admin/reception/sos/trigger"
                               method="post"
                               onsubmit="return validateSosForm()">
+                            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
 
-                            <div class="row">
-                                <div class="col-md-6 cams-form-group">
-                                    <label class="cams-form-label text-danger fw-bold">
-                                        Tên sản phụ <span class="text-danger">*</span>
-                                    </label>
-
-                                    <input type="text"
-                                           name="name"
-                                           id="sosName"
-                                           class="cams-form-input ${not empty fieldErrors.name ? 'is-invalid' : ''}"
-                                           value="${param.name}"
-                                           placeholder="Họ tên sản phụ khẩn cấp"
-                                           required
-                                           oninput="validateSosName()">
-
-                                    <small id="sosNameError" class="cams-field-error">
-                                        <c:out value="${fieldErrors.name}"/>
-                                    </small>
-                                </div>
-
-                                <div class="col-md-6 cams-form-group">
-                                    <label class="cams-form-label text-danger fw-bold">
-                                        Số điện thoại liên lạc <span class="text-danger">*</span>
-                                    </label>
-
-                                    <input type="text"
-                                           name="phone"
-                                           id="sosPhone"
-                                           class="cams-form-input ${not empty fieldErrors.phone ? 'is-invalid' : ''}"
-                                           value="${param.phone}"
-                                           placeholder="SĐT liên hệ"
-                                           required
-                                           maxlength="11"
-                                           oninput="this.value = this.value.replace(/[^0-9]/g, ''); validateSosPhone();">
-
-                                    <small id="sosPhoneError" class="cams-field-error">
-                                        <c:out value="${fieldErrors.phone}"/>
-                                    </small>
-                                </div>
+                            <div class="cams-form-group">
+                                <label class="cams-form-label text-danger fw-bold" for="sosAppointmentId">
+                                    Bệnh nhân / ca khám đang hoạt động <span class="text-danger">*</span>
+                                </label>
+                                <select name="appointmentId" id="sosAppointmentId"
+                                        class="cams-form-input ${not empty fieldErrors.appointmentId ? 'is-invalid' : ''}" required>
+                                    <option value="">-- Chọn bệnh nhân trong hàng đợi hôm nay --</option>
+                                    <c:forEach var="candidate" items="${sosCandidates}">
+                                        <option value="${candidate.id}" ${param.appointmentId == candidate.id ? 'selected' : ''}>
+                                            #${candidate.id} — <c:out value="${candidate.patientName}"/> — <c:out value="${candidate.status}"/> — <c:out value="${candidate.queueNumber}"/>
+                                        </option>
+                                    </c:forEach>
+                                </select>
+                                <small id="sosAppointmentError" class="cams-field-error"><c:out value="${fieldErrors.appointmentId}"/></small>
+                                <c:if test="${empty sosCandidates}"><div class="form-text">Hiện không có ca Confirmed, Waiting hoặc InProgress đủ điều kiện chuyển SOS.</div></c:if>
                             </div>
 
                             <div class="cams-form-group">
@@ -348,33 +336,12 @@
         return true;
     }
 
-    function validateSosName() {
-        const name = document.getElementById("sosName").value.trim();
-
-        if (!name) {
-            return setSosError("sosName", "sosNameError", "Họ tên bệnh nhân không được để trống.");
+    function validateSosAppointment() {
+        const appointment = document.getElementById("sosAppointmentId").value;
+        if (!appointment) {
+            return setSosError("sosAppointmentId", "sosAppointmentError", "Vui lòng chọn bệnh nhân trong hàng đợi hôm nay.");
         }
-
-        const nameRegex = /^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝàáâãèéêìíòóôõùúýĂăĐđĨĩŨũƠơƯưẠ-ỹ\s]+$/;
-        if (!nameRegex.test(name)) {
-            return setSosError("sosName", "sosNameError", "Họ tên chỉ được chứa chữ cái và khoảng trắng.");
-        }
-
-        return clearSosError("sosName", "sosNameError");
-    }
-
-    function validateSosPhone() {
-        const phone = document.getElementById("sosPhone").value.trim();
-
-        if (!phone) {
-            return setSosError("sosPhone", "sosPhoneError", "Số điện thoại không được để trống.");
-        }
-
-        if (!/^0\d{9,10}$/.test(phone)) {
-            return setSosError("sosPhone", "sosPhoneError", "Số điện thoại phải bắt đầu bằng 0 và có 10-11 chữ số.");
-        }
-
-        return clearSosError("sosPhone", "sosPhoneError");
+        return clearSosError("sosAppointmentId", "sosAppointmentError");
     }
 
     function validateSosSymptoms() {
@@ -409,24 +376,18 @@
     }
 
     function validateSosForm() {
-        const validName = validateSosName();
-        const validPhone = validateSosPhone();
+        const validAppointment = validateSosAppointment();
         const validSymptoms = validateSosSymptoms();
 
-        return validName && validPhone && validSymptoms;
+        return validAppointment && validSymptoms;
     }
 
     document.addEventListener("DOMContentLoaded", function () {
-        const nameError = document.getElementById("sosNameError");
-        const phoneError = document.getElementById("sosPhoneError");
+        const appointmentError = document.getElementById("sosAppointmentError");
         const symptomsError = document.getElementById("sosSymptomsError");
 
-        if (nameError && nameError.innerText.trim()) {
-            nameError.style.display = "block";
-        }
-
-        if (phoneError && phoneError.innerText.trim()) {
-            phoneError.style.display = "block";
+        if (appointmentError && appointmentError.innerText.trim()) {
+            appointmentError.style.display = "block";
         }
 
         if (symptomsError && symptomsError.innerText.trim()) {

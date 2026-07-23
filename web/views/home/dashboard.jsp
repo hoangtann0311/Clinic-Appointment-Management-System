@@ -145,9 +145,9 @@
                         </div>
                     </c:if>
 
-                    <%-- ── Patient (roleId=5) ────────────────────────────── --%>
+                                        <%-- ── Patient (roleId=5) ────────────────────────────── --%>
                     <c:if test="${user.roleId == 5}">
-                        <div class="col-sm-6">
+                        <div class="col-sm-4">
                             <a href="${pageContext.request.contextPath}/patient/booking" class="text-decoration-none">
                                 <div class="quick-link-card p-3 rounded-3 border">
                                     <i class="bi bi-calendar-plus fs-4 text-primary"></i>
@@ -156,7 +156,7 @@
                                 </div>
                             </a>
                         </div>
-                        <div class="col-sm-6">
+                        <div class="col-sm-4">
                             <a href="${pageContext.request.contextPath}/patient/appointments" class="text-decoration-none">
                                 <div class="quick-link-card p-3 rounded-3 border">
                                     <i class="bi bi-clock-history fs-4 text-info"></i>
@@ -165,21 +165,12 @@
                                 </div>
                             </a>
                         </div>
-                        <div class="col-sm-6">
+                        <div class="col-sm-4">
                             <a href="${pageContext.request.contextPath}/patient/medical-records" class="text-decoration-none">
                                 <div class="quick-link-card p-3 rounded-3 border">
                                     <i class="bi bi-journal-medical fs-4 text-success"></i>
                                     <h6 class="mt-2 mb-1">Hồ Sơ Bệnh Án</h6>
                                     <small class="text-muted">Xem chẩn đoán & đơn thuốc</small>
-                                </div>
-                            </a>
-                        </div>
-                        <div class="col-sm-6">
-                            <a href="${pageContext.request.contextPath}/patient/pregnancy" class="text-decoration-none">
-                                <div class="quick-link-card p-3 rounded-3 border">
-                                    <i class="bi bi-heart-pulse-fill fs-4 text-danger"></i>
-                                    <h6 class="mt-2 mb-1">Theo Dõi Thai Kỳ</h6>
-                                    <small class="text-muted">Hành trình bé yêu từng tuần</small>
                                 </div>
                             </a>
                         </div>
@@ -201,7 +192,7 @@
                                 <div class="quick-link-card p-3 rounded-3 border">
                                     <i class="bi bi-people fs-4 text-success"></i>
                                     <h6 class="mt-2 mb-1">Nhân Sự</h6>
-                                    <small class="text-muted">Quản lý bác sĩ, nhân viên</small>
+                                    <small class="text-muted">Quản lý Bác sĩ lâm sàng, nhân viên</small>
                                 </div>
                             </a>
                         </div>

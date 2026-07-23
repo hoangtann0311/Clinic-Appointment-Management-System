@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @WebServlet(urlPatterns = {"/admin/reception/sos", "/admin/reception/sos/trigger", "/admin/reception/sos/dismiss"})
@@ -50,11 +51,16 @@ public class StaffSosServlet extends HttpServlet {
         String path = req.getServletPath();
 
         if ("/admin/reception/sos/trigger".equals(path)) {
-            String name = req.getParameter("name");
-            String phone = req.getParameter("phone");
+            String appointmentId = req.getParameter("appointmentId");
             String symptoms = req.getParameter("symptoms");
 
-            Map<String, String> fieldErrors = StaffValidator.validateSosFieldErrors(name, phone, symptoms);
+            Map<String, String> fieldErrors = new java.util.LinkedHashMap<>();
+            if (appointmentId == null || appointmentId.isBlank()) {
+                fieldErrors.put("appointmentId", "Vui lòng chọn bệnh nhân đang trong luồng khám hôm nay.");
+            }
+            String symptomsError = StaffValidator
+                    .validateSosFieldErrors("Bệnh nhân", "0900000000", symptoms).get("symptoms");
+            if (symptomsError != null) fieldErrors.put("symptoms", symptomsError);
 
             if (!fieldErrors.isEmpty()) {
                 req.setAttribute("fieldErrors", fieldErrors);
@@ -68,8 +74,10 @@ public class StaffSosServlet extends HttpServlet {
             }
 
             try {
-                staffReceptionService.activateEmergencySosManual(name, phone, symptoms);
-                resp.sendRedirect(req.getContextPath() + "/admin/reception/sos");
+                String queueNumber = staffReceptionService
+                        .activateEmergencySosForAppointment(appointmentId, symptoms);
+                resp.sendRedirect(req.getContextPath() + "/admin/reception/sos?success=activated&queue="
+                        + java.net.URLEncoder.encode(queueNumber, "UTF-8"));
             } catch (IllegalArgumentException e) {
                 forwardSosWithErrors(req, resp, e);
             }
@@ -86,7 +94,7 @@ public class StaffSosServlet extends HttpServlet {
                 }
 
                 staffReceptionService.dismissSosAlarm(id);
-                resp.sendRedirect(req.getContextPath() + "/admin/reception/sos");
+                resp.sendRedirect(req.getContextPath() + "/admin/reception/sos?success=dismissed");
             } catch (IllegalArgumentException e) {
                 forwardSosWithErrors(req, resp, e);
             }
@@ -116,8 +124,14 @@ public class StaffSosServlet extends HttpServlet {
     }
 
     private void setSosPageData(HttpServletRequest req) {
-        req.setAttribute("sosAppointments", staffReceptionService.getSmartQueueByDate(LocalDate.now()).stream()
+        List<com.clinic.model.Appointment> todayQueue = staffReceptionService.getSmartQueueByDate(LocalDate.now());
+        req.setAttribute("sosAppointments", todayQueue.stream()
                 .filter(a -> "Emergency_SOS".equalsIgnoreCase(a.getStatus()))
+                .collect(Collectors.toList()));
+        req.setAttribute("sosCandidates", todayQueue.stream()
+                .filter(a -> "Confirmed".equalsIgnoreCase(a.getStatus())
+                        || "Waiting".equalsIgnoreCase(a.getStatus())
+                        || "InProgress".equalsIgnoreCase(a.getStatus()))
                 .collect(Collectors.toList()));
 
         req.setAttribute("activeSos", staffReceptionService.getWidgetActiveSosByDate(LocalDate.now()));

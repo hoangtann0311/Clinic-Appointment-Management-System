@@ -81,22 +81,39 @@ public class PrescriptionDAO {
      * Trả về ID vừa tạo, hoặc -1 nếu thất bại.
      */
     public int create(int medicalRecordId, String prescriptionCode) {
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            return create(conn, medicalRecordId, prescriptionCode);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return -1;
+        }
+    }
+
+    public int create(Connection conn, int medicalRecordId, String prescriptionCode) throws SQLException {
         String sql =
             "INSERT INTO prescriptions (medical_record_id, prescription_code, status, created_at) " +
             "VALUES (?, ?, 'issued', ?)";
 
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt(1, medicalRecordId);
             ps.setString(2, prescriptionCode);
             ps.setTimestamp(3, Timestamp.valueOf(LocalDateTime.now()));
             ps.executeUpdate();
-            ResultSet keys = ps.getGeneratedKeys();
-            if (keys.next()) return keys.getInt(1);
-        } catch (SQLException e) {
-            e.printStackTrace();
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                if (keys.next()) return keys.getInt(1);
+            }
         }
         return -1;
+    }
+
+    public Integer findIdByMedicalRecordId(Connection conn, int medicalRecordId) throws SQLException {
+        String sql = "SELECT id FROM prescriptions WHERE medical_record_id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, medicalRecordId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : null;
+            }
+        }
     }
 
     /**
@@ -127,6 +144,47 @@ public class PrescriptionDAO {
             e.printStackTrace();
         }
         return new ArrayList<>();
+    }
+
+    /** Loads items for every prescription invoice on a page in one query. */
+    public java.util.Map<Integer, List<PrescriptionItem>> getItemsByInvoiceIds(
+            java.util.Collection<Integer> invoiceIds) {
+        java.util.Map<Integer, List<PrescriptionItem>> result = new java.util.LinkedHashMap<>();
+        if (invoiceIds == null || invoiceIds.isEmpty()) return result;
+        String placeholders = String.join(",", java.util.Collections.nCopies(invoiceIds.size(), "?"));
+        String sql = "SELECT i.id AS invoice_id, pi.id, pi.prescription_id, pi.medicine_id, "
+                + "pi.quantity, pi.dosage, m.name AS medicine_name, m.unit AS medicine_unit, "
+                + "m.price AS medicine_price, mc.category_name AS medicine_category "
+                + "FROM invoices i "
+                + "JOIN medical_records mr ON mr.appointment_id = i.appointment_id "
+                + "JOIN prescriptions p ON p.medical_record_id = mr.id "
+                + "JOIN prescription_items pi ON pi.prescription_id = p.id "
+                + "JOIN medicines m ON m.id = pi.medicine_id "
+                + "LEFT JOIN medicine_categories mc ON mc.id = m.category_id "
+                + "WHERE i.id IN (" + placeholders + ") ORDER BY i.id, pi.id";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            int index = 1;
+            for (Integer invoiceId : invoiceIds) ps.setInt(index++, invoiceId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    PrescriptionItem item = new PrescriptionItem();
+                    item.setId(rs.getInt("id"));
+                    item.setPrescriptionId(rs.getInt("prescription_id"));
+                    item.setMedicineId(rs.getInt("medicine_id"));
+                    item.setQuantity(rs.getInt("quantity"));
+                    item.setDosage(rs.getString("dosage"));
+                    item.setMedicineName(rs.getString("medicine_name"));
+                    item.setMedicineUnit(rs.getString("medicine_unit"));
+                    item.setMedicineCategory(rs.getString("medicine_category"));
+                    item.setPrice(rs.getBigDecimal("medicine_price"));
+                    result.computeIfAbsent(rs.getInt("invoice_id"), key -> new ArrayList<>()).add(item);
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Không thể tải chi tiết hóa đơn thuốc", e);
+        }
+        return result;
     }
 
     private List<PrescriptionItem> getItemsByPrescriptionId(int prescriptionId, Connection conn)
@@ -231,6 +289,33 @@ public class PrescriptionDAO {
             e.printStackTrace();
         }
         return false;
+    }
+
+    public boolean replaceItems(Connection conn, int prescriptionId, List<PrescriptionItem> items)
+            throws SQLException {
+        String deleteSql = "DELETE FROM prescription_items WHERE prescription_id = ?";
+        String insertSql =
+            "INSERT INTO prescription_items (prescription_id, medicine_id, quantity, dosage) " +
+            "VALUES (?, ?, ?, ?)";
+        try (PreparedStatement del = conn.prepareStatement(deleteSql)) {
+            del.setInt(1, prescriptionId);
+            del.executeUpdate();
+        }
+        if (items == null || items.isEmpty()) return true;
+        try (PreparedStatement ins = conn.prepareStatement(insertSql)) {
+            for (PrescriptionItem item : items) {
+                ins.setInt(1, prescriptionId);
+                ins.setInt(2, item.getMedicineId());
+                ins.setInt(3, item.getQuantity());
+                ins.setString(4, item.getDosage());
+                ins.addBatch();
+            }
+            int[] counts = ins.executeBatch();
+            for (int count : counts) {
+                if (count == Statement.EXECUTE_FAILED) return false;
+            }
+            return true;
+        }
     }
 
     // ── Medicines lookup ─────────────────────────────────────────────────────

@@ -1,9 +1,7 @@
 package com.clinic.controller;
 
-import com.clinic.model.AiAnalysisResult;
-import com.clinic.model.UltrasoundImage;
-import com.clinic.model.UltrasoundWaitingPatient;
 import com.clinic.model.User;
+import com.clinic.model.UltrasoundWaitingPatient;
 import com.clinic.service.UltrasoundOrderService;
 
 import jakarta.servlet.ServletException;
@@ -14,10 +12,9 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 import java.util.List;
+import com.clinic.model.UltrasoundImage;
 
-/**
- * Servlet hiển thị chi tiết ca chỉ định siêu âm và khởi động ca qua POST.
- */
+/** Detail and state-changing actions for the assigned Bác sĩ Siêu âm. */
 @WebServlet("/sonographer/detail")
 public class UltrasoundDetailServlet extends HttpServlet {
 
@@ -26,23 +23,14 @@ public class UltrasoundDetailServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-
-        User user = (User) request.getSession().getAttribute("user");
+        User user = sessionUser(request);
         if (user == null || user.getRoleId() != 6) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền truy cập.");
             return;
         }
 
-        String orderIdStr = request.getParameter("orderId");
-        if (orderIdStr == null || orderIdStr.trim().isEmpty()) {
-            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Thiếu ID chỉ định siêu âm.");
-            return;
-        }
-
-        int orderId;
-        try {
-            orderId = Integer.parseInt(orderIdStr.trim());
-        } catch (NumberFormatException ex) {
+        Integer orderId = positiveInt(request.getParameter("orderId"));
+        if (orderId == null) {
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "ID chỉ định siêu âm không hợp lệ.");
             return;
         }
@@ -51,99 +39,162 @@ public class UltrasoundDetailServlet extends HttpServlet {
             response.sendError(HttpServletResponse.SC_NOT_FOUND, "Không tìm thấy chỉ định siêu âm.");
             return;
         }
-
-        // Load danh sách ảnh siêu âm đã upload
         if (!orderService.isReadyForSonographer(orderId)) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN,
-                    "Chỉ định chưa đủ điều kiện thanh toán để xử lý.");
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ định chưa đủ điều kiện thanh toán để xử lý.");
             return;
         }
 
-        List<UltrasoundImage> images = orderService.getUltrasoundImages(orderId);
-        
-        // Load kết quả phân tích AI nếu có
-        AiAnalysisResult aiResult = orderService.getAiResult(orderId);
+        String state = order.getStatus() == null ? "" : order.getStatus().trim();
+        boolean unassignedState = state.equalsIgnoreCase("Pending")
+                || state.equalsIgnoreCase("Waiting") || state.equalsIgnoreCase("Ordered");
+        if (!unassignedState && !orderService.checkSonographerOwnership(orderId, user.getId())) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN,
+                    "Ca siêu âm này đang do Bác sĩ Siêu âm khác phụ trách.");
+            return;
+        }
 
         request.setAttribute("order", order);
+        List<UltrasoundImage> images = orderService.getUltrasoundImages(orderId);
+        if (orderService.isReviewSchemaSupported()) {
+            for (UltrasoundImage image : images) {
+                orderService.ensureImageDimensions(image, getServletContext().getRealPath(""));
+            }
+        }
+        com.clinic.model.UltrasoundAnnotation currentAnnotation = orderService.getCurrentAnnotation(orderId);
+        com.clinic.model.UltrasoundReport currentReport = orderService.getCurrentReport(orderId);
+        UltrasoundImage selectedImage = images.isEmpty() ? null : images.get(0);
+        if (currentAnnotation != null) {
+            for (UltrasoundImage image : images) {
+                if (image.getId() == currentAnnotation.getUltrasoundImageId()) {
+                    selectedImage = image;
+                    break;
+                }
+            }
+        }
         request.setAttribute("images", images);
-        request.setAttribute("aiResult", aiResult);
+        request.setAttribute("selectedImage", selectedImage);
+        request.setAttribute("aiResult", selectedImage == null ? null
+                : orderService.getAiResultForImage(orderId, selectedImage.getId()));
+        request.setAttribute("currentAnnotation", currentAnnotation);
+        request.setAttribute("currentReport", currentReport);
         request.setAttribute("ownershipSupported", orderService.isSonographerOwnershipSupported());
-
+        request.setAttribute("reviewSchemaSupported", orderService.isReviewSchemaSupported());
         request.getRequestDispatcher("/views/sonographer/detail.jsp").forward(request, response);
     }
 
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws IOException {
-        if (!orderService.isSonographerOwnershipSupported()) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Cơ sở dữ liệu chưa được nâng cấp để quản lý người phụ trách siêu âm.");
-            return;
-        }
-        User user = (User) request.getSession().getAttribute("user");
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        User user = sessionUser(request);
         if (user == null || user.getRoleId() != 6) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền truy cập.");
             return;
         }
-
-        int orderId;
-        try {
-            orderId = Integer.parseInt(request.getParameter("orderId"));
-        } catch (NumberFormatException | NullPointerException ex) {
+        Integer orderId = positiveInt(request.getParameter("orderId"));
+        if (orderId == null) {
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "ID chỉ định siêu âm không hợp lệ.");
             return;
         }
-
-        String action = request.getParameter("action");
-        if (!"start".equalsIgnoreCase(action) && !"complete".equalsIgnoreCase(action) && !"saveDraft".equalsIgnoreCase(action)) {
-            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Thao tác không hợp lệ.");
+        if (!orderService.isSonographerOwnershipSupported()) {
+            response.sendError(HttpServletResponse.SC_CONFLICT,
+                    "Cơ sở dữ liệu chưa hỗ trợ quản lý người phụ trách siêu âm.");
             return;
         }
-
         if (!orderService.isReadyForSonographer(orderId)) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN,
                     "Chỉ định chưa đủ điều kiện thanh toán để xử lý.");
             return;
         }
 
+        String action = safe(request.getParameter("action"));
         if ("start".equalsIgnoreCase(action)) {
             if (orderService.startUltrasoundOrder(orderId, user.getId())) {
-                response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId + "&success=started");
+                redirect(response, request, orderId, "success=started");
             } else {
-                response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId + "&error=" + java.net.URLEncoder.encode("Không thể tiếp nhận ca (Đã có KTV khác tiếp nhận hoặc chưa thanh toán).", "UTF-8"));
+                redirect(response, request, orderId, "error=startConflict");
             }
-        } else {
-            // Thao tác complete hoặc saveDraft bắt buộc kiểm tra Ownership
-            if (!orderService.checkSonographerOwnership(orderId, user.getId())) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền cập nhật kết quả cho ca siêu âm này (Đã được phụ trách bởi KTV khác).");
-                return;
-            }
-
-            String sonographerNotes = request.getParameter("sonographerNotes");
-            if ("complete".equalsIgnoreCase(action)) {
-                if (sonographerNotes == null || sonographerNotes.trim().isEmpty()) {
-                    response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId 
-                            + "&error=" + java.net.URLEncoder.encode("Vui lòng nhập đầy đủ kết quả nhận xét chuyên môn siêu âm.", "UTF-8"));
-                    return;
-                }
-                if (orderService.completeSonographerResult(orderId, sonographerNotes)) {
-                    response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId + "&success=completed");
-                } else {
-                    response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId 
-                            + "&error=" + java.net.URLEncoder.encode("Lỗi khi hoàn thành ca siêu âm.", "UTF-8"));
-                }
-            } else if ("saveDraft".equalsIgnoreCase(action)) {
-                // Lưu nháp kết quả
-                if (sonographerNotes != null && !sonographerNotes.trim().isEmpty()) {
-                    com.clinic.model.AiAnalysisResult aiRes = orderService.getAiResult(orderId);
-                    if (aiRes != null) {
-                        aiRes.setMessage(sonographerNotes.trim());
-                        com.clinic.dao.AiAnalysisResultDAO dao = new com.clinic.dao.AiAnalysisResultDAO();
-                        dao.deleteByTestOrderId(orderId);
-                        dao.insert(aiRes);
-                    }
-                }
-                response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId + "&success=draftSaved");
-            }
+            return;
         }
+
+        boolean sign = "sign".equalsIgnoreCase(action) || "complete".equalsIgnoreCase(action);
+        if (!sign && !"saveDraft".equalsIgnoreCase(action)) {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Thao tác không hợp lệ.");
+            return;
+        }
+        if (!orderService.isReviewSchemaSupported()) {
+            response.sendError(HttpServletResponse.SC_CONFLICT,
+                    "Chưa áp dụng migration V13 cho quy trình duyệt và ký kết quả siêu âm.");
+            return;
+        }
+        if (!orderService.checkSonographerOwnership(orderId, user.getId())) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN,
+                    "Bạn không phải người phụ trách ca siêu âm này.");
+            return;
+        }
+
+        Integer imageId = positiveInt(request.getParameter("imageId"));
+        Integer imageWidth = positiveInt(request.getParameter("imageWidth"));
+        Integer imageHeight = positiveInt(request.getParameter("imageHeight"));
+        if (imageId == null || imageWidth == null || imageHeight == null) {
+            redirect(response, request, orderId, "error=invalidImageMetadata");
+            return;
+        }
+        UltrasoundImage storedImage = orderService.getUltrasoundImageById(imageId);
+        if (storedImage == null) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND, "Không tìm thấy ảnh siêu âm đã chọn.");
+            return;
+        }
+        if (storedImage.getTestOrderId() != orderId) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN,
+                    "Ảnh siêu âm đã chọn không thuộc chỉ định đang xử lý.");
+            return;
+        }
+        if (!orderService.ensureImageDimensions(storedImage, getServletContext().getRealPath(""))) {
+            redirect(response, request, orderId, "error=invalidImageMetadata");
+            return;
+        }
+
+        String reviewStatus = safe(request.getParameter("reviewStatus"));
+        if ("Accepted".equals(reviewStatus)
+                && !orderService.hasAcceptableAiResultForImage(orderId, imageId)) {
+            response.setStatus(HttpServletResponse.SC_CONFLICT);
+            response.setContentType("text/plain; charset=UTF-8");
+            response.getWriter().write("Ảnh được chọn chưa có kết quả AI hợp lệ để xác nhận.");
+            return;
+        }
+
+        boolean saved = orderService.saveSonographerReview(
+                orderId, user.getId(), user.getFullName(), imageId, imageWidth, imageHeight,
+                reviewStatus, request.getParameter("annotationData"),
+                request.getParameter("rejectionReason"), request.getParameter("imageDescription"),
+                request.getParameter("professionalFindings"), request.getParameter("conclusion"), sign);
+
+        if (saved) {
+            redirect(response, request, orderId, sign ? "success=signed" : "success=draftSaved");
+        } else {
+            redirect(response, request, orderId, sign ? "error=signFailed" : "error=draftFailed");
+        }
+    }
+
+    private User sessionUser(HttpServletRequest request) {
+        Object value = request.getSession(false) == null ? null
+                : request.getSession(false).getAttribute("user");
+        return value instanceof User ? (User) value : null;
+    }
+
+    private Integer positiveInt(String value) {
+        try {
+            int parsed = Integer.parseInt(value);
+            return parsed > 0 ? parsed : null;
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private String safe(String value) { return value == null ? "" : value.trim(); }
+
+    private void redirect(HttpServletResponse response, HttpServletRequest request,
+                          int orderId, String query) throws IOException {
+        response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId="
+                + orderId + "&" + query + "#review-workspace");
     }
 }

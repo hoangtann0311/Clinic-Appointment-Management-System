@@ -17,7 +17,6 @@ import java.util.List;
  */
 public class UltrasoundOrderDAO {
 
-    public static final String COMPLETED_STATUS = "Completed";
 
     private static final String WAITING_CONDITION =
         "("
@@ -191,24 +190,6 @@ public class UltrasoundOrderDAO {
         }
     }
 
-    public boolean updateStatus(int orderId, String newStatus) {
-        String sql = "UPDATE test_orders SET status = ? WHERE id = ?";
-        Connection conn = null;
-        PreparedStatement ps = null;
-        try {
-            conn = DatabaseConfig.getConnection();
-            ps = conn.prepareStatement(sql);
-            ps.setString(1, newStatus);
-            ps.setInt(2, orderId);
-            return ps.executeUpdate() > 0;
-        } catch (SQLException e) {
-            System.err.println("[UltrasoundOrderDAO] updateStatus error: " + e.getMessage());
-            return false;
-        } finally {
-            closeResources(conn, ps, null);
-        }
-    }
-
     private static Boolean hasSonographerOwnershipColumn = null;
 
     public boolean isSonographerOwnershipSupported() {
@@ -368,7 +349,9 @@ public class UltrasoundOrderDAO {
         String sql = "SELECT TOP 1 o.id AS order_id, o.medical_record_id, o.service_id, o.status, o.created_at "
                 + "FROM test_orders o WITH (UPDLOCK, HOLDLOCK) "
                 + "WHERE o.medical_record_id = ? AND o.service_id = ? "
-                + "AND UPPER(LTRIM(RTRIM(ISNULL(o.status, '')))) NOT IN ('COMPLETED', 'CANCELLED', 'CONFIRMED') "
+                // Completed là phiếu đã được Bác sĩ Siêu âm ký và vẫn là một
+                // chỉ định đang hoạt động cho tới khi bác sĩ lâm sàng Confirmed.
+                + "AND UPPER(LTRIM(RTRIM(ISNULL(o.status, '')))) NOT IN ('CANCELLED', 'CONFIRMED') "
                 + "ORDER BY o.id DESC";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, medicalRecordId);
@@ -385,14 +368,6 @@ public class UltrasoundOrderDAO {
                 order.setCreatedAt(rs.getTimestamp("created_at"));
                 return order;
             }
-        }
-    }
-
-    public UltrasoundWaitingPatient findActiveOrder(int medicalRecordId, int serviceId) {
-        try (Connection conn = DatabaseConfig.getConnection()) {
-            return findActiveOrder(conn, medicalRecordId, serviceId);
-        } catch (SQLException e) {
-            throw new RuntimeException("Lỗi database khi kiểm tra chỉ định siêu âm đang xử lý", e);
         }
     }
 

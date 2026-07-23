@@ -1,28 +1,26 @@
 package com.clinic.service;
 
+import com.clinic.config.AppConfig;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Service gọi Python để nhận diện u xơ tử cung từ ảnh siêu âm
  */
 public class AiPredictionService {
 
-    private static final String PYTHON_COMMAND = "py";
-
-    private static final String PYTHON_SCRIPT =
-            "C:\\Users\\admin\\Downloads\\AI_Ultrasound_Fibroid\\predict_for_web.py";
-
     public String predict(String inputImagePath, String outputDir) throws Exception {
         File dir = new File(outputDir);
-
-        if (!dir.exists()) {
-            dir.mkdirs();
+        if (!dir.exists() && !dir.mkdirs()) throw new IllegalStateException("Không tạo được thư mục kết quả AI.");
+        String scriptPath = AppConfig.getAiPythonScript();
+        if (scriptPath.isBlank() || !new File(scriptPath).isFile()) {
+            throw new IllegalStateException("Chưa cấu hình đúng ai.python.script.");
         }
 
         ProcessBuilder processBuilder = new ProcessBuilder(
-                PYTHON_COMMAND,
-                PYTHON_SCRIPT,
+                AppConfig.getAiPythonCommand(),
+                scriptPath,
                 inputImagePath,
                 outputDir
         );
@@ -32,12 +30,13 @@ public class AiPredictionService {
 
         Process process = processBuilder.start();
 
-        String output = new String(
-                process.getInputStream().readAllBytes(),
-                StandardCharsets.UTF_8
-        );
-
-        int exitCode = process.waitFor();
+        boolean completed = process.waitFor(AppConfig.getAiProcessTimeout(), TimeUnit.MILLISECONDS);
+        if (!completed) {
+            process.destroyForcibly();
+            throw new RuntimeException("AI prediction timed out.");
+        }
+        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        int exitCode = process.exitValue();
 
         if (exitCode != 0) {
             throw new RuntimeException("AI prediction failed: " + output);

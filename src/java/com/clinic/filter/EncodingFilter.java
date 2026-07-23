@@ -1,5 +1,6 @@
 package com.clinic.filter;
 
+import com.clinic.model.User;
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.FilterConfig;
@@ -8,15 +9,18 @@ import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.annotation.WebFilter;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
+import java.time.Instant;
+import java.util.UUID;
 
 /**
  * Filter that sets UTF-8 encoding for all requests and responses.
  * Only sets text/html Content-Type for non-static resources
  * to avoid overriding MIME types of CSS, JS, images, fonts, etc.
  */
-@WebFilter("/*")
+// @WebFilter("/*")
 public class EncodingFilter implements Filter {
 
     @Override
@@ -31,16 +35,42 @@ public class EncodingFilter implements Filter {
         request.setCharacterEncoding("UTF-8");
         response.setCharacterEncoding("UTF-8");
 
-        // Only set Content-Type for HTML requests — skip static resources (CSS, JS, images...)
+        String requestId = UUID.randomUUID().toString();
+        request.setAttribute("requestId", requestId);
+        if (response instanceof HttpServletResponse) {
+            ((HttpServletResponse) response).setHeader("X-Request-ID", requestId);
+        }
+
         if (request instanceof HttpServletRequest) {
             HttpServletRequest req = (HttpServletRequest) request;
             String path = normalizePath(req.getRequestURI());
             if (!isStaticResource(path)) {
                 response.setContentType("text/html; charset=UTF-8");
+            } else {
+                if (path.endsWith(".js")) {
+                    response.setContentType("application/javascript; charset=UTF-8");
+                } else if (path.endsWith(".css")) {
+                    response.setContentType("text/css; charset=UTF-8");
+                }
             }
         }
 
-        chain.doFilter(request, response);
+        try {
+            chain.doFilter(request, response);
+        } catch (IOException | ServletException | RuntimeException ex) {
+            HttpServletRequest req = request instanceof HttpServletRequest
+                    ? (HttpServletRequest) request : null;
+            User user = null;
+            if (req != null && req.getSession(false) != null
+                    && req.getSession(false).getAttribute("user") instanceof User) {
+                user = (User) req.getSession(false).getAttribute("user");
+            }
+            System.err.printf("[%s] requestId=%s route=%s userId=%s role=%s error=%s%n",
+                    Instant.now(), requestId, req == null ? "unknown" : normalizePath(req.getRequestURI()),
+                    user == null ? "anonymous" : user.getId(), user == null ? "anonymous" : user.getRoleId(),
+                    ex.getClass().getSimpleName());
+            throw ex;
+        }
     }
 
     /**

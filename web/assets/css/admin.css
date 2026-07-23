@@ -1,5 +1,5 @@
 /* ============================================================
-   CAMS Admin — Pink Rose Dashboard Stylesheet v3.0
+   CAMS Admin — Clinical Dashboard Stylesheet
    ============================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800;900&family=Nunito:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
@@ -8,27 +8,27 @@
     --sidebar-w: 270px;
     --topbar-h: 66px;
 
-    /* === PINK CORE PALETTE === */
-    --pink-50:  #fff0f6;
-    --pink-100: #ffe0ef;
-    --pink-200: #ffb3d1;
-    --pink-300: #ff80b3;
-    --pink-400: #ff4d94;
-    --pink-500: #e91e8c;
-    --pink-600: #c2185b;
-    --pink-700: #9c0f4a;
-    --pink-800: #7b0a39;
-    --pink-900: #5a0628;
+    /* === CLINICAL BLUE PALETTE === */
+    --pink-50:  #fff0f5;
+    --pink-100: #f8bbd0;
+    --pink-200: #f9a8d4;
+    --pink-300: #f472b6;
+    --pink-400: #ec4899;
+    --pink-500: #c2185b;
+    --pink-600: #a3154d;
+    --pink-700: #be185d;
+    --pink-800: #9d174d;
+    --pink-900: #831843;
 
-    --rose-400: #fb7185;
-    --rose-500: #f43f5e;
-    --rose-600: #e11d48;
+    --rose-400: #f43f5e;
+    --rose-500: #e11d48;
+    --rose-600: #be123c;
 
     /* === SURFACES === */
-    --c-bg:              #fff5f9;
+    --c-bg:              #f6f8fb;
     --c-surface:         #ffffff;
-    --c-surface-variant: #fff0f5;
-    --c-surface-container: #fce8f0;
+    --c-surface-variant: #f1f5f9;
+    --c-surface-container: #eaf0f7;
 
     /* === PRIMARY === */
     --c-primary:         var(--pink-600);
@@ -37,24 +37,24 @@
     --c-primary-container: var(--pink-100);
 
     /* === TEXT === */
-    --c-on-bg:           #1f1117;
-    --c-on-surface:      #2d1a25;
-    --c-on-surface-var:  #5a3d4e;
-    --c-muted:           #8a6070;
-    --c-outline:         #e8c5d5;
-    --c-outline-variant: #f5dfe9;
+    --c-on-bg:           #1f2937;
+    --c-on-surface:      #1f2937;
+    --c-on-surface-var:  #475569;
+    --c-muted:           #64748b;
+    --c-outline:         #cbd5e1;
+    --c-outline-variant: #e2e8f0;
 
     /* === SIDEBAR === */
-    --sb-bg:         #1a0a12;
-    --sb-bg-mid:     #2d1020;
-    --sb-bg-deep:    #0f0509;
-    --sb-hover:      #3d1830;
-    --sb-active-bg:  rgba(233,30,140,0.18);
-    --sb-active-border: var(--pink-500);
-    --sb-text:       #f0d5e3;
-    --sb-text-muted: #a07085;
+    --sb-bg:         #971747;
+    --sb-bg-mid:     #80103a;
+    --sb-bg-deep:    #6b0d30;
+    --sb-hover:      #b51d58;
+    --sb-active-bg:  rgba(244,63,94,0.15);
+    --sb-active-border: #e91e63;
+    --sb-text:       #e2e8f0;
+    --sb-text-muted: #94a3b8;
     --sb-border:     rgba(255,255,255,0.07);
-    --sb-accent:     #ff80b3;
+    --sb-accent:     #93c5fd;
 
     /* === STATUS === */
     --status-active-bg:   #e8f5e9;
@@ -67,12 +67,12 @@
     --status-pending-fg:  #f57f17;
 
     /* === SHADOWS === */
-    --shadow-xs: 0 1px 3px rgba(194,24,91,0.07);
-    --shadow-sm: 0 2px 8px rgba(194,24,91,0.10);
-    --shadow-md: 0 4px 20px rgba(194,24,91,0.13);
-    --shadow-lg: 0 8px 32px rgba(194,24,91,0.16);
-    --shadow-xl: 0 16px 56px rgba(194,24,91,0.20);
-    --shadow-pink: 0 4px 24px rgba(233,30,140,0.30);
+    --shadow-xs: 0 1px 3px rgba(15,23,42,0.06);
+    --shadow-sm: 0 2px 8px rgba(15,23,42,0.08);
+    --shadow-md: 0 4px 20px rgba(15,23,42,0.10);
+    --shadow-lg: 0 8px 32px rgba(15,23,42,0.12);
+    --shadow-xl: 0 16px 56px rgba(15,23,42,0.14);
+    --shadow-pink: 0 4px 24px rgba(194,24,91,0.18);
 
     /* === RADIUS === */
     --r-sm:   8px;
@@ -1163,30 +1163,28 @@ body.admin-login-page {
 
 /* ============================================================
    DOCTOR WORKSPACE
-   A restrained clinical layer over the shared CAMS rose theme.
+   A restrained clinical layer over the shared dashboard theme.
    ============================================================ */
 .doctor-theme .admin-main {
-    background:
-        radial-gradient(circle at 90% 0%, rgba(251, 113, 133, .10), transparent 28rem),
-        linear-gradient(180deg, #fffafb 0%, #fff7fa 100%);
+    background: #f6f8fb;
 }
 
 .doctor-theme .admin-main .card {
-    border: 1px solid #f6d5e0 !important;
-    box-shadow: 0 10px 28px rgba(96, 22, 54, .07) !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, .06) !important;
 }
 
 .doctor-theme .admin-main .card:hover {
-    box-shadow: 0 14px 32px rgba(96, 22, 54, .10) !important;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, .08) !important;
 }
 
 .doctor-theme .admin-main .table > :not(caption) > * > * {
-    border-color: #f8dbe5;
+    border-color: #e2e8f0;
 }
 
 .doctor-theme .admin-main .table thead th {
-    color: #9f174d;
-    background: #fff1f5;
+    color: #334155;
+    background: #f8fafc;
     font-size: .76rem;
     font-weight: 800;
     letter-spacing: .035em;
@@ -1198,23 +1196,23 @@ body.admin-login-page {
 }
 
 .doctor-theme .admin-main .table tbody tr:hover {
-    background: #fff8fa;
+    background: #f8fafc;
 }
 
 .doctor-theme .admin-main .form-label {
-    color: #7f1d4a;
+    color: #334155;
     font-weight: 700;
 }
 
 .doctor-theme .admin-main .form-control,
 .doctor-theme .admin-main .form-select {
     min-height: 42px;
-    border-color: #efc5d5;
-    background-color: #fffdfd;
+    border-color: #cbd5e1;
+    background-color: #ffffff;
 }
 
 .doctor-theme .admin-main .form-control::placeholder {
-    color: #b58a9b;
+    color: #94a3b8;
 }
 
 .doctor-theme .admin-main .btn {
@@ -1224,24 +1222,24 @@ body.admin-login-page {
 
 .doctor-theme .admin-main .alert {
     border-width: 1px;
-    box-shadow: 0 6px 16px rgba(96, 22, 54, .05);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, .05);
 }
 
 .doctor-theme .doctor-record-hero {
-    background: linear-gradient(135deg, #9d174d 0%, #e11d70 55%, #fb7185 100%) !important;
-    box-shadow: 0 14px 32px rgba(190, 24, 93, .22) !important;
+    background: #0d6efd !important;
+    box-shadow: 0 8px 20px rgba(13, 110, 253, .16) !important;
 }
 
 .doctor-theme .admin-main .quick-link-card {
     background: #fff;
-    border-color: #f2cddd !important;
+    border-color: #dbeafe !important;
     transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
 }
 
 .doctor-theme .admin-main .quick-link-card:hover {
     transform: translateY(-3px);
-    border-color: #ec7ca6 !important;
-    box-shadow: 0 12px 22px rgba(190, 24, 93, .12);
+    border-color: #93c5fd !important;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, .08);
 }
 
 /* Keep Doctor page banners in one calm clinical palette. Semantic status badges
@@ -1250,30 +1248,206 @@ body.admin-login-page {
 .doctor-theme .admin-main .card.bg-success.bg-gradient,
 .doctor-theme .admin-main .card.bg-info.bg-gradient,
 .doctor-theme .admin-main .card.bg-danger.bg-gradient {
-    background: linear-gradient(135deg, #9d174d 0%, #e11d70 58%, #fb7185 100%) !important;
-    box-shadow: 0 .65rem 1.45rem rgba(190, 24, 93, .18) !important;
+    background: #0d6efd !important;
+    box-shadow: 0 .5rem 1rem rgba(13, 110, 253, .14) !important;
     border-color: transparent !important;
 }
 
 .doctor-theme .admin-main .obs-nav .nav-link.active {
-    color: #b10f5c;
-    border-bottom-color: #e11d68;
+    color: #0d6efd;
+    border-bottom-color: #0d6efd;
     background: #fff;
 }
 
 .doctor-theme .admin-main .obs-nav .nav-link:hover:not(.active) {
-    color: #9d174d;
-    background: #fff1f6;
+    color: #0d6efd;
+    background: #eff6ff;
 }
 
 .doctor-theme .admin-main .form-control:focus,
 .doctor-theme .admin-main .form-select:focus {
-    border-color: #ec4899 !important;
-    box-shadow: 0 0 0 .22rem rgba(236, 72, 153, .16) !important;
+    border-color: #60a5fa !important;
+    box-shadow: 0 0 0 .22rem rgba(59, 130, 246, .16) !important;
+}
+
+/* ============================================================
+   SHARED CLINICAL WORKSPACE
+   Both clinical doctors and sonographers use these neutral components.
+   Role-specific screens may differ in content, never in visual language.
+   ============================================================ */
+.doctor-theme .admin-main,
+.sonographer-theme .admin-main {
+    background: var(--c-bg);
+}
+
+.doctor-theme .admin-main .admin-page-header,
+.sonographer-theme .admin-main .admin-page-header {
+    align-items: center;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--c-outline-variant);
+}
+
+.doctor-theme .admin-main .admin-page-title,
+.sonographer-theme .admin-main .admin-page-title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #172033;
+}
+
+.doctor-theme .admin-main .admin-page-subtitle,
+.sonographer-theme .admin-main .admin-page-subtitle {
+    color: var(--c-muted);
+}
+
+.clinical-kpi {
+    height: 100%;
+    background: var(--c-surface) !important;
+    border: 1px solid var(--c-outline-variant) !important;
+    border-left: 4px solid var(--c-primary) !important;
+    border-radius: var(--r-md) !important;
+    box-shadow: var(--shadow-xs) !important;
+    overflow: hidden;
+    transition: border-color var(--t-fast), box-shadow var(--t-fast), transform var(--t-fast);
+}
+
+.clinical-kpi:hover {
+    border-color: var(--pink-300) !important;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm) !important;
+}
+
+.clinical-kpi .card-body {
+    min-height: 104px;
+    padding: 1rem 1.1rem !important;
+}
+
+.clinical-kpi__value {
+    color: #172033;
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    font-weight: 800;
+    line-height: 1.1;
+}
+
+.clinical-kpi .fs-1 {
+    color: #172033 !important;
+    font-family: var(--font-display);
+    font-weight: 800 !important;
+}
+
+.clinical-kpi__label {
+    margin-top: .45rem;
+    color: #475569;
+    font-size: .82rem;
+    font-weight: 700;
+}
+
+.clinical-kpi--success { border-left-color: #15803d !important; }
+.clinical-kpi--warning { border-left-color: #b45309 !important; }
+.clinical-kpi--danger  { border-left-color: #b91c1c !important; }
+.clinical-kpi--muted   { border-left-color: #64748b !important; }
+.clinical-kpi--success .fs-1 { color: #15803d !important; }
+.clinical-kpi--warning .fs-1 { color: #b45309 !important; }
+.clinical-kpi--danger .fs-1  { color: #b91c1c !important; }
+.clinical-kpi--muted .fs-1   { color: #475569 !important; }
+
+.clinical-kpi.kpi-card .card-body {
+    min-height: 0;
+}
+
+.clinical-panel,
+.doctor-theme .admin-main > .card,
+.sonographer-theme .admin-main > .card {
+    border-color: var(--c-outline-variant) !important;
+    border-radius: var(--r-md) !important;
+    box-shadow: var(--shadow-xs) !important;
+}
+
+/* Older doctor pages use coloured Bootstrap banners.  Render those banners as
+   the same calm workspace heading used by the sonographer pages. */
+.doctor-theme .admin-main .card.bg-primary.bg-gradient.text-white {
+    background: var(--c-surface) !important;
+    color: #172033 !important;
+    border: 1px solid var(--c-outline-variant) !important;
+    box-shadow: var(--shadow-xs) !important;
+}
+
+.doctor-theme .admin-main .card.bg-primary.bg-gradient.text-white h1,
+.doctor-theme .admin-main .card.bg-primary.bg-gradient.text-white h2,
+.doctor-theme .admin-main .card.bg-primary.bg-gradient.text-white h3,
+.doctor-theme .admin-main .card.bg-primary.bg-gradient.text-white p {
+    color: inherit !important;
+}
+
+.doctor-theme .admin-main .card.bg-primary.bg-gradient.text-white p {
+    opacity: 1 !important;
+    color: var(--c-muted) !important;
+    font-size: .9rem !important;
+}
+
+.doctor-theme .admin-main .card.bg-primary.bg-gradient.text-white .badge {
+    border: 1px solid var(--pink-200);
+    font-size: .75rem !important;
+}
+
+.doctor-theme .admin-main .card.bg-primary.bg-gradient.text-white .btn-light {
+    color: var(--c-primary) !important;
+    background: var(--pink-50) !important;
+    border: 1px solid var(--pink-200) !important;
+    box-shadow: none !important;
+}
+
+.doctor-theme .admin-main .card.bg-primary.bg-gradient.text-white .btn-light:hover {
+    background: var(--pink-100) !important;
+    transform: none;
+}
+
+/* Components built before the clinical workspace used different table/card
+   classes.  This compatibility layer makes them read as one system. */
+.doctor-theme .admin-main .card-header,
+.sonographer-theme .admin-main .card-header {
+    border-bottom-color: var(--c-outline-variant);
+}
+
+.doctor-theme .admin-main .table thead th,
+.sonographer-theme .admin-main .table thead th {
+    background: #f8fafc;
+    color: #334155;
+}
+
+.doctor-theme .admin-main .badge,
+.sonographer-theme .admin-main .badge {
+    font-weight: 700;
+}
+
+.doctor-theme .admin-main .alert,
+.sonographer-theme .admin-main .alert {
+    border-radius: var(--r-sm);
+    box-shadow: none;
+}
+
+.sonographer-theme .table-danger-subtle {
+    background-color: #fff7f7 !important;
+}
+
+.sonographer-theme .sos-blink {
+    border-left: 4px solid #b91c1c !important;
+}
+
+@keyframes cams-pulse-sos {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.04); opacity: .9; }
+}
+
+.sonographer-theme .sos-blink,
+.sonographer-theme .sos-pulse {
+    animation: cams-pulse-sos 1.2s ease-in-out infinite;
 }
 
 @media (max-width: 767.98px) {
     .doctor-theme .admin-main { padding: 1rem; }
     .doctor-theme .admin-main .table { font-size: .84rem; }
+
+    .clinical-kpi .card-body { min-height: auto; }
 }
 

@@ -86,7 +86,7 @@ public class StaffEditServlet extends HttpServlet {
 
             Invoice preInvoice = new com.clinic.dao.InvoiceDAO().getByAppointmentIdAndType(id, "PRE_EXAM");
             if (preInvoice == null || !"PendingConfirmation".equalsIgnoreCase(preInvoice.getStatus())) {
-                resp.sendRedirect(req.getContextPath() + "/admin/reception/edit?id=" + id + "&error=Không thể xác nhận thanh toán cho hóa đơn này.");
+                resp.sendRedirect(req.getContextPath() + "/admin/reception/edit?id=" + id + "&error=" + java.net.URLEncoder.encode("Không thể xác nhận thanh toán cho hóa đơn này.", "UTF-8"));
                 return;
             }
 
@@ -94,7 +94,7 @@ public class StaffEditServlet extends HttpServlet {
             if (success) {
                 resp.sendRedirect(req.getContextPath() + "/admin/reception/edit?id=" + id + "&success=paymentConfirmed");
             } else {
-                resp.sendRedirect(req.getContextPath() + "/admin/reception/edit?id=" + id + "&error=Không thể xác nhận thanh toán.");
+                resp.sendRedirect(req.getContextPath() + "/admin/reception/edit?id=" + id + "&error=" + java.net.URLEncoder.encode("Không thể xác nhận thanh toán.", "UTF-8"));
             }
             return;
         }
@@ -121,7 +121,7 @@ public class StaffEditServlet extends HttpServlet {
             }
 
             if (targetInvoice == null || !"PendingConfirmation".equalsIgnoreCase(targetInvoice.getStatus())) {
-                resp.sendRedirect(req.getContextPath() + "/admin/reception/edit?id=" + id + "&error=Không thể từ chối hóa đơn này.");
+                resp.sendRedirect(req.getContextPath() + "/admin/reception/edit?id=" + id + "&error=" + java.net.URLEncoder.encode("Không thể từ chối hóa đơn này.", "UTF-8"));
                 return;
             }
 
@@ -130,10 +130,10 @@ public class StaffEditServlet extends HttpServlet {
                 if (success) {
                     resp.sendRedirect(req.getContextPath() + "/admin/reception/payments?success=paymentRejected");
                 } else {
-                    resp.sendRedirect(req.getContextPath() + "/admin/reception/payments?error=Không thể từ chối thanh toán.");
+                    resp.sendRedirect(req.getContextPath() + "/admin/reception/payments?error=" + java.net.URLEncoder.encode("Không thể từ chối thanh toán.", "UTF-8"));
                 }
             } catch (IllegalArgumentException e) {
-                resp.sendRedirect(req.getContextPath() + "/admin/reception/payments?error=" + e.getMessage());
+                resp.sendRedirect(req.getContextPath() + "/admin/reception/payments?error=" + java.net.URLEncoder.encode(e.getMessage(), "UTF-8"));
             }
             return;
         }
