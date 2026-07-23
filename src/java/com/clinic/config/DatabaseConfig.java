@@ -44,10 +44,10 @@ public final class DatabaseConfig {
      * Thành viên cấu hình bằng DB_USER và DB_PASSWORD trên máy cá nhân.
      */
     private static final String DB_USER =
-            getSetting("DB_USER", null);
+            getSetting("DB_USER", "sa");
 
     private static final String DB_PASSWORD =
-            getSetting("DB_PASSWORD", null);
+            getSetting("DB_PASSWORD", "123");
 
     /**
      * Bốn URL đầu sử dụng Windows Authentication.

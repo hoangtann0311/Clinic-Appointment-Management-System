@@ -53,7 +53,24 @@ public class LoginServlet extends HttpServlet {
         String password = request.getParameter("password");
 
         Map<String, String> errors = new HashMap<>();
-        User user = authService.login(email, password, errors);
+        User user;
+        try {
+            user = authService.login(email, password, errors);
+        } catch (RuntimeException e) {
+            // Không để lỗi DB/driver hoặc dữ liệu không hợp lệ biến thành HTTP 500
+            // không có thông tin cho người dùng. Chi tiết vẫn được ghi ở server log.
+            System.err.println(">>> Login failed unexpectedly for identifier: "
+                    + (email != null ? email : "null"));
+            e.printStackTrace(System.err);
+            errors.put("login", "Không thể đăng nhập lúc này. Vui lòng kiểm tra kết nối cơ sở dữ liệu và thử lại.");
+            request.setAttribute("emailValue", email);
+            request.setAttribute("errors", errors);
+            request.setAttribute("errorMessage", errors.get("login"));
+            request.setAttribute("emailError", errors.get("email"));
+            request.setAttribute("passwordError", errors.get("password"));
+            request.getRequestDispatcher("/views/auth/login.jsp").forward(request, response);
+            return;
+        }
 
         if (user == null) {
             // Đăng nhập thất bại: giữ lại email đã nhập, hiển thị lỗi
