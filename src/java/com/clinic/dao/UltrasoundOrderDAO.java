@@ -267,12 +267,19 @@ public class UltrasoundOrderDAO {
      */
     public boolean checkDoctorOwnership(int orderId, int doctorUserId) {
         String sql = "SELECT 1 FROM test_orders o "
-                   + "LEFT JOIN doctors d ON o.doctor_id = d.id "
-                   + "WHERE o.id = ? AND d.user_id = ?";
+                   + "LEFT JOIN doctors d_order ON o.doctor_id = d_order.id "
+                   + "LEFT JOIN medical_records mr ON o.medical_record_id = mr.id "
+                   + "LEFT JOIN appointments a_curr ON mr.appointment_id = a_curr.id "
+                   + "LEFT JOIN doctors d_curr ON a_curr.doctor_id = d_curr.id "
+                   + "LEFT JOIN appointments a_any ON a_curr.patient_id = a_any.patient_id "
+                   + "LEFT JOIN doctors d_any ON a_any.doctor_id = d_any.id "
+                   + "WHERE o.id = ? AND (d_order.user_id = ? OR d_curr.user_id = ? OR d_any.user_id = ?)";
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, orderId);
             ps.setInt(2, doctorUserId);
+            ps.setInt(3, doctorUserId);
+            ps.setInt(4, doctorUserId);
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next();
             }
@@ -281,6 +288,7 @@ public class UltrasoundOrderDAO {
             return false;
         }
     }
+
 
     /**
      * Verifies that the given patient (by user ID) owns the appointment for this order AND order is Confirmed.
