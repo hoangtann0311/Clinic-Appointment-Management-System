@@ -9,36 +9,36 @@
 /* ── Custom Theme CSS Variables ── */
 :root {
     /* Color Palette */
-    --pt-pink-50:  #fff0f6;
-    --pt-pink-100: #ffe0ef;
-    --pt-pink-200: #ffb3d1;
-    --pt-pink-300: #ff80b3;
-    --pt-pink-400: #ff4d94;
-    --pt-pink-500: #e91e8c;
-    --pt-pink-600: #c2185b;
-    --pt-pink-700: #9c0f4a;
+    --pt-pink-50:  #F0F7FF;
+    --pt-pink-100: #E0EFFF;
+    --pt-pink-200: #BFDBFE;
+    --pt-pink-300: #93C5FD;
+    --pt-pink-400: #60A5FA;
+    --pt-pink-500: #3B82F6;
+    --pt-pink-600: #2563EB;
+    --pt-pink-700: #1D4ED8;
 
-    --pt-rose-500: #f43f5e;
-    --pt-rose-600: #e11d48;
+    --pt-rose-500: #60A5FA;
+    --pt-rose-600: #3B82F6;
 
     /* Surfaces */
-    --pt-bg:           #faf5f7; /* Extremely clean soft rose-tinted white */
+    --pt-bg:           #F0F7FF; /* Extremely clean soft rose-tinted white */
     --pt-surface:      #ffffff;
-    --pt-surface-var:  #fff6fb;
-    --pt-outline:      #f0dae5;
-    --pt-outline-var:  #ffe2f0;
+    --pt-surface-var:  #EFF6FF;
+    --pt-outline:      #DBEAFE;
+    --pt-outline-var:  #DBEAFE;
 
     /* Text colors */
-    --pt-on-bg:       #29121c;
-    --pt-on-surface:  #381525;
-    --pt-on-var:      #602c46;
-    --pt-muted:       #8a5e74;
+    --pt-on-bg:       #0F172A;
+    --pt-on-surface:  #1E293B;
+    --pt-on-var:      #475569;
+    --pt-muted:       #94A3B8;
 
     /* Shadows (soft pinkish-gray depth) */
-    --pt-shadow-xs: 0 2px 8px rgba(194, 24, 91, 0.02);
-    --pt-shadow-sm: 0 6px 18px rgba(194, 24, 91, 0.04);
-    --pt-shadow-md: 0 10px 30px rgba(194, 24, 91, 0.07);
-    --pt-shadow-lg: 0 20px 48px rgba(194, 24, 91, 0.1);
+    --pt-shadow-xs: 0 2px 8px rgba(37,99,235, 0.02);
+    --pt-shadow-sm: 0 6px 18px rgba(37,99,235, 0.04);
+    --pt-shadow-md: 0 10px 30px rgba(37,99,235, 0.07);
+    --pt-shadow-lg: 0 20px 48px rgba(37,99,235, 0.1);
 
     /* Radius */
     --pt-r-sm: 8px;
@@ -90,7 +90,7 @@ body.patient-body {
 .patient-navbar-brand i {
     color: var(--pt-pink-500);
     font-size: 1.7rem;
-    filter: drop-shadow(0 2px 6px rgba(233,30,140,0.25));
+    filter: drop-shadow(0 2px 6px rgba(37,99,235,0.25));
 }
 .pt-brand-badge {
     font-size: 0.62rem;
@@ -188,7 +188,7 @@ body.patient-body {
     align-items: center;
     justify-content: center;
     text-transform: uppercase;
-    box-shadow: 0 2px 6px rgba(233,30,140,0.2);
+    box-shadow: 0 2px 6px rgba(37,99,235,0.2);
 }
 
 /* Dropdown Menu overrides */
@@ -222,7 +222,7 @@ body.patient-body {
 
 /* ── Custom Patient Hero Banner ── */
 .patient-hero-card {
-    background: linear-gradient(135deg, #fff2f6 0%, #ffe3f0 100%) !important;
+    background: linear-gradient(135deg, #E0EFFF 0%, #DBEAFE 100%) !important;
     border: 1.5px solid var(--pt-outline) !important;
     box-shadow: var(--pt-shadow-sm) !important;
     border-radius: var(--pt-r-lg) !important;
@@ -240,7 +240,7 @@ body.patient-body {
     color: #ffffff !important;
     font-size: 0.82rem;
     padding: 0.45rem 1rem;
-    box-shadow: 0 2px 8px rgba(233,30,140,0.15);
+    box-shadow: 0 2px 8px rgba(37,99,235,0.15);
 }
 
 /* ── Modern Premium Cards ── */
@@ -323,13 +323,13 @@ body.patient-body {
     border: none !important;
     border-radius: var(--pt-r-md) !important;
     font-weight: 600;
-    box-shadow: 0 4px 14px rgba(233,30,140,0.22);
+    box-shadow: 0 4px 14px rgba(37,99,235,0.22);
     transition: all var(--pt-t) !important;
     color: #fff !important;
 }
 .btn-primary:hover, .btn-primary:focus {
     background: linear-gradient(135deg, var(--pt-pink-700), var(--pt-pink-600)) !important;
-    box-shadow: 0 6px 20px rgba(233,30,140,0.35) !important;
+    box-shadow: 0 6px 20px rgba(37,99,235,0.35) !important;
     transform: translateY(-1px);
     color: #fff !important;
 }
@@ -469,5 +469,92 @@ body.patient-body {
 }
 .btn-primary, .btn-primary:hover {
     color: #ffffff !important;
+}
+
+/* CAMS unified soft-pink layer for the Patient portal. */
+:root {
+    --pt-pink-50: #F0F7FF !important;
+    --pt-pink-100: #E0EFFF !important;
+    --pt-pink-200: #BFDBFE !important;
+    --pt-pink-300: #93C5FD !important;
+    --pt-pink-400: #60A5FA !important;
+    --pt-pink-500: #3B82F6 !important;
+    --pt-pink-600: #2563EB !important;
+    --pt-pink-700: #1D4ED8 !important;
+    --pt-rose-500: #3B82F6 !important;
+    --pt-rose-600: #2563EB !important;
+    --pt-bg: #F0F7FF !important;
+    --pt-surface-var: #EFF6FF !important;
+    --pt-outline: #BFDBFE !important;
+    --pt-outline-var: #DBEAFE !important;
+    --pt-on-bg: #1E293B !important;
+    --pt-on-surface: #1E293B !important;
+    --pt-on-var: #64748B !important;
+    --pt-muted: #94A3B8 !important;
+}
+body.patient-body { background:#F0F7FF !important; color:#1E293B !important; }
+.patient-navbar {
+    background:rgba(255,255,255,.97) !important;
+    border-bottom-color:#efd5e0 !important;
+}
+.patient-navbar-brand,
+.patient-navbar-brand i,
+.patient-nav-link.active,
+.patient-nav-link:hover,
+.text-pink-theme,
+.text-pink-light {
+    color:#2563EB !important;
+}
+.pt-brand-badge,
+.patient-profile-toggle:hover,
+.patient-nav-link:hover {
+    background:#EFF6FF !important;
+    color:#475569 !important;
+    border-color:#BFDBFE !important;
+}
+.patient-avatar-sm,
+.patient-hero-card .badge {
+    background:linear-gradient(135deg,#3B82F6,#3B82F6) !important;
+    color:#fff !important;
+}
+.patient-nav-link.active::after {
+    background:linear-gradient(90deg,#3B82F6,#3B82F6) !important;
+}
+.patient-hero-card {
+    background:linear-gradient(135deg,#F0F7FF 0%,#f9e8f0 100%) !important;
+    border-color:#DBEAFE !important;
+}
+.patient-body .card-header,
+.patient-body .table thead th {
+    background:#EFF6FF !important;
+    border-color:#DBEAFE !important;
+}
+.patient-body .btn-primary {
+    background:#3B82F6 !important;
+    border-color:#3B82F6 !important;
+    color:#fff !important;
+    box-shadow:0 4px 12px rgba(37,99,235,.16) !important;
+}
+.patient-body .btn-primary:hover,
+.patient-body .btn-primary:focus {
+    background:#2563EB !important;
+    border-color:#2563EB !important;
+}
+.patient-body .btn-outline-primary {
+    color:#1D4ED8 !important;
+    border-color:#60A5FA !important;
+    background:#fff !important;
+}
+.patient-body .btn-outline-primary:hover {
+    color:#475569 !important;
+    background:#E0EFFF !important;
+    border-color:#3B82F6 !important;
+}
+.patient-body .icon-circle,
+.doctor-avatar-circle,
+.pregnancy-female-icon {
+    background:#E0EFFF !important;
+    color:#2563EB !important;
+    border-color:#93C5FD !important;
 }
 

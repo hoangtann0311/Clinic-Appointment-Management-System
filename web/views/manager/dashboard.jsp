@@ -7,7 +7,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Quản Lý — CAMS Manager</title>
+    <title>Tổng Quan Quản Lý — CAMS</title>
 
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
@@ -22,7 +22,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 
     <!-- Admin CSS (dùng chung nền Pink) -->
-    <link href="${pageContext.request.contextPath}/assets/css/admin.css" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/admin.css?v=202" rel="stylesheet">
 
     <style>
         /* ============================================================
@@ -33,31 +33,31 @@
         :root {
             --sidebar-w: 270px;
             --topbar-h: 66px;
-            --pink-50:  #fff0f6;
-            --pink-100: #ffe0ef;
-            --pink-200: #ffb3d1;
-            --pink-300: #ff80b3;
-            --pink-400: #ff4d94;
-            --pink-500: #e91e8c;
-            --pink-600: #c2185b;
-            --pink-700: #9c0f4a;
-            --pink-800: #7b0a39;
-            --rose-400: #fb7185;
-            --rose-500: #f43f5e;
-            --rose-600: #e11d48;
+            --pink-50:  #F0F7FF;
+            --pink-100: #E0EFFF;
+            --pink-200: #BFDBFE;
+            --pink-300: #93C5FD;
+            --pink-400: #60A5FA;
+            --pink-500: #3B82F6;
+            --pink-600: #2563EB;
+            --pink-700: #1D4ED8;
+            --pink-800: #1D4ED8;
+            --rose-400: #93C5FD;
+            --rose-500: #60A5FA;
+            --rose-600: #3B82F6;
 
-            --c-bg:              #fff5f9;
+            --c-bg:              #EFF6FF;
             --c-surface:         #ffffff;
-            --c-surface-variant: #fff0f5;
-            --c-primary:         #c2185b;
-            --c-primary-light:   #ff4d94;
-            --c-primary-dark:    #9c0f4a;
-            --c-on-bg:           #1f1117;
-            --c-on-surface:      #2d1a25;
-            --c-on-surface-var:  #5a3d4e;
-            --c-muted:           #8a6070;
-            --c-outline:         #e8c5d5;
-            --c-outline-variant: #f5dfe9;
+            --c-surface-variant: #E0EFFF;
+            --c-primary:         #2563EB;
+            --c-primary-light:   #60A5FA;
+            --c-primary-dark:    #1D4ED8;
+            --c-on-bg:           #0F172A;
+            --c-on-surface:      #1E293B;
+            --c-on-surface-var:  #475569;
+            --c-muted:           #94A3B8;
+            --c-outline:         #BFDBFE;
+            --c-outline-variant: #DBEAFE;
 
             --green-500: #10b981;  --green-100: #d1fae5;  --green-700: #065f46;
             --amber-500: #f59e0b;  --amber-100: #fef3c7;  --amber-700: #92400e;
@@ -66,10 +66,10 @@
             --cyan-500:  #06b6d4;  --cyan-100:  #cffafe;  --cyan-700:  #155e75;
             --red-500:   #ef4444;  --red-100:   #fee2e2;  --red-700:   #991b1b;
 
-            --shadow-xs:   0 1px 3px rgba(194,24,91,0.07);
-            --shadow-sm:   0 2px 8px rgba(194,24,91,0.10);
-            --shadow-md:   0 4px 20px rgba(194,24,91,0.13);
-            --shadow-pink: 0 4px 24px rgba(233,30,140,0.30);
+            --shadow-xs:   0 1px 3px rgba(37,99,235,0.07);
+            --shadow-sm:   0 2px 8px rgba(37,99,235,0.10);
+            --shadow-md:   0 4px 20px rgba(37,99,235,0.13);
+            --shadow-pink: 0 4px 24px rgba(37,99,235,0.30);
 
             --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 22px; --r-pill: 999px;
             --t-fast: 0.15s ease; --t-normal: 0.25s ease;
@@ -124,33 +124,25 @@
             display: flex; align-items: center; gap: 0.3rem; margin-top: 0.25rem;
         }
 
-        /* Business KPI variants */
-        .kpi-patients      .card-body { border-top: 3px solid #7c3aed !important; }
-        .kpi-patients      .kpi-icon { background: #ede9fe; color: #7c3aed; }
-        .kpi-appointments  .card-body { border-top: 3px solid #2563eb !important; }
-        .kpi-appointments  .kpi-icon { background: #dbeafe; color: #2563eb; }
-        .kpi-waiting       .card-body { border-top: 3px solid #d97706 !important; }
-        .kpi-waiting       .kpi-icon { background: #fef3c7; color: #d97706; }
-        .kpi-doctors       .card-body { border-top: 3px solid #059669 !important; }
-        .kpi-doctors       .kpi-icon { background: #d1fae5; color: #059669; }
-        .kpi-ultrasound    .card-body { border-top: 3px solid #0891b2 !important; }
-        .kpi-ultrasound    .kpi-icon { background: #cffafe; color: #0891b2; }
-        .kpi-revenue       .card-body { border-top: 3px solid var(--pink-600) !important; }
-        .kpi-revenue       .kpi-icon { background: var(--pink-100); color: var(--pink-600); }
-        .kpi-emergency     .card-body { border-top: 3px solid #dc2626 !important; }
-        .kpi-emergency     .kpi-icon { background: #fee2e2; color: #dc2626; }
-        .kpi-completed     .card-body { border-top: 3px solid #059669 !important; }
-        .kpi-completed     .kpi-icon { background: #d1fae5; color: #059669; }
-        .kpi-rate          .card-body { border-top: 3px solid #f59e0b !important; }
-        .kpi-rate          .kpi-icon { background: #fff7ed; color: #ea580c; }
-        .kpi-new-patients  .card-body { border-top: 3px solid #8b5cf6 !important; }
-        .kpi-new-patients  .kpi-icon { background: #ede9fe; color: #8b5cf6; }
+        /* KPI màu phân biệt theo vai trò từng chỉ số */
+        .kpi-appointments .card-body { border-top: 3px solid #3B82F6 !important; }
+        .kpi-appointments .kpi-icon { background: #DBEAFE; color: #2563EB; }
+        .kpi-waiting .card-body    { border-top: 3px solid #F59E0B !important; }
+        .kpi-waiting .kpi-icon     { background: #FEF3C7; color: #D97706; }
+        .kpi-doctors .card-body    { border-top: 3px solid #10B981 !important; }
+        .kpi-doctors .kpi-icon     { background: #D1FAE5; color: #059669; }
+        .kpi-ultrasound .card-body { border-top: 3px solid #8B5CF6 !important; }
+        .kpi-ultrasound .kpi-icon  { background: #EDE9FE; color: #6D28D9; }
+        .kpi-revenue .card-body    { border-top: 3px solid #059669 !important; }
+        .kpi-revenue .kpi-icon     { background: #D1FAE5; color: #047857; }
+        .kpi-completed .card-body  { border-top: 3px solid #06B6D4 !important; }
+        .kpi-completed .kpi-icon   { background: #CFFAFE; color: #0891B2; }
 
         /* Service/Medicine KPI (Manager's own domain) */
-        .kpi-services  .card-body { border-top: 3px solid var(--pink-400) !important; }
-        .kpi-services  .kpi-icon { background: var(--pink-100); color: var(--pink-600); }
-        .kpi-medicines .card-body { border-top: 3px solid #ce3fa7 !important; }
-        .kpi-medicines .kpi-icon { background: #fce4f3; color: #9c0f6e; }
+        .kpi-services  .card-body { border-top: 3px solid #6366F1 !important; }
+        .kpi-services  .kpi-icon { background: #E0E7FF; color: #4F46E5; }
+        .kpi-medicines .card-body { border-top: 3px solid #14B8A6 !important; }
+        .kpi-medicines .kpi-icon { background: #CCFBF1; color: #0D9488; }
 
         /* ── Admin Card ── */
         .admin-card {
@@ -303,9 +295,9 @@
             width: 24px; height: 24px; border-radius: 50%;
             font-size: 0.7rem; font-weight: 800; color: #fff; flex-shrink: 0;
         }
-        .usage-rank.r1 { background: #e91e63; }
+        .usage-rank.r1 { background: #3B82F6; }
         .usage-rank.r2 { background: #ec407a; }
-        .usage-rank.r3 { background: #f06292; }
+        .usage-rank.r3 { background: #60A5FA; }
         .usage-rank.rn { background: #f48fb1; }
 
         /* ── Revenue Compare ── */
@@ -349,7 +341,7 @@
         }
         .header-date-filter .date-input-group:focus-within {
             border-color: var(--pink-400);
-            box-shadow: 0 0 0 3px rgba(233,30,140,0.08);
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.08);
         }
         .header-date-filter .date-input-group .date-label {
             font-size: 0.65rem; font-weight: 700; color: var(--c-muted);
@@ -374,9 +366,9 @@
         }
         .btn-header-apply {
             background: linear-gradient(135deg, var(--pink-500), var(--pink-600));
-            color: #fff; box-shadow: 0 2px 6px rgba(233,30,140,0.2);
+            color: #fff; box-shadow: 0 2px 6px rgba(37,99,235,0.2);
         }
-        .btn-header-apply:hover { box-shadow: 0 4px 12px rgba(233,30,140,0.35); transform: translateY(-1px); color: #fff; }
+        .btn-header-apply:hover { box-shadow: 0 4px 12px rgba(37,99,235,0.35); transform: translateY(-1px); color: #fff; }
         .btn-header-today {
             background: var(--c-surface); color: var(--c-primary);
             border: 1.5px solid var(--pink-200);
@@ -423,7 +415,7 @@
         <a href="${pageContext.request.contextPath}/manager/dashboard" class="admin-topbar-brand">
             <i class="bi bi-hospital-fill"></i>
             CAMS
-            <span class="brand-badge">Manager</span>
+            <span class="brand-badge">Quản Lý</span>
         </a>
     </div>
     <div class="admin-topbar-right">
@@ -433,7 +425,7 @@
             </div>
             <span>${sessionScope.user.fullName}</span>
             <span class="admin-topbar-role">
-                <i class="bi bi-briefcase-fill me-1"></i>Manager
+                <i class="bi bi-briefcase-fill me-1"></i>Quản Lý
             </span>
         </div>
         <a href="${pageContext.request.contextPath}/logout" class="admin-topbar-logout" title="Đăng xuất">
@@ -453,7 +445,7 @@
     <div class="admin-page-header">
         <div class="admin-page-header-left" style="flex:1; min-width:0;">
             <h1 class="admin-page-title">
-                <i class="bi bi-clipboard-data me-2" style="color:var(--pink-500);"></i>Dashboard Quản Lý
+                <i class="bi bi-clipboard-data me-2" style="color:var(--pink-500);"></i>Tổng Quan Quản Lý
             </h1>
             <div style="display:flex; align-items:center; flex-wrap:wrap; gap:0.75rem;">
                 <div class="admin-page-subtitle" style="margin-bottom:0;">
@@ -501,11 +493,6 @@
             <i class="bi bi-arrow-clockwise"></i>
             Làm mới
         </button>
-        <a href="${pageContext.request.contextPath}/export/reports?dateFrom=${dateFrom}&dateTo=${dateTo}"
-           class="btn-refresh" title="Xuất báo cáo CSV" style="color:#059669;background:#ecfdf5;border-color:#a7f3d0;">
-            <i class="bi bi-download"></i>
-            Xuất Báo Cáo
-        </a>
     </div>
 
     <%-- Welcome Banner --%>
@@ -524,27 +511,11 @@
     </div>
 
     <%-- ════════════════════════════════════════════ --%>
-    <%-- HÀNG 1: 10 KPI CARDS — Business Operations --%>
+    <%-- CÁC CHỈ SỐ VẬN HÀNH CỐT LÕI --%>
     <%-- ════════════════════════════════════════════ --%>
     <div class="row g-3 mb-4">
-        <%-- 1. Tổng bệnh nhân --%>
-        <div class="col-xl-15 col-lg-3 col-md-4 col-sm-6" style="flex:0 0 auto;width:20%;">
-            <a href="${pageContext.request.contextPath}/manager/statistics/" style="text-decoration:none;color:inherit;">
-            <div class="card kpi-card kpi-patients fade-in-up">
-                <div class="card-body">
-                    <div class="kpi-icon"><i class="bi bi-people-fill"></i></div>
-                    <div class="kpi-content">
-                        <div class="kpi-value">${not empty totalPatients ? totalPatients : 0}</div>
-                        <div class="kpi-label"><c:choose><c:when test="${isCustomRange}">BN (Khoảng)</c:when><c:otherwise>Tổng Bệnh Nhân</c:otherwise></c:choose></div>
-                        <div class="kpi-sub"><i class="bi bi-database"></i> <c:choose><c:when test="${isCustomRange}">${dateRangeLabel}</c:when><c:otherwise>Toàn hệ thống</c:otherwise></c:choose></div>
-                    </div>
-                </div>
-            </div>
-            </a>
-        </div>
-
-        <%-- 2. Lịch hẹn --%>
-        <div class="col-xl-15 col-lg-3 col-md-4 col-sm-6" style="flex:0 0 auto;width:20%;">
+        <%-- 1. Lịch hẹn --%>
+        <div class="col-xl-4 col-lg-4 col-md-6">
             <a href="${pageContext.request.contextPath}/manager/schedules/" style="text-decoration:none;color:inherit;">
             <div class="card kpi-card kpi-appointments fade-in-up">
                 <div class="card-body">
@@ -560,7 +531,7 @@
         </div>
 
         <%-- 3. Đang chờ khám --%>
-        <div class="col-xl-15 col-lg-3 col-md-4 col-sm-6" style="flex:0 0 auto;width:20%;">
+        <div class="col-xl-4 col-lg-4 col-md-6">
             <a href="${pageContext.request.contextPath}/manager/schedules/" style="text-decoration:none;color:inherit;">
             <div class="card kpi-card kpi-waiting fade-in-up">
                 <div class="card-body">
@@ -576,15 +547,15 @@
         </div>
 
         <%-- 4. Bác sĩ trực --%>
-        <div class="col-xl-15 col-lg-3 col-md-4 col-sm-6" style="flex:0 0 auto;width:20%;">
+        <div class="col-xl-4 col-lg-4 col-md-6">
             <a href="${pageContext.request.contextPath}/manager/schedules/" style="text-decoration:none;color:inherit;">
             <div class="card kpi-card kpi-doctors fade-in-up">
                 <div class="card-body">
                     <div class="kpi-icon"><i class="bi bi-person-badge-fill"></i></div>
                     <div class="kpi-content">
                         <div class="kpi-value">${not empty doctorsWorking ? doctorsWorking : 0}</div>
-                        <div class="kpi-label"><c:choose><c:when test="${isCustomRange}">BS (${dateToFormatted})</c:when><c:otherwise>Bác sĩ lâm sàng có lịch trực</c:otherwise></c:choose></div>
-                        <div class="kpi-sub"><i class="bi bi-check-circle"></i> Đã duyệt lịch</div>
+                        <div class="kpi-label"><c:choose><c:when test="${isCustomRange}">BS (${dateToFormatted})</c:when><c:otherwise>Bác sĩ có lịch làm việc</c:otherwise></c:choose></div>
+                        <div class="kpi-sub"><i class="bi bi-check-circle"></i> Lịch đã xác nhận</div>
                     </div>
                 </div>
             </div>
@@ -592,7 +563,7 @@
         </div>
 
         <%-- 5. Ca siêu âm --%>
-        <div class="col-xl-15 col-lg-3 col-md-4 col-sm-6" style="flex:0 0 auto;width:20%;">
+        <div class="col-xl-4 col-lg-4 col-md-6">
             <a href="${pageContext.request.contextPath}/manager/services/" style="text-decoration:none;color:inherit;">
             <div class="card kpi-card kpi-ultrasound fade-in-up">
                 <div class="card-body">
@@ -606,45 +577,25 @@
             </div>
             </a>
         </div>
-    </div>
-
-    <%-- HÀNG 1B: 5 KPI tiếp theo --%>
-    <div class="row g-3 mb-4">
         <%-- 6. Doanh thu --%>
-        <div class="col-xl-15 col-lg-3 col-md-4 col-sm-6" style="flex:0 0 auto;width:20%;">
-            <a href="${pageContext.request.contextPath}/manager/statistics/" style="text-decoration:none;color:inherit;">
+        <div class="col-xl-4 col-lg-4 col-md-6">
+            <a href="#revenueCharts" style="text-decoration:none;color:inherit;">
             <div class="card kpi-card kpi-revenue fade-in-up">
                 <div class="card-body">
                     <div class="kpi-icon"><i class="bi bi-cash-coin"></i></div>
                     <div class="kpi-content">
-                        <div class="kpi-value" style="font-size:1.05rem;">${not empty revenue ? revenue : '0 VNĐ'}</div>
-                        <div class="kpi-label"><c:choose><c:when test="${isCustomRange}">Doanh Thu (Khoảng)</c:when><c:otherwise>Tổng Doanh Thu</c:otherwise></c:choose></div>
-                        <div class="kpi-sub"><i class="bi bi-graph-up"></i> Đã thanh toán</div>
+                        <div class="kpi-value" style="font-size:1.05rem;">${not empty revenueToday ? revenueToday : '0 VNĐ'}</div>
+                        <div class="kpi-label">Doanh Thu Hôm Nay</div>
+                        <div class="kpi-sub"><i class="bi bi-graph-up"></i> Tổng: ${not empty revenue ? revenue : '0 VNĐ'}</div>
                     </div>
                 </div>
             </div>
             </a>
         </div>
 
-        <%-- 7. Ca cấp cứu --%>
-        <div class="col-xl-15 col-lg-3 col-md-4 col-sm-6" style="flex:0 0 auto;width:20%;">
-            <a href="${pageContext.request.contextPath}/manager/schedules/" style="text-decoration:none;color:inherit;">
-            <div class="card kpi-card kpi-emergency fade-in-up">
-                <div class="card-body">
-                    <div class="kpi-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
-                    <div class="kpi-content">
-                        <div class="kpi-value">${not empty emergencyCases ? emergencyCases : 0}</div>
-                        <div class="kpi-label"><c:choose><c:when test="${isCustomRange}">Cấp Cứu (Khoảng)</c:when><c:otherwise>Tổng Ca Cấp Cứu</c:otherwise></c:choose></div>
-                        <div class="kpi-sub"><i class="bi bi-activity"></i> Khẩn cấp</div>
-                    </div>
-                </div>
-            </div>
-            </a>
-        </div>
-
-        <%-- 8. Ca hoàn thành --%>
-        <div class="col-xl-15 col-lg-3 col-md-4 col-sm-6" style="flex:0 0 auto;width:20%;">
-            <a href="${pageContext.request.contextPath}/manager/statistics/" style="text-decoration:none;color:inherit;">
+        <%-- 7. Ca hoàn thành --%>
+        <div class="col-xl-4 col-lg-4 col-md-6">
+            <a href="${pageContext.request.contextPath}/manager/dashboard" style="text-decoration:none;color:inherit;">
             <div class="card kpi-card kpi-completed fade-in-up">
                 <div class="card-body">
                     <div class="kpi-icon"><i class="bi bi-check-circle-fill"></i></div>
@@ -657,271 +608,48 @@
             </div>
             </a>
         </div>
-
-        <%-- 9. Tỉ lệ hoàn thành --%>
-        <div class="col-xl-15 col-lg-3 col-md-4 col-sm-6" style="flex:0 0 auto;width:20%;">
-            <a href="${pageContext.request.contextPath}/manager/statistics/" style="text-decoration:none;color:inherit;">
-            <div class="card kpi-card kpi-rate fade-in-up">
-                <div class="card-body">
-                    <div class="kpi-icon"><i class="bi bi-percent"></i></div>
-                    <div class="kpi-content">
-                        <div class="kpi-value">${not empty completionRate ? completionRate : '0%'}</div>
-                        <div class="kpi-label">Tỉ Lệ Hoàn Thành</div>
-                        <div class="kpi-sub"><i class="bi bi-graph-up"></i> Completed / Total</div>
-                    </div>
-                </div>
-            </div>
-            </a>
-        </div>
-
-        <%-- 10. Bệnh nhân mới --%>
-        <div class="col-xl-15 col-lg-3 col-md-4 col-sm-6" style="flex:0 0 auto;width:20%;">
-            <a href="${pageContext.request.contextPath}/manager/statistics/" style="text-decoration:none;color:inherit;">
-            <div class="card kpi-card kpi-new-patients fade-in-up">
-                <div class="card-body">
-                    <div class="kpi-icon"><i class="bi bi-person-plus-fill"></i></div>
-                    <div class="kpi-content">
-                        <div class="kpi-value">${not empty newPatients ? newPatients : 0}</div>
-                        <div class="kpi-label"><c:choose><c:when test="${isCustomRange}">BN Mới (Khoảng)</c:when><c:otherwise>Bệnh Nhân Mới</c:otherwise></c:choose></div>
-                        <div class="kpi-sub"><i class="bi bi-person-plus"></i> Mới đăng ký</div>
-                    </div>
-                </div>
-            </div>
-            </a>
-        </div>
     </div>
 
     <%-- ════════════════════════════════════════════ --%>
-    <%-- HÀNG 1C: CHỈ SỐ CHẤT LƯỢNG VẬN HÀNH --%>
+    <%-- BIỂU ĐỒ DOANH THU — 7 ngày & 30 ngày --%>
     <%-- ════════════════════════════════════════════ --%>
-    <div class="row g-3 mb-4">
-        <%-- Tỉ lệ hủy lịch (Cancellation Rate) --%>
-        <div class="col-md-6">
-            <div class="card kpi-card fade-in-up" style="--kpi-accent:#ef4444;">
-                <div class="card-body" style="border-top:3px solid #ef4444 !important;">
-                    <div class="kpi-icon" style="background:#fee2e2;color:#dc2626;"><i class="bi bi-x-circle-fill"></i></div>
-                    <div class="kpi-content">
-                        <div class="kpi-value">${not empty cancellationRate ? cancellationRate : '0%'}</div>
-                        <div class="kpi-label">Tỉ Lệ Hủy Lịch</div>
-                        <div class="kpi-sub"><i class="bi bi-slash-circle"></i> ${not empty cancelledCount ? cancelledCount : 0} ca hủy / ${not empty totalAppointments ? totalAppointments : 0} tổng</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <%-- Tỉ lệ cấp cứu (Emergency Rate) --%>
-        <div class="col-md-6">
-            <div class="card kpi-card fade-in-up" style="--kpi-accent:#f59e0b;">
-                <div class="card-body" style="border-top:3px solid #f59e0b !important;">
-                    <div class="kpi-icon" style="background:#fff7ed;color:#ea580c;"><i class="bi bi-exclamation-triangle-fill"></i></div>
-                    <div class="kpi-content">
-                        <div class="kpi-value">${not empty emergencyRate ? emergencyRate : '0%'}</div>
-                        <div class="kpi-label">Tỉ Lệ Cấp Cứu</div>
-                        <div class="kpi-sub"><i class="bi bi-activity"></i> ${not empty emergencyCases ? emergencyCases : 0} ca cấp cứu / ${not empty totalAppointments ? totalAppointments : 0} tổng</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <%-- ════════════════════════════════════════════ --%>
-    <%-- CẢNH BÁO VẬN HÀNH --%>
-    <%-- ════════════════════════════════════════════ --%>
-    <c:if test="${not empty operationalAlerts}">
-    <div class="row mb-4">
+    <div class="row g-3 mb-4" id="revenueCharts">
         <div class="col-12">
-            <div class="admin-card">
-                <div class="card-header">
-                    <h5>
-                        <i class="bi bi-exclamation-diamond-fill"></i>
-                        <c:choose>
-                            <c:when test="${isCustomRange}">Cảnh Báo Vận Hành (${dateRangeLabel})</c:when>
-                            <c:otherwise>Cảnh Báo &amp; Thông Báo Vận Hành</c:otherwise>
-                        </c:choose>
-                    </h5>
-                </div>
-                <div class="card-body p-3">
-                    <div class="row g-2">
-                        <c:forEach var="alert" items="${operationalAlerts}">
-                        <div class="col-lg-3 col-md-6">
-                            <div class="alert-item ${alert.type}">
-                                <div class="alert-icon"><i class="bi ${alert.icon}"></i></div>
-                                <div class="alert-body">
-                                    <div class="alert-title">${alert.title}</div>
-                                    <div class="alert-msg">${alert.message}</div>
-                                </div>
-                                <span class="alert-count">${alert.count}</span>
-                            </div>
-                        </div>
-                        </c:forEach>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    </c:if>
-
-    <%-- ════════════════════════════════════════════ --%>
-    <%-- BIỂU ĐỒ: Lịch hẹn + Phân bố trạng thái + Doanh thu --%>
-    <%-- ════════════════════════════════════════════ --%>
-    <div class="row g-3 mb-4">
-        <%-- Biểu đồ lịch hẹn --%>
-        <div class="col-xl-4 col-lg-6">
-            <div class="admin-card h-100">
-                <div class="card-header">
-                    <h5>
-                        <i class="bi bi-graph-up-arrow"></i>
-                        <c:choose>
-                            <c:when test="${isCustomRange}">Lịch Hẹn (${dateRangeLabel})</c:when>
-                            <c:otherwise>Lịch Hẹn 7 Ngày Qua</c:otherwise>
-                        </c:choose>
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <c:choose>
-                        <c:when test="${hasApptData}">
-                            <div class="chart-container">
-                                <canvas id="appointmentsChart" height="260"></canvas>
-                            </div>
-                        </c:when>
-                        <c:otherwise>
-                            <div class="admin-empty-state py-4">
-                                <i class="bi bi-bar-chart" style="font-size:2rem;color:var(--pink-200);"></i>
-                                <p class="mt-2 mb-0" style="color:var(--c-muted);">Chưa có dữ liệu trong khoảng này</p>
-                            </div>
-                        </c:otherwise>
-                    </c:choose>
-                </div>
-            </div>
-        </div>
-
-        <%-- Phân bố trạng thái lịch hẹn (Doughnut) --%>
-        <div class="col-xl-4 col-lg-6">
-            <div class="admin-card h-100">
-                <div class="card-header">
-                    <h5>
-                        <i class="bi bi-pie-chart-fill"></i>
-                        <c:choose>
-                            <c:when test="${isCustomRange}">Phân Bố Trạng Thái (${dateRangeLabel})</c:when>
-                            <c:otherwise>Phân Bố Trạng Thái Lịch Hẹn</c:otherwise>
-                        </c:choose>
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <c:choose>
-                        <c:when test="${not empty statusBreakdown}">
-                            <div class="chart-container">
-                                <canvas id="statusChart" height="260"></canvas>
-                            </div>
-                        </c:when>
-                        <c:otherwise>
-                            <div class="admin-empty-state py-4">
-                                <i class="bi bi-pie-chart" style="font-size:2rem;color:var(--pink-200);"></i>
-                                <p class="mt-2 mb-0" style="color:var(--c-muted);">Chưa có dữ liệu</p>
-                            </div>
-                        </c:otherwise>
-                    </c:choose>
-                </div>
-            </div>
-        </div>
-
-        <%-- Doanh thu 7 ngày --%>
-        <div class="col-xl-4 col-lg-6">
-            <div class="admin-card h-100">
-                <div class="card-header">
-                    <h5>
-                        <i class="bi bi-graph-up-arrow"></i>
-                        <c:choose>
-                            <c:when test="${isCustomRange}">Doanh Thu 7 Ngày (${dateRangeLabel})</c:when>
-                            <c:otherwise>Doanh Thu 7 Ngày Gần Nhất</c:otherwise>
-                        </c:choose>
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="mgrRevenue7DaysChart" height="260"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <%-- ════════════════════════════════════════════ --%>
-    <%-- HÀNG GIỮA: Hiệu suất bác sĩ + Lịch làm việc --%>
-    <%-- ════════════════════════════════════════════ --%>
-    <div class="row g-3 mb-4">
-        <%-- Hiệu suất bác sĩ --%>
-        <div class="col-xl-7">
             <div class="admin-card h-100">
                 <div class="card-header d-flex align-items-center justify-content-between">
                     <h5>
-                        <i class="bi bi-trophy-fill"></i>
+                        <i class="bi bi-graph-up-arrow"></i>
                         <c:choose>
-                            <c:when test="${isCustomRange}">Hiệu suất Bác sĩ lâm sàng (${dateRangeLabel})</c:when>
-                            <c:otherwise>Hiệu suất Bác sĩ lâm sàng</c:otherwise>
+                            <c:when test="${isCustomRange}">Doanh Thu (${dateRangeLabel})</c:when>
+                            <c:otherwise>Doanh Thu Dịch Vụ</c:otherwise>
                         </c:choose>
                     </h5>
+                    <div class="btn-group btn-group-sm" role="group" style="gap:0;">
+                        <button type="button" class="btn btn-sm active" id="btn7Days"
+                                style="background:#2563EB;color:#fff;border-radius:6px 0 0 6px;font-size:.72rem;font-weight:700;padding:.35rem .75rem;border:none;"
+                                onclick="switchRevenueChart(7)">7 Ngày</button>
+                        <button type="button" class="btn btn-sm" id="btn30Days"
+                                style="background:#E0EFFF;color:#2563EB;border-radius:0 6px 6px 0;font-size:.72rem;font-weight:700;padding:.35rem .75rem;border:none;"
+                                onclick="switchRevenueChart(30)">30 Ngày</button>
+                    </div>
                 </div>
-                <div class="card-body p-0">
-                    <c:choose>
-                        <c:when test="${not empty doctorPerformance}">
-                            <div class="admin-table-wrapper">
-                                <table class="admin-table compact">
-                                    <thead>
-                                        <tr>
-                                            <th>#</th>
-                                            <th>Bác sĩ lâm sàng</th>
-                                            <th>Chuyên Khoa</th>
-                                            <th class="text-center" title="Ca hoàn thành">Hoàn Thành</th>
-                                            <th class="text-center" title="Ca đã hủy">Hủy</th>
-                                            <th class="text-center" title="Ca cấp cứu">Cấp Cứu</th>
-                                            <th class="text-center" title="Tỉ lệ hoàn thành">Tỉ Lệ HT</th>
-                                            <th class="text-end">Doanh Thu</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <c:forEach var="dp" items="${doctorPerformance}" varStatus="loop">
-                                            <tr>
-                                                <td style="color:var(--c-muted);">${loop.index + 1}</td>
-                                                <td style="font-weight:600;">${dp.doctorName}</td>
-                                                <td style="color:var(--c-muted);font-size:0.8rem;">${dp.specialization}</td>
-                                                <td class="text-center"><span style="font-weight:700;color:var(--green-500);">${dp.completedCases}</span></td>
-                                                <td class="text-center">
-                                                    <c:choose>
-                                                        <c:when test="${dp.cancelledCases > 0}"><span style="font-weight:700;color:var(--red-500);">${dp.cancelledCases}</span></c:when>
-                                                        <c:otherwise><span style="color:var(--c-muted);">0</span></c:otherwise>
-                                                    </c:choose>
-                                                </td>
-                                                <td class="text-center">
-                                                    <c:choose>
-                                                        <c:when test="${dp.emergencyCases > 0}"><span style="font-weight:700;color:var(--amber-500);">${dp.emergencyCases}</span></c:when>
-                                                        <c:otherwise><span style="color:var(--c-muted);">0</span></c:otherwise>
-                                                    </c:choose>
-                                                </td>
-                                                <td class="text-center">
-                                                    <span style="font-weight:700;color:${dp.completionRate >= 80 ? 'var(--green-500)' : (dp.completionRate >= 50 ? 'var(--amber-500)' : 'var(--red-500)')};"><fmt:formatNumber value="${dp.completionRate}" pattern="#.0"/>%</span>
-                                                </td>
-                                                <td class="text-end" style="font-weight:600;"><fmt:formatNumber value="${dp.revenueGenerated}" pattern="#,###" /> VNĐ</td>
-                                            </tr>
-                                        </c:forEach>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </c:when>
-                        <c:otherwise>
-                            <div class="admin-empty-state">
-                                <i class="bi bi-person-badge"></i>
-                                <h6>Chưa có dữ liệu</h6>
-                                <p>Thêm bác sĩ vào hệ thống để xem hiệu suất.</p>
-                            </div>
-                        </c:otherwise>
-                    </c:choose>
+                <div class="card-body">
+                    <div class="chart-container" id="chart7Container">
+                        <canvas id="mgrRevenue7DaysChart" height="260"></canvas>
+                    </div>
+                    <div class="chart-container" id="chart30Container" style="display:none;">
+                        <canvas id="mgrRevenue30DaysChart" height="260"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <%-- Lịch làm việc --%>
-        <div class="col-xl-5">
+    <%-- ════════════════════════════════════════════ --%>
+    <%-- LỊCH LÀM VIỆC --%>
+    <%-- ════════════════════════════════════════════ --%>
+    <div class="row g-3 mb-4">
+        <div class="col-12">
             <div class="admin-card h-100">
                 <div class="card-header">
                     <h5>
@@ -938,7 +666,7 @@
                             <div class="admin-table-wrapper">
                                 <table class="admin-table compact">
                                     <thead>
-                                        <tr><th>Bác sĩ lâm sàng</th><th>Giờ</th><th>Slots</th><th>Trạng Thái</th></tr>
+                                        <tr><th>Bác sĩ lâm sàng</th><th>Giờ</th><th>Khung Giờ</th><th>Trạng Thái</th></tr>
                                     </thead>
                                     <tbody>
                                         <c:forEach var="sch" items="${todaySchedules}">
@@ -959,8 +687,8 @@
                                                 </td>
                                                 <td>
                                                     <c:choose>
-                                                        <c:when test="${sch.isApproved}"><span class="badge-status badge-approved">Đã duyệt</span></c:when>
-                                                        <c:otherwise><span class="badge-status badge-pending">Chờ duyệt</span></c:otherwise>
+                                                        <c:when test="${sch.isApproved}"><span class="badge-status badge-approved">Đã xác nhận</span></c:when>
+                                                        <c:otherwise><span class="badge-status badge-pending">Chờ xác nhận</span></c:otherwise>
                                                     </c:choose>
                                                 </td>
                                             </tr>
@@ -973,7 +701,7 @@
                             <div class="admin-empty-state">
                                 <i class="bi bi-calendar-x"></i>
                                 <h6>Chưa có lịch làm việc</h6>
-                                <p>Hôm nay chưa có Bác sĩ lâm sàng nào đăng ký lịch trực.</p>
+                                <p>Hôm nay chưa có bác sĩ lâm sàng nào đăng ký lịch làm việc.</p>
                             </div>
                         </c:otherwise>
                     </c:choose>
@@ -983,35 +711,82 @@
     </div>
 
     <%-- ════════════════════════════════════════════ --%>
-    <%-- HÀNG DƯỚI: Siêu âm + Bệnh nhân mới + Top dịch vụ --%>
+    <%-- BIỂU ĐỒ XU HƯỚNG LỊCH HẸN --%>
     <%-- ════════════════════════════════════════════ --%>
     <div class="row g-3 mb-4">
-        <%-- Thống kê siêu âm --%>
-        <div class="col-xl-4">
+        <div class="col-xl-6">
             <div class="admin-card h-100">
                 <div class="card-header">
-                    <h5><i class="bi bi-soundwave"></i>
+                    <h5>
+                        <i class="bi bi-calendar-check-fill"></i>
                         <c:choose>
-                            <c:when test="${isCustomRange}">Thống Kê Dịch Vụ Siêu Âm (${dateRangeLabel})</c:when>
-                            <c:otherwise>Thống Kê Dịch Vụ Siêu Âm</c:otherwise>
+                            <c:when test="${isCustomRange}">Lịch Hẹn 7 Ngày (${dateRangeLabel})</c:when>
+                            <c:otherwise>Lịch Hẹn 7 Ngày Gần Nhất</c:otherwise>
+                        </c:choose>
+                    </h5>
+                    <a href="${pageContext.request.contextPath}/manager/schedules/" style="font-size:0.75rem;font-weight:700;color:var(--c-primary);text-decoration:none;">
+                        Xem tất cả <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="mgrAppointmentsChart" height="260"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-6">
+            <div class="admin-card h-100">
+                <div class="card-header">
+                    <h5>
+                        <i class="bi bi-graph-up"></i>
+                        <c:choose>
+                            <c:when test="${isCustomRange}">Lượt Sử Dụng Dịch Vụ (${dateRangeLabel})</c:when>
+                            <c:otherwise>Lượt Sử Dụng Dịch Vụ 7 Ngày Gần Nhất</c:otherwise>
                         </c:choose>
                     </h5>
                 </div>
+                <div class="card-body">
+                    <c:choose>
+                        <c:when test="${not empty serviceUsageLast7DaysLabels}">
+                            <div class="chart-container">
+                                <canvas id="mgrServiceUsageChart" height="260"></canvas>
+                            </div>
+                        </c:when>
+                        <c:otherwise>
+                            <div class="admin-empty-state py-4">
+                                <i class="bi bi-activity" style="font-size:2rem;"></i>
+                                <p class="mt-2 mb-0">Chưa có dữ liệu sử dụng dịch vụ.</p>
+                            </div>
+                        </c:otherwise>
+                    </c:choose>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <%-- ════════════════════════════════════════════ --%>
+    <%-- DỊCH VỤ — Tổng Quan Nhanh --%>
+    <%-- ════════════════════════════════════════════ --%>
+    <div class="row g-3 mb-4">
+        <div class="col-xl-6">
+            <div class="admin-card h-100">
+                <div class="card-header">
+                    <h5><i class="bi bi-bar-chart-steps"></i> Dịch Vụ — Lượt Sử Dụng</h5>
+                </div>
                 <div class="card-body p-0">
                     <c:choose>
-                        <c:when test="${not empty ultrasoundStats}">
+                        <c:when test="${not empty topServicesByUsage}">
                             <div class="admin-table-wrapper">
                                 <table class="admin-table compact">
-                                    <thead>
-                                        <tr><th>Dịch Vụ</th><th class="text-center">Tổng Ca</th><th class="text-center"><c:choose><c:when test="${isCustomRange}">${dateToFormatted}</c:when><c:otherwise>Hôm Nay</c:otherwise></c:choose></th><th class="text-end">Giá</th></tr>
-                                    </thead>
+                                    <thead><tr><th>#</th><th>Tên Dịch Vụ</th><th>Nhóm</th><th style="text-align:right;">Lượt SD</th></tr></thead>
                                     <tbody>
-                                        <c:forEach var="us" items="${ultrasoundStats}">
+                                        <c:forEach var="svc" items="${topServicesByUsage}" varStatus="row">
                                             <tr>
-                                                <td style="font-weight:600;">${us.serviceName}</td>
-                                                <td class="text-center" style="font-weight:700;">${us.totalCases}</td>
-                                                <td class="text-center"><c:if test="${us.casesToday > 0}"><span class="badge-status badge-active">${us.casesToday}</span></c:if><c:if test="${us.casesToday == 0}">0</c:if></td>
-                                                <td class="text-end" style="font-weight:600;"><fmt:formatNumber value="${us.price}" pattern="#,###" /> đ</td>
+                                                <td><span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:.68rem;font-weight:800;color:#fff;background:${row.index == 0 ? '#3B82F6' : (row.index == 1 ? '#94A3B8' : '#9CA3AF')};">${row.count}</span></td>
+                                                <td><div style="font-weight:600;"><c:out value="${svc.serviceName}"/></div></td>
+                                                <td style="font-size:0.72rem;color:var(--c-muted);"><c:out value="${svc.categoryName}"/></td>
+                                                <td style="font-family:var(--font-display);font-weight:700;color:var(--c-primary);text-align:right;">${svc.usageToday}</td>
                                             </tr>
                                         </c:forEach>
                                     </tbody>
@@ -1019,81 +794,52 @@
                             </div>
                         </c:when>
                         <c:otherwise>
-                            <div class="admin-empty-state"><i class="bi bi-soundwave"></i><h6>Chưa có dịch vụ siêu âm</h6></div>
+                            <div class="admin-empty-state" style="padding:1.5rem;">
+                                <i class="bi bi-inbox"></i>
+                                <p class="mt-1 mb-0">Chưa có dữ liệu dịch vụ.</p>
+                            </div>
                         </c:otherwise>
                     </c:choose>
                 </div>
             </div>
         </div>
-
-        <%-- Bệnh nhân mới --%>
-        <div class="col-xl-4">
+        <div class="col-xl-6">
             <div class="admin-card h-100">
-                <div class="card-header d-flex align-items-center justify-content-between">
-                    <h5><i class="bi bi-person-plus-fill"></i> <c:choose><c:when test="${isCustomRange}">BN Mới (${dateRangeLabel})</c:when><c:otherwise>Bệnh Nhân Mới Đăng Ký</c:otherwise></c:choose></h5>
+                <div class="card-header">
+                    <h5><i class="bi bi-cash-stack"></i> Doanh Thu Dịch Vụ <span style="font-size:0.68rem;font-weight:400;color:var(--c-muted);">(Tất cả thời gian)</span></h5>
                 </div>
                 <div class="card-body p-0">
                     <c:choose>
-                        <c:when test="${not empty recentPatients}">
+                        <c:when test="${not empty topServicesByRevenue}">
                             <div class="admin-table-wrapper">
                                 <table class="admin-table compact">
-                                    <thead><tr><th>STT</th><th>Họ Tên</th><th>Email / SĐT</th><th>Ngày ĐK</th></tr></thead>
+                                    <thead><tr><th>#</th><th>Tên Dịch Vụ</th><th style="text-align:right;">Doanh Thu</th><th style="text-align:right;">Lượt SD</th></tr></thead>
                                     <tbody>
-                                        <c:forEach var="rp" items="${recentPatients}" varStatus="row">
+                                        <c:forEach var="svc" items="${topServicesByRevenue}" varStatus="row">
                                             <tr>
-                                                <td style="color:var(--c-muted);font-size:0.78rem;">${row.count}</td>
-                                                <td style="font-weight:600;">${rp.fullName}</td>
-                                                <td style="font-size:0.78rem;"><div>${rp.email}</div><c:if test="${not empty rp.phone}"><div style="color:var(--c-muted);">${rp.phone}</div></c:if></td>
-                                                <td style="color:var(--c-muted);font-size:0.78rem;white-space:nowrap;">${rp.createdAt}</td>
-                                            </tr>
-                                        </c:forEach>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </c:when>
-                        <c:otherwise><div class="admin-empty-state"><i class="bi bi-people"></i><h6>Chưa có bệnh nhân mới</h6></div></c:otherwise>
-                    </c:choose>
-                </div>
-            </div>
-        </div>
-
-        <%-- Top Dịch Vụ --%>
-        <div class="col-xl-4">
-            <div class="admin-card h-100">
-                <div class="card-header d-flex align-items-center justify-content-between">
-                    <h5><i class="bi bi-fire" style="color:#e91e63;"></i> <c:choose><c:when test="${isCustomRange}">Top Dịch Vụ (${dateRangeLabel})</c:when><c:otherwise>Top Dịch Vụ Hôm Nay</c:otherwise></c:choose></h5>
-                    <a href="${pageContext.request.contextPath}/manager/statistics/" class="btn-sm-outline-pink">Thống kê <i class="bi bi-arrow-right"></i></a>
-                </div>
-                <div class="card-body p-0">
-                    <c:choose>
-                        <c:when test="${not empty topServicesToday}">
-                            <div class="admin-table-wrapper">
-                                <table class="admin-table compact">
-                                    <thead><tr><th style="width:36px;">#</th><th>Dịch Vụ</th><th style="width:75px;">Lượt SD</th><th style="width:90px;">Xu Hướng</th></tr></thead>
-                                    <tbody>
-                                        <c:forEach var="svc" items="${topServicesToday}" varStatus="loop">
-                                            <tr>
-                                                <td><span class="usage-rank ${loop.index == 0 ? 'r1' : (loop.index == 1 ? 'r2' : (loop.index == 2 ? 'r3' : 'rn'))}">${loop.index + 1}</span></td>
-                                                <td>
-                                                    <div style="font-weight:600;">${fn:escapeXml(svc.serviceName)}</div>
-                                                    <c:if test="${not empty svc.categoryName}"><small style="font-size:0.68rem;color:var(--c-muted);"><i class="bi bi-folder me-1"></i>${fn:escapeXml(svc.categoryName)}</small></c:if>
-                                                </td>
-                                                <td><span style="font-family:var(--font-display);font-weight:800;font-size:0.95rem;">${svc.usageToday}</span> <span style="font-size:0.7rem;color:var(--c-muted);">lượt</span></td>
-                                                <td>
-                                                    <c:set var="trend" value="${svc.growthTrend}"/>
+                                                <td><span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:.68rem;font-weight:800;color:#fff;background:${row.index == 0 ? '#10B981' : (row.index == 1 ? '#94A3B8' : '#9CA3AF')};">${row.count}</span></td>
+                                                <td><div style="font-weight:600;"><c:out value="${svc.serviceName}"/></div></td>
+                                                <td style="font-family:var(--font-display);font-weight:700;color:#059669;text-align:right;">
                                                     <c:choose>
-                                                        <c:when test="${trend eq 'up'}"><span class="trend-up"><i class="bi bi-arrow-up-short"></i> ↑<fmt:formatNumber value="${svc.usageGrowthPercent}" maxFractionDigits="0"/>%</span></c:when>
-                                                        <c:when test="${trend eq 'down'}"><span class="trend-down"><i class="bi bi-arrow-down-short"></i> ↓<fmt:formatNumber value="${svc.usageGrowthPercent * -1}" maxFractionDigits="0"/>%</span></c:when>
-                                                        <c:otherwise><span class="trend-stable"><i class="bi bi-dash"></i> ổn định</span></c:otherwise>
+                                                        <c:when test="${svc.totalRevenue >= 1000000000}"><fmt:formatNumber value="${svc.totalRevenue / 1000000000}" maxFractionDigits="2"/> Tỷ</c:when>
+                                                        <c:when test="${svc.totalRevenue >= 1000000}"><fmt:formatNumber value="${svc.totalRevenue / 1000000}" maxFractionDigits="1"/> Triệu</c:when>
+                                                        <c:when test="${svc.totalRevenue > 0}"><fmt:formatNumber value="${svc.totalRevenue}" pattern="#,###"/> đ</c:when>
+                                                        <c:otherwise>—</c:otherwise>
                                                     </c:choose>
                                                 </td>
+                                                <td style="font-family:var(--font-display);font-weight:600;text-align:right;">${svc.totalUsage > 0 ? svc.totalUsage : '—'}</td>
                                             </tr>
                                         </c:forEach>
                                     </tbody>
                                 </table>
                             </div>
                         </c:when>
-                        <c:otherwise><div class="admin-empty-state" style="padding:1.5rem;"><i class="bi bi-bar-chart" style="font-size:1.8rem;color:var(--c-muted);"></i><p class="text-muted mt-1 mb-0" style="font-size:0.8rem;">Chưa có lượt sử dụng dịch vụ.</p></div></c:otherwise>
+                        <c:otherwise>
+                            <div class="admin-empty-state" style="padding:1.5rem;">
+                                <i class="bi bi-cash"></i>
+                                <p class="mt-1 mb-0">Chưa có dữ liệu doanh thu. Hóa đơn cần được xác nhận thanh toán bởi Lễ Tân.</p>
+                            </div>
+                        </c:otherwise>
                     </c:choose>
                 </div>
             </div>
@@ -1101,7 +847,7 @@
     </div>
 
     <%-- ════════════════════════════════════════════ --%>
-    <%-- HÀNG CUỐI: Dịch vụ & Thuốc KPI + Cảnh báo tồn kho + Thao tác nhanh --%>
+    <%-- HÀNG CUỐI: Dịch vụ & Thuốc KPI + Cảnh báo tồn kho --%>
     <%-- ════════════════════════════════════════════ --%>
     <div class="row g-3 mb-4">
         <%-- Dịch vụ & Thuốc KPI cards --%>
@@ -1148,16 +894,9 @@
                         <div class="card-body" style="border-top:3px solid #10b981 !important;">
                             <div class="kpi-icon" style="background:#d1fae5;color:#059669;"><i class="bi bi-cash-stack"></i></div>
                             <div class="kpi-content">
-                                <div class="kpi-value" style="font-size:1.05rem;">${not empty totalRevenueTodayFormatted ? totalRevenueTodayFormatted : '0'}</div>
-                                <div class="kpi-label"><c:choose><c:when test="${isCustomRange}">Doanh Thu DV (Khoảng)</c:when><c:otherwise>Doanh Thu DV Hôm Nay</c:otherwise></c:choose></div>
-                                <div class="revenue-compare">
-                                    <span class="rev-yesterday"><i class="bi bi-clock-history me-1"></i><c:choose><c:when test="${isCustomRange}">Kỳ trước ${not empty revenueYesterdayFormatted ? revenueYesterdayFormatted : '0'}</c:when><c:otherwise>H.qua ${not empty revenueYesterdayFormatted ? revenueYesterdayFormatted : '0'}</c:otherwise></c:choose></span>
-                                    <c:choose>
-                                        <c:when test="${revenueGrowthRate > 0}"><span class="rev-arrow-up"><i class="bi bi-arrow-up-short"></i><fmt:formatNumber value="${revenueGrowthRate}" maxFractionDigits="1"/>%</span></c:when>
-                                        <c:when test="${revenueGrowthRate < 0}"><span class="rev-arrow-down"><i class="bi bi-arrow-down-short"></i><fmt:formatNumber value="${revenueGrowthRate * -1}" maxFractionDigits="1"/>%</span></c:when>
-                                        <c:otherwise><span style="color:var(--c-muted);font-size:0.68rem;">→ 0%</span></c:otherwise>
-                                    </c:choose>
-                                </div>
+                                <div class="kpi-value" style="font-size:1.05rem;">${not empty revenue ? revenue : '0 VNĐ'}</div>
+                                <div class="kpi-label">Tổng Doanh Thu</div>
+                                <div class="kpi-sub"><i class="bi bi-check-circle"></i> Đã thanh toán</div>
                             </div>
                         </div>
                     </div>
@@ -1166,7 +905,7 @@
         </div>
 
         <%-- Cảnh báo tồn kho --%>
-        <div class="col-xl-3">
+        <div class="col-xl-6">
             <div class="admin-card h-100">
                 <div class="card-header d-flex align-items-center justify-content-between">
                     <h5><i class="bi bi-exclamation-triangle-fill" style="color:#e65100;"></i> Cảnh Báo Tồn Kho</h5>
@@ -1181,7 +920,7 @@
                                     <tbody>
                                         <c:forEach var="med" items="${lowStockMedicines}">
                                             <tr>
-                                                <td><div style="font-weight:600;">${fn:escapeXml(med.name)}</div><small style="font-size:0.68rem;color:var(--c-muted);">${fn:escapeXml(med.dosage)}</small></td>
+                                                <td><div style="font-weight:600;"><c:out value="${med.name}"/></div><small style="font-size:0.68rem;color:var(--c-muted);"><c:out value="${med.dosage}"/></small></td>
                                                 <td><span style="font-family:var(--font-display);font-weight:800;font-size:0.9rem;color:${med.stockQuantity <= 0 ? '#c62828' : (med.stockQuantity <= 3 ? '#c62828' : '#e65100')};">${med.stockQuantity}</span></td>
                                                 <td>
                                                     <c:choose>
@@ -1209,109 +948,6 @@
             </div>
         </div>
 
-        <%-- Thao tác nhanh --%>
-        <div class="col-xl-3">
-            <div class="admin-card h-100">
-                <div class="card-header"><h5><i class="bi bi-lightning-charge-fill"></i> Thao Tác Nhanh</h5></div>
-                <div class="card-body">
-                    <div class="d-flex flex-column gap-2">
-                        <a href="${pageContext.request.contextPath}/manager/services/" class="quick-action-btn">
-                            <span class="quick-action-icon"><i class="bi bi-activity"></i></span>
-                            <span class="quick-action-text"><span>Dịch Vụ Y Tế</span><small>Thêm, sửa, quản lý dịch vụ &amp; đơn giá</small></span>
-                        </a>
-                        <a href="${pageContext.request.contextPath}/manager/medicines/" class="quick-action-btn">
-                            <span class="quick-action-icon"><i class="bi bi-capsule"></i></span>
-                            <span class="quick-action-text"><span>Danh Mục Thuốc</span><small>Quản lý kho thuốc &amp; giá</small></span>
-                        </a>
-                        <a href="${pageContext.request.contextPath}/manager/schedules/" class="quick-action-btn">
-                            <span class="quick-action-icon"><i class="bi bi-calendar-check"></i></span>
-                            <span class="quick-action-text"><span>Duyệt Lịch Trực Bác sĩ lâm sàng</span><small>Phê duyệt lịch làm việc Bác sĩ lâm sàng</small></span>
-                        </a>
-                        <a href="${pageContext.request.contextPath}/manager/statistics/" class="quick-action-btn">
-                            <span class="quick-action-icon"><i class="bi bi-file-earmark-bar-graph"></i></span>
-                            <span class="quick-action-text"><span>Thống Kê Dịch Vụ</span><small>KPI, biểu đồ &amp; phân tích</small></span>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <%-- ════════════════════════════════════════════ --%>
-    <%-- BIỂU ĐỒ DOANH THU 12 THÁNG --%>
-    <%-- ════════════════════════════════════════════ --%>
-    <div class="row g-3 mb-4">
-        <div class="col-12">
-            <div class="admin-card">
-                <div class="card-header">
-                    <h5>
-                        <i class="bi bi-bar-chart-fill"></i>
-                        <c:choose>
-                            <c:when test="${isCustomRange}">Doanh Thu 12 Tháng (${dateRangeLabel})</c:when>
-                            <c:otherwise>Doanh Thu 12 Tháng</c:otherwise>
-                        </c:choose>
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="mgrRevenue12MonthsChart" height="300"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <%-- Activity Feed + Hướng dẫn --%>
-    <div class="row g-3">
-        <div class="col-xl-6">
-            <div class="admin-card h-100">
-                <div class="card-header"><h5><i class="bi bi-clock-history"></i> <c:choose><c:when test="${isCustomRange}">Hoạt Động (${dateRangeLabel})</c:when><c:otherwise>Hoạt Động Gần Đây</c:otherwise></c:choose></h5></div>
-                <div class="card-body p-3">
-                    <ul class="activity-feed">
-                        <c:if test="${not empty topServiceName && topServiceUsage > 0}">
-                            <li class="activity-item">
-                                <span class="activity-dot create"></span>
-                                <div class="activity-body">
-                                    <div class="act-title"><strong>${topServiceName}</strong> — dịch vụ được sử dụng nhiều nhất</div>
-                                    <div class="act-meta"><span><i class="bi bi-bar-chart-fill me-1"></i>${topServiceUsage} lượt</span><span><i class="bi bi-trophy-fill me-1"></i>Top 1</span></div>
-                                </div>
-                            </li>
-                        </c:if>
-                        <li class="activity-item">
-                            <span class="activity-dot update"></span>
-                            <div class="activity-body">
-                                <div class="act-title"><strong>${not empty totalUsageToday ? totalUsageToday : 0} lượt</strong> sử dụng dịch vụ</div>
-                                <div class="act-meta"><span><i class="bi bi-people me-1"></i>${not empty servicesUsedToday ? servicesUsedToday : 0} loại dịch vụ</span></div>
-                            </div>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-6">
-            <div class="admin-card h-100">
-                <div class="card-header"><h5><i class="bi bi-info-circle-fill"></i> Hướng Dẫn Quản Lý</h5></div>
-                <div class="card-body">
-                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;">
-                        <div style="background:var(--c-surface);border:1px solid var(--c-outline-variant);border-radius:var(--r-md);padding:1rem;text-align:center;">
-                            <span style="font-size:1.5rem;color:var(--pink-500);display:block;margin-bottom:0.4rem;"><i class="bi bi-1-circle-fill"></i></span>
-                            <div style="font-size:0.72rem;font-weight:600;color:var(--c-muted);text-transform:uppercase;letter-spacing:0.05em;">Dịch Vụ Y Tế</div>
-                            <div style="font-size:0.67rem;color:var(--c-muted);margin-top:0.15rem;">Thêm / sửa / ẩn dịch vụ &amp; đơn giá</div>
-                        </div>
-                        <div style="background:var(--c-surface);border:1px solid var(--c-outline-variant);border-radius:var(--r-md);padding:1rem;text-align:center;">
-                            <span style="font-size:1.5rem;color:var(--pink-500);display:block;margin-bottom:0.4rem;"><i class="bi bi-2-circle-fill"></i></span>
-                            <div style="font-size:0.72rem;font-weight:600;color:var(--c-muted);text-transform:uppercase;letter-spacing:0.05em;">Danh Mục Thuốc</div>
-                            <div style="font-size:0.67rem;color:var(--c-muted);margin-top:0.15rem;">Quản lý danh mục &amp; tồn kho thuốc</div>
-                        </div>
-                        <div style="background:var(--c-surface);border:1px solid var(--c-outline-variant);border-radius:var(--r-md);padding:1rem;text-align:center;">
-                            <span style="font-size:1.5rem;color:#3b82f6;display:block;margin-bottom:0.4rem;"><i class="bi bi-3-circle-fill"></i></span>
-                            <div style="font-size:0.72rem;font-weight:600;color:var(--c-muted);text-transform:uppercase;letter-spacing:0.05em;">Lịch Trực</div>
-                            <div style="font-size:0.67rem;color:var(--c-muted);margin-top:0.15rem;">Duyệt &amp; quản lý lịch Bác sĩ lâm sàng</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 
 </main>
@@ -1360,81 +996,101 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
 
 // ── Manager Charts ──
 (function() {
-    var pink500 = '#e91e8c', pink200 = '#ffb3d1';
+    var ocean500 = '#3B82F6';
+    var ocean200 = '#BFDBFE';
 
-    // Status Breakdown Doughnut
-    var statusCtx = document.getElementById('statusChart');
-    if (statusCtx) {
-        var statusLabelsVi = {
-            'completed':'Hoàn Thành','confirmed':'Đã Xác Nhận','pending':'Chờ Xác Nhận',
-            'cancelled':'Đã Hủy','waiting':'Đang Chờ','in_progress':'Đang Khám'
-        };
-        var rawLabels = [<c:forEach var="sb" items="${statusBreakdown}" varStatus="s">'${sb.status}'${s.last ? '' : ','}</c:forEach>];
-        var translatedLabels = rawLabels.map(function(l){return statusLabelsVi[l]||l;});
-        new Chart(statusCtx, {
-            type: 'doughnut',
-            data: {
-                labels: translatedLabels,
-                datasets: [{
-                    data: [<c:forEach var="sb" items="${statusBreakdown}" varStatus="s">${sb.count}${s.last ? '' : ','}</c:forEach>],
-                    backgroundColor: ['#10b981','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#f97316'],
-                    borderColor: '#fff', borderWidth: 2.5, hoverOffset: 6
-                }]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false, cutout: '60%',
-                plugins: { legend: { position: 'bottom', labels: { padding: 14, usePointStyle: true, pointStyleWidth: 8, font: { size: 11 } } } }
-            }
-        });
-    }
-
-    // Appointments Chart
-    var apptCtx = document.getElementById('appointmentsChart');
-    if (apptCtx) {
-        new Chart(apptCtx, {
-            type: 'bar',
-            data: {
-                labels: [<c:forEach var="lbl" items="${apptChartLabels}" varStatus="s">'${lbl}'${s.last ? '' : ','}</c:forEach>],
-                datasets: [{
-                    label: 'Lịch hẹn',
-                    data: [<c:forEach var="val" items="${apptChartValues}" varStatus="s">${val}${s.last ? '' : ','}</c:forEach>],
-                    backgroundColor: pink500, borderColor: '#c2185b', borderWidth: 1, borderRadius: 6
-                }]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } }, x: { grid: { display: false } } }
-            }
-        });
-    }
-
-    // Revenue 7 days
+    // Revenue 7 days (line chart)
     var ctx7 = document.getElementById('mgrRevenue7DaysChart');
     if (ctx7) {
         new Chart(ctx7, {
             type: 'line',
             data: {
                 labels: [<c:forEach items="${mgrRevenueChartLabels}" var="lbl" varStatus="s">'${lbl}'<c:if test="${!s.last}">,</c:if></c:forEach>],
-                datasets: [{ label: 'Doanh thu', data: [<c:forEach items="${mgrRevenueChartValues}" var="v" varStatus="s">${v}<c:if test="${!s.last}">,</c:if></c:forEach>], borderColor: pink500, backgroundColor: 'rgba(233,30,140,0.1)', fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: pink500 }]
+                datasets: [{ label: 'Doanh thu', data: [<c:forEach items="${mgrRevenueChartValues}" var="v" varStatus="s">${v}<c:if test="${!s.last}">,</c:if></c:forEach>], borderColor: '#3B82F6', backgroundColor: 'rgba(59,130,246,0.08)', fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#3B82F6', pointBorderColor: '#fff', pointBorderWidth: 2 }]
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: function(v){return v>=1e9?(v/1e9).toFixed(1)+'B':v>=1e6?(v/1e6).toFixed(0)+'M':v>=1e3?(v/1e3).toFixed(0)+'K':v;} } } } }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: function(v){return v>=1e9?(v/1e9).toFixed(1)+'B':v>=1e6?(v/1e6).toFixed(0)+'M':v>=1e3?(v/1e3).toFixed(0)+'K':v;} } }, x: { grid: { display: false } } } }
         });
     }
 
-    // Revenue 12 months
-    var ctx12 = document.getElementById('mgrRevenue12MonthsChart');
-    if (ctx12) {
-        new Chart(ctx12, {
-            type: 'bar',
+    // Revenue 30 days (line chart)
+    var ctx30 = document.getElementById('mgrRevenue30DaysChart');
+    if (ctx30) {
+        new Chart(ctx30, {
+            type: 'line',
             data: {
-                labels: [<c:forEach items="${mgrRevenue12MonthsLabels}" var="lbl" varStatus="s">'${lbl}'<c:if test="${!s.last}">,</c:if></c:forEach>],
-                datasets: [{ label: 'Doanh thu', data: [<c:forEach items="${mgrRevenue12MonthsValues}" var="v" varStatus="s">${v}<c:if test="${!s.last}">,</c:if></c:forEach>], backgroundColor: pink500, borderRadius: 6 }]
+                labels: [<c:forEach items="${mgrRevenue30Labels}" var="lbl" varStatus="s">'${lbl}'<c:if test="${!s.last}">,</c:if></c:forEach>],
+                datasets: [{ label: 'Doanh thu', data: [<c:forEach items="${mgrRevenue30Values}" var="v" varStatus="s">${v}<c:if test="${!s.last}">,</c:if></c:forEach>], borderColor: '#10B981', backgroundColor: 'rgba(16,185,129,0.06)', fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: '#10B981', pointBorderColor: '#fff', pointBorderWidth: 1.5, borderWidth: 2 }]
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: function(v){return v>=1e9?(v/1e9).toFixed(1)+'B':v>=1e6?(v/1e6).toFixed(0)+'M':v>=1e3?(v/1e3).toFixed(0)+'K':v;} } } } }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: function(v){return v>=1e9?(v/1e9).toFixed(1)+'B':v>=1e6?(v/1e6).toFixed(0)+'M':v>=1e3?(v/1e3).toFixed(0)+'K':v;} } }, x: { grid: { display: false } } } }
         });
     }
+
+    // Appointments trend 7 days (Bar chart)
+    var apptCtx = document.getElementById('mgrAppointmentsChart');
+    if (apptCtx) {
+        new Chart(apptCtx, {
+            type: 'bar',
+            data: {
+                labels: [<c:forEach items="${mgrApptChartLabels}" var="lbl" varStatus="s">'${lbl}'<c:if test="${!s.last}">,</c:if></c:forEach>],
+                datasets: [{ label: 'Lịch hẹn', data: [<c:forEach items="${mgrApptChartValues}" var="v" varStatus="s">${v}<c:if test="${!s.last}">,</c:if></c:forEach>], backgroundColor: ['#3B82F6','#2563EB','#1D4ED8','#60A5FA','#3B82F6','#2563EB','#1D4ED8'], borderRadius: 6, hoverBackgroundColor: '#2563EB' }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: '#E5E7EB' } }, x: { grid: { display: false } } } }
+        });
+    }
+
+    // Service usage 7 days (Line chart)
+    var svcCtx = document.getElementById('mgrServiceUsageChart');
+    if (svcCtx) {
+        new Chart(svcCtx, {
+            type: 'line',
+            data: {
+                labels: [
+                    <c:forEach var="lbl" items="${serviceUsageLast7DaysLabels}" varStatus="s">
+                        '${lbl}'${s.last ? '' : ','}
+                    </c:forEach>
+                ],
+                datasets: [{
+                    label: 'Lượt sử dụng',
+                    data: [
+                        <c:forEach var="val" items="${serviceUsageLast7DaysValues}" varStatus="s">
+                            ${val}${s.last ? '' : ','}
+                        </c:forEach>
+                    ],
+                    borderColor: '#10B981',
+                    backgroundColor: 'rgba(16,185,129,0.08)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#10B981',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: '#E5E7EB' } }, x: { grid: { display: false } } } }
+        });
+    }
+
 })();
+
+function switchRevenueChart(days) {
+    var btn7 = document.getElementById('btn7Days');
+    var btn30 = document.getElementById('btn30Days');
+    var chart7 = document.getElementById('chart7Container');
+    var chart30 = document.getElementById('chart30Container');
+    if (days === 7) {
+        chart7.style.display = 'block';
+        chart30.style.display = 'none';
+        btn7.style.background = '#2563EB'; btn7.style.color = '#fff';
+        btn30.style.background = '#E0EFFF'; btn30.style.color = '#2563EB';
+    } else {
+        chart7.style.display = 'none';
+        chart30.style.display = 'block';
+        btn7.style.background = '#E0EFFF'; btn7.style.color = '#2563EB';
+        btn30.style.background = '#2563EB'; btn30.style.color = '#fff';
+    }
+}
 </script>
 
 

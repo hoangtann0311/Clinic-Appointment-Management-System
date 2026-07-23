@@ -36,7 +36,7 @@ body {
     width: 72px;
     height: 72px;
     border-radius: 50%;
-    background: linear-gradient(135deg, rgba(194, 24, 91, 0.1), rgba(194, 24, 91, 0.05));
+    background: linear-gradient(135deg, rgba(37,99,235, 0.1), rgba(37,99,235, 0.05));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -85,7 +85,7 @@ body {
 
 /* ---------- Dashboard Welcome Banner ---------- */
 .bg-gradient-primary {
-    background: linear-gradient(135deg, #c2185b, #a3154d) !important;
+    background: linear-gradient(135deg, #2563EB, #1D4ED8) !important;
 }
 
 /* ---------- Quick Link Cards ---------- */
@@ -97,8 +97,8 @@ body {
     color: inherit;
 }
 .quick-link-card:hover {
-    border-color: #c2185b;
-    box-shadow: 0 4px 16px rgba(194, 24, 91, 0.1);
+    border-color: #2563EB;
+    box-shadow: 0 4px 16px rgba(37,99,235, 0.1);
     transform: translateY(-2px);
 }
 .quick-link-card h6 {
@@ -188,8 +188,8 @@ body {
     transition: border-color 0.2s, box-shadow 0.2s;
 }
 .form-select:focus {
-    border-color: #c2185b;
-    box-shadow: 0 0 0 0.2rem rgba(194, 24, 91, 0.15);
+    border-color: #2563EB;
+    box-shadow: 0 0 0 0.2rem rgba(37,99,235, 0.15);
 }
 
 textarea.form-control {
@@ -244,9 +244,9 @@ footer {
 .cams-app-footer {
     margin-top: 2rem;
     padding: 1.35rem 1rem 1.45rem;
-    background: #fff7fa;
-    border-top: 1px solid #f1dbe5;
-    color: #725564;
+    background: #F0F7FF;
+    border-top: 1px solid #BFDBFE;
+    color: #64748B;
     font-family: 'Be Vietnam Pro', 'Segoe UI', sans-serif;
     font-size: 0.76rem;
     text-align: center;
@@ -258,13 +258,13 @@ footer {
 }
 
 .cams-app-footer-copyright {
-    color: #725564;
+    color: #64748B;
     font-weight: 400;
 }
 
 .cams-app-footer-tagline {
     margin-top: 0.25rem !important;
-    color: #9c1458;
+    color: #1D4ED8;
     font-weight: 500;
 }
 
@@ -331,12 +331,12 @@ a, .btn, .quick-link-card, .form-control, .form-select {
    ============================================================ */
 /* Theme Variables (Pink/Rose Aesthetic) */
 :root {
-    --brand-pink-50: #fff1f2;
-    --brand-pink-100: #ffe4e6;
-    --brand-pink-200: #fecdd3;
-    --brand-pink-500: #f43f5e;
-    --brand-pink-600: #e11d48;
-    --brand-pink-700: #be123c;
+    --brand-pink-50: #F0F7FF;
+    --brand-pink-100: #E0EFFF;
+    --brand-pink-200: #BFDBFE;
+    --brand-pink-500: #3B82F6;
+    --brand-pink-600: #2563EB;
+    --brand-pink-700: #1D4ED8;
     --brand-teal-100: #ccfbf1;
     --brand-teal-600: #0d9488;
     --font-heading: 'Be Vietnam Pro', sans-serif;
@@ -416,12 +416,12 @@ a, .btn, .quick-link-card, .form-control, .form-select {
     font-weight: 700;
     padding: 0.5rem 1.5rem;
     border-radius: 50px;
-    box-shadow: 0 4px 12px rgba(244, 63, 94, 0.2);
+    box-shadow: 0 4px 12px rgba(37,99,235, 0.2);
     transition: all 0.2s ease;
     text-decoration: none;
 }
 .btn-home-primary:hover {
-    box-shadow: 0 6px 18px rgba(244, 63, 94, 0.35);
+    box-shadow: 0 6px 18px rgba(37,99,235, 0.35);
     transform: translateY(-1px);
     color: #ffffff;
 }
@@ -475,7 +475,7 @@ a, .btn, .quick-link-card, .form-control, .form-select {
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
     width: 120%; height: 120%;
-    background: radial-gradient(circle, rgba(254, 205, 211, 0.4) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(96,165,250, 0.48) 0%, transparent 70%);
     z-index: 1;
     pointer-events: none;
 }
@@ -485,7 +485,7 @@ a, .btn, .quick-link-card, .form-control, .form-select {
     background: #ffffff;
     border: 1px solid var(--brand-pink-100);
     border-radius: var(--radius-xl);
-    box-shadow: 0 20px 40px rgba(190, 18, 60, 0.08);
+    box-shadow: 0 20px 40px rgba(37,99,235, 0.08);
     padding: 1.5rem;
     max-width: 440px;
     margin: 0 auto;
@@ -540,7 +540,7 @@ a, .btn, .quick-link-card, .form-control, .form-select {
     color: #6b7280;
 }
 .mockup-alert-panel {
-    background: #fff1f2;
+    background: var(--brand-pink-50);
     border: 1.5px dashed var(--brand-pink-200);
     border-radius: var(--radius-lg);
     padding: 1rem;
@@ -596,7 +596,7 @@ a, .btn, .quick-link-card, .form-control, .form-select {
     height: 100%;
 }
 .feature-card:hover {
-    box-shadow: 0 15px 30px rgba(190, 18, 60, 0.06);
+    box-shadow: 0 15px 30px rgba(37,99,235, 0.06);
     transform: translateY(-4px);
     border-color: var(--brand-pink-200);
 }
@@ -619,7 +619,7 @@ a, .btn, .quick-link-card, .form-control, .form-select {
 
 /* --- Benefits --- */
 .bg-light-rose {
-    background: #fff8f9;
+    background: #F0F7FF;
 }
 .benefit-item {
     display: flex;
@@ -644,7 +644,7 @@ a, .btn, .quick-link-card, .form-control, .form-select {
     height: 100%;
 }
 .doctor-card:hover {
-    box-shadow: 0 12px 28px rgba(190, 18, 60, 0.08);
+    box-shadow: 0 12px 28px rgba(37,99,235, 0.08);
     transform: translateY(-3px);
 }
 .doctor-avatar-wrapper {
@@ -795,6 +795,8 @@ a, .btn, .quick-link-card, .form-control, .form-select {
     background: #ffffff;
     align-items: stretch;
     position: relative;
+    min-width: 0;
+    overflow-x: hidden;
 }
 .auth-home-link {
     position: absolute;
@@ -814,14 +816,14 @@ a, .btn, .quick-link-card, .form-control, .form-select {
     font-size: 0.88rem;
     font-weight: 700;
     text-decoration: none;
-    box-shadow: 0 8px 22px rgba(76, 5, 25, 0.16);
+    box-shadow: 0 8px 22px rgba(30, 64, 175, 0.25);
     transition: transform .2s ease, background-color .2s ease, box-shadow .2s ease;
 }
 .auth-home-link:hover {
     color: #ffffff;
     background: rgba(255, 255, 255, 0.22);
     transform: translateX(-2px);
-    box-shadow: 0 12px 26px rgba(76, 5, 25, 0.24);
+    box-shadow: 0 12px 26px rgba(30, 64, 175, 0.35);
 }
 
 /* Left Brand Panel (50% on desktop) */
@@ -830,7 +832,7 @@ a, .btn, .quick-link-card, .form-control, .form-select {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #be123c 0%, #881337 50%, #4c0519 100%);
+    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 52%, #1D4ED8 100%);
     color: #ffffff;
     position: relative;
     overflow: hidden;
@@ -901,7 +903,7 @@ a, .btn, .quick-link-card, .form-control, .form-select {
     margin-bottom: 0.85rem;
 }
 .auth-mockup-row i {
-    color: #fda4af;
+    color: #60A5FA;
     font-size: 1.2rem;
 }
 .auth-mockup-text {
@@ -915,7 +917,7 @@ a, .btn, .quick-link-card, .form-control, .form-select {
     position: absolute;
     width: 300px; height: 300px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(244, 63, 94, 0.3) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(96,165,250, 0.48) 0%, transparent 70%);
     filter: blur(40px);
     z-index: 1;
 }
@@ -930,6 +932,7 @@ a, .btn, .quick-link-card, .form-control, .form-select {
     padding: 3rem 2rem;
     background: #ffffff;
     min-height: 100vh;
+    min-width: 0;
 }
 /* Login: căn giữa dọc khi nội dung ngắn */
 .login-page .auth-split-right {
@@ -945,6 +948,7 @@ a, .btn, .quick-link-card, .form-control, .form-select {
 .auth-form-card {
     width: 100%;
     max-width: 440px;
+    min-width: 0;
 }
 .auth-form-header {
     margin-bottom: 2rem;
@@ -970,7 +974,7 @@ a, .btn, .quick-link-card, .form-control, .form-select {
     padding: 0.75rem 1.5rem;
     border-radius: 12px;
     width: 100%;
-    box-shadow: 0 4px 12px rgba(225, 29, 72, 0.25);
+    box-shadow: 0 4px 12px rgba(37,99,235, 0.24);
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
@@ -978,7 +982,7 @@ a, .btn, .quick-link-card, .form-control, .form-select {
     gap: 0.5rem;
 }
 .btn-auth-submit:hover {
-    box-shadow: 0 6px 18px rgba(225, 29, 72, 0.4);
+    box-shadow: 0 6px 18px rgba(37,99,235, 0.36);
     transform: translateY(-1px);
     color: #ffffff;
 }
@@ -1004,7 +1008,7 @@ a, .btn, .quick-link-card, .form-control, .form-select {
 }
 .floating-input:focus {
     border-color: var(--brand-pink-500);
-    box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.12);
+    box-shadow: 0 0 0 3px rgba(37,99,235, 0.12);
 }
 .floating-input.has-toggle {
     padding-right: 3rem;
@@ -1028,6 +1032,20 @@ a, .btn, .quick-link-card, .form-control, .form-select {
 }
 .floating-toggle:hover {
     color: #4b5563;
+}
+
+.register-terms {
+    display: flex;
+    align-items: flex-start;
+    gap: .6rem;
+}
+.register-terms input[type="checkbox"] {
+    flex: 0 0 auto;
+    margin-top: .3rem;
+}
+.register-terms label {
+    min-width: 0;
+    line-height: 1.55;
 }
 
 /* Label above input (Order -1) */
@@ -1054,7 +1072,7 @@ a, .btn, .quick-link-card, .form-control, .form-select {
 .login-alert-danger {
     background-color: #fff1f2;
     border: 1px solid #fecdd3;
-    color: #be123c;
+    color: #2563EB;
 }
 .login-alert-success {
     background-color: #f0fdf4;
@@ -1076,7 +1094,7 @@ a, .btn, .quick-link-card, .form-control, .form-select {
         color: var(--brand-pink-700);
         border-color: var(--brand-pink-200);
         background: #ffffff;
-        box-shadow: 0 4px 16px rgba(136, 19, 55, .1);
+        box-shadow: 0 4px 16px rgba(37, 99, 235, 0.15);
         top: 1.25rem;
         left: 1.25rem;
     }
@@ -1085,9 +1103,34 @@ a, .btn, .quick-link-card, .form-control, .form-select {
         background: var(--brand-pink-50);
     }
     .auth-split-right {
+        flex: 0 0 100%;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
         height: auto;
         overflow: visible;
         padding: 4rem 1.5rem;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .auth-split-right {
+        padding: 6.5rem 1rem 2rem;
+    }
+    .auth-form-card,
+    .auth-form-card form,
+    .floating-group,
+    .floating-input {
+        max-width: 100%;
+        min-width: 0;
+    }
+    .auth-form-header h2 {
+        font-size: 1.75rem;
+        line-height: 1.25;
+    }
+    .login-page form > .d-flex.justify-content-between {
+        flex-wrap: wrap;
+        gap: .75rem 1rem;
     }
 }
 
@@ -1111,18 +1154,131 @@ a, .btn, .quick-link-card, .form-control, .form-select {
 }
 
 .patient-report-title {
-    color: var(--c-primary, #c2185b);
+    color: var(--c-primary, #2563EB);
     font-size: .92rem;
 }
 
 .patient-result-pending {
-    border: 1px dashed #f3b5cf;
-    background: linear-gradient(135deg, #fff8fb, #fff1f6);
-    color: #725364;
+    border: 1px dashed #93C5FD;
+    background: linear-gradient(135deg, #F0F7FF, #E0EFFF);
+    color: #64748B;
 }
 
 .patient-result-pending i {
-    color: #d81b60;
+    color: #3B82F6;
     font-size: 1.55rem;
+}
+
+/* ============================================================
+   CAMS Unified Gentle Pink — public and authentication screens
+   ============================================================ */
+:root {
+    --brand-pink-50: #F0F7FF !important;
+    --brand-pink-100: #E0EFFF !important;
+    --brand-pink-200: #BFDBFE !important;
+    --brand-pink-500: #3B82F6 !important;
+    --brand-pink-600: #2563EB !important;
+    --brand-pink-700: #1D4ED8 !important;
+    --primary-color: #2563EB !important;
+    --bs-primary: #2563EB !important;
+    --bs-primary-rgb: 37, 99, 235 !important;
+    --bs-link-color: #2563EB !important;
+    --bs-link-hover-color: #1D4ED8 !important;
+}
+.home-navbar-brand,
+.home-navbar-brand i,
+.home-nav-link:hover,
+.hero-title span,
+.section-tag,
+.benefit-icon,
+.faq-btn i {
+    color:#2563EB !important;
+}
+.btn-home-primary,
+.btn-auth-submit,
+.bg-gradient-primary {
+    background:linear-gradient(135deg,#2563EB,#3B82F6) !important;
+    border-color:#3B82F6 !important;
+    box-shadow:0 4px 14px rgba(37,99,235,.16) !important;
+}
+.btn-home-primary:hover,
+.btn-auth-submit:hover {
+    background:linear-gradient(135deg,#3B82F6,#2563EB) !important;
+    box-shadow:0 6px 18px rgba(37,99,235,.22) !important;
+}
+.btn-home-outline {
+    color:#1D4ED8 !important;
+    border-color:#60A5FA !important;
+}
+.btn-home-outline:hover {
+    color:#475569 !important;
+    background:#E0EFFF !important;
+}
+.home-hero {
+    background:radial-gradient(circle at 80% 20%,#E0EFFF 0%,#F0F7FF 48%,#fff 100%) !important;
+}
+.hero-tag,
+.feature-icon-circle,
+.doctor-icon {
+    background:#E0EFFF !important;
+    color:#2563EB !important;
+    border-color:#BFDBFE !important;
+}
+.mockup-avatar {
+    background:linear-gradient(135deg,#2563EB,#3B82F6) !important;
+}
+.mockup-task-item,
+.mockup-alert-panel,
+.feature-card,
+.faq-item {
+    border-color:#DBEAFE !important;
+}
+.mockup-task-item,
+.bg-light-rose {
+    background:#F0F7FF !important;
+}
+.mockup-panel .text-danger,
+.mockup-alert-panel i {
+    color:#2563EB !important;
+}
+.home-footer {
+    background:#DBEAFE !important;
+    color:#64748B !important;
+    border-top:1px solid #BFDBFE;
+}
+.home-footer-brand,
+.home-footer h6,
+.home-footer .text-white,
+.home-footer a:hover {
+    color:#334155 !important;
+}
+.home-footer-brand i { color:#2563EB !important; }
+.footer-links a { color:#94A3B8 !important; }
+.auth-split-wrapper,
+.auth-split-right {
+    background:#F0F7FF !important;
+}
+.auth-split-left {
+    background:linear-gradient(135deg,#60A5FA 0%,#3B82F6 54%,#2563EB 100%) !important;
+}
+.auth-glow-blob {
+    background:radial-gradient(circle,rgba(96,165,250,.55) 0%,transparent 70%) !important;
+}
+.auth-mockup-panel {
+    background:rgba(255,255,255,.15) !important;
+    border-color:rgba(255,255,255,.32) !important;
+}
+.floating-input:focus {
+    border-color:#60A5FA !important;
+    box-shadow:0 0 0 3px rgba(59,130,246,.14) !important;
+}
+.patient-report-title,
+.patient-result-pending i {
+    color:#2563EB !important;
+}
+.patient-result-pending {
+    border-color:#93C5FD !important;
+    background:linear-gradient(135deg,#F0F7FF,#E0EFFF) !important;
+    color:#64748B !important;
 }
 

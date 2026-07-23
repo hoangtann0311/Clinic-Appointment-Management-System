@@ -33,7 +33,7 @@
             <a href="${pageContext.request.contextPath}/manager/dashboard"
                class="${fn:contains(requestURI, '/manager/dashboard') ? 'active' : ''}">
                 <i class="bi bi-speedometer2"></i>
-                <span>Dashboard</span>
+                <span>Tổng Quan</span>
             </a>
         </li>
 
@@ -54,13 +54,13 @@
             </a>
         </li>
 
-        <!-- QUAN LY LICH TRUC -->
+        <!-- QUẢN LÝ LỊCH LÀM VIỆC -->
         <li class="admin-sidebar-section">Quản Lý Nhân Sự</li>
         <li>
             <a href="${pageContext.request.contextPath}/manager/schedules/"
                class="${fn:contains(requestURI, '/manager/schedules') ? 'active' : ''}">
                 <i class="bi bi-calendar-check"></i>
-                <span>Duyệt Lịch Trực</span>
+                <span>Lịch Làm Việc</span>
             </a>
         </li>
         <li>
@@ -71,26 +71,12 @@
             </a>
         </li>
 
-        <!-- BAO CAO -->
-        <li class="admin-sidebar-section">Báo Cáo &amp; Thống Kê</li>
+        <li class="admin-sidebar-section">Theo Dõi Đơn Giá</li>
         <li>
             <a href="${pageContext.request.contextPath}/manager/services/?action=price-history"
                class="${fn:contains(requestURI, '/manager/services') && fn:contains(pageContext.request.queryString, 'price-history') ? 'active' : ''}">
                 <i class="bi bi-clock-history"></i>
                 <span>Nhật Ký Điều Chỉnh Giá</span>
-            </a>
-        </li>
-        <li>
-            <a href="#" class="disabled" title="Sử dụng nút Xuất Báo Cáo trên Dashboard">
-                <i class="bi bi-graph-up-arrow"></i>
-                <span>Báo Cáo Doanh Thu</span>
-            </a>
-        </li>
-        <li>
-            <a href="${pageContext.request.contextPath}/manager/statistics/"
-               class="${fn:contains(requestURI, '/manager/statistics') ? 'active' : ''}">
-                <i class="bi bi-file-earmark-bar-graph"></i>
-                <span>Thống Kê Dịch Vụ</span>
             </a>
         </li>
     </ul>

@@ -52,7 +52,6 @@ public final class AuthorizationConfig {
     /**
      * Kiểm tra path có thuộc zone của role không.
      * Patient đặc biệt: còn có /home.
-     * Export paths (/export/*) được phép cho Admin và Manager.
      */
     public static boolean isInZone(int roleId, String path) {
         if ("/change-password".equals(path)) {
@@ -60,8 +59,7 @@ public final class AuthorizationConfig {
         }
 
         if (roleId == ROLE_ADMIN) {
-            return (path.startsWith("/admin/") && !path.startsWith("/admin/reception"))
-                    || path.startsWith("/export/");
+            return path.startsWith("/admin/") && !path.startsWith("/admin/reception");
         }
 
         // Tệp ảnh y tế được phục vụ qua endpoint dùng chung, nhưng vẫn phải
@@ -71,10 +69,6 @@ public final class AuthorizationConfig {
         }
         if ("/medical/ai-image".equals(path)) {
             return roleId == ROLE_DOCTOR || roleId == ROLE_SONOGRAPHER;
-        }
-
-        if (path.startsWith("/export/") && roleId == ROLE_MANAGER) {
-            return true;
         }
 
         if (roleId == ROLE_STAFF && path.startsWith("/admin/reception")) {
@@ -129,13 +123,10 @@ public final class AuthorizationConfig {
         Map.entry("/manager/schedules/",    "schedule.view"),
         Map.entry("/manager/time-slots",    "schedule.view"),
         Map.entry("/manager/time-slots/",   "schedule.view"),
-        Map.entry("/manager/statistics",    "service.view"),
-        Map.entry("/manager/statistics/",   "service.view"),
+        Map.entry("/manager/statistics",    "report.view_dashboard"),
+        Map.entry("/manager/statistics/",   "report.view_dashboard"),
         Map.entry("/manager/pricing",       "service.view"),
         Map.entry("/manager/pricing/",      "service.view"),
-
-        // ──────────── EXPORT (/export/*) ────────────
-        Map.entry("/export/reports",    "report.view"),
 
         // ──────────── DOCTOR ZONE (/doctor/*) ────────────
         Map.entry("/doctor/dashboard",         "report.view_dashboard"),
@@ -157,7 +148,6 @@ public final class AuthorizationConfig {
         Map.entry("/doctor/pregnancy",          "medical_record.view"),
         Map.entry("/doctor/results",            "ultrasound.view"),
         Map.entry("/doctor/ultrasound-request/create", "medical_record.edit"),
-        Map.entry("/doctor/notifications",      "user.view"),
 
         // ──────────── STAFF ZONE (/staff/*) ────────────
         Map.entry("/staff/dashboard",      "report.view_dashboard"),
@@ -167,13 +157,13 @@ public final class AuthorizationConfig {
         Map.entry("/admin/reception/booking",          "appointment.create"),
         Map.entry("/admin/reception/checkin",          "appointment.edit"),
         Map.entry("/admin/reception/cancel",           "appointment.cancel"),
+        Map.entry("/admin/reception/priority",         "appointment.edit"),
         Map.entry("/admin/reception/edit",             "appointment.edit"),
         Map.entry("/admin/reception/doctor-schedules", "appointment.view"),
         Map.entry("/admin/reception/slots",            "appointment.view"),
         Map.entry("/admin/reception/patient-lookup",   "user.view"),
         Map.entry("/admin/reception/payments",         "payment.view"),
         Map.entry("/admin/reception/payments/",        "payment.view"),
-        Map.entry("/admin/reception/sos",              "appointment.edit"),
 
         // ──────────── SONOGRAPHER ZONE (/sonographer/*) ────────────
         Map.entry("/sonographer/dashboard", "ultrasound.view"),
@@ -194,12 +184,10 @@ public final class AuthorizationConfig {
         Map.entry("/patient/booking/slots",  "appointment.create"),
         Map.entry("/patient/medical-records", "medical_record.view"),
         Map.entry("/patient/invoices",       "payment.view"),
+        Map.entry("/patient/prescription-decision", "payment.view"),
         Map.entry("/patient/payment",        "payment.view"),
-        Map.entry("/patient/pregnancy",      "medical_record.view"),
-        Map.entry("/patient/pregnancy/results", "medical_record.view"),
         Map.entry("/patient/profile",        "appointment.view"),
         Map.entry("/patient/review",         "appointment.view"),
-        Map.entry("/patient/notifications",  "appointment.view"),
 
         // ──────────── SHARED AUTHENTICATED ENDPOINTS ────────────
         Map.entry("/change-password",          AUTHENTICATED_ONLY),
@@ -211,7 +199,7 @@ public final class AuthorizationConfig {
     // PUBLIC PATHS — không cần xác thực hay phân quyền
     // ═══════════════════════════════════════════════════════════
     public static final Set<String> PUBLIC_PATHS = Set.of(
-        "/login", "/admin/login", "/register", "/verify-email",
+        "/login", "/register", "/verify-email",
         "/forgot-password", "/reset-password",
         "/google-login", "/google-login-server", "/logout"
     );
@@ -240,8 +228,7 @@ public final class AuthorizationConfig {
     // ═══════════════════════════════════════════════════════════
     public static final Set<String> CRITICAL_PATH_PREFIXES = Set.of(
         "/admin/users", "/admin/roles",
-        "/admin/audit-logs", "/export/reports",
-        "/manager/statistics"
+        "/admin/audit-logs"
     );
 
     // ═══════════════════════════════════════════════════════════
@@ -342,7 +329,7 @@ public final class AuthorizationConfig {
             case ROLE_MANAGER     -> "Quản lý";
             case ROLE_STAFF       -> "Nhân viên";
             case ROLE_PATIENT     -> "Bệnh nhân";
-            case ROLE_SONOGRAPHER -> "Bác sĩ Siêu âm";
+            case ROLE_SONOGRAPHER -> "Bác sĩ siêu âm";
             default               -> "Không rõ (#" + roleId + ")";
         };
     }

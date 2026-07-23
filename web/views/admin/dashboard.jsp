@@ -7,7 +7,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Quản Trị Hệ Thống — CAMS Admin</title>
+    <title>Tổng Quan Quản Trị Hệ Thống — CAMS</title>
 
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
@@ -27,7 +27,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 
     <!-- Admin CSS -->
-    <link href="${pageContext.request.contextPath}/assets/css/admin.css" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/admin.css?v=202" rel="stylesheet">
 
     <style>
 /* ============================================================
@@ -38,43 +38,43 @@
 :root {
     --sidebar-w: 270px;
     --topbar-h: 66px;
-    --pink-50:  #fff0f6;
-    --pink-100: #ffe0ef;
-    --pink-200: #ffb3d1;
-    --pink-300: #ff80b3;
-    --pink-400: #ff4d94;
-    --pink-500: #e91e8c;
-    --pink-600: #c2185b;
-    --pink-700: #9c0f4a;
-    --pink-800: #7b0a39;
-    --rose-400: #fb7185;
-    --rose-500: #f43f5e;
-    --rose-600: #e11d48;
+    --pink-50:  #F0F7FF;
+    --pink-100: #E0EFFF;
+    --pink-200: #BFDBFE;
+    --pink-300: #93C5FD;
+    --pink-400: #60A5FA;
+    --pink-500: #3B82F6;
+    --pink-600: #2563EB;
+    --pink-700: #1D4ED8;
+    --pink-800: #1D4ED8;
+    --rose-400: #93C5FD;
+    --rose-500: #60A5FA;
+    --rose-600: #3B82F6;
 
-    --c-bg:              #fff5f9;
+    --c-bg:              #EFF6FF;
     --c-surface:         #ffffff;
-    --c-surface-variant: #fff0f5;
-    --c-primary:         #c2185b;
-    --c-primary-light:   #ff4d94;
-    --c-primary-dark:    #9c0f4a;
-    --c-primary-container: #ffe0ef;
-    --c-on-bg:           #1f1117;
-    --c-on-surface:      #2d1a25;
-    --c-on-surface-var:  #5a3d4e;
-    --c-muted:           #8a6070;
-    --c-outline:         #e8c5d5;
-    --c-outline-variant: #f5dfe9;
+    --c-surface-variant: #E0EFFF;
+    --c-primary:         #2563EB;
+    --c-primary-light:   #60A5FA;
+    --c-primary-dark:    #1D4ED8;
+    --c-primary-container: #E0EFFF;
+    --c-on-bg:           #0F172A;
+    --c-on-surface:      #1E293B;
+    --c-on-surface-var:  #475569;
+    --c-muted:           #94A3B8;
+    --c-outline:         #BFDBFE;
+    --c-outline-variant: #DBEAFE;
 
-    --sb-bg:           #1a0a12;
-    --sb-bg-mid:       #2d1020;
-    --sb-bg-deep:      #0f0509;
-    --sb-hover:        #3d1830;
-    --sb-active-bg:    rgba(233,30,140,0.18);
-    --sb-active-border:#e91e8c;
-    --sb-text:         #f0d5e3;
-    --sb-text-muted:   #a07085;
+    --sb-bg:           #EFF6FF;
+    --sb-bg-mid:       #DBEAFE;
+    --sb-bg-deep:      #BFDBFE;
+    --sb-hover:        #F5F9FF;
+    --sb-active-bg:    rgba(37,99,235,0.18);
+    --sb-active-border:#3B82F6;
+    --sb-text:         #DBEAFE;
+    --sb-text-muted:   #94A3B8;
     --sb-border:       rgba(255,255,255,0.07);
-    --sb-accent:       #ff80b3;
+    --sb-accent:       #93C5FD;
 
     --green-500: #10b981;  --green-100: #d1fae5;  --green-700: #065f46;
     --amber-500: #f59e0b;  --amber-100: #fef3c7;  --amber-700: #92400e;
@@ -84,11 +84,11 @@
     --red-500:   #ef4444;  --red-100:   #fee2e2;  --red-700:   #991b1b;
     --teal-500:  #14b8a6;  --teal-100:  #ccfbf1;  --teal-700:  #115e59;
 
-    --shadow-xs:   0 1px 3px rgba(194,24,91,0.07);
-    --shadow-sm:   0 2px 8px rgba(194,24,91,0.10);
-    --shadow-md:   0 4px 20px rgba(194,24,91,0.13);
-    --shadow-lg:   0 8px 32px rgba(194,24,91,0.16);
-    --shadow-pink: 0 4px 24px rgba(233,30,140,0.30);
+    --shadow-xs:   0 1px 3px rgba(37,99,235,0.07);
+    --shadow-sm:   0 2px 8px rgba(37,99,235,0.10);
+    --shadow-md:   0 4px 20px rgba(37,99,235,0.13);
+    --shadow-lg:   0 8px 32px rgba(37,99,235,0.16);
+    --shadow-pink: 0 4px 24px rgba(37,99,235,0.30);
 
     --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 22px; --r-pill: 999px;
     --t-fast: 0.15s ease; --t-normal: 0.25s ease;
@@ -134,7 +134,7 @@ body.admin-body {
 }
 .admin-topbar-brand i {
     color: var(--pink-500); font-size: 1.5rem;
-    filter: drop-shadow(0 0 6px rgba(233,30,140,0.4));
+    filter: drop-shadow(0 0 6px rgba(37,99,235,0.4));
 }
 .admin-topbar-brand .brand-badge {
     font-family: var(--font-body); font-weight: 700; font-size: 0.65rem;
@@ -177,7 +177,7 @@ body.admin-body {
     background: linear-gradient(135deg, var(--pink-500), var(--rose-400));
     color: #fff; display: flex; align-items: center; justify-content: center;
     font-weight: 800; font-size: 0.85rem; text-transform: uppercase; flex-shrink: 0;
-    box-shadow: 0 2px 8px rgba(233,30,140,0.35);
+    box-shadow: 0 2px 8px rgba(37,99,235,0.35);
 }
 .admin-topbar-role {
     font-size: 0.62rem; font-weight: 700; padding: 2px 8px;
@@ -206,7 +206,7 @@ body.admin-body {
     border-right: 1px solid var(--sb-border);
 }
 .admin-sidebar::-webkit-scrollbar { width: 3px; }
-.admin-sidebar::-webkit-scrollbar-thumb { background: rgba(255,128,179,0.25); border-radius: 3px; }
+.admin-sidebar::-webkit-scrollbar-thumb { background: rgba(59,130,246,0.25); border-radius: 3px; }
 .admin-sidebar::before {
     content: ''; display: block; height: 3px;
     background: linear-gradient(90deg, var(--pink-500), var(--rose-400), transparent);
@@ -214,7 +214,7 @@ body.admin-body {
 .admin-sidebar-user {
     padding: 1.5rem 1.25rem 1.25rem; text-align: center;
     border-bottom: 1px solid var(--sb-border);
-    background: linear-gradient(180deg, rgba(233,30,140,0.08) 0%, transparent 100%);
+    background: linear-gradient(180deg, rgba(37,99,235,0.08) 0%, transparent 100%);
 }
 .admin-sidebar-avatar {
     width: 62px; height: 62px; border-radius: 50%;
@@ -222,10 +222,10 @@ body.admin-body {
     color: #fff; display: inline-flex; align-items: center; justify-content: center;
     font-family: var(--font-display); font-weight: 900; font-size: 1.4rem;
     text-transform: uppercase; margin-bottom: 0.75rem;
-    box-shadow: 0 0 0 3px rgba(233,30,140,0.2), var(--shadow-pink);
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.2), var(--shadow-pink);
 }
 .admin-sidebar-name {
-    font-family: var(--font-display); color: #f5e0ea;
+    font-family: var(--font-display); color: #E0EFFF;
     font-weight: 700; font-size: 0.9rem; margin-bottom: 0.4rem;
 }
 .admin-sidebar-badge {
@@ -288,7 +288,7 @@ body.admin-body {
 
 /* ── Welcome Banner ── */
 .admin-welcome-banner {
-    background: linear-gradient(135deg, var(--pink-700) 0%, var(--pink-500) 55%, var(--rose-400) 100%);
+    background: linear-gradient(135deg, #1E40AF 0%, #2563EB 55%, #3B82F6 100%);
     border-radius: var(--r-lg); padding: 1.5rem 2rem; margin-bottom: 1.75rem;
     display: flex; align-items: center; justify-content: space-between;
     flex-wrap: wrap; gap: 1rem; position: relative; overflow: hidden;
@@ -320,7 +320,7 @@ body.admin-body {
     position: relative; z-index: 1;
 }
 
-/* ── KPI Cards — System Admin color variants ── */
+/* ── KPI Cards — thống nhất màu chủ đạo toàn hệ thống ── */
 .kpi-card {
     background: var(--c-surface) !important;
     border-radius: var(--r-lg) !important;
@@ -341,23 +341,18 @@ body.admin-body {
     font-size: 1.4rem; flex-shrink: 0;
 }
 
-/* Color-coded KPI cards */
-.kpi-accounts     .card-body { border-top: 3px solid var(--purple-500) !important; }
-.kpi-accounts     .kpi-icon { background: var(--purple-100); color: var(--purple-500); }
-.kpi-active       .card-body { border-top: 3px solid var(--green-500) !important; }
-.kpi-active       .kpi-icon { background: var(--green-100); color: var(--green-500); }
-.kpi-locked       .card-body { border-top: 3px solid var(--red-500) !important; }
-.kpi-locked       .kpi-icon { background: var(--red-100); color: var(--red-500); }
-.kpi-unverified   .card-body { border-top: 3px solid var(--amber-500) !important; }
-.kpi-unverified   .kpi-icon { background: var(--amber-100); color: var(--amber-500); }
-.kpi-roles        .card-body { border-top: 3px solid var(--cyan-500) !important; }
-.kpi-roles        .kpi-icon { background: var(--cyan-100); color: var(--cyan-500); }
-.kpi-permissions  .card-body { border-top: 3px solid var(--teal-500) !important; }
-.kpi-permissions  .kpi-icon { background: var(--teal-100); color: var(--teal-500); }
-.kpi-logins       .card-body { border-top: 3px solid var(--blue-500) !important; }
-.kpi-logins       .kpi-icon { background: var(--blue-100); color: var(--blue-500); }
-.kpi-audit        .card-body { border-top: 3px solid var(--purple-500) !important; }
-.kpi-audit        .kpi-icon { background: var(--purple-100); color: var(--purple-500); }
+.kpi-accounts .card-body    { border-top: 3px solid #3B82F6 !important; }
+.kpi-active .card-body     { border-top: 3px solid #10B981 !important; }
+.kpi-locked .card-body     { border-top: 3px solid #EF4444 !important; }
+.kpi-unverified .card-body { border-top: 3px solid #F59E0B !important; }
+.kpi-logins .card-body     { border-top: 3px solid #6366F1 !important; }
+.kpi-audit .card-body      { border-top: 3px solid #8B5CF6 !important; }
+.kpi-accounts .kpi-icon    { background:#DBEAFE; color:#2563EB; }
+.kpi-active .kpi-icon      { background:#D1FAE5; color:#059669; }
+.kpi-locked .kpi-icon      { background:#FEE2E2; color:#DC2626; }
+.kpi-unverified .kpi-icon  { background:#FEF3C7; color:#D97706; }
+.kpi-logins .kpi-icon      { background:#E0E7FF; color:#4F46E5; }
+.kpi-audit .kpi-icon       { background:#EDE9FE; color:#6D28D9; }
 
 .kpi-content { flex: 1; min-width: 0; }
 .kpi-value {
@@ -459,11 +454,19 @@ body.admin-body {
 .badge-action.CREATE { background: #d1fae5; color: #065f46; }
 .badge-action.UPDATE { background: #fef3c7; color: #92400e; }
 .badge-action.DELETE { background: #fee2e2; color: #991b1b; }
-.badge-action.DENIED { background: #fce4ec; color: #c62828; }
+.badge-action.DENIED { background: #E0EFFF; color: #c62828; }
 .badge-action.EXPORT { background: #ede9fe; color: #5b21b6; }
 .badge-action.APPROVE{ background: #cffafe; color: #155e75; }
 .badge-action.TOGGLE { background: #fff3e0; color: #e65100; }
 .badge-action.OTHER  { background: #f3f4f6; color: #6b7280; }
+
+/* ── Per-Role Color Badges ── */
+.badge-role-admin       { background:#DBEAFE; color:#1E40AF; border:1px solid #93C5FD; }
+.badge-role-manager     { background:#D1FAE5; color:#065F46; border:1px solid #6EE7B7; }
+.badge-role-doctor      { background:#EDE9FE; color:#5B21B6; border:1px solid #C4B5FD; }
+.badge-role-staff       { background:#FEF3C7; color:#92400E; border:1px solid #FCD34D; }
+.badge-role-patient     { background:#F3F4F6; color:#374151; border:1px solid #D1D5DB; }
+.badge-role-sonographer { background:#CFFAFE; color:#155E75; border:1px solid #67E8F9; }
 
 /* ── Empty State ── */
 .admin-empty-state { text-align: center; padding: 2.5rem 1rem; color: var(--c-muted); }
@@ -496,7 +499,7 @@ body.admin-body {
 }
 .header-date-filter .date-input-group:focus-within {
     border-color: var(--pink-400);
-    box-shadow: 0 0 0 3px rgba(233,30,140,0.08);
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.08);
 }
 .header-date-filter .date-input-group .date-label {
     font-size: 0.65rem; font-weight: 700; color: var(--c-muted);
@@ -521,9 +524,9 @@ body.admin-body {
 }
 .btn-header-apply {
     background: linear-gradient(135deg, var(--pink-500), var(--pink-600));
-    color: #fff; box-shadow: 0 2px 6px rgba(233,30,140,0.2);
+    color: #fff; box-shadow: 0 2px 6px rgba(37,99,235,0.2);
 }
-.btn-header-apply:hover { box-shadow: 0 4px 12px rgba(233,30,140,0.35); transform: translateY(-1px); color: #fff; }
+.btn-header-apply:hover { box-shadow: 0 4px 12px rgba(37,99,235,0.35); transform: translateY(-1px); color: #fff; }
 .btn-header-today {
     background: var(--c-surface); color: var(--c-primary);
     border: 1.5px solid var(--pink-200);
@@ -609,7 +612,7 @@ body.admin-body {
         <a href="${pageContext.request.contextPath}/admin/dashboard" class="admin-topbar-brand">
             <i class="bi bi-hospital-fill"></i>
             CAMS
-            <span class="brand-badge">Admin</span>
+            <span class="brand-badge">Quản trị viên</span>
         </a>
     </div>
     <div class="admin-topbar-right">
@@ -626,7 +629,7 @@ body.admin-body {
             </div>
             <span>${sessionScope.user.fullName}</span>
             <span class="admin-topbar-role">
-                <i class="bi bi-shield-check me-1"></i>Admin
+                <i class="bi bi-shield-check me-1"></i>Quản trị viên
             </span>
         </div>
 
@@ -712,16 +715,16 @@ body.admin-body {
         </div>
         <span class="badge-role">
             <i class="bi bi-person-badge-fill"></i>
-            Quản Trị Viên Hệ Thống
+            Quản trị viên hệ thống
         </span>
     </div>
 
     <%-- ════════════════════════════════════════════ --%>
-    <%-- 8 KPI CARDS — System Administration --%>
+    <%-- 6 KPI CARDS — thông tin vận hành cần thiết --%>
     <%-- ════════════════════════════════════════════ --%>
     <div class="row g-3 mb-4">
         <%-- 1. Tổng số tài khoản --%>
-        <div class="col-xl-3 col-lg-4 col-md-6">
+        <div class="col-xl-4 col-lg-6">
             <a href="${pageContext.request.contextPath}/admin/users/" style="text-decoration:none;color:inherit;">
             <div class="card kpi-card kpi-accounts fade-in-up">
                 <div class="card-body">
@@ -742,7 +745,7 @@ body.admin-body {
         </div>
 
         <%-- 2. Tài khoản đang hoạt động --%>
-        <div class="col-xl-3 col-lg-4 col-md-6">
+        <div class="col-xl-4 col-lg-6">
             <a href="${pageContext.request.contextPath}/admin/users/?status=Active" style="text-decoration:none;color:inherit;">
             <div class="card kpi-card kpi-active fade-in-up">
                 <div class="card-body">
@@ -750,7 +753,7 @@ body.admin-body {
                     <div class="kpi-content">
                         <div class="kpi-value">${not empty activeAccounts ? activeAccounts : 0}</div>
                         <div class="kpi-label">Tài Khoản Đang Hoạt Động</div>
-                        <div class="kpi-sub"><i class="bi bi-shield-check"></i> Trạng thái Active</div>
+                        <div class="kpi-sub"><i class="bi bi-shield-check"></i> Trạng thái hoạt động</div>
                     </div>
                 </div>
             </div>
@@ -758,13 +761,13 @@ body.admin-body {
         </div>
 
         <%-- 3. Tài khoản bị khóa --%>
-        <div class="col-xl-3 col-lg-4 col-md-6">
+        <div class="col-xl-4 col-lg-6">
             <a href="${pageContext.request.contextPath}/admin/users/?status=LOCKED" style="text-decoration:none;color:inherit;">
             <div class="card kpi-card kpi-locked fade-in-up">
                 <div class="card-body">
                     <div class="kpi-icon"><i class="bi bi-lock-fill"></i></div>
                     <div class="kpi-content">
-                        <div class="kpi-value" style="${lockedAccounts > 0 ? 'color:#dc2626;' : ''}">${not empty lockedAccounts ? lockedAccounts : 0}</div>
+                        <div class="kpi-value">${not empty lockedAccounts ? lockedAccounts : 0}</div>
                         <div class="kpi-label">Tài Khoản Bị Khóa</div>
                         <div class="kpi-sub"><i class="bi bi-exclamation-triangle"></i> Cần xem xét</div>
                     </div>
@@ -774,13 +777,13 @@ body.admin-body {
         </div>
 
         <%-- 4. Tài khoản chưa xác thực --%>
-        <div class="col-xl-3 col-lg-4 col-md-6">
+        <div class="col-xl-4 col-lg-6">
             <a href="${pageContext.request.contextPath}/admin/users/?status=PENDING_VERIFICATION" style="text-decoration:none;color:inherit;">
             <div class="card kpi-card kpi-unverified fade-in-up">
                 <div class="card-body">
                     <div class="kpi-icon"><i class="bi bi-envelope-exclamation"></i></div>
                     <div class="kpi-content">
-                        <div class="kpi-value" style="${unverifiedAccounts > 0 ? 'color:#d97706;' : ''}">${not empty unverifiedAccounts ? unverifiedAccounts : 0}</div>
+                        <div class="kpi-value">${not empty unverifiedAccounts ? unverifiedAccounts : 0}</div>
                         <div class="kpi-label">Chưa Xác Thực Email</div>
                         <div class="kpi-sub"><i class="bi bi-hourglass-split"></i> Đang chờ xác nhận</div>
                     </div>
@@ -789,40 +792,8 @@ body.admin-body {
             </a>
         </div>
 
-        <%-- 5. Tổng số vai trò (Role) --%>
-        <div class="col-xl-3 col-lg-4 col-md-6">
-            <a href="${pageContext.request.contextPath}/admin/roles/" style="text-decoration:none;color:inherit;">
-            <div class="card kpi-card kpi-roles fade-in-up">
-                <div class="card-body">
-                    <div class="kpi-icon"><i class="bi bi-shield-lock-fill"></i></div>
-                    <div class="kpi-content">
-                        <div class="kpi-value">${not empty totalRoles ? totalRoles : 0}</div>
-                        <div class="kpi-label">Vai Trò (Roles)</div>
-                        <div class="kpi-sub"><i class="bi bi-person-badge"></i> Phân quyền hệ thống</div>
-                    </div>
-                </div>
-            </div>
-            </a>
-        </div>
-
-        <%-- 6. Tổng số quyền (Permission) --%>
-        <div class="col-xl-3 col-lg-4 col-md-6">
-            <a href="${pageContext.request.contextPath}/admin/roles/" style="text-decoration:none;color:inherit;">
-            <div class="card kpi-card kpi-permissions fade-in-up">
-                <div class="card-body">
-                    <div class="kpi-icon"><i class="bi bi-key-fill"></i></div>
-                    <div class="kpi-content">
-                        <div class="kpi-value">${not empty totalPermissions ? totalPermissions : 0}</div>
-                        <div class="kpi-label">Quyền (Permissions)</div>
-                        <div class="kpi-sub"><i class="bi bi-gear"></i> Kiểm soát truy cập</div>
-                    </div>
-                </div>
-            </div>
-            </a>
-        </div>
-
-        <%-- 7. Đăng nhập hôm nay --%>
-        <div class="col-xl-3 col-lg-4 col-md-6">
+        <%-- 5. Đăng nhập hôm nay --%>
+        <div class="col-xl-4 col-lg-6">
             <a href="${pageContext.request.contextPath}/admin/audit-logs/" style="text-decoration:none;color:inherit;">
             <div class="card kpi-card kpi-logins fade-in-up">
                 <div class="card-body">
@@ -842,8 +813,8 @@ body.admin-body {
             </a>
         </div>
 
-        <%-- 8. Audit Log hôm nay --%>
-        <div class="col-xl-3 col-lg-4 col-md-6">
+        <%-- 6. Nhật ký hệ thống hôm nay --%>
+        <div class="col-xl-4 col-lg-6">
             <a href="${pageContext.request.contextPath}/admin/audit-logs/" style="text-decoration:none;color:inherit;">
             <div class="card kpi-card kpi-audit fade-in-up">
                 <div class="card-body">
@@ -852,8 +823,8 @@ body.admin-body {
                         <div class="kpi-value">${not empty auditLogsToday ? auditLogsToday : 0}</div>
                         <div class="kpi-label">
                             <c:choose>
-                                <c:when test="${isCustomRange}">Audit Log (Khoảng)</c:when>
-                                <c:otherwise>Audit Log Hôm Nay</c:otherwise>
+                                <c:when test="${isCustomRange}">Nhật Ký Hoạt Động (Khoảng)</c:when>
+                                <c:otherwise>Nhật Ký Hoạt Động Hôm Nay</c:otherwise>
                             </c:choose>
                         </div>
                         <div class="kpi-sub"><i class="bi bi-journal-check"></i> <c:choose><c:when test="${isCustomRange}">${dateRangeLabel}</c:when><c:otherwise>Bản ghi hoạt động</c:otherwise></c:choose></div>
@@ -966,75 +937,7 @@ body.admin-body {
         </div>
     </div>
 
-    <%-- ════════════════════════════════════════════ --%>
-    <%-- BIỂU ĐỒ HÀNG 2: Phân bố vai trò + Phân loại Audit Log --%>
-    <%-- ════════════════════════════════════════════ --%>
-    <div class="row g-3 mb-4">
-        <%-- Biểu đồ phân bố vai trò (Doughnut) --%>
-        <div class="col-xl-6">
-            <div class="admin-card h-100">
-                <div class="card-header">
-                    <h5>
-                        <i class="bi bi-pie-chart-fill"></i>
-                        <c:choose>
-                            <c:when test="${isCustomRange}">Phân Bố Người Dùng Theo Vai Trò (${dateRangeLabel})</c:when>
-                            <c:otherwise>Phân Bố Người Dùng Theo Vai Trò</c:otherwise>
-                        </c:choose>
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <c:choose>
-                        <c:when test="${hasRoleDistData}">
-                            <div class="chart-container">
-                                <canvas id="roleDistributionChart" height="280"></canvas>
-                            </div>
-                        </c:when>
-                        <c:otherwise>
-                            <div class="admin-empty-state py-4">
-                                <i class="bi bi-pie-chart" style="font-size:2rem;color:var(--pink-200);"></i>
-                                <p class="mt-2 mb-0" style="color:var(--c-muted);">
-                                    <c:choose>
-                                        <c:when test="${isCustomRange}">Chưa có dữ liệu người dùng trong khoảng này</c:when>
-                                        <c:otherwise>Chưa có dữ liệu người dùng</c:otherwise>
-                                    </c:choose>
-                                </p>
-                            </div>
-                        </c:otherwise>
-                    </c:choose>
-                </div>
-            </div>
-        </div>
-
-        <%-- Biểu đồ phân loại Audit Log (Doughnut) --%>
-        <div class="col-xl-6">
-            <div class="admin-card h-100">
-                <div class="card-header">
-                    <h5>
-                        <i class="bi bi-diagram-3-fill"></i>
-                        <c:choose>
-                            <c:when test="${isCustomRange}">Phân Loại Hoạt Động (${dateRangeLabel})</c:when>
-                            <c:otherwise>Phân Loại Hoạt Động Hệ Thống</c:otherwise>
-                        </c:choose>
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <c:choose>
-                        <c:when test="${hasAuditClassData}">
-                            <div class="chart-container">
-                                <canvas id="auditClassChart" height="280"></canvas>
-                            </div>
-                        </c:when>
-                        <c:otherwise>
-                            <div class="admin-empty-state py-4">
-                                <i class="bi bi-diagram-3" style="font-size:2rem;color:var(--pink-200);"></i>
-                                <p class="mt-2 mb-0" style="color:var(--c-muted);">Chưa có hoạt động nào trong khoảng này</p>
-                            </div>
-                        </c:otherwise>
-                    </c:choose>
-                </div>
-            </div>
-        </div>
-    </div>
+    <%-- Thống kê chi tiết được hiển thị trong các bảng bên dưới --%>
 
     <%-- ════════════════════════════════════════════ --%>
     <%-- HÀNG BẢNG: Người dùng mới nhất + Audit Log gần đây (full-width) --%>
@@ -1077,10 +980,23 @@ body.admin-body {
                                                 <td style="color:var(--c-muted);font-size:0.78rem;">${row.count}</td>
                                                 <td style="font-weight:600;">${ru.fullName}</td>
                                                 <td style="font-size:0.78rem;">${ru.email}</td>
-                                                <td><span class="badge-role-tag" style="display:inline-block;padding:2px 10px;border-radius:var(--r-pill);font-size:0.7rem;font-weight:700;background:var(--pink-100);color:var(--pink-700);border:1px solid var(--pink-200);">${ru.roleName}</span></td>
+                                                <td>
+                                                    <c:set var="recentRole" value="${fn:toLowerCase(ru.roleName)}"/>
+                                                    <span class="badge-role-tag badge-role-${recentRole}">
+                                                        <c:choose>
+                                                            <c:when test="${recentRole == 'admin'}">Quản trị viên</c:when>
+                                                            <c:when test="${recentRole == 'manager'}">Quản Lý</c:when>
+                                                            <c:when test="${recentRole == 'doctor'}">Bác Sĩ Lâm Sàng</c:when>
+                                                            <c:when test="${recentRole == 'staff'}">Lễ Tân</c:when>
+                                                            <c:when test="${recentRole == 'patient'}">Bệnh Nhân</c:when>
+                                                            <c:when test="${recentRole == 'sonographer'}">Bác sĩ siêu âm</c:when>
+                                                            <c:otherwise>${ru.roleName}</c:otherwise>
+                                                        </c:choose>
+                                                    </span>
+                                                </td>
                                                 <td>
                                                     <c:choose>
-                                                        <c:when test="${ru.status == 'Active'}"><span class="badge-status badge-active">Active</span></c:when>
+                                                        <c:when test="${ru.status == 'Active'}"><span class="badge-status badge-active">Hoạt động</span></c:when>
                                                         <c:when test="${ru.status == 'LOCKED'}"><span class="badge-status badge-locked">Khóa</span></c:when>
                                                         <c:when test="${ru.status == 'PENDING_VERIFICATION'}"><span class="badge-status badge-pending">Chờ XT</span></c:when>
                                                         <c:otherwise><span class="badge-status badge-inactive">${ru.status}</span></c:otherwise>
@@ -1139,13 +1055,38 @@ body.admin-body {
                                         <c:forEach var="log" items="${recentAuditLogs}">
                                             <tr>
                                                 <td style="font-weight:600;">${log.userName}</td>
-                                                <td style="font-size:0.75rem;color:var(--c-muted);">${log.roleName}</td>
+                                                <td>
+                                                    <c:set var="auditRole" value="${fn:toLowerCase(log.roleName)}"/>
+                                                    <span class="badge-role-tag badge-role-${auditRole}">
+                                                        <c:choose>
+                                                            <c:when test="${auditRole == 'admin'}">Quản trị viên</c:when>
+                                                            <c:when test="${auditRole == 'manager'}">Quản Lý</c:when>
+                                                            <c:when test="${auditRole == 'doctor'}">Bác Sĩ Lâm Sàng</c:when>
+                                                            <c:when test="${auditRole == 'staff'}">Lễ Tân</c:when>
+                                                            <c:when test="${auditRole == 'patient'}">Bệnh Nhân</c:when>
+                                                            <c:when test="${auditRole == 'sonographer'}">Bác sĩ siêu âm</c:when>
+                                                            <c:otherwise>${log.roleName}</c:otherwise>
+                                                        </c:choose>
+                                                    </span>
+                                                </td>
                                                 <td>
                                                     <div style="font-size:0.8rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${fn:escapeXml(log.action)}">
                                                         ${log.action}
                                                     </div>
                                                 </td>
-                                                <td><span class="badge-action ${log.actionType}">${log.actionType}</span></td>
+                                                <td>
+                                                    <span class="badge-action ${log.actionType}">
+                                                        <c:choose>
+                                                            <c:when test="${log.actionType == 'LOGIN'}">Đăng Nhập</c:when>
+                                                            <c:when test="${log.actionType == 'CREATE'}">Tạo Mới</c:when>
+                                                            <c:when test="${log.actionType == 'UPDATE'}">Cập Nhật</c:when>
+                                                            <c:when test="${log.actionType == 'DELETE'}">Xóa</c:when>
+                                                            <c:when test="${log.actionType == 'DENIED'}">Từ Chối</c:when>
+                                                            <c:when test="${log.actionType == 'EXPORT'}">Xuất Dữ Liệu</c:when>
+                                                            <c:otherwise>Khác</c:otherwise>
+                                                        </c:choose>
+                                                    </span>
+                                                </td>
                                                 <td style="color:var(--c-muted);font-size:0.75rem;white-space:nowrap;">${log.createdAt}</td>
                                             </tr>
                                         </c:forEach>
@@ -1221,8 +1162,8 @@ document.addEventListener('keydown', function(e) {
 <%-- ════════════════════════════════════════════ --%>
 <script>
 (function() {
-    var pink500 = '#e91e8c';
-    var pink200 = '#ffb3d1';
+    var pink500 = '#3B82F6';
+    var pink200 = '#BFDBFE';
 
     // ── 1. Login Trend Chart (Line) ──
     var loginCtx = document.getElementById('loginTrendChart');
@@ -1262,7 +1203,7 @@ document.addEventListener('keydown', function(e) {
                     y: {
                         beginAtZero: true,
                         ticks: { stepSize: 1, font: { size: 11 } },
-                        grid: { color: '#f5dfe9' }
+                        grid: { color: '#DBEAFE' }
                     },
                     x: {
                         ticks: { font: { size: 11 } },
@@ -1304,7 +1245,7 @@ document.addEventListener('keydown', function(e) {
                     y: {
                         beginAtZero: true,
                         ticks: { stepSize: 1, font: { size: 11 } },
-                        grid: { color: '#f5dfe9' }
+                        grid: { color: '#DBEAFE' }
                     },
                     x: {
                         ticks: { font: { size: 11 } },
@@ -1315,94 +1256,6 @@ document.addEventListener('keydown', function(e) {
         });
     }
 
-    // ── 3. Role Distribution Chart (Doughnut) ──
-    var roleDistCtx = document.getElementById('roleDistributionChart');
-    if (roleDistCtx) {
-        new Chart(roleDistCtx, {
-            type: 'doughnut',
-            data: {
-                labels: [
-                    <c:forEach var="lbl" items="${roleDistributionLabels}" varStatus="s">
-                        '${lbl}'${s.last ? '' : ','}
-                    </c:forEach>
-                ],
-                datasets: [{
-                    data: [
-                        <c:forEach var="val" items="${roleDistributionValues}" varStatus="s">
-                            ${val}${s.last ? '' : ','}
-                        </c:forEach>
-                    ],
-                    backgroundColor: [
-                        '#e91e8c', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4'
-                    ],
-                    borderColor: '#fff',
-                    borderWidth: 2.5,
-                    hoverOffset: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '55%',
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            padding: 14,
-                            usePointStyle: true,
-                            pointStyleWidth: 8,
-                            font: { size: 11 }
-                        }
-                    }
-                }
-            }
-        });
-    }
-
-    // ── 4. Audit Log Classification Chart (Doughnut) ──
-    var auditClassCtx = document.getElementById('auditClassChart');
-    if (auditClassCtx) {
-        new Chart(auditClassCtx, {
-            type: 'doughnut',
-            data: {
-                labels: [
-                    <c:forEach var="lbl" items="${auditClassLabels}" varStatus="s">
-                        '${lbl}'${s.last ? '' : ','}
-                    </c:forEach>
-                ],
-                datasets: [{
-                    data: [
-                        <c:forEach var="val" items="${auditClassValues}" varStatus="s">
-                            ${val}${s.last ? '' : ','}
-                        </c:forEach>
-                    ],
-                    backgroundColor: [
-                        '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4',
-                        '#8b5cf6', '#f97316', '#dc2626', '#6b7280'
-                    ],
-                    borderColor: '#fff',
-                    borderWidth: 2.5,
-                    hoverOffset: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '55%',
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            padding: 14,
-                            usePointStyle: true,
-                            pointStyleWidth: 8,
-                            font: { size: 11 }
-                        }
-                    }
-                }
-            }
-        });
-    }
 })();
 </script>
 
