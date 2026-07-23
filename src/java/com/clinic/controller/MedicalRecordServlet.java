@@ -413,6 +413,9 @@ public class MedicalRecordServlet extends HttpServlet {
         mr.setStatus(isDraft ? "draft" : "final");
         try (Connection conn = DatabaseConfig.getConnection()) {
             conn.setAutoCommit(false);
+            try (Statement lockStmt = conn.createStatement()) {
+                lockStmt.execute("SET LOCK_TIMEOUT 5000");
+            }
             try {
                 if (!appointmentDAO.lockConsultationInProgress(conn, apptId, doctorId)) {
                     throw new SQLException("APPOINTMENT_STATE_CONFLICT");
@@ -436,19 +439,16 @@ public class MedicalRecordServlet extends HttpServlet {
                             || !prescriptionDAO.replaceItems(conn, prescriptionId, prescriptionItems)) {
                         throw new SQLException("PRESCRIPTION_SAVE_FAILED");
                     }
+                    prescriptionDAO.resetPurchaseDecision(conn, prescriptionId);
                 }
 
                 if (!isDraft) {
                     if (dao.hasBlockingUltrasoundOrdersForAppointment(conn, apptId)) {
                         throw new SQLException("ULTRASOUND_PENDING");
                     }
-                    if (!prescriptionItems.isEmpty()) {
-                        java.math.BigDecimal total = calculatePrescriptionTotal(conn, prescriptionItems);
-                        if (total.signum() > 0
-                                && invoiceDAO.upsertPrescriptionInvoice(conn, apptId, total) <= 0) {
-                            throw new SQLException("PRESCRIPTION_INVOICE_FAILED");
-                        }
-                    } else {
+                    // Chốt hồ sơ chỉ phát hành chỉ định. Hóa đơn thuốc chỉ được
+                    // tạo sau khi bệnh nhân chủ động chọn mua tại phòng khám.
+                    if (prescriptionItems.isEmpty()) {
                         invoiceDAO.cancelUnsubmittedPrescriptionInvoices(conn, apptId);
                     }
                     if (!appointmentDAO.completeConsultation(conn, apptId, doctorId)) {
@@ -461,7 +461,7 @@ public class MedicalRecordServlet extends HttpServlet {
             } catch (SQLException ex) {
                 try { conn.rollback(); } catch (SQLException rollbackEx) { ex.addSuppressed(rollbackEx); }
                 if ("ULTRASOUND_PENDING".equals(ex.getMessage())) {
-                    transactionError = "Chưa thể chốt hồ sơ: còn chỉ định siêu âm chưa được Bác sĩ Siêu âm xác nhận hoặc hủy hợp lệ.";
+                    transactionError = "Chưa thể chốt hồ sơ: còn chỉ định siêu âm chưa được Bác sĩ siêu âm xác nhận hoặc hủy hợp lệ.";
                 }
                 System.err.println("[MedicalRecordServlet] transaction rolled back: " + ex.getMessage());
             } finally {
@@ -705,42 +705,4 @@ public class MedicalRecordServlet extends HttpServlet {
         return parseIntField(req, name).value;
     }
 
-    /**
-     * Tính tổng tiền đơn thuốc dựa trên số lượng × đơn giá trong bảng medicines.
-     * Truy vấn DB để lấy giá hiện tại của từng loại thuốc.
-     *
-     * @param items danh sách thuốc trong đơn
-     * @return tổng tiền BigDecimal (>= 0)
-     */
-    private java.math.BigDecimal calculatePrescriptionTotal(Connection conn, List<PrescriptionItem> items)
-            throws SQLException {
-        if (items == null || items.isEmpty()) return java.math.BigDecimal.ZERO;
-
-        java.math.BigDecimal total = java.math.BigDecimal.ZERO;
-        StringBuilder placeholders = new StringBuilder();
-        java.util.Map<Integer, Integer> qtyMap = new java.util.LinkedHashMap<>();
-        for (PrescriptionItem item : items) {
-            int mid = item.getMedicineId();
-            if (!qtyMap.containsKey(mid)) {
-                if (placeholders.length() > 0) placeholders.append(',');
-                placeholders.append('?');
-            }
-            qtyMap.put(mid, qtyMap.getOrDefault(mid, 0) + item.getQuantity());
-        }
-
-        String sql = "SELECT id, price FROM medicines WHERE id IN (" + placeholders + ")";
-        try (java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
-            int idx = 1;
-            for (int mid : qtyMap.keySet()) ps.setInt(idx++, mid);
-            java.sql.ResultSet rs = ps.executeQuery();
-            while (rs.next()) {
-                int mid = rs.getInt("id");
-                java.math.BigDecimal price = rs.getBigDecimal("price");
-                if (price != null && qtyMap.containsKey(mid)) {
-                    total = total.add(price.multiply(new java.math.BigDecimal(qtyMap.get(mid))));
-                }
-            }
-        }
-        return total;
-    }
 }

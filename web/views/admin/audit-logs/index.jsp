@@ -7,18 +7,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lịch Sử Hoạt Động — Admin CAMS</title>
+    <title>Lịch Sử Hoạt Động — CAMS Quản Trị</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
           rel="stylesheet"
           integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
           crossorigin="anonymous">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <link href="${pageContext.request.contextPath}/assets/css/style.css" rel="stylesheet">
-    <link href="${pageContext.request.contextPath}/assets/css/admin.css" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/style.css?v=202" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/admin.css?v=202" rel="stylesheet">
     <style>
         :root { --bs-body-font-family: 'Be Vietnam Pro', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body.admin-body { font-family: var(--bs-body-font-family); background: #f7f3f5; }
+        body.admin-body { font-family: var(--bs-body-font-family); background: #fff5f9; }
+        #adminMain {
+            width: calc(100% - var(--sidebar-w));
+            max-width: none;
+            padding-right: 1.5rem;
+        }
+        .audit-table-card,
+        .audit-table-card .table-responsive,
+        .audit-table { width: 100%; max-width: none; }
+        @media (max-width: 991.98px) {
+            #adminMain { width: 100%; }
+        }
 
         /* ── Filter Bar ── */
         .audit-filter-bar {
@@ -117,7 +128,12 @@
         .audit-table-card .card-header h5 i { color: #c24b6e; margin-right: 0.5rem; }
 
         /* ── Table ── */
-        .audit-table { width: 100%; border-collapse: collapse; }
+        .audit-table {
+            width: 100%;
+            min-width: 980px;
+            table-layout: fixed;
+            border-collapse: collapse;
+        }
         .audit-table thead th {
             background: #fdf2f5;
             font-size: 0.73rem;
@@ -282,6 +298,8 @@
 
         /* ── Responsive ── */
         @media (max-width: 768px) {
+            #adminMain { width: 100%; padding-left: 1rem; padding-right: 1rem; }
+            .audit-table { min-width: 0; table-layout: auto; }
             .audit-filter-bar .row > div { margin-bottom: 0.5rem; }
             .audit-table thead { display: none; }
             .audit-table tbody td {
@@ -313,14 +331,15 @@
             <i class="bi bi-list"></i>
         </button>
         <a href="${pageContext.request.contextPath}/admin/dashboard" class="admin-topbar-brand">
-            <i class="bi bi-hospital"></i> CAMS <span>Admin</span>
+            <i class="bi bi-hospital-fill"></i> CAMS
+            <span class="brand-badge">Quản trị viên</span>
         </a>
     </div>
     <div class="admin-topbar-right">
         <div class="admin-topbar-user d-none d-md-flex">
             <div class="admin-avatar-sm">${fn:substring(sessionScope.user.fullName, 0, 1)}</div>
             <span>${sessionScope.user.fullName}</span>
-            <span class="admin-topbar-role"><i class="bi bi-shield-check me-1"></i>Admin</span>
+            <span class="admin-topbar-role"><i class="bi bi-shield-check me-1"></i>Quản trị viên</span>
         </div>
         <a href="${pageContext.request.contextPath}/logout" class="admin-topbar-logout">
             <i class="bi bi-box-arrow-right"></i> <span class="d-none d-md-inline">Đăng xuất</span>
@@ -411,7 +430,15 @@
                     <option value="">Tất cả</option>
                     <c:forEach var="r" items="${roleOptions}">
                         <option value="${r.userId}" ${r.userId eq filterRoleId ? 'selected' : ''}>
-                            ${r.userName}
+                            <c:choose>
+                                <c:when test="${r.userName eq 'Admin'}">Quản trị viên</c:when>
+                                <c:when test="${r.userName eq 'Doctor'}">Bác sĩ lâm sàng</c:when>
+                                <c:when test="${r.userName eq 'Manager'}">Quản lý</c:when>
+                                <c:when test="${r.userName eq 'Staff'}">Nhân viên lễ tân</c:when>
+                                <c:when test="${r.userName eq 'Patient'}">Bệnh nhân</c:when>
+                                <c:when test="${r.userName eq 'Sonographer'}">Bác sĩ siêu âm</c:when>
+                                <c:otherwise>${r.userName}</c:otherwise>
+                            </c:choose>
                         </option>
                     </c:forEach>
                 </select>
@@ -470,13 +497,21 @@
             <c:when test="${not empty auditLogs}">
                 <div class="table-responsive">
                     <table class="audit-table">
+                        <colgroup>
+                            <col style="width:5%">
+                            <col style="width:15%">
+                            <col style="width:20%">
+                            <col style="width:18%">
+                            <col style="width:12%">
+                            <col style="width:30%">
+                        </colgroup>
                         <thead>
                             <tr>
-                                <th style="width:60px;">STT</th>
-                                <th style="width:160px;">Thời Gian</th>
-                                <th style="width:150px;">Người Dùng</th>
-                                <th style="width:110px;">Phân hệ</th>
-                                <th style="width:90px;">Loại</th>
+                                <th>STT</th>
+                                <th>Thời Gian</th>
+                                <th>Người Dùng</th>
+                                <th>Phân Hệ</th>
+                                <th>Loại</th>
                                 <th>Hành Động</th>
                             </tr>
                         </thead>
@@ -521,7 +556,7 @@
                                                 <c:when test="${tbl eq 'services'}"><i class="bi bi-clipboard2-pulse"></i> Dịch vụ</c:when>
                                                 <c:when test="${tbl eq 'medicines'}"><i class="bi bi-capsule"></i> Thuốc</c:when>
                                                 <c:when test="${tbl eq 'appointments'}"><i class="bi bi-calendar-check"></i> Lịch hẹn</c:when>
-                                                <c:when test="${tbl eq 'doctor_schedules'}"><i class="bi bi-calendar-week"></i> Lịch trực</c:when>
+                                                <c:when test="${tbl eq 'doctor_schedules'}"><i class="bi bi-calendar-week"></i> Lịch làm việc</c:when>
                                                 <c:when test="${tbl eq 'time_slots'}"><i class="bi bi-clock"></i> Khung giờ</c:when>
                                                 <c:when test="${tbl eq 'medical_records'}"><i class="bi bi-file-medical"></i> Bệnh án</c:when>
                                                 <c:when test="${tbl eq 'prescriptions'}"><i class="bi bi-prescription2"></i> Đơn thuốc</c:when>
@@ -769,7 +804,7 @@
                 <div class="col-sm-6">
                     <div class="detail-label"><i class="bi bi-person-fill me-1"></i> Người thực hiện</div>
                     <div class="detail-value">` + escapeHtml(log.userName) + `
-                        <span style="color:#9e8590;font-size:0.75rem;">(` + escapeHtml(log.roleName) + `)</span>
+                        <span style="color:#9e8590;font-size:0.75rem;">(` + escapeHtml(roleNameVi(log.roleName)) + `)</span>
                     </div>
                 </div>
                 <div class="col-sm-6">
@@ -815,6 +850,18 @@
         const div = document.createElement('div');
         div.appendChild(document.createTextNode(str));
         return div.innerHTML;
+    }
+
+    function roleNameVi(roleName) {
+        const names = {
+            Admin: 'Quản trị viên',
+            Doctor: 'Bác sĩ lâm sàng',
+            Manager: 'Quản lý',
+            Staff: 'Nhân viên lễ tân',
+            Patient: 'Bệnh nhân',
+            Sonographer: 'Bác sĩ siêu âm'
+        };
+        return names[(roleName || '').trim()] || roleName || 'Không xác định';
     }
 </script>
 

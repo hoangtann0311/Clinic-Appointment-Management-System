@@ -124,7 +124,7 @@ public class NotificationHelper {
                 if (rs.next()) {
                     dao.create(rs.getInt("user_id"),
                             "Kết quả siêu âm đã sẵn sàng",
-                            "Bác sĩ Siêu âm đã ký kết quả "
+                            "Bác sĩ siêu âm đã ký kết quả "
                                     + (serviceName == null || serviceName.isBlank() ? "siêu âm" : serviceName)
                                     + " của bệnh nhân " + rs.getString("full_name")
                                     + ". Vui lòng xem kết quả để hoàn thiện hồ sơ bệnh án.");
@@ -181,13 +181,6 @@ public class NotificationHelper {
             };
         } catch (Exception e) { e.printStackTrace(); }
         return null;
-    }
-
-    // ── Loại 6: Báo động khẩn cấp SOS từ bệnh nhân ───────────────────────────
-    public static void sosAlert(int doctorUserId, String patientName, String queueNum, String symptoms) {
-        dao.create(doctorUserId,
-            "🚨 Báo động khẩn cấp SOS (Hàng đợi: " + queueNum + ")",
-            "Bệnh nhân " + patientName + " đã kích hoạt SOS khẩn cấp! Triệu chứng: " + symptoms + ". Vui lòng chuẩn bị tiếp nhận khám.");
     }
 
     /**

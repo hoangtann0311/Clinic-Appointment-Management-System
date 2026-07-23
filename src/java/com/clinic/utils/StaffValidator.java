@@ -158,41 +158,4 @@ public class StaffValidator {
         return value == null || value.trim().isEmpty();
     }
 
-    public static Map<String, String> validateSosFieldErrors(String name, String phone, String symptoms) {
-        Map<String, String> errors = new LinkedHashMap<>();
-
-        if (isEmpty(name)) {
-            errors.put("name", "Họ tên bệnh nhân không được để trống.");
-        }
-
-        if (isEmpty(phone)) {
-            errors.put("phone", "Số điện thoại không được để trống.");
-        } else if (!phone.matches("^0\\d{9,10}$")) {
-            errors.put("phone", "Số điện thoại phải bắt đầu bằng 0 và có 10-11 chữ số.");
-        }
-
-        if (isEmpty(symptoms)) {
-            errors.put("symptoms", "Triệu chứng khẩn cấp không được để trống.");
-        } else {
-            String cleanSymptoms = symptoms.trim();
-
-            if (cleanSymptoms.length() < 5) {
-                errors.put("symptoms", "Triệu chứng khẩn cấp quá ngắn, vui lòng nhập rõ hơn.");
-            } else if (cleanSymptoms.length() > 500) {
-                errors.put("symptoms", "Triệu chứng khẩn cấp không được vượt quá 500 ký tự.");
-            } else if (cleanSymptoms.matches("^[0-9\\s]+$")) {
-                errors.put("symptoms", "Triệu chứng khẩn cấp không được chỉ chứa số.");
-            } else if (!cleanSymptoms.matches("^[\\p{L}0-9\\s,.()/-]+$")) {
-                errors.put("symptoms", "Triệu chứng khẩn cấp chứa ký tự không hợp lệ.");
-            } else if (cleanSymptoms.toLowerCase().matches(".*(.)\\1{5,}.*")) {
-                errors.put("symptoms", "Triệu chứng khẩn cấp không hợp lệ. Vui lòng nhập nội dung rõ ràng hơn.");
-            }
-        }
-
-        return errors;
-    }
-
-    public static List<String> validateSos(String name, String phone, String symptoms) {
-        return new ArrayList<>(validateSosFieldErrors(name, phone, symptoms).values());
-    }
 }

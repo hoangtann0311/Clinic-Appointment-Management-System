@@ -319,7 +319,7 @@ public class InvoiceDAO {
 
     public boolean submitPaymentDetails(int id, String paymentMethod, String transactionCode, String status) {
         String sql = "UPDATE invoices SET payment_method = ?, transaction_code = ?, proof_image_path = NULL, status = ? "
-                + "WHERE id = ? AND (status = 'Unpaid' OR (status = 'Rejected' AND invoice_type <> 'PRE_EXAM'))";
+                + "WHERE id = ? AND status = 'Unpaid'";
         Connection conn = null;
         PreparedStatement ps = null;
         try {
@@ -342,8 +342,7 @@ public class InvoiceDAO {
                                         String transactionCode) throws SQLException {
         String sql = "UPDATE invoices SET payment_method = ?, transaction_code = ?, "
                 + "proof_image_path = NULL, status = 'PendingConfirmation' "
-                + "WHERE id = ? AND (status = 'Unpaid' "
-                + "OR (status = 'Rejected' AND invoice_type <> 'PRE_EXAM'))";
+                + "WHERE id = ? AND status = 'Unpaid'";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, paymentMethod);
             ps.setString(2, transactionCode);
@@ -414,113 +413,6 @@ public class InvoiceDAO {
         return -1;
     }
 
-    /**
-     * Tạo mới hoặc cập nhật hóa đơn thuốc (PRESCRIPTION) cho một lịch hẹn.
-     * - Nếu đã tồn tại hóa đơn PRESCRIPTION chưa thanh toán → cập nhật totalAmount.
-     * - Nếu chưa có → tạo hóa đơn mới với status = 'Unpaid'.
-     * - Nếu đã Paid/DeclinedPurchase → không thay đổi (hóa đơn đã khóa).
-     *
-     * @param appointmentId ID của lịch hẹn
-     * @param totalAmount   Tổng tiền đơn thuốc
-     * @return ID của hóa đơn thuốc (mới tạo hoặc đã có), -1 nếu thất bại
-     */
-    public int upsertPrescriptionInvoice(int appointmentId, java.math.BigDecimal totalAmount) {
-        // Kiểm tra hóa đơn thuốc đã tồn tại chưa
-        String selectSql = "SELECT id, status FROM invoices WHERE appointment_id = ? AND UPPER(invoice_type) = 'PRESCRIPTION'";
-        Connection conn = null;
-        PreparedStatement ps = null;
-        ResultSet rs = null;
-        try {
-            conn = DatabaseConfig.getConnection();
-            ps = conn.prepareStatement(selectSql);
-            ps.setInt(1, appointmentId);
-            rs = ps.executeQuery();
-            if (rs.next()) {
-                int existingId = rs.getInt("id");
-                String existingStatus = rs.getString("status");
-                // Chỉ cập nhật nếu hóa đơn chưa được khóa (Paid hoặc DeclinedPurchase)
-                if (!"Paid".equalsIgnoreCase(existingStatus) && !"DeclinedPurchase".equalsIgnoreCase(existingStatus)) {
-                    closeResources(null, ps, rs);
-                    ps = conn.prepareStatement("UPDATE invoices SET total_amount = ? WHERE id = ?");
-                    ps.setBigDecimal(1, totalAmount);
-                    ps.setInt(2, existingId);
-                    ps.executeUpdate();
-                }
-                return existingId;
-            }
-        } catch (SQLException e) {
-            System.err.println("[InvoiceDAO] upsertPrescriptionInvoice SELECT ERROR: " + e.getMessage());
-        } finally {
-            closeResources(null, ps, rs);
-        }
-
-        // Chưa có → tạo mới
-        String insertSql = "INSERT INTO invoices (appointment_id, total_amount, status, invoice_type, created_at) VALUES (?, ?, 'Unpaid', 'PRESCRIPTION', GETDATE())";
-        try {
-            ps = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS);
-            ps.setInt(1, appointmentId);
-            ps.setBigDecimal(2, totalAmount);
-            ps.executeUpdate();
-            rs = ps.getGeneratedKeys();
-            if (rs.next()) return rs.getInt(1);
-        } catch (SQLException e) {
-            System.err.println("[InvoiceDAO] upsertPrescriptionInvoice INSERT ERROR: " + e.getMessage());
-        } finally {
-            closeResources(conn, ps, rs);
-        }
-        return -1;
-    }
-
-    /**
-     * Transaction-aware variant used while finalizing a medical record. The
-     * caller owns commit/rollback so the record, prescription, invoice and
-     * appointment status cannot diverge.
-     */
-    public int upsertPrescriptionInvoice(Connection conn, int appointmentId,
-                                         java.math.BigDecimal totalAmount) throws SQLException {
-        String selectSql = "SELECT TOP 1 id, status, total_amount FROM invoices WITH (UPDLOCK, HOLDLOCK) "
-                + "WHERE appointment_id = ? AND UPPER(invoice_type) = 'PRESCRIPTION' ORDER BY id DESC";
-        try (PreparedStatement ps = conn.prepareStatement(selectSql)) {
-            ps.setInt(1, appointmentId);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    int id = rs.getInt("id");
-                    String status = rs.getString("status");
-                    if ("Paid".equalsIgnoreCase(status) || "DeclinedPurchase".equalsIgnoreCase(status)) {
-                        java.math.BigDecimal oldTotal = rs.getBigDecimal("total_amount");
-                        if (oldTotal == null) oldTotal = java.math.BigDecimal.ZERO;
-                        java.math.BigDecimal difference = totalAmount.subtract(oldTotal);
-                        return difference.signum() > 0
-                                ? insertPrescriptionInvoice(conn, appointmentId, difference)
-                                : id;
-                    }
-                    try (PreparedStatement update = conn.prepareStatement(
-                            "UPDATE invoices SET total_amount = ? WHERE id = ? "
-                                    + "AND status NOT IN ('Paid', 'DeclinedPurchase')")) {
-                        update.setBigDecimal(1, totalAmount);
-                        update.setInt(2, id);
-                        return update.executeUpdate() == 1 ? id : -1;
-                    }
-                }
-            }
-        }
-        return insertPrescriptionInvoice(conn, appointmentId, totalAmount);
-    }
-
-    private int insertPrescriptionInvoice(Connection conn, int appointmentId,
-                                          java.math.BigDecimal totalAmount) throws SQLException {
-        String sql = "INSERT INTO invoices (appointment_id, total_amount, status, invoice_type, created_at) "
-                + "VALUES (?, ?, 'Unpaid', 'PRESCRIPTION', GETDATE())";
-        try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            ps.setInt(1, appointmentId);
-            ps.setBigDecimal(2, totalAmount);
-            if (ps.executeUpdate() != 1) return -1;
-            try (ResultSet keys = ps.getGeneratedKeys()) {
-                return keys.next() ? keys.getInt(1) : -1;
-            }
-        }
-    }
-
     public void cancelUnsubmittedPrescriptionInvoices(Connection conn, int appointmentId)
             throws SQLException {
         String sql = "UPDATE invoices SET status = 'Cancelled' WHERE appointment_id = ? "
@@ -531,65 +423,9 @@ public class InvoiceDAO {
         }
     }
 
-    /**
-     * Đánh dấu hóa đơn thuốc là DeclinedPurchase (Bệnh nhân từ chối mua thuốc).
-     * Chỉ áp dụng cho hóa đơn loại PRESCRIPTION đang ở trạng thái Unpaid/PendingConfirmation.
-     *
-     * @param invoiceId   ID hóa đơn cần từ chối
-     * @param confirmedBy ID nhân viên xác nhận từ chối
-     * @return true nếu cập nhật thành công
-     */
-    public boolean declinePrescriptionInvoice(int invoiceId, int confirmedBy) {
-        String sql = "UPDATE invoices SET status = 'DeclinedPurchase', confirmed_by = ?, confirmed_at = GETDATE() "
-                   + "WHERE id = ? AND UPPER(invoice_type) = 'PRESCRIPTION' "
-                   + "AND status NOT IN ('Paid', 'DeclinedPurchase')";
-        Connection conn = null;
-        PreparedStatement ps = null;
-        try {
-            conn = DatabaseConfig.getConnection();
-            ps = conn.prepareStatement(sql);
-            ps.setInt(1, confirmedBy);
-            ps.setInt(2, invoiceId);
-            return ps.executeUpdate() > 0;
-        } catch (SQLException e) {
-            System.err.println("[InvoiceDAO] declinePrescriptionInvoice ERROR: " + e.getMessage());
-            return false;
-        } finally {
-            closeResources(conn, ps, null);
-        }
-    }
-
-    /**
-     * Kiểm tra xem hóa đơn thuốc (PRESCRIPTION) của cuộc hẹn đã được thanh toán hoặc từ chối mua hay chưa (BR-31, BR-32).
-     * Nếu không có hóa đơn thuốc cho cuộc hẹn này, trả về true.
-     *
-     * @param appointmentId ID cuộc hẹn
-     * @return true nếu hóa đơn thuốc đã Paid/DeclinedPurchase hoặc không có hóa đơn thuốc.
-     */
-    public boolean isPrescriptionPaidOrDeclined(int appointmentId) {
-        String sql = "SELECT status FROM invoices WHERE appointment_id = ? AND UPPER(invoice_type) = 'PRESCRIPTION'";
-        Connection conn = null;
-        PreparedStatement ps = null;
-        ResultSet rs = null;
-        try {
-            conn = DatabaseConfig.getConnection();
-            ps = conn.prepareStatement(sql);
-            ps.setInt(1, appointmentId);
-            rs = ps.executeQuery();
-            if (rs.next()) {
-                String status = rs.getString("status");
-                return "Paid".equalsIgnoreCase(status) || "DeclinedPurchase".equalsIgnoreCase(status);
-            }
-        } catch (SQLException e) {
-            System.err.println("[InvoiceDAO] isPrescriptionPaidOrDeclined ERROR: " + e.getMessage());
-        } finally {
-            closeResources(conn, ps, rs);
-        }
-        return true;
-    }
-
     public List<Invoice> getInvoicesByPatientUserId(int userId) {
-        String sql = BASE_SELECT + " WHERE pt.user_id = ? ORDER BY i.id DESC";
+        String sql = BASE_SELECT
+                + " WHERE pt.user_id = ? AND i.status <> 'Cancelled' ORDER BY i.id DESC";
         List<Invoice> list = new ArrayList<>();
         Connection conn = null;
         PreparedStatement ps = null;
@@ -608,6 +444,49 @@ public class InvoiceDAO {
             closeResources(conn, ps, rs);
         }
         return list;
+    }
+
+    /**
+     * Trừ tồn kho đúng một lần trong cùng transaction xác nhận thanh toán.
+     * Phương thức chỉ thành công với hóa đơn thuốc Paid có quyết định Accepted.
+     */
+    public boolean deductPrescriptionStock(Connection conn, int invoiceId)
+            throws SQLException {
+        String selectSql = "SELECT m.id AS medicine_id, m.stock_quantity, pi.quantity "
+                + "FROM invoices i "
+                + "JOIN medical_records mr ON mr.appointment_id = i.appointment_id "
+                + "JOIN prescriptions p ON p.medical_record_id = mr.id "
+                + "JOIN prescription_items pi ON pi.prescription_id = p.id "
+                + "JOIN medicines m WITH (UPDLOCK, HOLDLOCK) ON m.id = pi.medicine_id "
+                + "WHERE i.id = ? AND UPPER(i.invoice_type) = 'PRESCRIPTION' "
+                + "AND i.status = 'Paid' AND p.purchase_decision = 'Accepted' "
+                + "ORDER BY m.id";
+
+        List<int[]> stockRows = new ArrayList<>();
+        try (PreparedStatement ps = conn.prepareStatement(selectSql)) {
+            ps.setInt(1, invoiceId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    int stock = rs.getInt("stock_quantity");
+                    int quantity = rs.getInt("quantity");
+                    if (stock < quantity) return false;
+                    stockRows.add(new int[]{rs.getInt("medicine_id"), quantity});
+                }
+            }
+        }
+        if (stockRows.isEmpty()) return false;
+
+        String updateSql = "UPDATE medicines SET stock_quantity = stock_quantity - ?, "
+                + "updated_at = GETDATE() WHERE id = ? AND stock_quantity >= ?";
+        try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
+            for (int[] row : stockRows) {
+                ps.setInt(1, row[1]);
+                ps.setInt(2, row[0]);
+                ps.setInt(3, row[1]);
+                if (ps.executeUpdate() != 1) return false;
+            }
+        }
+        return true;
     }
 
 

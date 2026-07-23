@@ -44,7 +44,7 @@
                     <input type="text" name="search" class="form-control border-start-0 ps-0" placeholder="Tên sản phụ, Bác sĩ lâm sàng, mã SA..." value="${searchParam}">
                 </div>
             </div>
-            <div class="col-md-2">
+            <div class="col-md-3">
                 <label class="form-label text-muted small fw-bold">TRẠNG THÁI</label>
                 <select name="status" class="form-select">
                     <option value="">Tất cả trạng thái</option>
@@ -56,14 +56,6 @@
                 </select>
             </div>
             <div class="col-md-2">
-                <label class="form-label text-muted small fw-bold">ƯU TIÊN</label>
-                <select name="emergency" class="form-select">
-                    <option value="">Tất cả</option>
-                    <option value="true" ${emergencyParam == 'true' ? 'selected' : ''}>Khẩn cấp (SOS)</option>
-                    <option value="false" ${emergencyParam == 'false' ? 'selected' : ''}>Thường</option>
-                </select>
-            </div>
-            <div class="col-md-2">
                 <label class="form-label text-muted small fw-bold">NGÀY CHỈ ĐỊNH</label>
                 <input type="date" name="date" class="form-control" value="${dateParam}">
             </div>
@@ -71,7 +63,7 @@
                 <button type="submit" class="btn btn-primary w-100 flex-grow-1">
                     <i class="bi bi-funnel-fill me-1"></i> Lọc danh sách
                 </button>
-                <a href="${pageContext.request.contextPath}/sonographer/waiting-list" class="btn btn-light border" title="Reset bộ lọc">
+                <a href="${pageContext.request.contextPath}/sonographer/waiting-list" class="btn btn-light border" title="Đặt lại bộ lọc">
                     <i class="bi bi-arrow-counterclockwise"></i>
                 </a>
             </div>
@@ -93,29 +85,24 @@
                 <thead>
                     <tr>
                         <th>
-                            <a href="?sortBy=orderId&sortDir=${nextSortDir}&search=${searchParam}&status=${statusParam}&date=${dateParam}&emergency=${emergencyParam}" class="text-dark d-flex align-items-center gap-1">
+                            <a href="?sortBy=orderId&sortDir=${nextSortDir}&search=${searchParam}&status=${statusParam}&date=${dateParam}" class="text-dark d-flex align-items-center gap-1">
                                 Mã Yêu Cầu <i class="bi bi-arrow-down-up small text-muted"></i>
                             </a>
                         </th>
                         <th>
-                            <a href="?sortBy=patientName&sortDir=${nextSortDir}&search=${searchParam}&status=${statusParam}&date=${dateParam}&emergency=${emergencyParam}" class="text-dark d-flex align-items-center gap-1">
+                            <a href="?sortBy=patientName&sortDir=${nextSortDir}&search=${searchParam}&status=${statusParam}&date=${dateParam}" class="text-dark d-flex align-items-center gap-1">
                                 Sản Phụ <i class="bi bi-arrow-down-up small text-muted"></i>
                             </a>
                         </th>
                         <th>
-                            <a href="?sortBy=serviceName&sortDir=${nextSortDir}&search=${searchParam}&status=${statusParam}&date=${dateParam}&emergency=${emergencyParam}" class="text-dark d-flex align-items-center gap-1">
+                            <a href="?sortBy=serviceName&sortDir=${nextSortDir}&search=${searchParam}&status=${statusParam}&date=${dateParam}" class="text-dark d-flex align-items-center gap-1">
                                 Dịch Vụ Siêu Âm <i class="bi bi-arrow-down-up small text-muted"></i>
                             </a>
                         </th>
                         <th>Chỉ Định Bởi</th>
                         <th>
-                            <a href="?sortBy=createdAt&sortDir=${nextSortDir}&search=${searchParam}&status=${statusParam}&date=${dateParam}&emergency=${emergencyParam}" class="text-dark d-flex align-items-center gap-1">
+                            <a href="?sortBy=createdAt&sortDir=${nextSortDir}&search=${searchParam}&status=${statusParam}&date=${dateParam}" class="text-dark d-flex align-items-center gap-1">
                                 Thời Gian <i class="bi bi-arrow-down-up small text-muted"></i>
-                            </a>
-                        </th>
-                        <th>
-                            <a href="?sortBy=emergency&sortDir=${nextSortDir}&search=${searchParam}&status=${statusParam}&date=${dateParam}&emergency=${emergencyParam}" class="text-dark d-flex align-items-center gap-1">
-                                Ưu Tiên <i class="bi bi-arrow-down-up small text-muted"></i>
                             </a>
                         </th>
                         <th>Trạng Thái</th>
@@ -126,7 +113,7 @@
                     <c:choose>
                         <c:when test="${empty waitingPatients}">
                             <tr>
-                                <td colspan="8" class="text-center text-muted py-5">
+                                <td colspan="7" class="text-center text-muted py-5">
                                     <i class="bi bi-card-checklist fs-2 d-block mb-2 text-muted"></i>
                                     Không tìm thấy yêu cầu siêu âm nào.
                                 </td>
@@ -134,7 +121,7 @@
                         </c:when>
                         <c:otherwise>
                             <c:forEach var="order" items="${waitingPatients}">
-                                <tr class="${order.emergency && order.status != 'Completed' ? 'table-danger-subtle sos-blink' : ''}">
+                                <tr>
                                     <td><strong>SA-${order.orderId}</strong></td>
                                     <td>
                                         <span class="fw-bold text-dark"><c:out value="${order.patientName}"/></span><br>
@@ -150,18 +137,6 @@
                                     <td>
                                         <span>${fn:substring(order.createdAt, 11, 16)}</span><br>
                                         <small class="text-muted">${fn:substring(order.createdAt, 0, 10)}</small>
-                                    </td>
-                                    <td>
-                                        <c:choose>
-                                            <c:when test="${order.emergency}">
-                                                <span class="badge bg-danger text-white d-flex align-items-center gap-1 w-fit font-weight-bold sos-pulse">
-                                                    <i class="bi bi-exclamation-triangle-fill"></i> KHẨN CẤP (SOS)
-                                                </span>
-                                            </c:when>
-                                            <c:otherwise>
-                                                <span class="badge bg-light text-muted border">Thường</span>
-                                            </c:otherwise>
-                                        </c:choose>
                                     </td>
                                     <td>
                                         <c:choose>
@@ -216,17 +191,17 @@
             <nav aria-label="Page navigation">
                 <ul class="pagination pagination-cams m-0">
                     <li class="page-item ${currentPage == 1 ? 'disabled' : ''}">
-                        <a class="page-link" href="?page=${currentPage - 1}&search=${searchParam}&status=${statusParam}&date=${dateParam}&emergency=${emergencyParam}&sortBy=${sortBy}&sortDir=${sortDir}">
+                        <a class="page-link" href="?page=${currentPage - 1}&search=${searchParam}&status=${statusParam}&date=${dateParam}&sortBy=${sortBy}&sortDir=${sortDir}">
                             <i class="bi bi-chevron-left"></i>
                         </a>
                     </li>
                     <c:forEach var="p" begin="1" end="${totalPages}">
                         <li class="page-item ${currentPage == p ? 'active' : ''}">
-                            <a class="page-link" href="?page=${p}&search=${searchParam}&status=${statusParam}&date=${dateParam}&emergency=${emergencyParam}&sortBy=${sortBy}&sortDir=${sortDir}">${p}</a>
+                            <a class="page-link" href="?page=${p}&search=${searchParam}&status=${statusParam}&date=${dateParam}&sortBy=${sortBy}&sortDir=${sortDir}">${p}</a>
                         </li>
                     </c:forEach>
                     <li class="page-item ${currentPage == totalPages ? 'disabled' : ''}">
-                        <a class="page-link" href="?page=${currentPage + 1}&search=${searchParam}&status=${statusParam}&date=${dateParam}&emergency=${emergencyParam}&sortBy=${sortBy}&sortDir=${sortDir}">
+                        <a class="page-link" href="?page=${currentPage + 1}&search=${searchParam}&status=${statusParam}&date=${dateParam}&sortBy=${sortBy}&sortDir=${sortDir}">
                             <i class="bi bi-chevron-right"></i>
                         </a>
                     </li>

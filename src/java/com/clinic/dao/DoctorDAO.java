@@ -254,7 +254,7 @@ public class DoctorDAO {
     public boolean hasActiveWorkOrAppointments(Connection conn, int doctorId) throws SQLException {
         if (doctorId <= 0) return false;
         String apptSql = "SELECT 1 FROM appointments WHERE doctor_id = ? "
-                       + "AND UPPER(LTRIM(RTRIM(ISNULL(status, '')))) IN ('PENDING', 'CONFIRMED', 'WAITING', 'EMERGENCY_SOS', 'INPROGRESS')";
+                       + "AND UPPER(LTRIM(RTRIM(ISNULL(status, '')))) IN ('PENDING', 'CONFIRMED', 'WAITING', 'INPROGRESS')";
         String schedSql = "SELECT 1 FROM doctor_schedules WHERE doctor_id = ? "
                         + "AND work_date >= CAST(GETDATE() AS DATE) "
                         + "AND UPPER(LTRIM(RTRIM(ISNULL(status, '')))) IN ('PENDING', 'APPROVED')";

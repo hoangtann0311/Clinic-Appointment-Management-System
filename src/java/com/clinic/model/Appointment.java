@@ -1,7 +1,9 @@
 package com.clinic.model;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 
 public class Appointment {
     private int id;
@@ -15,7 +17,11 @@ public class Appointment {
     private boolean isEmergency;
     private String status;
     private Integer serviceId; // nullable
-    private String queueNumber; // STT, e.g., "SOS-01", "STT-02"
+    private String queueNumber; // Số thứ tự tiếp đón, e.g. "STT-02"
+    private String priorityReason;
+    private LocalDateTime prioritizedAt;
+    private Integer prioritizedBy;
+    private String prioritizedByName;
     private String preExamPaymentStatus;
     private String gestationalAge; // E.g. "10 tuần 2 ngày"
     private Integer slotId; // nullable
@@ -28,7 +34,7 @@ public class Appointment {
     // Transient fields for join results (for doctor / origin/dungdi)
     private String patientName;
     private String serviceName;
-    private String timeSlot; // Stores the String representation like "08:00 - 08:20" or "Khẩn cấp (SOS)"
+    private String timeSlot; // Stores the String representation like "08:00 - 08:20"
 
     // Constructors
     public Appointment() {}
@@ -38,7 +44,6 @@ public class Appointment {
         this.patientName = patientName;
         this.symptoms = symptoms;
         this.status = status;
-        this.isEmergency = "Emergency_SOS".equals(status);
         this.appointmentDate = LocalDate.now();
         this.timeSlot = "08:00 - 08:20";
     }
@@ -99,10 +104,7 @@ public class Appointment {
     public void setEmergency(boolean emergency) { isEmergency = emergency; }
 
     public String getStatus() { return status; }
-    public void setStatus(String status) {
-        this.status = status;
-        this.isEmergency = "Emergency_SOS".equals(status);
-    }
+    public void setStatus(String status) { this.status = status; }
 
     public Integer getServiceId() {
         if (serviceId == null && service != null) return service.getId();
@@ -175,6 +177,23 @@ public class Appointment {
 
     public String getQueueNumber() { return queueNumber; }
     public void setQueueNumber(String queueNumber) { this.queueNumber = queueNumber; }
+
+    public String getPriorityReason() { return priorityReason; }
+    public void setPriorityReason(String priorityReason) { this.priorityReason = priorityReason; }
+
+    public LocalDateTime getPrioritizedAt() { return prioritizedAt; }
+    public void setPrioritizedAt(LocalDateTime prioritizedAt) { this.prioritizedAt = prioritizedAt; }
+
+    public Integer getPrioritizedBy() { return prioritizedBy; }
+    public void setPrioritizedBy(Integer prioritizedBy) { this.prioritizedBy = prioritizedBy; }
+
+    public String getPrioritizedByName() { return prioritizedByName; }
+    public void setPrioritizedByName(String prioritizedByName) { this.prioritizedByName = prioritizedByName; }
+
+    public String getPrioritizedAtText() {
+        return prioritizedAt == null ? "" :
+                prioritizedAt.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+    }
 
     public String getPreExamPaymentStatus() { return preExamPaymentStatus; }
     public void setPreExamPaymentStatus(String preExamPaymentStatus) { this.preExamPaymentStatus = preExamPaymentStatus; }

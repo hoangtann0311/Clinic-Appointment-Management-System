@@ -12,11 +12,11 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
           integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="${pageContext.request.contextPath}/assets/css/admin.css" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/admin.css?v=202" rel="stylesheet">
 
     <style>
         .detail-header {
-            background: linear-gradient(135deg, #fff0f6 0%, #ffe0ef 40%, #fce4ec 100%);
+            background: linear-gradient(135deg, #fff9fc 0%, #fff1f6 40%, #fff1f6 100%);
             border-radius: var(--r-lg); padding: 1.5rem 1.75rem;
             margin-bottom: 1.5rem; border: 1px solid var(--pink-200);
             display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
@@ -113,14 +113,14 @@
             <i class="bi bi-list"></i>
         </button>
         <a href="${pageContext.request.contextPath}/manager/dashboard" class="admin-topbar-brand">
-            <i class="bi bi-hospital-fill"></i> CAMS <span class="brand-badge">Manager</span>
+            <i class="bi bi-hospital-fill"></i> CAMS <span class="brand-badge">Quản Lý</span>
         </a>
     </div>
     <div class="admin-topbar-right">
         <div class="admin-topbar-user d-none d-md-flex">
             <div class="admin-avatar-sm">${fn:substring(sessionScope.user.fullName, 0, 1)}</div>
             <span>${sessionScope.user.fullName}</span>
-            <span class="admin-topbar-role"><i class="bi bi-briefcase-fill me-1"></i>Manager</span>
+            <span class="admin-topbar-role"><i class="bi bi-briefcase-fill me-1"></i>Quản Lý</span>
         </div>
         <a href="${pageContext.request.contextPath}/logout" class="admin-topbar-logout"><i class="bi bi-box-arrow-right"></i></a>
     </div>

@@ -6,7 +6,7 @@
 <!-- Main Content Area -->
 <div class="admin-page-header">
     <div class="admin-page-header-left">
-        <h1 class="admin-page-title">Dashboard Thống Kê</h1>
+        <h1 class="admin-page-title">Tổng Quan Siêu Âm</h1>
         <div class="admin-page-subtitle">
             <i class="bi bi-calendar3"></i>
             <span>${not empty displayDate ? displayDate : 'Hôm nay'}</span>
@@ -33,24 +33,6 @@
 
 <!-- Quick Statistics Row -->
 <div class="row g-3 mb-4">
-    <!-- SOS ALERT CARD (Only shows if there are active SOS cases today) -->
-    <c:if test="${totalEmergencyToday > 0}">
-        <div class="col-12">
-            <div class="card bg-danger-subtle border-2 border-danger text-danger shadow-sm">
-                <div class="card-body d-flex align-items-center justify-content-between py-3">
-                    <div class="d-flex align-items-center gap-3">
-                        <i class="bi bi-exclamation-triangle-fill fs-3 text-danger" style="animation: pulse-sos 1s infinite;"></i>
-                        <div>
-                            <h5 class="m-0 fw-bold">Cảnh Báo Khẩn Cấp SOS!</h5>
-                            <p class="m-0 small text-danger-emphasis">Có <strong>${totalEmergencyToday}</strong> ca cần ưu tiên siêu âm khẩn cấp ngay hôm nay.</p>
-                        </div>
-                    </div>
-                    <a href="${pageContext.request.contextPath}/sonographer/waiting-list?emergency=true" class="btn btn-danger fw-bold btn-sm">Xem ngay</a>
-                </div>
-            </div>
-        </div>
-    </c:if>
-
     <!-- PENDING -->
     <div class="col-xl col-md-4 col-sm-6">
         <div class="card clinical-kpi kpi-card kpi-pending">
@@ -137,7 +119,6 @@
                         <th>Sản Phụ</th>
                         <th>Dịch Vụ Chỉ Định</th>
                         <th>Bác sĩ lâm sàng chỉ định</th>
-                        <th>Mức Ưu Tiên</th>
                         <th>Trạng Thái</th>
                         <th>Hành Động</th>
                     </tr>
@@ -146,7 +127,7 @@
                     <c:choose>
                         <c:when test="${empty recentOrders}">
                             <tr>
-                                <td colspan="7" class="text-center text-muted py-5">
+                                <td colspan="6" class="text-center text-muted py-5">
                                     Chưa có chỉ định siêu âm nào được thực hiện hôm nay.
                                 </td>
                             </tr>
@@ -161,18 +142,6 @@
                                     </td>
                                     <td><c:out value="${order.serviceName}"/></td>
                                     <td><c:out value="${order.doctorName}"/></td>
-                                    <td>
-                                        <c:choose>
-                                            <c:when test="${order.emergency}">
-                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle font-weight-bold">
-                                                    <i class="bi bi-exclamation-triangle-fill"></i> SOS
-                                                </span>
-                                            </c:when>
-                                            <c:otherwise>
-                                                <span class="badge bg-light text-muted border">Thường</span>
-                                            </c:otherwise>
-                                        </c:choose>
-                                    </td>
                                     <td>
                                         <c:choose>
                                             <c:when test="${fn:toLowerCase(order.status) == 'pending'}">

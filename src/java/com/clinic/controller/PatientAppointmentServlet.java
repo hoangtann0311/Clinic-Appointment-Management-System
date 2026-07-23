@@ -2,6 +2,7 @@ package com.clinic.controller;
 
 import com.clinic.model.Appointment;
 import com.clinic.model.Invoice;
+import com.clinic.model.Prescription;
 import com.clinic.model.User;
 import com.clinic.service.PatientBookingService;
 
@@ -43,18 +44,35 @@ public class PatientAppointmentServlet extends HttpServlet {
         // Load invoices for payment status display
         Map<Integer, Invoice> postExamInvoices = new HashMap<>();
         Map<Integer, Invoice> prescriptionInvoices = new HashMap<>();
+        Map<Integer, Boolean> prescriptionPurchaseResolved = new HashMap<>();
+        com.clinic.dao.PrescriptionDAO prescriptionDAO =
+                new com.clinic.dao.PrescriptionDAO();
         for (Appointment apt : appointments) {
             Invoice postInv = new com.clinic.dao.InvoiceDAO().getByAppointmentIdAndType(apt.getId(), "POST_EXAM");
             if (postInv != null && !"Paid".equalsIgnoreCase(postInv.getStatus()) && !"PendingConfirmation".equalsIgnoreCase(postInv.getStatus())) {
                 postExamInvoices.put(apt.getId(), postInv);
             }
             Invoice rxInv = new com.clinic.dao.InvoiceDAO().getByAppointmentIdAndType(apt.getId(), "PRESCRIPTION");
-            if (rxInv != null && !"Paid".equalsIgnoreCase(rxInv.getStatus()) && !"PendingConfirmation".equalsIgnoreCase(rxInv.getStatus()) && !"DeclinedPurchase".equalsIgnoreCase(rxInv.getStatus())) {
+            if (rxInv != null && !"Paid".equalsIgnoreCase(rxInv.getStatus()) && !"PendingConfirmation".equalsIgnoreCase(rxInv.getStatus())) {
                 prescriptionInvoices.put(apt.getId(), rxInv);
             }
+            prescriptionPurchaseResolved.put(
+                    apt.getId(),
+                    prescriptionDAO.isPurchaseResolvedForReview(apt.getId()));
         }
         request.setAttribute("postExamInvoices", postExamInvoices);
         request.setAttribute("prescriptionInvoices", prescriptionInvoices);
+        request.setAttribute(
+                "prescriptionPurchaseResolved", prescriptionPurchaseResolved);
+        Map<Integer, Prescription> pendingPrescriptionChoices = new HashMap<>();
+        for (Prescription prescription :
+                prescriptionDAO.getPatientPurchaseChoices(user.getId())) {
+            if ("Pending".equalsIgnoreCase(prescription.getPurchaseDecision())) {
+                pendingPrescriptionChoices.put(
+                        prescription.getAppointmentId(), prescription);
+            }
+        }
+        request.setAttribute("pendingPrescriptionChoices", pendingPrescriptionChoices);
 
         HttpSession session = request.getSession(false);
         if (session != null && session.getAttribute("bookingSuccess") != null) {
@@ -64,6 +82,10 @@ public class PatientAppointmentServlet extends HttpServlet {
         if (session != null && session.getAttribute("bookingError") != null) {
             request.setAttribute("bookingError", session.getAttribute("bookingError"));
             session.removeAttribute("bookingError");
+        }
+        String errorCode = request.getParameter("bookingError");
+        if (request.getAttribute("bookingError") == null && errorCode != null) {
+            request.setAttribute("bookingError", mapErrorCode(errorCode));
         }
 
         request.getRequestDispatcher("/views/patient/appointments.jsp").forward(request, response);
@@ -98,104 +120,6 @@ public class PatientAppointmentServlet extends HttpServlet {
             } catch (NumberFormatException e) {
                 request.getSession().setAttribute("bookingError", "Lịch hẹn không hợp lệ.");
             }
-        } else if ("sos".equals(action)) {
-            try {
-                int appointmentId = Integer.parseInt(request.getParameter("appointmentId"));
-
-                // Bảo mật: Xác minh lịch hẹn có thuộc về bệnh nhân đang đăng nhập không
-                int patientId = new com.clinic.dao.PatientDAO().getPatientIdByUserId(user.getId());
-                Appointment appt = appointmentDAO.findAppointmentById(appointmentId);
-                HttpSession session = request.getSession();
-                if (appt == null || appt.getPatientId() != patientId) {
-                    session.setAttribute("bookingError", "Bạn không có quyền kích hoạt SOS cho lịch hẹn này.");
-                    response.sendRedirect(request.getContextPath() + "/patient/appointments");
-                    return;
-                }
-
-                // Triệu chứng bệnh nhân mô tả trong modal
-                String sosSymptoms = request.getParameter("symptoms");
-                if (sosSymptoms == null || sosSymptoms.isBlank()) {
-                    sosSymptoms = "Bệnh nhân báo động khẩn cấp SOS.";
-                }
-                sosSymptoms = sosSymptoms.trim();
-                if (sosSymptoms.length() > 500) {
-                    request.getSession().setAttribute("bookingError", "Mô tả SOS không được vượt quá 500 ký tự.");
-                    response.sendRedirect(request.getContextPath() + "/patient/appointments");
-                    return;
-                }
-
-                String queueNum = appointmentDAO.activateEmergencySosForAppointment(
-                        appointmentId, patientId, sosSymptoms);
-                boolean ok = queueNum != null;
-
-                if (ok) {
-                    
-                    // Gửi thông báo khẩn cấp cho bác sĩ phụ trách
-                    try {
-                        String[] apptInfo = com.clinic.utils.NotificationHelper.getApptInfo(appointmentId);
-                        if (apptInfo != null) {
-                            String patientName = apptInfo[0];
-                            int doctorUserId = Integer.parseInt(apptInfo[3]);
-                            com.clinic.utils.NotificationHelper.sosAlert(doctorUserId, patientName, queueNum, sosSymptoms);
-                        }
-                    } catch (Exception e) {
-                        System.err.println("[PatientAppointmentServlet] Gửi thông báo SOS thất bại: " + e.getMessage());
-                    }
-                }
-
-                session = request.getSession();
-                if (ok) {
-                    session.setAttribute("bookingSuccess",
-                            "Báo động khẩn cấp SOS đã được kích hoạt! Số thứ tự ưu tiên: "
-                            + queueNum + ". Vui lòng giữ bình tĩnh, bác sĩ đang được điều phối.");
-
-                    // Log action
-                    new com.clinic.dao.AuditLogDAO().logAction(
-                            "Bệnh nhân kích hoạt SOS cho lịch hẹn #" + appointmentId
-                                    + " | Triệu chứng: " + sosSymptoms,
-                            "Patient",
-                            "appointments",
-                            "Confirmed",
-                            "Emergency_SOS"
-                    );
-                } else {
-                    session.setAttribute("bookingError", "Không thể kích hoạt SOS cho lịch hẹn này. Vui lòng thử lại.");
-                }
-            } catch (NumberFormatException e) {
-                request.getSession().setAttribute("bookingError", "Mã lịch hẹn không hợp lệ.");
-            }
-        } else if ("globalSos".equals(action)) {
-            // Global emergency activation
-            try {
-                String symptoms = request.getParameter("symptoms");
-                if (symptoms == null || symptoms.trim().isEmpty()) {
-                    symptoms = "Báo động khẩn cấp SOS kích hoạt từ thiết bị của Bệnh nhân.";
-                }
-                
-                // Retrieve or create patient profile
-                int patientId = new com.clinic.dao.PatientDAO().getPatientIdByUserId(user.getId());
-                com.clinic.model.Patient patient = null;
-                if (patientId > 0) {
-                    patient = new com.clinic.dao.PatientDAO().findById(patientId);
-                } else {
-                    patient = new com.clinic.dao.PatientDAO().createPatientWithUserId(
-                            user.getFullName(), user.getPhone(), null, "zalo_" + user.getPhone(), user.getId()
-                    );
-                }
-                
-                if (patient != null) {
-                    // Trigger SOS manual using StaffReceptionService logic
-                    com.clinic.service.StaffReceptionService receptionService = new com.clinic.service.StaffReceptionService();
-                    receptionService.activateEmergencySosManual(patient.getFullName(), patient.getPhone(), symptoms);
-                    
-                    HttpSession session = request.getSession();
-                    session.setAttribute("bookingSuccess", "Báo động đỏ SOS khẩn cấp đã được phát toàn hệ thống! Vui lòng giữ an toàn, nhân viên y tế đang đến.");
-                } else {
-                    request.getSession().setAttribute("bookingError", "Không thể kích hoạt SOS vì không tạo được hồ sơ bệnh nhân.");
-                }
-            } catch (Exception e) {
-                request.getSession().setAttribute("bookingError", "Lỗi kích hoạt SOS: " + e.getMessage());
-            }
         }
 
         response.sendRedirect(request.getContextPath() + "/patient/appointments");
@@ -208,5 +132,18 @@ public class PatientAppointmentServlet extends HttpServlet {
             return null;
         }
         return (User) session.getAttribute("user");
+    }
+
+    private String mapErrorCode(String code) {
+        if ("ChuaXuLyDonThuoc".equals(code)) {
+            return "Vui lòng chọn mua hoặc không mua thuốc tại phòng khám trước khi đánh giá.";
+        }
+        if ("ChuaThanhToanDonThuoc".equals(code)) {
+            return "Hóa đơn thuốc chưa được thanh toán.";
+        }
+        if ("LichHenChuaHoanThanh".equals(code)) {
+            return "Lịch hẹn chưa hoàn thành nên chưa thể đánh giá.";
+        }
+        return "Không thể thực hiện thao tác. Vui lòng kiểm tra lại.";
     }
 }

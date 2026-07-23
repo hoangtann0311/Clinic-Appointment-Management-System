@@ -8,19 +8,19 @@
     .doctor-card { border: 1.5px solid var(--pt-outline, #f0dae5) !important; }
     .doctor-avatar-circle {
         width: 48px; height: 48px; border-radius: 50%;
-        background: var(--pt-pink-50, #fff0f6);
-        color: var(--pt-pink-600, #c2185b);
-        border: 1.5px solid var(--pt-pink-200, #ffb3d1);
+        background: var(--pt-pink-50, #fff9fc);
+        color: var(--pt-pink-600, #b86689);
+        border: 1.5px solid var(--pt-pink-200, #f7dce7);
         display: flex; align-items: center; justify-content: center;
         font-weight: 700; font-size: 1.1rem; flex-shrink: 0;
     }
     .summary-card { position: sticky; top: 5rem; }
     .slot-btn { min-width: 76px; }
     .slot-btn.active {
-        background: var(--pt-pink-600, #c2185b) !important;
+        background: var(--pt-pink-600, #b86689) !important;
         color: #fff !important;
-        border-color: var(--pt-pink-600, #c2185b) !important;
-        box-shadow: 0 3px 10px rgba(194,24,91,0.22);
+        border-color: var(--pt-pink-600, #b86689) !important;
+        box-shadow: 0 3px 10px rgba(184,102,137,0.22);
     }
     .slot-period-label { font-weight: 700; color: var(--pt-muted, #8a5e74); font-size: .82rem; letter-spacing: .04em; text-transform: uppercase; }
     .slot-btn.slot-locked {
@@ -33,7 +33,7 @@
     }
     .slot-btn.slot-locked:hover { background: #ebebef !important; }
     .doctor-panel { display: none; border-top: 1.5px solid var(--pt-outline, #f0dae5); background: var(--pt-surface-var, #fff6fb); border-radius: 0 0 14px 14px; }
-    .toggle-doctor-btn.expanded { background: var(--pt-pink-600, #c2185b) !important; border-color: var(--pt-pink-600, #c2185b) !important; }
+    .toggle-doctor-btn.expanded { background: var(--pt-pink-600, #b86689) !important; border-color: var(--pt-pink-600, #b86689) !important; }
 </style>
 
 <div class="row mb-4">
@@ -64,10 +64,10 @@
 <c:if test="${not empty errors.general}">
     <div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill me-2"></i>${errors.general}</div>
 </c:if>
-<c:if test="${not empty errors.slotId || not empty errors.serviceIds}">
+<c:if test="${not empty errors.slotId || not empty errors.serviceId}">
     <div class="alert alert-danger" data-cams-toast>
         <i class="bi bi-exclamation-triangle-fill me-2"></i>
-        <c:out value="${not empty errors.slotId ? errors.slotId : errors.serviceIds}"/>
+        <c:out value="${not empty errors.slotId ? errors.slotId : errors.serviceId}"/>
     </div>
 </c:if>
 
@@ -195,15 +195,15 @@
                             <label class="form-label fw-semibold small d-block">Dịch vụ khám <span class="text-danger">*</span></label>
                             <c:forEach var="s" items="${services}">
                                 <div class="form-check">
-                                    <input class="form-check-input addon-service-checkbox" type="checkbox"
-                                           name="serviceIds" value="${s.id}" data-price="${s.price}" id="svc_${s.id}">
+                                    <input class="form-check-input main-service-radio" type="radio"
+                                           name="serviceId" value="${s.id}" data-price="${s.price}" id="svc_${s.id}" required>
                                     <label class="form-check-label small" for="svc_${s.id}">
                                         ${s.serviceName} (<fmt:formatNumber value="${s.price}" pattern="#,###"/>đ)
                                     </label>
                                 </div>
                             </c:forEach>
-                            <div id="serviceSelectionError" class="text-danger small mt-1" ${empty errors.serviceIds ? 'hidden' : ''}>
-                                <c:out value="${errors.serviceIds}"/>
+                            <div id="serviceSelectionError" class="text-danger small mt-1" ${empty errors.serviceId ? 'hidden' : ''}>
+                                <c:out value="${errors.serviceId}"/>
                             </div>
                         </div>
 
@@ -462,22 +462,20 @@
         updateTotalPrice();
     }
 
-    // ── Tính lại tổng tiền = phí khám Bác sĩ lâm sàng + tổng dịch vụ bổ sung đã tick ──
+    // ── Tính lại tổng tiền = phí khám Bác sĩ lâm sàng + một dịch vụ chính ──
     function updateTotalPrice() {
         const totalEl = document.getElementById('summaryTotalPrice');
         if (!totalEl) return;
-        let addonTotal = 0;
-        document.querySelectorAll('.addon-service-checkbox:checked').forEach(function (cb) {
-            addonTotal += parseFloat(cb.dataset.price || 0);
-        });
-        const total = (currentBasePrice || 0) + addonTotal;
+        const selectedService = document.querySelector('.main-service-radio:checked');
+        const servicePrice = selectedService ? parseFloat(selectedService.dataset.price || 0) : 0;
+        const total = (currentBasePrice || 0) + servicePrice;
         totalEl.textContent = new Intl.NumberFormat('vi-VN').format(total) + 'đ';
     }
 
-    document.querySelectorAll('.addon-service-checkbox').forEach(function (cb) {
+    document.querySelectorAll('.main-service-radio').forEach(function (cb) {
         cb.addEventListener('change', function () {
             updateTotalPrice();
-            if (document.querySelector('.addon-service-checkbox:checked')) {
+            if (document.querySelector('.main-service-radio:checked')) {
                 const error = document.getElementById('serviceSelectionError');
                 if (error) error.hidden = true;
             }
@@ -486,11 +484,11 @@
 
     const bookingForm = document.getElementById('bookingForm');
     if (bookingForm) bookingForm.addEventListener('submit', function (event) {
-        if (!document.querySelector('.addon-service-checkbox:checked')) {
+        if (!document.querySelector('.main-service-radio:checked')) {
             event.preventDefault();
             const error = document.getElementById('serviceSelectionError');
             if (error) {
-                error.textContent = 'Vui lòng chọn ít nhất một dịch vụ khám.';
+                error.textContent = 'Vui lòng chọn một dịch vụ khám.';
                 error.hidden = false;
                 error.scrollIntoView({block: 'center', behavior: 'smooth'});
             }

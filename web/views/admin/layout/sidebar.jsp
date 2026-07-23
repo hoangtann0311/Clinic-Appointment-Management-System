@@ -21,7 +21,7 @@
         </div>
         <div class="admin-sidebar-name">${sessionScope.user.fullName}</div>
         <span class="admin-sidebar-badge">
-            <i class="bi bi-shield-check"></i>Quản Trị Viên
+            <i class="bi bi-shield-check"></i>Quản trị viên
         </span>
     </div>
 
@@ -34,7 +34,7 @@
             <a href="${pageContext.request.contextPath}/admin/dashboard"
                class="${fn:contains(requestURI, '/admin/dashboard') ? 'active' : ''}">
                 <i class="bi bi-speedometer2"></i>
-                <span>Dashboard</span>
+                <span>Tổng Quan</span>
             </a>
         </li>
 

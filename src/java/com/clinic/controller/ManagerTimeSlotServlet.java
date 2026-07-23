@@ -68,7 +68,7 @@ public class ManagerTimeSlotServlet extends HttpServlet {
         DoctorSchedule schedule = scheduleService.getScheduleById(scheduleId);
         if (schedule == null) {
             resp.sendRedirect(req.getContextPath()
-                    + "/manager/time-slots/?error=Lịch+trực+không+tồn+tại");
+                    + "/manager/time-slots/?error=Lịch+làm+việc+không+tồn+tại");
             return;
         }
 
@@ -207,7 +207,7 @@ public class ManagerTimeSlotServlet extends HttpServlet {
             // Có patient đã đặt → không cho sinh lại, redirect với thông báo
             resp.sendRedirect(redirectUrl
                     + "&warning=Có+" + bookedSlots
-                    + "+bệnh+nhân+đã+đặt+lịch.+Không+thể+sinh+lại+slots.+"
+                    + "+bệnh+nhân+đã+đặt+lịch.+Không+thể+sinh+lại+khung+giờ.+"
                     + "Vui+lòng+xử+lý+các+lịch+hẹn+trước.");
             return;
         }
@@ -227,7 +227,7 @@ public class ManagerTimeSlotServlet extends HttpServlet {
         DoctorSchedule schedule = scheduleService.getScheduleById(scheduleId);
         if (schedule == null || !schedule.isApprovedSchedule()) {
             resp.sendRedirect(redirectUrl
-                    + "&error=Chỉ+có+thể+sinh+slot+cho+lịch+trực+đã+duyệt");
+                    + "&error=Chỉ+có+thể+sinh+khung+giờ+cho+lịch+làm+việc+đã+xác+nhận");
             return;
         }
 
@@ -237,17 +237,17 @@ public class ManagerTimeSlotServlet extends HttpServlet {
         if (count > 0) {
             User actor = getCurrentUser(req);
             AuditUtil.log(actor != null ? actor.getId() : null,
-                    "Tạo " + count + " suất khám cho lịch trực #" + scheduleId
+                    "Tạo " + count + " suất khám cho lịch làm việc #" + scheduleId
                     + " (" + schedule.getDoctorName() + " - " + schedule.getWorkDate() + ")",
                     "time_slots", null, "count=" + count, null);
             resp.sendRedirect(redirectUrl + "&success=generated&count=" + count);
         } else if (count == 0) {
             resp.sendRedirect(redirectUrl
-                    + "&error=Lịch+trực+có+thời+gian+làm+việc+dưới+20+phút,+không+thể+sinh+slot");
+                    + "&error=Lịch+làm+việc+có+thời+gian+dưới+20+phút,+không+thể+sinh+khung+giờ");
         } else {
             resp.sendRedirect(redirectUrl + "&error="
                     + java.net.URLEncoder.encode(
-                            errors.getOrDefault("general", "Lỗi+hệ+thống+khi+sinh+slot"), "UTF-8"));
+                            errors.getOrDefault("general", "Lỗi+hệ+thống+khi+sinh+khung+giờ"), "UTF-8"));
         }
     }
 
@@ -262,7 +262,7 @@ public class ManagerTimeSlotServlet extends HttpServlet {
         if (bookedSlots > 0) {
             resp.sendRedirect(redirectUrl
                     + "&warning=Có+" + bookedSlots
-                    + "+bệnh+nhân+đã+đặt+lịch.+Không+thể+xóa+slots.+"
+                    + "+bệnh+nhân+đã+đặt+lịch.+Không+thể+xóa+khung+giờ.+"
                     + "Vui+lòng+xử+lý+các+lịch+hẹn+trước+khi+xóa.");
             return;
         }
@@ -273,7 +273,7 @@ public class ManagerTimeSlotServlet extends HttpServlet {
         if (deleted) {
             User actor = getCurrentUser(req);
             AuditUtil.log(actor != null ? actor.getId() : null,
-                    "Xoá toàn bộ suất khám của lịch trực #" + scheduleId,
+                    "Xoá toàn bộ suất khám của lịch làm việc #" + scheduleId,
                     "time_slots", null, null, null);
             resp.sendRedirect(redirectUrl + "&success=deleted");
         } else if (errors.containsKey("hasBookedSlots")) {
@@ -283,7 +283,7 @@ public class ManagerTimeSlotServlet extends HttpServlet {
         } else {
             resp.sendRedirect(redirectUrl + "&error="
                     + java.net.URLEncoder.encode(
-                            errors.getOrDefault("general", "Không+thể+xóa+slot"), "UTF-8"));
+                            errors.getOrDefault("general", "Không+thể+xóa+khung+giờ"), "UTF-8"));
         }
     }
 
@@ -292,7 +292,7 @@ public class ManagerTimeSlotServlet extends HttpServlet {
                                        String redirectUrl) throws IOException {
         int slotId = parseInt(req.getParameter("slotId"), -1);
         if (slotId <= 0) {
-            resp.sendRedirect(redirectUrl + "&error=Slot+không+hợp+lệ");
+            resp.sendRedirect(redirectUrl + "&error=Khung+giờ+không+hợp+lệ");
             return;
         }
 
@@ -306,7 +306,7 @@ public class ManagerTimeSlotServlet extends HttpServlet {
         if (timeSlotService.updateSlotPrice(scheduleId, slotId, req.getParameter("price"), errors)) {
             User actor = getCurrentUser(req);
             AuditUtil.log(actor != null ? actor.getId() : null,
-                    "Cập nhật giá slot #" + slotId, "time_slots", null,
+                    "Cập nhật giá khung giờ #" + slotId, "time_slots", null,
                     req.getParameter("price"), null);
             resp.sendRedirect(redirectUrl + "&success=priceUpdated");
             return;
@@ -323,7 +323,7 @@ public class ManagerTimeSlotServlet extends HttpServlet {
         if (updated > 0) {
             User actor = getCurrentUser(req);
             AuditUtil.log(actor != null ? actor.getId() : null,
-                    "Áp giá cho " + updated + " slot của lịch trực #" + scheduleId,
+                    "Áp giá cho " + updated + " khung giờ của lịch làm việc #" + scheduleId,
                     "time_slots", null, null, req.getParameter("price"));
             resp.sendRedirect(redirectUrl + "&success=priceUpdated&count=" + updated);
             return;

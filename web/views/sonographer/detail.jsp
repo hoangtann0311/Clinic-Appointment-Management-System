@@ -28,7 +28,7 @@
             <i class="bi bi-arrow-left me-1"></i>Danh sách chờ
         </a>
         <h1 class="admin-page-title mb-1">Ca siêu âm #SA-${order.orderId}</h1>
-        <div class="admin-page-subtitle">Bác sĩ Siêu âm thực hiện, duyệt vùng AI và ký phiếu kết quả</div>
+        <div class="admin-page-subtitle">Bác sĩ siêu âm thực hiện, duyệt vùng AI và ký phiếu kết quả</div>
     </div>
     <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2">
         <c:out value="${order.status}" />
@@ -42,7 +42,6 @@
             <c:when test="${param.success == 'started'}">Đã tiếp nhận ca siêu âm.</c:when>
             <c:when test="${param.success == 'uploaded'}">Đã tải ảnh siêu âm.</c:when>
             <c:when test="${param.success == 'analyzed'}">AI đã phân tích xong. Hãy kiểm tra trước khi ký.</c:when>
-            <c:when test="${param.success == 'draftSaved'}">Đã lưu bản nháp và vùng duyệt mới.</c:when>
             <c:when test="${param.success == 'signed' || param.success == 'completed'}">Đã ký phiếu và chuyển cho Bác sĩ lâm sàng.</c:when>
             <c:otherwise>Thao tác đã hoàn tất.</c:otherwise>
         </c:choose>
@@ -56,8 +55,8 @@
             <c:when test="${param.error == 'startConflict'}">Ca đã được người khác tiếp nhận hoặc chưa đủ điều kiện xử lý.</c:when>
             <c:when test="${param.error == 'invalidImageMetadata'}">Không đọc được kích thước ảnh. Hãy tải lại ảnh rồi thử lại.</c:when>
             <c:when test="${param.error == 'signFailed'}">Không thể ký: hãy kiểm tra trạng thái duyệt, nội dung phiếu và phiên làm việc.</c:when>
-            <c:when test="${param.error == 'draftFailed'}">Không thể lưu nháp. Hãy kiểm tra các trường bắt buộc.</c:when>
-            <c:when test="${param.error == 'aiUnavailable'}">AI Engine tạm thời không sẵn sàng. Có thể thử lại hoặc lập phiếu thủ công có nêu lý do.</c:when>
+            <c:when test="${param.error == 'aiAlreadyRun'}">Chỉ định này đã gửi AI một lần. Hãy kiểm tra kết quả và hoàn tất phiếu.</c:when>
+            <c:when test="${param.error == 'aiUnavailable'}">AI không hoàn tất phân tích. Bác sĩ siêu âm hãy đánh giá thủ công và ghi rõ kết quả chuyên môn.</c:when>
             <c:otherwise>Thao tác chưa hoàn tất. Vui lòng kiểm tra dữ liệu và thử lại.</c:otherwise>
         </c:choose>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -86,7 +85,7 @@
                     <dt class="col-5 text-muted mb-3">Bác sĩ lâm sàng chỉ định</dt><dd class="col-7">BS. <c:out value="${order.doctorName}" /></dd>
                     <dt class="col-5 text-muted mb-3">Triệu chứng</dt><dd class="col-7"><c:out value="${empty order.symptoms ? 'Không ghi nhận' : order.symptoms}" /></dd>
                     <dt class="col-5 text-muted">Ưu tiên</dt><dd class="col-7">
-                        <c:choose><c:when test="${order.emergency}"><span class="badge bg-danger">Khẩn cấp</span></c:when>
+                        <c:choose><c:when test="${order.emergency}"><span class="badge bg-warning text-dark">Ưu tiên</span></c:when>
                         <c:otherwise><span class="badge bg-secondary-subtle text-secondary">Thông thường</span></c:otherwise></c:choose>
                     </dd>
                 </dl>
@@ -110,28 +109,28 @@
                         </form>
                     </c:when>
                     <c:when test="${status == 'inprogress' || status == 'uploaded'}">
-                        <p class="mb-3">Chụp ảnh đạt chất lượng, kiểm tra ảnh xem trước rồi tải lên hệ thống.</p>
+                        <p class="mb-3">Mỗi chỉ định sử dụng một ảnh siêu âm gốc để AI và Bác sĩ siêu âm cùng đối chiếu.</p>
                         <c:if test="${not empty images}">
-                            <div class="row g-2 mb-3">
-                                <c:forEach var="img" items="${images}"><div class="col-4">
-                                    <img loading="lazy" src="${pageContext.request.contextPath}/medical/ultrasound-image?id=${img.id}" alt="Ảnh siêu âm"
-                                         class="img-fluid rounded border w-100" style="height:100px;object-fit:contain;background:#0f172a">
-                                    <div class="small text-truncate mt-1"><c:out value="${img.originalFilename}" /></div>
-                                </div></c:forEach>
+                            <div class="mb-3">
+                                <img loading="lazy" src="${pageContext.request.contextPath}/medical/ultrasound-image?id=${selectedImage.id}" alt="Ảnh siêu âm gốc"
+                                     class="img-fluid rounded border w-100" style="height:180px;object-fit:contain;background:#0f172a">
+                                <div class="small text-truncate mt-1"><c:out value="${selectedImage.originalFilename}" /></div>
                             </div>
                         </c:if>
-                        <form method="post" action="${pageContext.request.contextPath}/sonographer/upload" enctype="multipart/form-data">
-                            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}"><input type="hidden" name="orderId" value="${order.orderId}">
-                            <div class="input-group"><input type="file" class="form-control" name="file" accept="image/jpeg,image/png" required>
-                                <button class="btn btn-primary"><i class="bi bi-cloud-arrow-up me-1"></i>Tải ảnh</button></div>
-                            <div class="form-text">JPG/PNG, tối đa 10 MB. Không tải ảnh chứa thông tin ngoài hồ sơ bệnh nhân này.</div>
-                        </form>
-                        <c:if test="${status == 'uploaded'}"><hr>
+                        <c:if test="${status == 'inprogress' && empty images}">
+                            <form method="post" action="${pageContext.request.contextPath}/sonographer/upload" enctype="multipart/form-data">
+                                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}"><input type="hidden" name="orderId" value="${order.orderId}">
+                                <div class="input-group"><input type="file" class="form-control" name="file" accept="image/jpeg,image/png" required>
+                                    <button class="btn btn-primary"><i class="bi bi-cloud-arrow-up me-1"></i>Tải ảnh gốc</button></div>
+                                <div class="form-text">Chỉ một ảnh JPG/PNG, tối đa 10 MB. Hãy kiểm tra đúng bệnh nhân trước khi tải.</div>
+                            </form>
+                        </c:if>
+                        <c:if test="${status == 'uploaded' && empty aiResult}"><hr>
                             <form method="post" action="${pageContext.request.contextPath}/sonographer/analyze" id="aiAnalyzeForm">
                                 <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}"><input type="hidden" name="orderId" value="${order.orderId}">
                                 <button class="btn btn-outline-primary" id="analyzeButton"><i class="bi bi-cpu me-1"></i>
-                                    ${empty aiResult ? 'Gửi ảnh cho AI phân tích' : 'Phân tích lại bằng AI'}</button>
-                                <span class="small text-muted ms-2">AI chỉ hỗ trợ, không tự tạo kết luận chính thức.</span>
+                                    Gửi ảnh cho AI phân tích</button>
+                                <span class="small text-muted ms-2">Mỗi chỉ định chỉ gửi AI một lần; AI không tự tạo kết luận chính thức.</span>
                             </form>
                         </c:if>
                     </c:when>
@@ -152,11 +151,11 @@
     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
         <div><h5 class="mb-1">Duyệt ảnh và lập phiếu kết quả</h5><div class="small text-muted">Ba bước: xem ảnh → duyệt vùng → nhập phiếu và ký</div></div>
         <c:if test="${not empty aiResult}"><span class="badge ${aiResult.status == 'Success' ? 'bg-success' : aiResult.status == 'Failed' ? 'bg-danger' : 'bg-warning text-dark'}">
-            AI: <c:out value="${aiResult.status}" /></span></c:if>
+            AI: ${aiResult.status == 'Success' ? 'Đã phân tích' : aiResult.status == 'Failed' ? 'Không hoàn tất' : 'Đang phân tích'}</span></c:if>
     </div>
     <div class="card-body p-4">
         <c:if test="${not reviewSchemaSupported}">
-            <div class="alert alert-warning mb-0">Cần áp dụng migration V13 trước khi lưu vùng duyệt và ký phiếu kết quả.</div>
+            <div class="alert alert-warning mb-0">Cơ sở dữ liệu chưa sẵn sàng cho chức năng lưu vùng phân tích và ký phiếu kết quả. Vui lòng liên hệ quản trị viên.</div>
         </c:if>
         <c:if test="${reviewSchemaSupported}">
             <c:choose>
@@ -172,7 +171,7 @@
 
                     <div class="alert alert-warning py-2 small">Kết quả AI chỉ mang tính hỗ trợ, không thay thế kết luận chuyên môn.</div>
 
-                    <h6 class="fw-bold mb-3"><span class="badge bg-primary me-2">1</span>Đối chiếu ba lớp hình ảnh độc lập</h6>
+                    <h6 class="fw-bold mb-3"><span class="badge bg-primary me-2">1</span>Đối chiếu ảnh gốc, ảnh AI và vùng đánh dấu thủ công</h6>
                     <div class="row g-3 mb-4">
                         <div class="col-lg-8">
                             <div class="us-image-stage" id="imageStage"><div id="imageViewport">
@@ -190,7 +189,7 @@
                             <div class="d-flex flex-wrap gap-2 mb-2">
                                 <button type="button" class="btn btn-sm btn-outline-primary image-view-button" data-image-view="raw">Xem ảnh gốc</button>
                                 <button type="button" class="btn btn-sm btn-outline-primary image-view-button" data-image-view="ai">Xem vùng AI</button>
-                                <button type="button" class="btn btn-sm btn-outline-primary image-view-button" data-image-view="review">Xem vùng Bác sĩ Siêu âm</button>
+                                <button type="button" class="btn btn-sm btn-outline-primary image-view-button" data-image-view="review">Xem vùng Bác sĩ siêu âm</button>
                             </div>
                             <div class="d-flex flex-wrap gap-2 mb-2">
                                 <button type="button" class="btn btn-sm btn-outline-secondary" id="zoomInButton">Phóng to</button>
@@ -268,7 +267,6 @@
                         <textarea class="form-control" name="conclusion" rows="3" maxlength="8000"><c:out value="${currentReport.conclusion}" /></textarea></div>
                     <div class="alert alert-light border small">Người ký: <strong><c:out value="${sessionScope.user.fullName}" /></strong>. Sau khi ký, phiếu chuyển sang chờ Bác sĩ lâm sàng xác nhận và không thể sửa trực tiếp.</div>
                     <div class="d-flex justify-content-end gap-2">
-                        <button type="submit" id="draftButton" class="btn btn-outline-primary">Lưu nháp</button>
                         <button type="submit" class="btn btn-primary" id="signButton"><i class="bi bi-pen me-1"></i>Ký và chuyển Bác sĩ lâm sàng</button>
                     </div>
                 </form>
@@ -288,7 +286,7 @@
         <c:otherwise>
             <div class="row g-4">
                 <div class="col-md-4"><div class="text-muted small">Trạng thái duyệt vùng</div><div class="fw-semibold"><c:out value="${currentAnnotation.reviewStatus}" /></div></div>
-                <div class="col-md-4"><div class="text-muted small">Bác sĩ Siêu âm ký</div><div class="fw-semibold"><c:out value="${currentReport.signedName}" /></div></div>
+                <div class="col-md-4"><div class="text-muted small">Bác sĩ siêu âm ký</div><div class="fw-semibold"><c:out value="${currentReport.signedName}" /></div></div>
                 <div class="col-md-4"><div class="text-muted small">Thời điểm ký</div><div class="fw-semibold"><c:out value="${currentReport.signedAt}" /></div></div>
                 <div class="col-12"><div class="text-muted small">Mô tả hình ảnh</div><div class="readonly-field"><c:out value="${currentReport.imageDescription}" /></div></div>
                 <div class="col-12"><div class="text-muted small">Nhận xét chuyên môn</div><div class="readonly-field"><c:out value="${currentReport.professionalFindings}" /></div></div>
@@ -402,10 +400,8 @@
     document.getElementById('resetViewButton').onclick=()=>{viewScale=1;viewX=0;viewY=0;applyView();};
     function updateReviewUi(){const review=selectedReview(),rejected=review==='Rejected';document.getElementById('rejectionReasonGroup').style.display=rejected?'block':'none';if(review)setImageView('review');else draw();}
     form.querySelectorAll('[name="reviewStatus"]').forEach(x=>x.addEventListener('change',updateReviewUi));
-    let clickedAction = '';
-    const draftBtn = document.getElementById('draftButton');
+    let clickedAction = 'sign';
     const signBtn = document.getElementById('signButton');
-    if (draftBtn) draftBtn.addEventListener('click', () => { clickedAction = 'saveDraft'; });
     if (signBtn) signBtn.addEventListener('click', () => { clickedAction = 'sign'; });
 
     function notifyValidation(message) {
@@ -450,7 +446,7 @@
 
         const signing = clickedAction === 'sign', review = selectedReview();
         if (!review) {
-            e.preventDefault(); notifyValidation('Bác sĩ Siêu âm phải chủ động chọn Chấp nhận, Hiệu chỉnh hoặc Từ chối gợi ý AI.'); return;
+            e.preventDefault(); notifyValidation('Bác sĩ siêu âm phải chủ động chọn Chấp nhận, Hiệu chỉnh hoặc Từ chối gợi ý AI.'); return;
         }
         if ((review==='Corrected' && points.length<3) || (review==='Rejected' && form.rejectionReason.value.trim().length<5)) {
             e.preventDefault(); notifyValidation(review==='Corrected'?'Vui lòng tạo vùng đa giác có ít nhất 3 điểm.':'Vui lòng nêu lý do từ chối (ít nhất 5 ký tự).'); return;

@@ -978,7 +978,7 @@ public class TimeSlotDAO {
 
         public static DeleteSlotsResult hasBookedSlots(int scheduleId, int bookedCount) {
             return new DeleteSlotsResult(false, scheduleId, 0, bookedCount, "HAS_BOOKED",
-                    "Không thể xóa: lịch trực #" + scheduleId + " có " + bookedCount
+                    "Không thể xóa: lịch làm việc #" + scheduleId + " có " + bookedCount
                     + " khung giờ đã được bệnh nhân đặt. "
                     + "Vui lòng xử lý các lịch hẹn này trước khi xóa.");
         }

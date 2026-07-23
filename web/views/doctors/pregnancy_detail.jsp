@@ -25,7 +25,7 @@
                         </a>
                         <a href="${pageContext.request.contextPath}/doctor/dashboard"
                            class="btn btn-outline-light btn-sm rounded-pill px-3">
-                            <i class="bi bi-arrow-left me-1"></i>Dashboard
+                            <i class="bi bi-arrow-left me-1"></i>Tổng Quan
                         </a>
                     </div>
                 </div>

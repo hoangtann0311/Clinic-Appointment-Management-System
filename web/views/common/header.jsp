@@ -6,7 +6,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CAMS - Clinic Appointment Management System</title>
+    <title>CAMS - Hệ thống quản lý lịch khám</title>
     <!-- Bootstrap 5 CSS CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
           rel="stylesheet"
@@ -19,17 +19,19 @@
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800;900&display=swap"
           rel="stylesheet">
     <!-- Custom CSS -->
-    <link href="${pageContext.request.contextPath}/assets/css/style.css?v=103"
+    <link href="${pageContext.request.contextPath}/assets/css/style.css?v=202"
+          rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/app-ui.css?v=202"
           rel="stylesheet">
     <style>
         :root {
-            --primary-color: #0d6efd;
+            --primary-color: #b86689;
             --success-color: #198754;
             /* Ghi đè font mặc định của Bootstrap 5 bằng font hỗ trợ tiếng Việt */
             --bs-body-font-family: 'Be Vietnam Pro', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         body {
-            background-color: #f5f7fa;
+            background-color: #fff7fa;
             font-family: var(--bs-body-font-family);
         }
         .navbar-brand {
@@ -54,14 +56,14 @@
         }
         .form-control:focus {
             border-color: var(--primary-color);
-            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+            box-shadow: 0 0 0 0.2rem rgba(184, 102, 137, 0.18);
         }
     </style>
 </head>
 <c:choose>
     <c:when test="${not empty sessionScope.user && (sessionScope.user.roleId == 2 || sessionScope.user.roleId == 6)}">
         <!-- Rose Pink Theme Header/Sidebar for Doctor (2) and Sonographer (6) -->
-        <link href="${pageContext.request.contextPath}/assets/css/admin.css?v=103" rel="stylesheet">
+        <link href="${pageContext.request.contextPath}/assets/css/admin.css?v=202" rel="stylesheet">
         <body class="admin-body ${sessionScope.user.roleId == 2 ? 'doctor-theme' : 'sonographer-theme'}">
 
         <%-- TOP BAR --%>
@@ -73,7 +75,7 @@
                 <a href="${pageContext.request.contextPath}/home" class="admin-topbar-brand">
                     <i class="bi bi-hospital-fill"></i>
                     CAMS
-                    <span class="brand-badge">${sessionScope.user.roleId == 2 ? 'Bác sĩ lâm sàng' : 'Bác sĩ Siêu âm'}</span>
+                    <span class="brand-badge">${sessionScope.user.roleId == 2 ? 'Bác sĩ lâm sàng' : 'Bác sĩ siêu âm'}</span>
                 </a>
             </div>
             <div class="admin-topbar-right">
@@ -95,38 +97,9 @@
                     </c:choose>
                     <span>${sessionScope.user.fullName}</span>
                     <span class="admin-topbar-role">
-                        <i class="bi bi-briefcase-fill me-1"></i>${sessionScope.user.roleId == 2 ? 'Bác sĩ lâm sàng' : 'Bác sĩ Siêu âm'}
+                        <i class="bi bi-briefcase-fill me-1"></i>${sessionScope.user.roleId == 2 ? 'Bác sĩ lâm sàng' : 'Bác sĩ siêu âm'}
                     </span>
                 </div>
-
-                <%-- Chuông thông báo — chỉ hiện cho bác sĩ --%>
-                <c:if test="${sessionScope.user.roleId == 2}">
-                <div class="position-relative me-2" id="notifBell" style="cursor:pointer;"
-                     onclick="toggleNotifDropdown(event)">
-                    <i class="bi bi-bell-fill" style="font-size:1.2rem;color:#e91e8c;"></i>
-                    <span id="notifBadge"
-                          class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
-                          style="font-size:.6rem;display:none;">0</span>
-                </div>
-
-                <%-- Dropdown thông báo --%>
-                <div id="notifDropdown"
-                     class="card border-0 shadow-lg rounded-4 d-none"
-                     style="position:fixed;top:56px;right:80px;width:360px;z-index:9999;max-height:480px;overflow:hidden;">
-                    <div class="card-header d-flex align-items-center justify-content-between py-2 px-3"
-                         style="background:#fff;">
-                        <span class="fw-bold small">Thông báo</span>
-                        <button class="btn btn-sm btn-link text-muted p-0 small"
-                                onclick="markAllRead(event)">Đánh dấu tất cả đã đọc</button>
-                    </div>
-                    <div id="notifList" style="overflow-y:auto;max-height:400px;">
-                        <div class="text-center py-4 text-muted small" id="notifEmpty">
-                            <i class="bi bi-bell-slash d-block fs-3 mb-2 opacity-25"></i>
-                            Chưa có thông báo
-                        </div>
-                    </div>
-                </div>
-                </c:if>
 
                 <a href="${pageContext.request.contextPath}/logout" class="admin-topbar-logout" title="Đăng xuất">
                     <i class="bi bi-box-arrow-right"></i>
@@ -158,7 +131,7 @@
                 </c:choose>
                 <div class="admin-sidebar-name">${sessionScope.user.fullName}</div>
                 <span class="admin-sidebar-badge">
-                    <i class="bi bi-person-badge-fill"></i>${sessionScope.user.roleId == 2 ? 'Bác sĩ lâm sàng' : 'Bác sĩ Siêu âm'}
+                    <i class="bi bi-person-badge-fill"></i>${sessionScope.user.roleId == 2 ? 'Bác sĩ lâm sàng' : 'Bác sĩ siêu âm'}
                 </span>
             </div>
 
@@ -169,7 +142,7 @@
                         <li>
                             <a href="${pageContext.request.contextPath}/doctor/dashboard">
                                 <i class="bi bi-speedometer2"></i>
-                                <span>Dashboard</span>
+                                <span>Tổng Quan</span>
                             </a>
                         </li>
                         <li>
@@ -215,7 +188,7 @@
                             <a href="${pageContext.request.contextPath}/sonographer/dashboard"
                                class="${fn:contains(pageContext.request.requestURI, '/dashboard') ? 'active' : ''}">
                                 <i class="bi bi-speedometer2"></i>
-                                <span>Dashboard Thống Kê</span>
+                                <span>Tổng Quan Siêu Âm</span>
                             </a>
                         </li>
                         <li>
@@ -246,11 +219,12 @@
                                 <span>Đã Hoàn Thành</span>
                             </a>
                         </li>
+                        <li class="admin-sidebar-section">Minh Chứng AI</li>
                         <li>
                             <a href="${pageContext.request.contextPath}/sonographer/ai-model"
                                class="${fn:contains(pageContext.request.requestURI, '/ai-model') ? 'active' : ''}">
-                                <i class="bi bi-robot"></i>
-                                <span>Model AI</span>
+                                <i class="bi bi-cpu-fill"></i>
+                                <span>Hồ Sơ Mô Hình AI</span>
                             </a>
                         </li>
                     </c:when>
@@ -283,125 +257,10 @@
         })();
         </script>
 
-        <%-- JS thông báo (chỉ load cho bác sĩ) --%>
-        <c:if test="${sessionScope.user.roleId == 2}">
-        <style>
-          #notifBell {
-              padding: 4px 8px;
-              border-radius: 8px;
-              transition: background .2s;
-              display: flex !important;
-              align-items: center;
-              position: relative;
-          }
-          #notifBell:hover { background: rgba(233,30,140,.1); }
-          #notifDropdown .notif-item { padding: 10px 14px; border-bottom: 1px solid #f0f0f0;
-            cursor: pointer; transition: background .15s; }
-          #notifDropdown .notif-item:hover { background: #fafafa; }
-          #notifDropdown .notif-item.unread { background: #fff5fb; }
-          #notifDropdown .notif-item.unread:hover { background: #fce4f3; }
-          #notifDropdown .notif-dot { width:8px;height:8px;border-radius:50%;
-            background:#e91e8c;flex-shrink:0;margin-top:4px; }
-        </style>
-        <script>
-        document.addEventListener('DOMContentLoaded', function() {
-          var CTX = '${pageContext.request.contextPath}';
-          var dropdown = document.getElementById('notifDropdown');
-          var badge    = document.getElementById('notifBadge');
-          var list     = document.getElementById('notifList');
-          var empty    = document.getElementById('notifEmpty');
-          var open     = false;
-
-          if (!dropdown || !badge) return; // guard nếu elements chưa có
-
-          // ── Polling đếm unread mỗi 30 giây ──────────────────────────────
-          function pollUnread() {
-            fetch(CTX + '/doctor/notifications?count=1')
-              .then(function(r){ return r.json(); })
-              .then(function(d){
-                if (d.unread > 0) {
-                  badge.textContent = d.unread > 99 ? '99+' : d.unread;
-                  badge.style.display = '';
-                } else {
-                  badge.style.display = 'none';
-                }
-              }).catch(function(){});
-          }
-          pollUnread();
-          setInterval(pollUnread, 30000);
-
-          // ── Load danh sách khi mở dropdown ───────────────────────────────
-          function loadNotifs() {
-            fetch(CTX + '/doctor/notifications')
-              .then(function(r){ return r.json(); })
-              .then(function(d){
-                badge.textContent = d.unread > 99 ? '99+' : d.unread;
-                badge.style.display = d.unread > 0 ? '' : 'none';
-
-                if (!d.items || d.items.length === 0) {
-                  list.innerHTML = '';
-                  empty.style.display = '';
-                  return;
-                }
-                empty.style.display = 'none';
-                var html = '';
-                d.items.forEach(function(n) {
-                  html += '<div class="notif-item d-flex gap-2 ' + (n.isRead ? '' : 'unread') + '"' +
-                    ' onclick="readNotif(' + n.id + ',this)">' +
-                    (!n.isRead ? '<div class="notif-dot mt-1 flex-shrink-0"></div>' :
-                      '<div style="width:8px;flex-shrink:0;"></div>') +
-                    '<div class="flex-grow-1">' +
-                      '<div class="fw-semibold small">' + escHtml(n.title) + '</div>' +
-                      '<div class="small text-muted" style="line-height:1.3;">' + escHtml(n.content) + '</div>' +
-                      '<div class="text-muted" style="font-size:.7rem;margin-top:2px;">' + n.timeAgo + '</div>' +
-                    '</div>' +
-                    '</div>';
-                });
-                list.innerHTML = html;
-              }).catch(function(){});
-          }
-
-          window.toggleNotifDropdown = function(e) {
-            e.stopPropagation();
-            open = !open;
-            dropdown.classList.toggle('d-none', !open);
-            if (open) loadNotifs();
-          };
-
-          window.readNotif = function(id, el) {
-            fetch(CTX + '/doctor/notifications?action=read&id=' + id, { method:'POST' })
-              .then(function(){ pollUnread(); });
-            el.classList.remove('unread');
-            var dot = el.querySelector('.notif-dot');
-            if (dot) dot.style.display = 'none';
-          };
-
-          window.markAllRead = function(e) {
-            e.stopPropagation();
-            fetch(CTX + '/doctor/notifications?action=readAll', { method:'POST' })
-              .then(function(){ loadNotifs(); });
-          };
-
-          // Đóng dropdown khi click ra ngoài
-          document.addEventListener('click', function(e) {
-            if (open && !dropdown.contains(e.target)) {
-              open = false;
-              dropdown.classList.add('d-none');
-            }
-          });
-
-          function escHtml(s) {
-            return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')
-                          .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-          }
-        }); // end DOMContentLoaded
-        </script>
-        </c:if>
-
     </c:when>
     <c:when test="${not empty sessionScope.user && sessionScope.user.roleId == 5}">
         <!-- Rose-Pink Theme Header/Top Navbar for Patient (5) - Premium Client Portal -->
-        <link href="${pageContext.request.contextPath}/assets/css/patient.css" rel="stylesheet">
+        <link href="${pageContext.request.contextPath}/assets/css/patient.css?v=202" rel="stylesheet">
         <body class="patient-body">
 
         <%-- TOP NAVIGATION BAR --%>
@@ -452,14 +311,6 @@
 
                     <!-- User Actions / Profile Dropdown -->
                     <div class="d-flex align-items-center gap-3 patient-user-actions pt-2 pt-lg-0">
-                        <a href="${pageContext.request.contextPath}/patient/notifications" class="position-relative patient-notif-btn me-2" title="Thông báo">
-                            <i class="bi bi-bell fs-5"></i>
-                            <c:if test="${unreadCount > 0}">
-                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.55rem; padding: 0.25em 0.5em;">
-                                    ${unreadCount}
-                                </span>
-                            </c:if>
-                        </a>
                         <div class="dropdown">
                             <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle patient-profile-toggle" id="patientUserDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                                 <div class="patient-avatar-sm me-2">
@@ -476,11 +327,6 @@
                                 <li>
                                     <a class="dropdown-item" href="${pageContext.request.contextPath}/patient/profile">
                                         <i class="bi bi-person-circle me-2 text-muted"></i>Hồ Sơ Cá Nhân
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="${pageContext.request.contextPath}/patient/notifications">
-                                        <i class="bi bi-bell me-2 text-muted"></i>Thông Báo
                                     </a>
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
@@ -563,7 +409,7 @@
                             <%-- Link về Dashboard --%>
                             <li class="nav-item">
                                 <a class="nav-link" href="${pageContext.request.contextPath}/home">
-                                    <i class="bi bi-speedometer2 me-1"></i>Dashboard
+                                    <i class="bi bi-speedometer2 me-1"></i>Tổng Quan
                                 </a>
                             </li>
 
@@ -585,11 +431,6 @@
                                     </a>
                                 </li>
 
-                                <li class="nav-item">
-                                    <a class="nav-link position-relative" href="${pageContext.request.contextPath}/patient/notifications">
-                                        <i class="bi bi-bell me-1"></i>Thông Báo
-                                    </a>
-                                </li>
                             </c:if>
 
                             <%-- Dropdown tài khoản --%>
@@ -613,11 +454,6 @@
                                     <li>
                                         <a class="dropdown-item" href="${pageContext.request.contextPath}/patient/profile">
                                             <i class="bi bi-person me-2"></i>Hồ sơ cá nhân
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item" href="${pageContext.request.contextPath}/patient/notifications">
-                                            <i class="bi bi-bell me-2"></i>Thông báo
                                         </a>
                                     </li>
                                     <li><hr class="dropdown-divider"></li>

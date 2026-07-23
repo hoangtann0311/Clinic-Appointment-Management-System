@@ -20,7 +20,7 @@
                     </div>
                     <a href="${pageContext.request.contextPath}/doctor/dashboard"
                        class="btn btn-light btn-sm rounded-pill px-3">
-                        <i class="bi bi-arrow-left me-1"></i>Dashboard
+                        <i class="bi bi-arrow-left me-1"></i>Tổng Quan
                     </a>
                 </div>
             </div>
@@ -187,15 +187,11 @@
                                 </c:if>
                             </div>
 
-                            <%-- Nút xem chi tiết / kê đơn --%>
+                            <%-- Một lối vào duy nhất để xem hồ sơ đã hoàn tất. --%>
                             <div class="d-flex gap-2 mt-3">
                                 <a href="${pageContext.request.contextPath}/doctor/medical-records?apptId=${rec.appointmentId}"
                                    class="btn btn-sm btn-outline-primary rounded-pill">
-                                    <i class="bi bi-eye me-1"></i>Xem / Sửa Hồ Sơ
-                                </a>
-                                <a href="${pageContext.request.contextPath}/doctor/prescriptions?recordId=${rec.id}"
-                                   class="btn btn-sm btn-outline-danger rounded-pill">
-                                    <i class="bi bi-prescription2 me-1"></i>Đơn Thuốc
+                                    <i class="bi bi-eye me-1"></i>Xem Hồ Sơ
                                 </a>
                             </div>
                         </div>

@@ -102,7 +102,7 @@
                             <a href="${pageContext.request.contextPath}/doctor/dashboard" class="text-decoration-none">
                                 <div class="quick-link-card p-3 rounded-3 border">
                                     <i class="bi bi-speedometer2 fs-4 text-primary"></i>
-                                    <h6 class="mt-2 mb-1">Dashboard Bác Sĩ</h6>
+                                    <h6 class="mt-2 mb-1">Tổng Quan Bác Sĩ</h6>
                                     <small class="text-muted">Tổng quan & thống kê</small>
                                 </div>
                             </a>
@@ -179,11 +179,11 @@
                     <%-- ── Manager (roleId=3) ────────────────────────────── --%>
                     <c:if test="${user.roleId == 3}">
                         <div class="col-sm-6">
-                            <a href="${pageContext.request.contextPath}/manager/statistics" class="text-decoration-none">
+                            <a href="${pageContext.request.contextPath}/manager/dashboard#mgrRevenue7DaysChart" class="text-decoration-none">
                                 <div class="quick-link-card p-3 rounded-3 border">
                                     <i class="bi bi-graph-up fs-4 text-primary"></i>
-                                    <h6 class="mt-2 mb-1">Báo Cáo</h6>
-                                    <small class="text-muted">Thống kê doanh thu</small>
+                                    <h6 class="mt-2 mb-1">Biểu Đồ Doanh Thu</h6>
+                                    <small class="text-muted">Theo dõi doanh thu phòng khám</small>
                                 </div>
                             </a>
                         </div>
@@ -191,8 +191,8 @@
                             <a href="${pageContext.request.contextPath}/manager/schedules" class="text-decoration-none">
                                 <div class="quick-link-card p-3 rounded-3 border">
                                     <i class="bi bi-people fs-4 text-success"></i>
-                                    <h6 class="mt-2 mb-1">Nhân Sự</h6>
-                                    <small class="text-muted">Quản lý Bác sĩ lâm sàng, nhân viên</small>
+                                    <h6 class="mt-2 mb-1">Lịch Làm Việc</h6>
+                                    <small class="text-muted">Xác nhận lịch làm việc của bác sĩ</small>
                                 </div>
                             </a>
                         </div>

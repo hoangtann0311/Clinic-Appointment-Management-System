@@ -22,9 +22,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.text.Normalizer;
 import java.util.List;
-import java.util.regex.Pattern;
 
 @WebServlet("/patient/payment")
 public class PatientPaymentServlet extends HttpServlet {
@@ -124,22 +122,12 @@ public class PatientPaymentServlet extends HttpServlet {
 
             // Load prescription items for PRESCRIPTION invoices
             List<PrescriptionItem> prescriptionItems = List.of();
-            java.math.BigDecimal previousPrescriptionTotal = null;
             if ("PRESCRIPTION".equalsIgnoreCase(invoiceType)) {
                 MedicalRecord record = new MedicalRecordDAO().getByAppointmentId(appointmentId);
                 if (record != null && record.getId() > 0) {
                     Prescription prescription = new PrescriptionDAO().getByMedicalRecordId(record.getId());
                     if (prescription != null && prescription.getId() > 0) {
                         prescriptionItems = new PrescriptionDAO().getItemsByPrescriptionId(prescription.getId());
-                    }
-                }
-
-                java.math.BigDecimal currentTotal = invoice.getTotalAmount() != null ? invoice.getTotalAmount() : java.math.BigDecimal.ZERO;
-                java.util.List<com.clinic.model.Invoice> allRx = new com.clinic.dao.InvoiceDAO().getByAppointmentId(appointmentId);
-                for (com.clinic.model.Invoice inv : allRx) {
-                    if ("PRESCRIPTION".equalsIgnoreCase(inv.getInvoiceType()) && "Paid".equalsIgnoreCase(inv.getStatus())) {
-                        previousPrescriptionTotal = inv.getTotalAmount();
-                        break;
                     }
                 }
             }
@@ -154,13 +142,6 @@ public class PatientPaymentServlet extends HttpServlet {
                 }
             }
 
-            // Nội dung chuyển khoản = SĐT bệnh nhân + tên dịch vụ (không dấu, không khoảng trắng thừa)
-            // để nhân viên đối chiếu minh chứng dễ dàng, thay vì mã cố định không có ý nghĩa.
-            String patientPhone = appt.getPatient() != null ? appt.getPatient().getPhone() : null;
-            String svcName = appt.getService() != null ? appt.getService().getServiceName() : "KHAM";
-            String transferContent = buildTransferContent(patientPhone, svcName, appointmentId);
-            String transferContentEncoded = java.net.URLEncoder.encode(transferContent, "UTF-8");
-
             request.setAttribute("appointment", appt);
             request.setAttribute("invoice", invoice);
             request.setAttribute("preInvoice", preInvoice);
@@ -169,10 +150,7 @@ public class PatientPaymentServlet extends HttpServlet {
             request.setAttribute("success", request.getParameter("success"));
             request.setAttribute("error", request.getParameter("error"));
             request.setAttribute("prescriptionItems", prescriptionItems);
-            request.setAttribute("previousPrescriptionTotal", previousPrescriptionTotal);
             request.setAttribute("holdExpiresAtMillis", holdExpiresAtMillis);
-            request.setAttribute("transferContent", transferContent);
-            request.setAttribute("transferContentEncoded", transferContentEncoded);
 
             request.getRequestDispatcher("/views/patient/payment.jsp").forward(request, response);
 
@@ -196,17 +174,15 @@ public class PatientPaymentServlet extends HttpServlet {
     }
 
     /**
-     * Legacy appointments may not yet have a PRE_EXAM invoice. Preserve the locked
-     * doctor fee and every selected add-on service when creating that fallback invoice.
+     * Lịch hẹn cũ có thể chưa có hóa đơn PRE_EXAM. Tổng tiền gồm phí khám đã khóa
+     * và đúng một dịch vụ chính của lịch hẹn.
      */
     private BigDecimal resolvePreExamAmount(int appointmentId) {
-        String sql = "SELECT COALESCE(a.base_fee, s.price, CAST(250000 AS decimal(12,2))) "
-                + "+ COALESCE(SUM(aps.price), 0) AS total_amount "
+        String sql = "SELECT COALESCE(a.base_fee, CAST(250000 AS decimal(12,2))) "
+                + "+ COALESCE(s.price, 0) AS total_amount "
                 + "FROM appointments a "
                 + "LEFT JOIN services s ON s.id = a.service_id "
-                + "LEFT JOIN appointment_services aps ON aps.appointment_id = a.id "
-                + "WHERE a.id = ? "
-                + "GROUP BY a.base_fee, s.price";
+                + "WHERE a.id = ?";
         try (Connection conn = com.clinic.config.DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, appointmentId);
@@ -219,21 +195,6 @@ public class PatientPaymentServlet extends HttpServlet {
             e.printStackTrace();
         }
         return BigDecimal.valueOf(250000);
-    }
-
-    /** SĐT + tên dịch vụ, bỏ dấu tiếng Việt, chỉ giữ chữ/số/khoảng trắng — dùng cho nội dung CK và QR. */
-    private String buildTransferContent(String phone, String serviceName, int appointmentId) {
-        String phonePart = (phone == null || phone.trim().isEmpty()) ? ("LH" + appointmentId) : phone.trim();
-        String namePart = removeDiacritics(serviceName == null ? "KHAM" : serviceName).toUpperCase();
-        String content = (phonePart + " " + namePart).trim();
-        return content.length() > 60 ? content.substring(0, 60) : content;
-    }
-
-    private String removeDiacritics(String input) {
-        String normalized = Normalizer.normalize(input, Normalizer.Form.NFD);
-        String noAccents = Pattern.compile("\\p{InCombiningDiacriticalMarks}+").matcher(normalized).replaceAll("");
-        noAccents = noAccents.replace('Đ', 'D').replace('đ', 'd');
-        return noAccents.replaceAll("[^a-zA-Z0-9\\s]", "").trim();
     }
 
     @Override
@@ -265,7 +226,7 @@ public class PatientPaymentServlet extends HttpServlet {
             Appointment appointment = appointmentDAO.findAppointmentById(invoice.getAppointmentId());
             int patientId = new com.clinic.dao.PatientDAO().getPatientIdByUserId(user.getId());
             if (appointment == null || patientId <= 0 || appointment.getPatientId() != patientId) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You do not own this invoice.");
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền thanh toán hóa đơn này.");
                 return;
             }
 
@@ -278,13 +239,9 @@ public class PatientPaymentServlet extends HttpServlet {
                         + "&type=" + invoice.getInvoiceType() + "&error=HoaDonDangChoXacNhan");
                 return;
             }
-            if ("DeclinedPurchase".equalsIgnoreCase(invoice.getStatus())) {
+            if (!"Unpaid".equalsIgnoreCase(invoice.getStatus())) {
                 response.sendRedirect(request.getContextPath() + "/patient/payment?appointmentId=" + invoice.getAppointmentId()
-                        + "&type=" + invoice.getInvoiceType() + "&error=HoaDonDaTuChoiMua");
-                return;
-            }
-            if ("Rejected".equalsIgnoreCase(invoice.getStatus()) && "PRE_EXAM".equalsIgnoreCase(invoice.getInvoiceType())) {
-                response.sendRedirect(request.getContextPath() + "/patient/appointments?bookingError=ThanhToanTruocKhamDaBiTuChoi");
+                        + "&type=" + invoice.getInvoiceType() + "&error=TrangThaiHoaDonKhongHopLe");
                 return;
             }
             if (!"BankTransfer".equalsIgnoreCase(paymentMethod) && !"Cash".equalsIgnoreCase(paymentMethod)) {

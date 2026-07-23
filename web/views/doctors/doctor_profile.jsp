@@ -9,7 +9,7 @@
         <h1 class="admin-page-title">Hồ Sơ Cá Nhân</h1>
         <div class="admin-page-subtitle">
             <i class="bi bi-house-fill"></i>
-            <a href="${pageContext.request.contextPath}/doctor/dashboard" style="color:inherit;text-decoration:none;">Dashboard</a>
+            <a href="${pageContext.request.contextPath}/doctor/dashboard" style="color:inherit;text-decoration:none;">Tổng Quan</a>
             <i class="bi bi-chevron-right" style="font-size:.65rem;"></i>
             <span>Hồ Sơ</span>
         </div>

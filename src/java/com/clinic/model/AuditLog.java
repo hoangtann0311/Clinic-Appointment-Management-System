@@ -131,7 +131,7 @@ public class AuditLog implements Serializable {
             case "Manager":     return "Quản lý";
             case "Staff":       return "Nhân viên";
             case "Patient":     return "Bệnh nhân";
-            case "Sonographer": return "Bác sĩ Siêu âm";
+            case "Sonographer": return "Bác sĩ siêu âm";
             default:            return roleName;
         }
     }

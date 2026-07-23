@@ -49,7 +49,7 @@ public class UltrasoundDetailServlet extends HttpServlet {
                 || state.equalsIgnoreCase("Waiting") || state.equalsIgnoreCase("Ordered");
         if (!unassignedState && !orderService.checkSonographerOwnership(orderId, user.getId())) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN,
-                    "Ca siêu âm này đang do Bác sĩ Siêu âm khác phụ trách.");
+                    "Ca siêu âm này đang do Bác sĩ siêu âm khác phụ trách.");
             return;
         }
 
@@ -73,8 +73,7 @@ public class UltrasoundDetailServlet extends HttpServlet {
         }
         request.setAttribute("images", images);
         request.setAttribute("selectedImage", selectedImage);
-        request.setAttribute("aiResult", selectedImage == null ? null
-                : orderService.getAiResultForImage(orderId, selectedImage.getId()));
+        request.setAttribute("aiResult", selectedImage == null ? null : orderService.getAiResult(orderId));
         request.setAttribute("currentAnnotation", currentAnnotation);
         request.setAttribute("currentReport", currentReport);
         request.setAttribute("ownershipSupported", orderService.isSonographerOwnershipSupported());
@@ -116,7 +115,7 @@ public class UltrasoundDetailServlet extends HttpServlet {
         }
 
         boolean sign = "sign".equalsIgnoreCase(action) || "complete".equalsIgnoreCase(action);
-        if (!sign && !"saveDraft".equalsIgnoreCase(action)) {
+        if (!sign) {
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Thao tác không hợp lệ.");
             return;
         }
@@ -169,9 +168,9 @@ public class UltrasoundDetailServlet extends HttpServlet {
                 request.getParameter("professionalFindings"), request.getParameter("conclusion"), sign);
 
         if (saved) {
-            redirect(response, request, orderId, sign ? "success=signed" : "success=draftSaved");
+            redirect(response, request, orderId, "success=signed");
         } else {
-            redirect(response, request, orderId, sign ? "error=signFailed" : "error=draftFailed");
+            redirect(response, request, orderId, "error=signFailed");
         }
     }
 

@@ -23,7 +23,7 @@
 <c:if test="${not empty param.error}"><div class="alert alert-danger alert-dismissible fade show shadow-sm result-toast" data-auto-dismiss="true">
   <i class="bi bi-exclamation-triangle-fill me-2"></i>
   <c:choose><c:when test="${param.error == 'incompleteConclusion'}">Ghi chú xác nhận phải có ít nhất 20 ký tự.</c:when>
-    <c:when test="${param.error == 'confirmFailed'}">Chỉ có thể xác nhận phiếu đã được Bác sĩ Siêu âm ký và đang ở trạng thái chờ duyệt.</c:when>
+    <c:when test="${param.error == 'confirmFailed'}">Chỉ có thể xác nhận phiếu đã được Bác sĩ siêu âm ký và đang ở trạng thái chờ xác nhận.</c:when>
     <c:otherwise>Không thể hoàn tất thao tác. Vui lòng kiểm tra dữ liệu.</c:otherwise></c:choose>
   <button class="btn-close" data-bs-dismiss="alert"></button></div></c:if>
 
@@ -52,9 +52,9 @@
               <c:choose><c:when test="${not empty r.ai_processed_image_url && not empty r.raw_image_id}"><img loading="lazy" class="result-image" src="${pageContext.request.contextPath}/medical/ai-image?orderId=${r.order_id}&amp;imageId=${r.raw_image_id}&amp;type=result" alt="Ảnh AI phân tích đúng ảnh gốc"></c:when>
               <c:otherwise><div class="border rounded p-5 text-center text-muted">AI không tạo vùng hợp lệ cho ảnh này</div></c:otherwise></c:choose>
             </div>
-            <div class="col-xl-4"><div class="small fw-semibold mb-2">3. Vùng Bác sĩ Siêu âm xác nhận/chỉnh sửa</div>
+            <div class="col-xl-4"><div class="small fw-semibold mb-2">3. Vùng Bác sĩ siêu âm xác nhận/chỉnh sửa</div>
               <c:choose><c:when test="${not empty r.raw_image_id}"><div class="position-relative">
-                <img loading="lazy" id="review-image-${r.order_id}" class="result-image" src="${pageContext.request.contextPath}/medical/ultrasound-image?id=${r.raw_image_id}" alt="Ảnh có vùng Bác sĩ Siêu âm xác nhận hoặc chỉnh sửa">
+                <img loading="lazy" id="review-image-${r.order_id}" class="result-image" src="${pageContext.request.contextPath}/medical/ultrasound-image?id=${r.raw_image_id}" alt="Ảnh có vùng Bác sĩ siêu âm xác nhận hoặc chỉnh sửa">
                 <canvas id="review-overlay-${r.order_id}" class="position-absolute" style="inset:0;pointer-events:none"></canvas>
                 <textarea id="review-annotation-${r.order_id}" hidden><c:out value="${r.annotation_data}" /></textarea>
               </div></c:when><c:otherwise><div class="border rounded p-5 text-center text-muted">Chưa có vùng duyệt</div></c:otherwise></c:choose>
@@ -68,11 +68,11 @@
 
           <c:choose>
             <c:when test="${empty r.report_status}">
-              <div class="alert alert-secondary mb-0">Bác sĩ Siêu âm chưa ký phiếu kết quả. Chưa thể xác nhận hoặc chốt hồ sơ bệnh án.</div>
+              <div class="alert alert-secondary mb-0">Bác sĩ siêu âm chưa ký phiếu kết quả. Chưa thể xác nhận hoặc chốt hồ sơ bệnh án.</div>
             </c:when>
             <c:otherwise>
               <section class="official-report rounded p-4 mb-4">
-                <div class="d-flex justify-content-between align-items-start gap-2 mb-3"><div><h6 class="fw-bold mb-1">Phiếu kết quả của Bác sĩ Siêu âm</h6>
+                <div class="d-flex justify-content-between align-items-start gap-2 mb-3"><div><h6 class="fw-bold mb-1">Phiếu kết quả của Bác sĩ siêu âm</h6>
                   <div class="small text-muted">Ký bởi <strong><c:out value="${r.signed_name}" /></strong> lúc <c:out value="${r.signed_at}" /></div></div>
                   <span class="badge bg-primary-subtle text-primary">Vùng: <c:out value="${r.review_status}" /></span></div>
                 <c:if test="${r.review_status == 'Rejected'}"><div class="alert alert-warning py-2 small">Lý do từ chối AI: <c:out value="${r.rejection_reason}" /></div></c:if>
@@ -87,7 +87,7 @@
                   <label for="doctor-notes-${r.order_id}" class="form-label fw-semibold">Ghi chú xác nhận của Bác sĩ lâm sàng <span class="text-danger">*</span></label>
                   <textarea id="doctor-notes-${r.order_id}" name="doctorMessage" class="form-control" rows="3" minlength="20" maxlength="2000" required
                     placeholder="Ghi nhận đã đối chiếu kết quả siêu âm với thăm khám lâm sàng và nêu hướng xử trí..."></textarea>
-                  <div class="form-text mb-3">Nội dung này không thay thế hoặc sửa kết luận của Bác sĩ Siêu âm.</div>
+                  <div class="form-text mb-3">Nội dung này không thay thế hoặc sửa kết luận của Bác sĩ siêu âm.</div>
                   <div class="d-flex justify-content-end"><button class="btn btn-primary" onclick="return confirm('Xác nhận đã xem phiếu siêu âm và cho phép chốt hồ sơ?')">
                     <i class="bi bi-patch-check me-1"></i>Xác nhận kết quả</button></div>
                 </form>

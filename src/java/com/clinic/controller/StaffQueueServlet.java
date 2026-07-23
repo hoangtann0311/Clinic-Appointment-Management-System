@@ -12,9 +12,13 @@ import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 
 import java.io.IOException;
-import java.util.stream.Collectors;
 
-@WebServlet(urlPatterns = {"/admin/reception", "/admin/reception/checkin", "/admin/reception/cancel"})
+@WebServlet(urlPatterns = {
+        "/admin/reception",
+        "/admin/reception/checkin",
+        "/admin/reception/cancel",
+        "/admin/reception/priority"
+})
 public class StaffQueueServlet extends HttpServlet {
 
     private StaffReceptionService staffReceptionService;
@@ -34,8 +38,11 @@ public class StaffQueueServlet extends HttpServlet {
         if (!requireReceptionAccess(req, resp)) return;
         String path = req.getServletPath();
 
-        if ("/admin/reception/checkin".equals(path) || "/admin/reception/cancel".equals(path)) {
-            resp.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED, "Check-in và hủy lịch phải dùng POST.");
+        if ("/admin/reception/checkin".equals(path)
+                || "/admin/reception/cancel".equals(path)
+                || "/admin/reception/priority".equals(path)) {
+            resp.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED,
+                    "Check-in, hủy lịch và cập nhật ưu tiên phải dùng POST.");
             return;
         }
         renderQueue(req, resp);
@@ -45,10 +52,37 @@ public class StaffQueueServlet extends HttpServlet {
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         User user = (User) req.getSession().getAttribute("user");
         if (user == null || user.getRoleId() != 4) {
-            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Thao tác check-in và hủy lịch chỉ dành cho nhân viên Lễ tân (Staff).");
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN,
+                    "Thao tác tiếp đón chỉ dành cho nhân viên Lễ tân (Staff).");
             return;
         }
         String path = req.getServletPath();
+
+        if ("/admin/reception/priority".equals(path)) {
+            try {
+                String action = req.getParameter("action");
+                if ("mark".equals(action)) {
+                    staffReceptionService.markPriority(
+                            req.getParameter("id"),
+                            req.getParameter("reason"),
+                            user.getId(),
+                            getClientIp(req));
+                    req.getSession().setAttribute(
+                            "queueSuccess", "Đã đưa ca khám lên mức ưu tiên.");
+                } else if ("clear".equals(action)) {
+                    staffReceptionService.clearPriority(
+                            req.getParameter("id"), user.getId(), getClientIp(req));
+                    req.getSession().setAttribute(
+                            "queueSuccess", "Đã bỏ mức ưu tiên của ca khám.");
+                } else {
+                    throw new IllegalArgumentException("Thao tác ưu tiên không hợp lệ.");
+                }
+            } catch (IllegalArgumentException | IllegalStateException e) {
+                req.getSession().setAttribute("queueError", e.getMessage());
+            }
+            resp.sendRedirect(req.getContextPath() + "/admin/reception");
+            return;
+        }
 
         if ("/admin/reception/checkin".equals(path)) {
             String id = req.getParameter("id");
@@ -109,14 +143,25 @@ public class StaffQueueServlet extends HttpServlet {
         req.setAttribute("queue", staffReceptionService.getSmartQueueByDate(selectedDate));
         req.setAttribute("todayAppointments", staffReceptionService.getWidgetAppointmentsByDate(selectedDate));
         req.setAttribute("waitingQueue", staffReceptionService.getWidgetWaitingQueueByDate(selectedDate));
-        req.setAttribute("activeSos", staffReceptionService.getWidgetActiveSosByDate(selectedDate));
-
-        req.setAttribute("zaloMsgs", staffReceptionService.getZaloNotifications()
-                .stream()
-                .limit(5)
-                .collect(Collectors.toList()));
-
+        Object queueSuccess = req.getSession().getAttribute("queueSuccess");
+        if (queueSuccess != null) {
+            req.setAttribute("queueSuccess", queueSuccess);
+            req.getSession().removeAttribute("queueSuccess");
+        }
+        Object queueError = req.getSession().getAttribute("queueError");
+        if (queueError != null) {
+            req.setAttribute("queueError", queueError);
+            req.getSession().removeAttribute("queueError");
+        }
         req.getRequestDispatcher("/views/staff/reception-queue.jsp").forward(req, resp);
+    }
+
+    private String getClientIp(HttpServletRequest req) {
+        String forwarded = req.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            return forwarded.split(",")[0].trim();
+        }
+        return req.getRemoteAddr();
     }
 
     private boolean requireReceptionAccess(HttpServletRequest req, HttpServletResponse resp) throws IOException {

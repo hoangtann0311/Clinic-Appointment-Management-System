@@ -29,24 +29,13 @@ public class AiAnalysisResultDAO {
                 }
             }
             try (PreparedStatement latest = conn.prepareStatement(
-                    "SELECT TOP 1 id, status, analyzed_at FROM ai_analysis_results "
-                            + "WHERE test_order_id = ? ORDER BY analyzed_at DESC, id DESC")) {
+                    "SELECT TOP 1 id FROM ai_analysis_results WITH (UPDLOCK, HOLDLOCK) "
+                            + "WHERE test_order_id = ?")) {
                 latest.setInt(1, orderId);
                 try (ResultSet rs = latest.executeQuery()) {
-                    if (rs.next() && "Analyzing".equalsIgnoreCase(rs.getString("status"))) {
-                        Timestamp analyzedAt = rs.getTimestamp("analyzed_at");
-                        long cutoff = System.currentTimeMillis() - Math.max(staleAfterMillis, 60_000L);
-                        if (analyzedAt != null && analyzedAt.getTime() >= cutoff) {
-                            conn.rollback();
-                            return -1;
-                        }
-                        try (PreparedStatement stale = conn.prepareStatement(
-                                "UPDATE ai_analysis_results SET status = 'Failed', "
-                                        + "error_message = N'Phiên AI trước đã hết thời gian xử lý.', analyzed_at = CURRENT_TIMESTAMP "
-                                        + "WHERE id = ? AND status = 'Analyzing'")) {
-                            stale.setInt(1, rs.getInt("id"));
-                            stale.executeUpdate();
-                        }
+                    if (rs.next()) {
+                        conn.rollback();
+                        return -1;
                     }
                 }
             }
@@ -92,6 +81,33 @@ public class AiAnalysisResultDAO {
             System.err.println("[AiAnalysisResultDAO] getByTestOrderId ERROR: " + e.getMessage());
         }
         return null;
+    }
+
+    /**
+     * Thống kê chỉ đọc để chứng minh mức độ sử dụng AI trong hệ thống.
+     * Không chứa thông tin định danh bệnh nhân.
+     */
+    public ModelUsageStats getModelUsageStats() {
+        String sql = "SELECT COUNT_BIG(*) AS total_runs, "
+                + "SUM(CASE WHEN status = 'Success' THEN 1 ELSE 0 END) AS successful_runs, "
+                + "SUM(CASE WHEN status = 'Success' AND detected = 1 THEN 1 ELSE 0 END) AS detected_runs, "
+                + "MAX(analyzed_at) AS latest_run "
+                + "FROM ai_analysis_results";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                return new ModelUsageStats(
+                        rs.getLong("total_runs"),
+                        rs.getLong("successful_runs"),
+                        rs.getLong("detected_runs"),
+                        rs.getTimestamp("latest_run")
+                );
+            }
+        } catch (SQLException e) {
+            System.err.println("[AiAnalysisResultDAO] getModelUsageStats ERROR: " + e.getMessage());
+        }
+        return ModelUsageStats.empty();
     }
 
     /**
@@ -209,5 +225,40 @@ public class AiAnalysisResultDAO {
 
     private void setNullableInt(PreparedStatement ps, int index, Integer value) throws SQLException {
         if (value == null) ps.setNull(index, Types.INTEGER); else ps.setInt(index, value);
+    }
+
+    public static final class ModelUsageStats {
+        private final long totalRuns;
+        private final long successfulRuns;
+        private final long detectedRuns;
+        private final Timestamp latestRun;
+
+        public ModelUsageStats(long totalRuns, long successfulRuns,
+                               long detectedRuns, Timestamp latestRun) {
+            this.totalRuns = totalRuns;
+            this.successfulRuns = successfulRuns;
+            this.detectedRuns = detectedRuns;
+            this.latestRun = latestRun;
+        }
+
+        public static ModelUsageStats empty() {
+            return new ModelUsageStats(0L, 0L, 0L, null);
+        }
+
+        public long getTotalRuns() {
+            return totalRuns;
+        }
+
+        public long getSuccessfulRuns() {
+            return successfulRuns;
+        }
+
+        public long getDetectedRuns() {
+            return detectedRuns;
+        }
+
+        public Timestamp getLatestRun() {
+            return latestRun;
+        }
     }
 }

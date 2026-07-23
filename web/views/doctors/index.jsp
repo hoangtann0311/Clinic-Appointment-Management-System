@@ -187,6 +187,6 @@
     </div>
 </div>
 
-<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=202">
 
 <%@ include file="../common/footer.jsp" %>

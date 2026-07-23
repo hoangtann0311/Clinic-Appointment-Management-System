@@ -126,11 +126,11 @@ public class DoctorScheduleService {
         // 1. Kiểm tra tồn tại & trạng thái
         DoctorSchedule schedule = scheduleDAO.findById(scheduleId);
         if (schedule == null) {
-            errors.put("general", "Lịch trực không tồn tại.");
+            errors.put("general", "Lịch làm việc không tồn tại.");
             return false;
         }
         if (schedule.getStatus() != ScheduleStatus.PENDING) {
-            errors.put("general", "Chỉ có thể duyệt lịch trực đang ở trạng thái Chờ duyệt. "
+            errors.put("general", "Chỉ có thể xác nhận lịch làm việc đang ở trạng thái Chờ xác nhận. "
                     + "Trạng thái hiện tại: " + schedule.getStatus().getLabel());
             return false;
         }
@@ -146,7 +146,7 @@ public class DoctorScheduleService {
         if (conflict) {
             errors.put("conflict",
                     "Bác sĩ " + schedule.getDoctorName()
-                    + " đã có lịch trực được duyệt trong cùng ngày và khung giờ này.");
+                    + " đã có lịch làm việc được xác nhận trong cùng ngày và khung giờ này.");
             return false;
         }
 
@@ -193,7 +193,7 @@ public class DoctorScheduleService {
                 errors.put("general", result.getErrorMessage());
                 break;
             default:
-                errors.put("general", "Duyệt lịch trực thất bại. Vui lòng thử lại.");
+                errors.put("general", "Xác nhận lịch làm việc thất bại. Vui lòng thử lại.");
                 break;
         }
 
@@ -223,18 +223,18 @@ public class DoctorScheduleService {
         // 2. Kiểm tra tồn tại & trạng thái
         DoctorSchedule schedule = scheduleDAO.findById(scheduleId);
         if (schedule == null) {
-            errors.put("general", "Lịch trực không tồn tại.");
+            errors.put("general", "Lịch làm việc không tồn tại.");
             return false;
         }
         if (schedule.getStatus() != ScheduleStatus.PENDING) {
-            errors.put("general", "Chỉ có thể từ chối lịch trực đang ở trạng thái Chờ duyệt.");
+            errors.put("general", "Chỉ có thể từ chối lịch làm việc đang ở trạng thái Chờ xác nhận.");
             return false;
         }
 
         // 3. Thực hiện từ chối
         boolean result = scheduleDAO.reject(scheduleId, rejectedBy, trimmedReason);
         if (!result) {
-            errors.put("general", "Từ chối lịch trực thất bại. Có thể lịch đã được xử lý bởi người khác.");
+            errors.put("general", "Từ chối lịch làm việc thất bại. Có thể lịch đã được xử lý bởi người khác.");
         }
         return result;
     }
@@ -272,13 +272,13 @@ public class DoctorScheduleService {
         // 2. Kiểm tra tồn tại & trạng thái
         DoctorSchedule schedule = scheduleDAO.findById(scheduleId);
         if (schedule == null) {
-            errors.put("general", "Lịch trực không tồn tại.");
+            errors.put("general", "Lịch làm việc không tồn tại.");
             return ScheduleCancelResult.validationFailed();
         }
 
         ScheduleStatus currentStatus = schedule.getStatus();
         if (currentStatus == ScheduleStatus.CANCELLED) {
-            errors.put("general", "Lịch trực này đã bị hủy trước đó.");
+            errors.put("general", "Lịch làm việc này đã bị hủy trước đó.");
             return ScheduleCancelResult.validationFailed();
         }
 
@@ -290,7 +290,7 @@ public class DoctorScheduleService {
             List<TimeSlot> bookedSlotList = timeSlotService.getBookedSlotsBySchedule(scheduleId);
 
             errors.put("hasBookedSlots",
-                    "Lịch trực #" + scheduleId + " của bác sĩ " + schedule.getDoctorName()
+                    "Lịch làm việc #" + scheduleId + " của bác sĩ " + schedule.getDoctorName()
                     + " hiện có " + bookedSlots + " bệnh nhân đã đặt lịch. "
                     + "Bạn không thể hủy trực tiếp. Vui lòng xử lý chuyển bác sĩ hoặc "
                     + "đổi lịch cho từng bệnh nhân trước.");
@@ -360,7 +360,7 @@ public class DoctorScheduleService {
     public boolean canModifySchedule(int scheduleId, Map<String, String> errors) {
         DoctorSchedule schedule = scheduleDAO.findById(scheduleId);
         if (schedule == null) {
-            errors.put("general", "Lịch trực không tồn tại.");
+            errors.put("general", "Lịch làm việc không tồn tại.");
             return false;
         }
 
@@ -374,15 +374,15 @@ public class DoctorScheduleService {
             int bookedSlots = timeSlotService.countBookedSlots(scheduleId);
             if (bookedSlots > 0) {
                 errors.put("hasBookedSlots",
-                        "Lịch trực này có " + bookedSlots + " bệnh nhân đã đặt lịch. "
-                        + "Không thể sửa lịch trực. Vui lòng xử lý chuyển bệnh nhân trước.");
+                        "Lịch làm việc này có " + bookedSlots + " bệnh nhân đã đặt lịch. "
+                        + "Không thể sửa lịch làm việc. Vui lòng xử lý chuyển bệnh nhân trước.");
                 return false;
             }
             return true;
         }
 
         // Các trạng thái khác không sửa được
-        errors.put("general", "Không thể sửa lịch trực ở trạng thái "
+        errors.put("general", "Không thể sửa lịch làm việc ở trạng thái "
                 + schedule.getStatus().getLabel() + ".");
         return false;
     }
@@ -406,7 +406,7 @@ public class DoctorScheduleService {
             schedule.getId()
         );
         if (conflict) {
-            warnings.add("Cảnh báo: Bác sĩ đã có lịch trực được duyệt trùng ngày và khung giờ này.");
+            warnings.add("Cảnh báo: Bác sĩ đã có lịch làm việc được xác nhận trùng ngày và khung giờ này.");
         }
 
         int maxSlots = schedule.getMaxSlots();

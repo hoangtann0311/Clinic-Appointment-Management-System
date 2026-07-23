@@ -28,7 +28,7 @@
                     </div>
                     <a href="${pageContext.request.contextPath}/doctor/dashboard"
                        class="btn btn-light btn-sm rounded-pill px-3">
-                        <i class="bi bi-arrow-left me-1"></i>Dashboard
+                        <i class="bi bi-arrow-left me-1"></i>Tổng Quan
                     </a>
                 </div>
             </div>
@@ -96,7 +96,6 @@
                     <option value="Waiting"        ${fn:toLowerCase(statusFilter) == 'waiting'        ? 'selected' : ''}>Chờ khám</option>
                     <option value="InProgress"     ${fn:toLowerCase(statusFilter) == 'inprogress'     ? 'selected' : ''}>Đang khám</option>
                     <option value="SUCCESS"        ${fn:toLowerCase(statusFilter) == 'success'        ? 'selected' : ''}>Hoàn thành</option>
-                    <option value="Emergency_SOS"  ${fn:toLowerCase(statusFilter) == 'emergency_sos'  ? 'selected' : ''}>Cấp cứu</option>
                     <option value="Cancelled"      ${fn:toLowerCase(statusFilter) == 'cancelled'      ? 'selected' : ''}>Đã huỷ</option>
                     <option value="NoShow"         ${fn:toLowerCase(statusFilter) == 'noshow'         ? 'selected' : ''}>Vắng mặt</option>
                 </select>
@@ -145,7 +144,6 @@
                                 <th class="border-0">Ngày hẹn</th>
                                 <th class="border-0">Giờ</th>
                                 <th class="border-0">Triệu chứng</th>
-                                <th class="border-0">Cấp cứu</th>
                                 <th class="border-0">Nguồn đặt</th>
                                 <th class="border-0">Trạng thái</th>
                                 <th class="border-0">Hồ sơ</th>
@@ -153,7 +151,7 @@
                         </thead>
                         <tbody>
                             <c:forEach var="appt" items="${appointments}" varStatus="loop">
-                                <tr class="${appt.emergency ? 'table-danger' : ''}">
+                                <tr>
                                     <td class="ps-3 text-muted small">${loop.index + 1}</td>
 
                                     <%-- Bệnh nhân --%>
@@ -188,21 +186,18 @@
                                         </span>
                                     </td>
 
-                                    <%-- Cấp cứu --%>
-                                    <td class="text-center">
-                                        <c:if test="${appt.emergency}">
-                                            <span class="badge bg-danger rounded-pill">
-                                                <i class="bi bi-exclamation-triangle-fill me-1"></i>Cấp cứu
-                                            </span>
-                                        </c:if>
-                                    </td>
-
                                     <%-- Nguồn đặt --%>
                                     <td>
+                                        <c:if test="${appt.emergency}">
+                                            <span class="badge bg-warning-subtle text-warning-emphasis border rounded-pill mb-1"
+                                                  title="${appt.priorityReason}">
+                                                <i class="bi bi-arrow-up-circle-fill me-1"></i>Ưu tiên
+                                            </span>
+                                        </c:if>
                                         <c:choose>
                                             <c:when test="${appt.bookingSource == 'online'}">
                                                 <span class="badge bg-info text-dark rounded-pill">
-                                                    <i class="bi bi-globe me-1"></i>Online
+                                                    <i class="bi bi-globe me-1"></i>Trực tuyến
                                                 </span>
                                             </c:when>
                                             <c:when test="${appt.bookingSource == 'direct'}">
@@ -219,7 +214,7 @@
                                     <%-- Bác sĩ lâm sàng chỉ được bắt đầu ca đã check-in; hoàn tất chỉ diễn ra khi lưu bệnh án chính thức. --%>
                                     <td>
                                         <c:choose>
-                                            <c:when test="${fn:toLowerCase(appt.status) == 'waiting' || fn:toLowerCase(appt.status) == 'emergency_sos'}">
+                                            <c:when test="${fn:toLowerCase(appt.status) == 'waiting'}">
                                                 <form method="post" action="${pageContext.request.contextPath}/doctor/appointments">
                                                     <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}"/>
                                                     <input type="hidden" name="action" value="startConsultation"/>
@@ -290,6 +285,5 @@
 .status-success       { background: #ede9fe; color: #5b21b6; border-color: #c4b5fd; }
 .status-cancelled     { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
 .status-noshow        { background: #f3f4f6; color: #374151; border-color: #9ca3af; }
-.status-emergency_sos { background: #ffe4e6; color: #9f1239; border-color: #fda4af; }
 </style>
 <%@ include file="../common/footer.jsp" %>

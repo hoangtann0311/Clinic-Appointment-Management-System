@@ -18,7 +18,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=Inter:wght@400;600;700&display=swap"
           rel="stylesheet">
     <!-- Custom CSS -->
-    <link href="${pageContext.request.contextPath}/assets/css/style.css?v=102" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/style.css?v=202" rel="stylesheet">
 </head>
 <body class="login-page">
 

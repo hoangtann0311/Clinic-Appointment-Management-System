@@ -298,24 +298,32 @@ public class UltrasoundOrderService {
                     if (rs.next()) state = rs.getString(1);
                 }
             }
-            if (!"InProgress".equalsIgnoreCase(state) && !"Uploaded".equalsIgnoreCase(state)) {
+            if (!"InProgress".equalsIgnoreCase(state)) {
                 conn.rollback();
                 return false;
+            }
+            try (java.sql.PreparedStatement ps = conn.prepareStatement(
+                    "SELECT COUNT(*) FROM ultrasound_images WITH (UPDLOCK, HOLDLOCK) WHERE test_order_id = ?")) {
+                ps.setInt(1, img.getTestOrderId());
+                try (java.sql.ResultSet rs = ps.executeQuery()) {
+                    if (rs.next() && rs.getInt(1) > 0) {
+                        conn.rollback();
+                        return false;
+                    }
+                }
             }
             if (ultrasoundImageDAO.insert(conn, img) <= 0) {
                 conn.rollback();
                 return false;
             }
-            if ("InProgress".equalsIgnoreCase(state)) {
-                try (java.sql.PreparedStatement ps = conn.prepareStatement(
-                        "UPDATE test_orders SET status = 'Uploaded' WHERE id = ? "
-                                + "AND sonographer_user_id = ? AND UPPER(LTRIM(RTRIM(ISNULL(status, '')))) = 'INPROGRESS'")) {
-                    ps.setInt(1, img.getTestOrderId());
-                    ps.setInt(2, img.getUploadedBy());
-                    if (ps.executeUpdate() != 1) {
-                        conn.rollback();
-                        return false;
-                    }
+            try (java.sql.PreparedStatement ps = conn.prepareStatement(
+                    "UPDATE test_orders SET status = 'Uploaded' WHERE id = ? "
+                            + "AND sonographer_user_id = ? AND UPPER(LTRIM(RTRIM(ISNULL(status, '')))) = 'INPROGRESS'")) {
+                ps.setInt(1, img.getTestOrderId());
+                ps.setInt(2, img.getUploadedBy());
+                if (ps.executeUpdate() != 1) {
+                    conn.rollback();
+                    return false;
                 }
             }
             conn.commit();
@@ -375,15 +383,15 @@ public class UltrasoundOrderService {
         if (order == null || !ultrasoundOrderDAO.isReadyForSonographer(orderId)
                 || !checkSonographerOwnership(orderId, actorUserId)
                 || !"Uploaded".equalsIgnoreCase(order.getStatus())) return false;
+        if (aiAnalysisResultDAO.getByTestOrderId(orderId) != null) return false;
 
-        // Lấy danh sách ảnh đã tải lên
+        // Mỗi chỉ định phải có đúng một ảnh đầu vào.
         List<UltrasoundImage> images = ultrasoundImageDAO.getByTestOrderId(orderId);
-        if (images.isEmpty()) {
-            System.err.println("[UltrasoundOrderService] Không có hình ảnh nào được upload cho orderId=" + orderId);
+        if (images.size() != 1) {
+            System.err.println("[UltrasoundOrderService] Chỉ định phải có đúng một ảnh, orderId=" + orderId);
             return false;
         }
 
-        // Chọn ảnh đầu tiên làm ảnh đầu vào cho AI
         UltrasoundImage targetImg = images.get(0);
         String inputImagePath = targetImg.getFilePath();
 

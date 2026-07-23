@@ -7,7 +7,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quản Lý Dịch Vụ — CAMS Admin</title>
+    <title>Quản Lý Dịch Vụ — CAMS Quản Trị</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
           rel="stylesheet"
@@ -15,22 +15,22 @@
           crossorigin="anonymous">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="${pageContext.request.contextPath}/assets/css/admin.css" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/admin.css?v=202" rel="stylesheet">
 
     <style>
         :root {
             --sidebar-w: 270px; --topbar-h: 66px;
-            --pink-50: #fff0f6; --pink-100: #ffe0ef; --pink-200: #ffb3d1; --pink-300: #ff80b3;
-            --pink-400: #ff4d94; --pink-500: #e91e8c; --pink-600: #c2185b; --pink-700: #9c0f4a;
-            --pink-800: #7b0a39; --rose-400: #fb7185; --rose-500: #f43f5e; --rose-600: #e11d48;
+            --pink-50: #fff9fc; --pink-100: #fff1f6; --pink-200: #f7dce7; --pink-300: #e8b4c9;
+            --pink-400: #df94b2; --pink-500: #d27b9f; --pink-600: #b86689; --pink-700: #a9607e;
+            --pink-800: #a9607e; --rose-400: #fb7185; --rose-500: #f43f5e; --rose-600: #e11d48;
             --c-bg: #fff5f9; --c-surface: #ffffff; --c-surface-variant: #fff0f5;
-            --c-surface-container: #fce8f0; --c-primary: #c2185b; --c-primary-light: #ff4d94;
-            --c-primary-dark: #9c0f4a; --c-primary-container: #ffe0ef; --c-on-bg: #1f1117;
+            --c-surface-container: #f7e7ee; --c-primary: #b86689; --c-primary-light: #df94b2;
+            --c-primary-dark: #a9607e; --c-primary-container: #fff1f6; --c-on-bg: #1f1117;
             --c-on-surface: #2d1a25; --c-on-surface-var: #5a3d4e; --c-muted: #8a6070;
             --c-outline: #e8c5d5; --c-outline-variant: #f5dfe9;
             --c-success: #2e7d32; --c-danger: #c62828; --c-warning: #f57f17;
-            --shadow-xs: 0 1px 3px rgba(194,24,91,0.07);
-            --shadow-sm: 0 2px 8px rgba(194,24,91,0.10);
+            --shadow-xs: 0 1px 3px rgba(184,102,137,0.07);
+            --shadow-sm: 0 2px 8px rgba(184,102,137,0.10);
             --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-pill: 999px;
             --t-fast: 0.15s ease;
             --font-display: 'Nunito', sans-serif;
@@ -78,12 +78,12 @@
         .badge-boolean-false { background: #f5f5f5; color: #757575; }
 
         .btn-primary-pink { background: linear-gradient(135deg, var(--pink-500), var(--pink-600)); color: #fff; border: none; font-weight: 700; border-radius: var(--r-sm); padding: 0.55rem 1.2rem; transition: all var(--t-fast); }
-        .btn-primary-pink:hover { background: linear-gradient(135deg, var(--pink-600), var(--pink-700)); color: #fff; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(233,30,140,0.3); }
+        .btn-primary-pink:hover { background: linear-gradient(135deg, var(--pink-600), var(--pink-700)); color: #fff; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(184,102,137,0.3); }
         .btn-action { display: inline-flex; align-items: center; gap: 0.25rem; }
 
         .filter-bar { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
         .filter-bar .form-control, .filter-bar .form-select { width: auto; min-width: 150px; border-radius: var(--r-sm); border: 1px solid var(--c-outline); font-size: 0.85rem; padding: 0.45rem 0.75rem; }
-        .filter-bar .form-control:focus, .filter-bar .form-select:focus { border-color: var(--pink-500); box-shadow: 0 0 0 0.2rem rgba(233,30,140,0.15); }
+        .filter-bar .form-control:focus, .filter-bar .form-select:focus { border-color: var(--pink-500); box-shadow: 0 0 0 0.2rem rgba(184,102,137,0.15); }
 
         .admin-pagination { display: flex; justify-content: center; gap: 0.25rem; margin-top: 1.25rem; }
         .admin-pagination a, .admin-pagination span { display: inline-flex; align-items: center; justify-content: center; min-width: 38px; height: 38px; padding: 0 0.5rem; border-radius: var(--r-sm); font-size: 0.85rem; font-weight: 600; text-decoration: none; border: 1px solid var(--c-outline-variant); color: var(--c-on-surface-var); transition: all var(--t-fast); }
@@ -115,14 +115,14 @@
         <a href="${pageContext.request.contextPath}/admin/dashboard" class="admin-topbar-brand">
             <i class="bi bi-hospital-fill"></i>
             CAMS
-            <span class="brand-badge">Admin</span>
+            <span class="brand-badge">Quản trị viên</span>
         </a>
     </div>
     <div class="admin-topbar-right">
         <div class="admin-topbar-user d-none d-md-flex">
             <div class="admin-avatar-sm">${fn:substring(sessionScope.user.fullName, 0, 1)}</div>
             <span>${sessionScope.user.fullName}</span>
-            <span class="admin-topbar-role"><i class="bi bi-shield-check me-1"></i>Admin</span>
+            <span class="admin-topbar-role"><i class="bi bi-shield-check me-1"></i>Quản trị viên</span>
         </div>
         <a href="${pageContext.request.contextPath}/logout" class="admin-topbar-logout">
             <i class="bi bi-box-arrow-right"></i>

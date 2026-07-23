@@ -51,7 +51,12 @@ public class UltrasoundAnalyzeServlet extends HttpServlet {
         try {
             if (!orderService.isReadyForSonographer(orderId) || !orderService.checkSonographerOwnership(orderId, user.getId())) {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN,
-                        "Bạn không có quyền phân tích AI cho ca siêu âm này (Đã được phụ trách bởi Bác sĩ Siêu âm khác).");
+                        "Bạn không có quyền phân tích AI cho ca siêu âm này (đã được phụ trách bởi Bác sĩ siêu âm khác).");
+                return;
+            }
+            if (orderService.getAiResult(orderId) != null) {
+                response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId
+                        + "&error=aiAlreadyRun");
                 return;
             }
             boolean success = orderService.runAiAnalysis(orderId, user.getId());
@@ -59,7 +64,7 @@ public class UltrasoundAnalyzeServlet extends HttpServlet {
                 response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId + "&success=analyzed");
             } else {
                 response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId 
-                        + "&error=" + java.net.URLEncoder.encode("Phân tích AI thất bại hoặc kết nối AI Engine bị lỗi. Vui lòng kiểm tra lại.", "UTF-8"));
+                        + "&error=aiUnavailable");
             }
         } catch (Exception e) {
             System.err.println("[UltrasoundAnalyzeServlet] Phân tích AI không hoàn tất: " + e.getClass().getSimpleName());

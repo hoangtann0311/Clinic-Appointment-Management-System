@@ -29,7 +29,7 @@
                     <i class="bi bi-arrow-left me-2"></i>Quay lại
                 </a>
                 <a href="${pageContext.request.contextPath}/home" class="btn btn-primary">
-                    <i class="bi bi-house me-2"></i>Về Dashboard
+                    <i class="bi bi-house me-2"></i>Về Tổng Quan
                 </a>
             </div>
         </div>

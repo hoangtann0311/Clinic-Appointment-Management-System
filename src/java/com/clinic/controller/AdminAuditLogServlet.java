@@ -19,7 +19,6 @@ import java.util.Map;
  * Servlet quản lý Lịch Sử Hoạt Động cho Admin.
  *
  * <p>GET → hiển thị danh sách audit log có filter + phân trang.
- * <p>POST → (dự phòng cho export Excel/CSV trong tương lai).
  *
  * <p>URL Patterns: /admin/audit-logs/ và /admin/audit-logs
  * <p>Permission required: system.view_audit_logs
@@ -125,96 +124,8 @@ public class AdminAuditLogServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        // Xử lý export CSV
-        String action = request.getParameter("action");
-        if ("export-csv".equals(action)) {
-            handleExportCsv(request, response);
-            return;
-        }
-        doGet(request, response);
-    }
-
-    /**
-     * Xuất audit log ra CSV (tương thích Excel với BOM UTF-8).
-     * Xuất tối đa 1000 bản ghi gần nhất theo filter hiện tại.
-     */
-    private void handleExportCsv(HttpServletRequest request, HttpServletResponse response)
-            throws IOException {
-        // ── Đọc tham số filter ──
-        String search    = request.getParameter("search");
-        String tableName = request.getParameter("tableName");
-        String userIdStr = request.getParameter("userId");
-        String roleIdStr = request.getParameter("roleId");
-        String dateFromStr = request.getParameter("dateFrom");
-        String dateToStr   = request.getParameter("dateTo");
-
-        Integer userId = null;
-        if (userIdStr != null && !userIdStr.isEmpty()) {
-            try { userId = Integer.parseInt(userIdStr); } catch (NumberFormatException e) { /* bỏ qua */ }
-        }
-        Integer roleId = null;
-        if (roleIdStr != null && !roleIdStr.isEmpty()) {
-            try { roleId = Integer.parseInt(roleIdStr); } catch (NumberFormatException e) { /* bỏ qua */ }
-        }
-
-        LocalDate dateFrom = null;
-        LocalDate dateTo = null;
-        if (dateFromStr != null && !dateFromStr.isEmpty()) {
-            try { dateFrom = LocalDate.parse(dateFromStr, DATE_FORMATTER); } catch (DateTimeParseException e) { /* bỏ qua */ }
-        }
-        if (dateToStr != null && !dateToStr.isEmpty()) {
-            try { dateTo = LocalDate.parse(dateToStr, DATE_FORMATTER); } catch (DateTimeParseException e) { /* bỏ qua */ }
-        }
-
-        // Lấy tối đa 1000 bản ghi
-        List<AuditLog> logs = auditLogService.getAuditLogs(1, 1000,
-                search, tableName, userId, roleId, dateFrom, dateTo);
-
-        // Ghi audit log cho hành động export
-        try {
-            com.clinic.utils.AuditUtil.log(request,
-                "Xuất CSV audit log (" + logs.size() + " bản ghi)",
-                "audit_logs", null, null);
-        } catch (Exception e) { /* ignore */ }
-
-        // ── Response ──
-        String fileName = "AuditLog_" + LocalDate.now().format(DATE_FORMATTER) + ".csv";
-        response.setContentType("text/csv; charset=UTF-8");
-        response.setHeader("Content-Disposition", "attachment; filename=\"" + fileName + "\"");
-        response.setCharacterEncoding("UTF-8");
-
-        java.io.PrintWriter out = response.getWriter();
-        // BOM cho Excel
-        out.print('﻿');
-
-        // Header
-        out.println("ID,Thời Gian,Người Dùng,Vai Trò,Hành Động,Phân Hệ,Loại,Địa Chỉ IP");
-
-        DateTimeFormatter dtFmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
-
-        for (AuditLog log : logs) {
-            String time = log.getCreatedAt() != null
-                    ? log.getCreatedAt().toLocalDateTime().format(dtFmt) : "";
-            String ip = log.getIpAddress() != null ? log.getIpAddress() : "";
-
-            out.println(log.getId() + ","
-                + "\"" + time + "\","
-                + "\"" + csvEscape(log.getUserName()) + "\","
-                + "\"" + csvEscape(log.getRoleNameDisplay()) + "\","
-                + "\"" + csvEscape(log.getAction()) + "\","
-                + "\"" + csvEscape(log.getTableName()) + "\","
-                + log.getActionTypeDisplay() + ","
-                + "\"" + ip + "\"");
-        }
-
-        out.println();
-        out.println("\"Tổng số bản ghi: " + logs.size() + "\",,,,,\"Xuất bởi CAMS\",,,");
-    }
-
-    /** Escape CSV field. */
-    private String csvEscape(String value) {
-        if (value == null) return "";
-        return value.replace("\"", "\"\"");
+        response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED,
+                "Trang lịch sử hoạt động chỉ hỗ trợ tra cứu trực tuyến.");
     }
 
     /**

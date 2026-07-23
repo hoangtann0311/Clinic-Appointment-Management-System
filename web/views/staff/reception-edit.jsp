@@ -6,7 +6,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Thay Đổi Lịch Khám - CAMS Staff</title>
+    <title>Thay Đổi Lịch Khám - CAMS Lễ Tân</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Google Fonts -->
@@ -14,9 +14,9 @@
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <!-- Theme CSS -->
-    <link href="${pageContext.request.contextPath}/assets/css/admin.css" rel="stylesheet">
-    <link href="${pageContext.request.contextPath}/assets/css/staff.css" rel="stylesheet">
-    <link href="${pageContext.request.contextPath}/assets/css/app-ui.css?v=1" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/admin.css?v=202" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/staff.css?v=202" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/app-ui.css?v=202" rel="stylesheet">
     <script src="${pageContext.request.contextPath}/assets/js/app-ui.js?v=1" charset="UTF-8" defer></script>
 </head>
 <body class="admin-body">
@@ -32,7 +32,7 @@
         <a href="${pageContext.request.contextPath}/admin/reception" class="admin-topbar-brand">
             <i class="bi bi-hospital-fill"></i>
             CAMS
-            <span class="brand-badge">Staff</span>
+            <span class="brand-badge">Lễ Tân</span>
         </a>
     </div>
 
@@ -95,7 +95,7 @@
                 <a href="${pageContext.request.contextPath}/admin/reception/doctor-schedules"
                    class="${fn:contains(requestURI, 'doctor-schedules') ? 'active' : ''}">
                     <i class="bi bi-calendar-week"></i>
-                    <span>Lịch Trực Bác Sĩ</span>
+                    <span>Lịch Làm Việc Bác Sĩ</span>
                 </a>
             </li>
             <li>
@@ -103,16 +103,6 @@
                    class="${fn:contains(requestURI, '/slots') ? 'active' : ''}">
                     <i class="bi bi-grid-3x3-gap"></i>
                     <span>Khung Giờ Khám</span>
-                </a>
-            </li>
-            <li>
-                <a href="${pageContext.request.contextPath}/admin/reception/sos" 
-                   class="${fn:contains(requestURI, 'sos') ? 'active' : ''}">
-                    <i class="bi bi-bell-slash text-danger"></i>
-                    <span>Giám Sát Cảnh Báo SOS</span>
-                    <c:if test="${activeSos > 0}">
-                        <span class="badge bg-danger ms-2"><c:out value="${activeSos}"/></span>
-                    </c:if>
                 </a>
             </li>
             <li>
@@ -208,14 +198,14 @@
                                    onchange="onDoctorOrDateChanged(); calculateLMPAge();">
                         </div>
                         <div class="col-md-4 cams-form-group">
-                            <label class="cams-form-label">Khung giờ trống (Slots) <span class="text-danger">*</span></label>
+                            <label class="cams-form-label">Khung giờ còn trống <span class="text-danger">*</span></label>
                             <select name="timeSlot" id="timeSlot" class="cams-form-input" required onchange="onSlotChanged()">
                                 <c:if test="${not empty apt.timeSlot}">
                                     <option value="${apt.timeSlot}" selected>${apt.timeSlot} (đã đặt)</option>
                                 </c:if>
                                 <option value="">-- Chọn khung giờ --</option>
                             </select>
-                            <small class="text-muted mt-1 d-block">Mỗi slot khám kéo dài mặc định 20 phút.</small>
+                            <small class="text-muted mt-1 d-block">Mỗi khung giờ khám kéo dài mặc định 20 phút.</small>
                         </div>
                         <div class="col-md-4 cams-form-group">
                             <label class="cams-form-label">Tổng chi phí tạm tính</label>
@@ -276,16 +266,6 @@
                                 </div>
                                 <c:if test="${preInvoice.status == 'PendingConfirmation'}">
                                     <hr class="my-3">
-                                    <c:if test="${not empty preInvoice.proofImagePath}">
-                                        <div class="mb-3">
-                                            <label class="text-muted small fw-bold d-block mb-1">ẢNH MINH CHỨNG CHUYỂN KHOẢN</label>
-                                            <a href="${pageContext.request.contextPath}${preInvoice.proofImagePath}" target="_blank">
-                                                <img src="${pageContext.request.contextPath}${preInvoice.proofImagePath}" alt="Minh chứng chuyển khoản"
-                                                     class="img-fluid rounded-3 border" style="max-height: 320px;">
-                                            </a>
-                                            <div class="form-text">Bấm vào ảnh để xem kích thước đầy đủ.</div>
-                                        </div>
-                                    </c:if>
                                     <form method="POST" action="${pageContext.request.contextPath}/admin/reception/edit">
                                         <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                         <input type="hidden" name="id" value="${apt.id}">
@@ -309,21 +289,10 @@
                                             </div>
                                             <div class="col-md-2 d-flex align-items-end">
                                                 <button type="submit" class="btn btn-success fw-bold w-100">
-                                                    <i class="bi bi-check-lg me-1"></i> Xác nhận PAID
+                                                    <i class="bi bi-check-lg me-1"></i> Đã thanh toán
                                                 </button>
                                             </div>
                                         </div>
-                                    </form>
-                                    <form method="POST" action="${pageContext.request.contextPath}/admin/reception/edit"
-                                          class="mt-2"
-                                          onsubmit="var r = prompt('Lý do từ chối thanh toán (bệnh nhân sẽ mất slot đã giữ):'); if (r === null) return false; document.getElementById('rejectReasonInput').value = r; return true;">
-                                        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
-                                        <input type="hidden" name="id" value="${apt.id}">
-                                        <input type="hidden" name="action" value="rejectPayment">
-                                        <input type="hidden" name="rejectReason" id="rejectReasonInput" value="">
-                                        <button type="submit" class="btn btn-outline-danger btn-sm fw-bold">
-                                            <i class="bi bi-x-lg me-1"></i> Từ chối thanh toán
-                                        </button>
                                     </form>
                                 </c:if>
                             </div>
