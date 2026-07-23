@@ -265,10 +265,15 @@
                                             <div class="col-12">
                                                 <div class="text-muted small mb-1 fw-semibold"><i class="bi bi-image me-1"></i>Ảnh siêu âm trong phiếu kết quả</div>
                                                 <c:forEach var="img" items="${imgs}">
-                                                    <a href="javascript:void(0);" onclick="viewLargeImage('${pageContext.request.contextPath}/medical/ultrasound-image?id=${img.id}')" title="Xem ảnh gốc">
+                                                    <a href="javascript:void(0);" onclick="viewLargeImage('${pageContext.request.contextPath}/medical/ultrasound-image?id=${img.id}')" title="Xem ảnh gốc" style="display: block; position: relative; text-decoration: none;">
                                                         <img loading="lazy" src="${pageContext.request.contextPath}/medical/ultrasound-image?id=${img.id}" alt="Ảnh siêu âm gốc"
                                                              style="width:100%; height:130px; object-fit:cover; border-radius:8px; border:1px solid #dee2e6;"
-                                                             onerror="this.src='${pageContext.request.contextPath}/assets/img/us_placeholder.png'">
+                                                             onerror="this.onerror=null; this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.setProperty('display', 'flex', 'important');">
+                                                        <div class="img-fallback d-none align-items-center justify-content-center flex-column text-muted"
+                                                             style="width:100%; height:130px; border-radius:8px; border:1px dashed #dee2e6; background:#f8f9fa;">
+                                                            <i class="bi bi-image text-secondary mb-1" style="font-size: 1.5rem;"></i>
+                                                            <span style="font-size: 0.75rem;">Không thể tải ảnh</span>
+                                                        </div>
                                                     </a>
                                                 </c:forEach>
                                             </div>
