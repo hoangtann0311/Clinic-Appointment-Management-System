@@ -28,11 +28,13 @@ public class GoogleConfigListener implements ServletContextListener {
         String clientId = firstConfigured(
                 System.getProperty("google.client.id"),
                 System.getenv("GOOGLE_CLIENT_ID"),
+                AppConfig.get("google.client.id", null),
                 ctx.getInitParameter("google.client.id"),
                 "YOUR_GOOGLE_CLIENT_ID");
         String clientSecret = firstConfigured(
                 System.getProperty("google.client.secret"),
                 System.getenv("GOOGLE_CLIENT_SECRET"),
+                AppConfig.get("google.client.secret", null),
                 ctx.getInitParameter("google.client.secret"),
                 "YOUR_GOOGLE_CLIENT_SECRET");
 
@@ -67,8 +69,10 @@ public class GoogleConfigListener implements ServletContextListener {
     }
 
     private String firstConfigured(String systemValue, String environmentValue,
-                                   String contextValue, String placeholderPrefix) {
-        for (String value : new String[]{systemValue, environmentValue, contextValue}) {
+                                   String externalConfigValue, String contextValue,
+                                   String placeholderPrefix) {
+        for (String value : new String[]{
+                systemValue, environmentValue, externalConfigValue, contextValue}) {
             if (value != null && !value.isBlank()
                     && !value.trim().startsWith(placeholderPrefix)) {
                 return value.trim();
