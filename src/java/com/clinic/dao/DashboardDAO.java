@@ -107,11 +107,11 @@ public class DashboardDAO {
     }
 
     public int countWaitingPatientsAll() {
-        return executeCount("SELECT COUNT(*) AS total FROM appointments WHERE LOWER(status) IN ('waiting', 'confirmed', 'in_progress', 'emergency_sos')");
+        return executeCount("SELECT COUNT(*) AS total FROM appointments WHERE LOWER(status) IN ('waiting', 'confirmed', 'inprogress')");
     }
 
     public int countWaitingPatients(LocalDate from, LocalDate to) {
-        return executeCount("SELECT COUNT(*) AS total FROM appointments WHERE appointment_date >= ? AND appointment_date <= ? AND LOWER(status) IN ('waiting', 'confirmed', 'in_progress', 'emergency_sos')", from, to);
+        return executeCount("SELECT COUNT(*) AS total FROM appointments WHERE appointment_date >= ? AND appointment_date <= ? AND LOWER(status) IN ('waiting', 'confirmed', 'inprogress')", from, to);
     }
 
     public int countDoctorsWorkingAll() {
@@ -138,15 +138,15 @@ public class DashboardDAO {
         return executeSum("SELECT ISNULL(SUM(i.total_amount), 0) AS total FROM invoices i INNER JOIN appointments a ON i.appointment_id = a.id WHERE a.appointment_date >= ? AND a.appointment_date <= ? AND UPPER(LTRIM(RTRIM(i.status))) = 'PAID'", from, to);
     }
     public int countEmergencyToday() {
-        return executeCount("SELECT COUNT(*) AS total FROM appointments WHERE appointment_date = CAST(GETDATE() AS DATE) AND LOWER(status) = 'emergency_sos'");
+        return executeCount("SELECT COUNT(*) AS total FROM appointments WHERE appointment_date = CAST(GETDATE() AS DATE) AND ISNULL(is_emergency, 0) = 1");
     }
 
     public int countEmergencyAll() {
-        return executeCount("SELECT COUNT(*) AS total FROM appointments WHERE LOWER(status) = 'emergency_sos'");
+        return executeCount("SELECT COUNT(*) AS total FROM appointments WHERE ISNULL(is_emergency, 0) = 1");
     }
 
     public int countEmergency(LocalDate from, LocalDate to) {
-        return executeCount("SELECT COUNT(*) AS total FROM appointments WHERE appointment_date >= ? AND appointment_date <= ? AND LOWER(status) = 'emergency_sos'", from, to);
+        return executeCount("SELECT COUNT(*) AS total FROM appointments WHERE appointment_date >= ? AND appointment_date <= ? AND ISNULL(is_emergency, 0) = 1", from, to);
     }
 
     public int countCancelledToday() {
@@ -410,7 +410,7 @@ public class DashboardDAO {
                    + "ISNULL(d.specialization, N'Chưa cập nhật') AS specialization, "
                    + "(SELECT COUNT(*) FROM appointments a WHERE a.doctor_id = d.id AND a.appointment_date >= ? AND a.appointment_date <= ? AND LOWER(a.status) = 'completed') AS completed_cases, "
                    + "(SELECT COUNT(*) FROM appointments a WHERE a.doctor_id = d.id AND a.appointment_date >= ? AND a.appointment_date <= ? AND LOWER(a.status) = 'cancelled') AS cancelled_cases, "
-                   + "(SELECT COUNT(*) FROM appointments a WHERE a.doctor_id = d.id AND a.appointment_date >= ? AND a.appointment_date <= ? AND LOWER(a.status) = 'emergency_sos') AS emergency_cases, "
+                   + "(SELECT COUNT(*) FROM appointments a WHERE a.doctor_id = d.id AND a.appointment_date >= ? AND a.appointment_date <= ? AND ISNULL(a.is_emergency, 0) = 1) AS emergency_cases, "
                    + "(SELECT COUNT(*) FROM appointments a WHERE a.doctor_id = d.id AND a.appointment_date >= ? AND a.appointment_date <= ?) AS total_appointments, "
                    + "ISNULL((SELECT SUM(i.total_amount) FROM invoices i INNER JOIN appointments a ON i.appointment_id = a.id "
                    + "WHERE a.doctor_id = d.id AND a.appointment_date >= ? AND a.appointment_date <= ? AND LOWER(i.status) = 'paid'), 0) AS revenue "
@@ -1004,7 +1004,7 @@ public class DashboardDAO {
             alert.type = "warning";
             alert.icon = "bi-activity";
             alert.title = "Ca cấp cứu";
-            alert.message = "Có " + emergency + " ca cấp cứu trong khoảng đã chọn.";
+            alert.message = "Có " + emergency + " ca được đánh dấu ưu tiên trong khoảng đã chọn.";
             alert.count = emergency;
             alerts.add(alert);
         }

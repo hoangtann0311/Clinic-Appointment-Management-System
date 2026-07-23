@@ -319,6 +319,16 @@ public class ServiceStatisticsService {
         }
     }
 
+    /** Doanh thu theo từng ngày trong khoảng được chọn. */
+    public Map<String, Double> getDailyRevenue(LocalDate startDate, LocalDate endDate) {
+        try {
+            return statsDAO.getDailyRevenue(startDate, endDate);
+        } catch (Exception e) {
+            System.err.println("[ServiceStatisticsService] getDailyRevenue ERROR: " + e.getMessage());
+            return Collections.emptyMap();
+        }
+    }
+
     /** Lượt sử dụng 7 ngày gần nhất. Map<ngày, số lượt>. */
     public Map<String, Integer> getUsageLast7Days() {
         try {
