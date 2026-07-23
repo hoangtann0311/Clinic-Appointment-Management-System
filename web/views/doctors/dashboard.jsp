@@ -159,9 +159,6 @@
                                                     <c:when test="${fn:toLowerCase(appt.status) == 'success'}">
                                                         <span class="badge bg-secondary rounded-pill">Hoàn thành</span>
                                                     </c:when>
-                                                    <c:when test="${fn:toLowerCase(appt.status) == 'emergency_sos'}">
-                                                        <span class="badge bg-danger rounded-pill"><i class="bi bi-exclamation-triangle-fill me-1"></i>Cấp cứu</span>
-                                                    </c:when>
                                                     <c:when test="${fn:toLowerCase(appt.status) == 'cancelled'}">
                                                         <span class="badge bg-danger rounded-pill">Đã huỷ</span>
                                                     </c:when>
@@ -172,6 +169,11 @@
                                                         <span class="badge bg-light text-dark rounded-pill border">${appt.status}</span>
                                                     </c:otherwise>
                                                 </c:choose>
+                                                <c:if test="${appt.emergency}">
+                                                    <span class="badge bg-warning-subtle text-warning-emphasis border rounded-pill ms-1">
+                                                        <i class="bi bi-arrow-up-circle-fill me-1"></i>Ưu tiên
+                                                    </span>
+                                                </c:if>
                                             </td>
                                             <td>
                                                 <a href="${pageContext.request.contextPath}/doctor/medical-records?apptId=${appt.id}"

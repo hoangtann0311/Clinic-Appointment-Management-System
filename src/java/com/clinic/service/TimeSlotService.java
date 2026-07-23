@@ -61,7 +61,7 @@ public class TimeSlotService {
 
         // 2. Kiểm tra thời gian hợp lệ
         if (schedule.getStartTime() == null || schedule.getEndTime() == null) {
-            errors.put("general", "Lịch trực thiếu thông tin giờ bắt đầu hoặc kết thúc.");
+            errors.put("general", "Lịch làm việc thiếu thông tin giờ bắt đầu hoặc kết thúc.");
             return -1;
         }
 
@@ -296,7 +296,7 @@ public class TimeSlotService {
         Double price = parsePrice(priceStr, errors);
         if (errors.containsKey("price")) return -1;
         int updated = timeSlotDAO.updatePriceBySchedule(scheduleId, price);
-        if (updated < 0) errors.put("general", "Không thể cập nhật giá cho lịch trực này.");
+        if (updated < 0) errors.put("general", "Không thể cập nhật giá cho lịch làm việc này.");
         return updated;
     }
 

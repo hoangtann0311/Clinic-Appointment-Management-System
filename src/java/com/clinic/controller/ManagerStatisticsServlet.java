@@ -14,111 +14,150 @@ import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Servlet xử lý trang Thống Kê Dịch Vụ Y Tế cho Manager.
- * Cung cấp dữ liệu KPI, bảng thống kê và biểu đồ trực quan
- * về tình hình sử dụng dịch vụ của phòng khám sản phụ khoa.
+ * Servlet Thống Kê Dịch Vụ cho Manager.
  *
- * URL: /manager/statistics/ hoặc /manager/statistics
+ * GET → hiển thị trang thống kê dịch vụ (KPI, biểu đồ, bảng xếp hạng)
+ *      Hỗ trợ lọc theo khoảng ngày: ?dateFrom=yyyy-MM-dd&dateTo=yyyy-MM-dd
  */
 @WebServlet(urlPatterns = {"/manager/statistics/", "/manager/statistics"})
 public class ManagerStatisticsServlet extends HttpServlet {
 
+    private ServiceStatisticsService statsService;
+
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+    public void init() throws ServletException {
+        statsService = new ServiceStatisticsService();
+    }
+
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
 
-        HttpSession session = request.getSession(false);
-        if (session == null || session.getAttribute("user") == null) {
-            response.sendRedirect(request.getContextPath() + "/login");
-            return;
-        }
+        // AuthorizationFilter đã kiểm tra quyền — không cần check thủ công
 
-        User user = (User) session.getAttribute("user");
-        if (user.getRoleId() != 3) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ Manager mới có quyền truy cập.");
-            return;
-        }
-
-        // Ngày hiện tại
+        // ── Đọc tham số lọc khoảng ngày ──
+        String dateFromStr = req.getParameter("dateFrom");
+        String dateToStr = req.getParameter("dateTo");
+        LocalDate dateFrom = null;
+        LocalDate dateTo = null;
         LocalDate today = LocalDate.now();
-        request.setAttribute("todayDisplay",
-                today.format(DateTimeFormatter.ofPattern("dd 'tháng' MM, yyyy")));
 
-        // Load toàn bộ dữ liệu thống kê
-        loadStatisticsData(request);
+        try {
+            if (dateFromStr != null && !dateFromStr.trim().isEmpty()) {
+                dateFrom = LocalDate.parse(dateFromStr);
+            }
+        } catch (Exception e) { dateFrom = null; }
+        try {
+            if (dateToStr != null && !dateToStr.trim().isEmpty()) {
+                dateTo = LocalDate.parse(dateToStr);
+            }
+        } catch (Exception e) { dateTo = null; }
 
-        request.getRequestDispatcher("/views/manager/statistics.jsp").forward(request, response);
-    }
+        if (dateFrom != null && dateTo != null && dateFrom.isAfter(dateTo)) {
+            LocalDate swap = dateFrom;
+            dateFrom = dateTo;
+            dateTo = swap;
+        }
+        boolean isCustomRange = (dateFrom != null || dateTo != null);
+        if (!isCustomRange) {
+            dateFrom = today;
+            dateTo = today;
+        } else {
+            if (dateFrom == null) dateFrom = today;
+            if (dateTo == null) dateTo = today;
+        }
 
-    /**
-     * Tổng hợp toàn bộ dữ liệu thống kê dịch vụ và gán vào request attributes.
-     */
-    private void loadStatisticsData(HttpServletRequest request) {
-        ServiceStatisticsService statsService = new ServiceStatisticsService();
+        DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        req.setAttribute("dateFrom", dateFrom);
+        req.setAttribute("dateTo", dateTo);
+        req.setAttribute("isCustomRange", isCustomRange);
+        req.setAttribute("today", today);
+        req.setAttribute("dateFromFormatted", dateFrom.format(dateFmt));
+        req.setAttribute("dateToFormatted", dateTo.format(dateFmt));
 
-        // ─── KPI CARDS ───
-        int totalUsageToday = statsService.getTotalUsageToday();
-        double totalRevenueToday = statsService.getTotalRevenueToday();
-        double usageGrowthRate = statsService.getUsageGrowthRate();
-        double revenueGrowthRate = statsService.getRevenueGrowthRate();
+        if (!isCustomRange || (dateFrom.equals(today) && dateTo.equals(today))) {
+            req.setAttribute("dateRangeLabel", "Hôm nay");
+        } else if (dateFrom.equals(dateTo)) {
+            req.setAttribute("dateRangeLabel", "Ngày " + dateFrom.format(dateFmt));
+        } else {
+            req.setAttribute("dateRangeLabel",
+                    dateFrom.format(dateFmt) + " → " + dateTo.format(dateFmt));
+        }
+        req.setAttribute("todayDisplay", today.format(dateFmt));
+
+        // ══════════════════════════════════════════════════
+        // KPI TỔNG QUAN
+        // ══════════════════════════════════════════════════
+        int totalUsage = statsService.getTotalUsage(dateFrom, dateTo);
+        double totalRevenue = statsService.getTotalRevenue(dateFrom, dateTo);
+        int servicesUsed = statsService.getServicesUsed(dateFrom, dateTo);
         int activeServiceCount = statsService.getActiveServiceCount();
-        int servicesUsedToday = statsService.getServicesUsedToday();
-        String topServiceName = statsService.getTopServiceName();
-        int topServiceUsage = statsService.getTopServiceUsage();
 
-        request.setAttribute("totalUsageToday", totalUsageToday);
-        request.setAttribute("totalRevenueTodayFormatted", ServiceStatisticsService.formatCurrency(totalRevenueToday));
-        request.setAttribute("totalRevenueToday", totalRevenueToday);
-        request.setAttribute("usageGrowthRate", usageGrowthRate);
-        request.setAttribute("usageGrowthFormatted", ServiceStatisticsService.formatGrowthPercent(usageGrowthRate));
-        request.setAttribute("revenueGrowthRate", revenueGrowthRate);
-        request.setAttribute("revenueGrowthFormatted", ServiceStatisticsService.formatGrowthPercent(revenueGrowthRate));
-        request.setAttribute("activeServiceCount", activeServiceCount);
-        request.setAttribute("servicesUsedToday", servicesUsedToday);
-        request.setAttribute("topServiceName", topServiceName);
-        request.setAttribute("topServiceUsage", topServiceUsage);
+        double revenuePrevious;
+        double revenueGrowthRate;
+        if (isCustomRange) {
+            long days = dateTo.toEpochDay() - dateFrom.toEpochDay() + 1;
+            revenuePrevious = statsService.getTotalRevenue(
+                    dateFrom.minusDays(days), dateFrom.minusDays(1));
+            revenueGrowthRate = statsService.getRevenueGrowthRate(dateFrom, dateTo);
+        } else {
+            revenuePrevious = statsService.getTotalRevenueYesterday();
+            revenueGrowthRate = statsService.getRevenueGrowthRate();
+        }
 
-        // ─── BẢNG THỐNG KÊ CHI TIẾT ───
+        req.setAttribute("totalUsage", totalUsage);
+        req.setAttribute("totalRevenue", ServiceStatisticsService.formatCurrency(totalRevenue));
+        req.setAttribute("totalRevenueRaw", totalRevenue);
+        req.setAttribute("servicesUsed", servicesUsed);
+        req.setAttribute("activeServiceCount", activeServiceCount);
+        req.setAttribute("revenueYesterdayFormatted",
+                ServiceStatisticsService.formatCurrency(revenuePrevious));
+        req.setAttribute("revenueGrowthRate", revenueGrowthRate);
+        req.setAttribute("revenueGrowthFormatted",
+                ServiceStatisticsService.formatGrowthPercent(revenueGrowthRate));
+
+        // ══════════════════════════════════════════════════
+        // BẢNG XẾP HẠNG
+        // ══════════════════════════════════════════════════
+        List<ServiceStatDetail> topByUsage = statsService.getTopServicesByUsage(10, dateFrom, dateTo);
+        List<ServiceStatDetail> topByRevenue = statsService.getTopServicesByTotalRevenue(10);
         List<ServiceStatDetail> allServiceStats = statsService.getAllServiceStats();
-        List<ServiceStatDetail> topServicesByUsage = statsService.getTopServicesByUsage(10);
-        List<ServiceStatDetail> topServicesByRevenue = statsService.getTopServicesByRevenue(10);
-        List<ServiceStatDetail> lowPerformingServices = statsService.getLowPerformingServices();
-        List<ServiceStatDetail> topServicesByTotalRevenue = statsService.getTopServicesByTotalRevenue(10);
+        List<ServiceStatDetail> lowPerforming = statsService.getLowPerformingServices();
 
-        request.setAttribute("allServiceStats", allServiceStats);
-        request.setAttribute("topServicesByUsage", topServicesByUsage);
-        request.setAttribute("topServicesByRevenue", topServicesByRevenue);
-        request.setAttribute("lowPerformingServices", lowPerformingServices);
-        request.setAttribute("topServicesByTotalRevenue", topServicesByTotalRevenue);
+        req.setAttribute("topByUsage", topByUsage);
+        req.setAttribute("topByRevenue", topByRevenue);
+        req.setAttribute("allServiceStats", allServiceStats);
+        req.setAttribute("lowPerforming", lowPerforming);
 
-        // ─── BIỂU ĐỒ: Doanh thu 7 ngày ───
-        Map<String, Double> revenue7Days = statsService.getRevenueLast7Days();
-        request.setAttribute("revenue7DaysLabels", revenue7Days.keySet());
-        request.setAttribute("revenue7DaysValues", revenue7Days.values());
+        // ══════════════════════════════════════════════════
+        // DỮ LIỆU BIỂU ĐỒ
+        // ══════════════════════════════════════════════════
+        Map<String, Double> revenueChart = isCustomRange
+                ? statsService.getDailyRevenue(dateFrom, dateTo)
+                : statsService.getRevenueLast7Days();
+        req.setAttribute("revenueChartLabels", new ArrayList<>(revenueChart.keySet()));
+        req.setAttribute("revenueChartValues", new ArrayList<>(revenueChart.values()));
 
-        // ─── BIỂU ĐỒ: Lượt sử dụng 7 ngày ───
-        Map<String, Integer> usage7Days = statsService.getUsageLast7Days();
-        request.setAttribute("usage7DaysLabels", usage7Days.keySet());
-        request.setAttribute("usage7DaysValues", usage7Days.values());
+        Map<String, Integer> usageChart = statsService.getUsageLast7Days();
+        req.setAttribute("usageChartLabels", new ArrayList<>(usageChart.keySet()));
+        req.setAttribute("usageChartValues", new ArrayList<>(usageChart.values()));
 
-        // ─── BIỂU ĐỒ: Doanh thu 12 tháng ───
-        Map<String, Double> revenue12Months = statsService.getRevenueLast12Months();
-        request.setAttribute("revenue12MonthsLabels", revenue12Months.keySet());
-        request.setAttribute("revenue12MonthsValues", revenue12Months.values());
+        Map<String, Double> monthlyRevenue = statsService.getRevenueLast12Months();
+        req.setAttribute("monthlyRevenueLabels", new ArrayList<>(monthlyRevenue.keySet()));
+        req.setAttribute("monthlyRevenueValues", new ArrayList<>(monthlyRevenue.values()));
 
-        // ─── BIỂU ĐỒ: Phân bổ doanh thu theo nhóm ───
-        List<CategoryRevenueStat> categoryRevenue = statsService.getCategoryRevenueBreakdown();
-        request.setAttribute("categoryRevenue", categoryRevenue);
-    }
+        List<CategoryRevenueStat> categoryBreakdown = statsService.getCategoryRevenueBreakdown();
+        req.setAttribute("categoryBreakdown", categoryBreakdown);
 
-    @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        // POST requests không được hỗ trợ trên trang thống kê (chỉ xem)
-        response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED, "Phương thức POST không được hỗ trợ.");
+        // Top service name for display
+        req.setAttribute("topServiceName", statsService.getTopServiceName(dateFrom, dateTo));
+        req.setAttribute("topServiceUsage", statsService.getTopServiceUsage(dateFrom, dateTo));
+
+        req.getRequestDispatcher("/views/manager/statistics.jsp").forward(req, resp);
     }
 }

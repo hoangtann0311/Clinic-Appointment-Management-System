@@ -41,7 +41,7 @@ public class AdminUserServlet extends HttpServlet {
         FALLBACK_ROLE_MAP.put(3, "Quản lý");
         FALLBACK_ROLE_MAP.put(4, "Nhân viên lễ tân");
         FALLBACK_ROLE_MAP.put(5, "Bệnh nhân");
-        FALLBACK_ROLE_MAP.put(6, "Bác sĩ Siêu âm");
+        FALLBACK_ROLE_MAP.put(6, "Bác sĩ siêu âm");
     }
 
     /** Role ID của Admin và Patient — không tính vào nhân sự. */

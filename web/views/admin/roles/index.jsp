@@ -6,7 +6,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vai Trò & Phân Quyền — Admin CAMS</title>
+    <title>Vai Trò & Phân Quyền — CAMS Quản Trị</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
           rel="stylesheet"
@@ -14,7 +14,7 @@
           crossorigin="anonymous">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="${pageContext.request.contextPath}/assets/css/admin.css" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/admin.css?v=202" rel="stylesheet">
 
     <%-- ============================================================
          CSS NỘI TUYẾN — Pink Rose Admin Theme
@@ -22,21 +22,21 @@
     <style>
 :root {
     --sidebar-w: 270px; --topbar-h: 66px;
-    --pink-50: #fff0f6; --pink-100: #ffe0ef; --pink-200: #ffb3d1; --pink-300: #ff80b3;
-    --pink-400: #ff4d94; --pink-500: #e91e8c; --pink-600: #c2185b; --pink-700: #9c0f4a;
-    --pink-800: #7b0a39; --rose-400: #fb7185; --rose-500: #f43f5e; --rose-600: #e11d48;
+    --pink-50: #fff9fc; --pink-100: #fff1f6; --pink-200: #f7dce7; --pink-300: #e8b4c9;
+    --pink-400: #df94b2; --pink-500: #d27b9f; --pink-600: #b86689; --pink-700: #a9607e;
+    --pink-800: #a9607e; --rose-400: #fb7185; --rose-500: #f43f5e; --rose-600: #e11d48;
     --c-bg: #fff5f9; --c-surface: #ffffff; --c-surface-variant: #fff0f5;
-    --c-surface-container: #fce8f0; --c-primary: #c2185b; --c-primary-light: #ff4d94;
-    --c-primary-dark: #9c0f4a; --c-primary-container: #ffe0ef; --c-on-bg: #1f1117;
+    --c-surface-container: #f7e7ee; --c-primary: #b86689; --c-primary-light: #df94b2;
+    --c-primary-dark: #a9607e; --c-primary-container: #fff1f6; --c-on-bg: #1f1117;
     --c-on-surface: #2d1a25; --c-on-surface-var: #5a3d4e; --c-muted: #8a6070;
     --c-outline: #e8c5d5; --c-outline-variant: #f5dfe9;
-    --sb-bg: #1a0a12; --sb-bg-mid: #2d1020; --sb-bg-deep: #0f0509;
-    --sb-hover: #3d1830; --sb-active-bg: rgba(233,30,140,0.18);
-    --sb-active-border: #e91e8c; --sb-text: #f0d5e3; --sb-text-muted: #a07085;
-    --sb-border: rgba(255,255,255,0.07); --sb-accent: #ff80b3;
-    --shadow-xs: 0 1px 3px rgba(194,24,91,0.07);
-    --shadow-sm: 0 2px 8px rgba(194,24,91,0.10);
-    --shadow-md: 0 4px 20px rgba(194,24,91,0.13);
+    --sb-bg: #fff5f9; --sb-bg-mid: #fae9f0; --sb-bg-deep: #f7e1ea;
+    --sb-hover: #fffafd; --sb-active-bg: rgba(184,102,137,0.18);
+    --sb-active-border: #d27b9f; --sb-text: #f0d5e3; --sb-text-muted: #a07085;
+    --sb-border: rgba(255,255,255,0.07); --sb-accent: #e8b4c9;
+    --shadow-xs: 0 1px 3px rgba(184,102,137,0.07);
+    --shadow-sm: 0 2px 8px rgba(184,102,137,0.10);
+    --shadow-md: 0 4px 20px rgba(184,102,137,0.13);
     --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-pill: 999px;
     --t-fast: 0.15s ease; --t-normal: 0.25s ease;
     --font-display: 'Nunito', sans-serif;
@@ -51,14 +51,14 @@ body.admin-body { font-family: var(--font-body); background: var(--c-bg); color:
 .admin-topbar { position: fixed; top: 0; left: 0; right: 0; height: var(--topbar-h); background: var(--c-surface); border-bottom: 2px solid var(--pink-200); display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; z-index: 1030; box-shadow: var(--shadow-xs); }
 .admin-topbar-left { display: flex; align-items: center; gap: 0.875rem; }
 .admin-topbar-brand { font-family: var(--font-display); font-weight: 900; font-size: 1.3rem; color: var(--c-primary); text-decoration: none; display: flex; align-items: center; gap: 0.5rem; letter-spacing: -0.03em; }
-.admin-topbar-brand i { color: var(--pink-500); font-size: 1.5rem; filter: drop-shadow(0 0 6px rgba(233,30,140,0.4)); }
+.admin-topbar-brand i { color: var(--pink-500); font-size: 1.5rem; filter: drop-shadow(0 0 6px rgba(184,102,137,0.4)); }
 .admin-topbar-brand .brand-badge { font-family: var(--font-body); font-weight: 700; font-size: 0.65rem; color: var(--c-primary); background: var(--pink-100); padding: 3px 10px; border-radius: var(--r-pill); letter-spacing: 0.06em; text-transform: uppercase; border: 1px solid var(--pink-200); }
 .admin-sidebar-toggle { background: none; border: none; color: var(--c-on-surface-var); font-size: 1.5rem; cursor: pointer; padding: 6px 8px; border-radius: var(--r-sm); display: none; line-height: 1; }
 .admin-sidebar-toggle:hover { background: var(--pink-100); color: var(--c-primary); }
 .admin-topbar-right { display: flex; align-items: center; gap: 0.75rem; }
 .admin-topbar-user { display: flex; align-items: center; gap: 0.6rem; padding: 0.375rem 0.875rem; background: var(--pink-50); border-radius: var(--r-pill); border: 1px solid var(--pink-200); }
 .admin-topbar-user span { font-size: 0.875rem; font-weight: 600; color: var(--c-primary-dark); }
-.admin-avatar-sm { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, var(--pink-500), var(--rose-400)); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.85rem; text-transform: uppercase; flex-shrink: 0; box-shadow: 0 2px 8px rgba(233,30,140,0.35); }
+.admin-avatar-sm { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, var(--pink-500), var(--rose-400)); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.85rem; text-transform: uppercase; flex-shrink: 0; box-shadow: 0 2px 8px rgba(184,102,137,0.35); }
 .admin-topbar-role { font-size: 0.62rem; font-weight: 700; padding: 2px 8px; border-radius: var(--r-pill); background: linear-gradient(135deg, var(--pink-500), var(--rose-500)); color: #fff; letter-spacing: 0.05em; text-transform: uppercase; }
 .admin-topbar-logout { color: var(--c-on-surface-var); text-decoration: none; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.875rem; border-radius: var(--r-sm); transition: all var(--t-fast); border: 1px solid transparent; }
 .admin-topbar-logout:hover { background: var(--pink-50); color: var(--rose-600); border-color: var(--pink-200); }
@@ -77,8 +77,8 @@ body.admin-body { font-family: var(--font-body); background: var(--c-bg); color:
 .role-tabs-wrapper { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.25rem; padding: 0.35rem; background: var(--c-surface); border-radius: var(--r-pill); border: 1px solid var(--c-outline-variant); box-shadow: var(--shadow-xs); overflow-x: auto; }
 .role-tab-link { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.55rem 1.1rem; border-radius: var(--r-pill); text-decoration: none; font-weight: 600; font-size: 0.85rem; color: var(--c-on-surface-var); transition: all var(--t-fast); white-space: nowrap; border: none; background: transparent; cursor: pointer; }
 .role-tab-link:hover { background: var(--pink-50); color: var(--c-primary); }
-.role-tab-link.active { background: linear-gradient(135deg, var(--pink-500), var(--pink-600)); color: #fff; box-shadow: 0 4px 12px rgba(233,30,140,0.3); }
-.role-tab-icon { width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem; background: rgba(233,30,140,0.12); color: var(--pink-600); font-weight: 800; }
+.role-tab-link.active { background: linear-gradient(135deg, var(--pink-500), var(--pink-600)); color: #fff; box-shadow: 0 4px 12px rgba(184,102,137,0.3); }
+.role-tab-icon { width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem; background: rgba(184,102,137,0.12); color: var(--pink-600); font-weight: 800; }
 .role-tab-link.active .role-tab-icon { background: rgba(255,255,255,0.25); color: #fff; }
 
 /* ── Permission Card ── */
@@ -97,7 +97,7 @@ body.admin-body { font-family: var(--font-body); background: var(--c-bg); color:
 .form-check.permission-check:hover { background: var(--pink-50); }
 .form-check.permission-check .form-check-input { width: 18px; height: 18px; margin: 0; border: 2px solid var(--c-outline); cursor: pointer; flex-shrink: 0; }
 .form-check.permission-check .form-check-input:checked { background-color: var(--pink-500); border-color: var(--pink-500); }
-.form-check.permission-check .form-check-input:focus { box-shadow: 0 0 0 0.2rem rgba(233,30,140,0.2); }
+.form-check.permission-check .form-check-input:focus { box-shadow: 0 0 0 0.2rem rgba(184,102,137,0.2); }
 .form-check.permission-check .form-check-label { font-size: 0.84rem; color: var(--c-on-surface); cursor: pointer; font-weight: 500; }
 .permission-desc { font-size: 0.72rem; color: var(--c-muted); margin-left: 1.8rem; margin-top: -0.2rem; margin-bottom: 0.25rem; }
 
@@ -108,7 +108,7 @@ body.admin-body { font-family: var(--font-body); background: var(--c-bg); color:
 .select-all-label { font-size: 0.78rem; font-weight: 700; color: var(--c-primary); cursor: pointer; }
 
 /* ── Role Info Card ── */
-.role-info-card { background: linear-gradient(135deg, var(--pink-700) 0%, var(--pink-500) 55%, var(--rose-400) 100%); border-radius: var(--r-lg); padding: 1.5rem 1.75rem; margin-bottom: 1.25rem; color: #fff; box-shadow: 0 4px 24px rgba(233,30,140,0.3); position: relative; overflow: hidden; }
+.role-info-card { background: linear-gradient(135deg, var(--pink-700) 0%, var(--pink-500) 55%, var(--rose-400) 100%); border-radius: var(--r-lg); padding: 1.5rem 1.75rem; margin-bottom: 1.25rem; color: #fff; box-shadow: 0 4px 24px rgba(184,102,137,0.3); position: relative; overflow: hidden; }
 .role-info-card::after { content: ''; position: absolute; top: -30px; right: -30px; width: 140px; height: 140px; border-radius: 50%; background: rgba(255,255,255,0.07); pointer-events: none; }
 .role-info-card h4 { font-family: var(--font-display); font-weight: 900; font-size: 1.2rem; margin: 0 0 0.4rem; display: flex; align-items: center; gap: 0.5rem; position: relative; }
 .role-info-card p { margin: 0; font-size: 0.85rem; opacity: 0.9; position: relative; }
@@ -121,7 +121,7 @@ body.admin-body { font-family: var(--font-body); background: var(--c-bg); color:
 
 /* ── Buttons ── */
 .btn-primary-pink { background: linear-gradient(135deg, var(--pink-500), var(--pink-600)); color: #fff; border: none; font-weight: 700; border-radius: var(--r-sm); padding: 0.55rem 1.2rem; transition: all var(--t-fast); font-family: var(--font-body); }
-.btn-primary-pink:hover { background: linear-gradient(135deg, var(--pink-600), var(--pink-700)); color: #fff; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(233,30,140,0.3); }
+.btn-primary-pink:hover { background: linear-gradient(135deg, var(--pink-600), var(--pink-700)); color: #fff; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(184,102,137,0.3); }
 .btn-outline-pink { color: var(--pink-600); background: var(--c-surface); border: 1px solid var(--pink-300); font-weight: 600; border-radius: var(--r-sm); padding: 0.55rem 1.2rem; transition: all var(--t-fast); font-family: var(--font-body); }
 .btn-outline-pink:hover { background: var(--pink-50); border-color: var(--pink-500); color: var(--pink-700); }
 .btn-refresh { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1.1rem; border-radius: var(--r-sm); font-size: 0.85rem; font-weight: 600; color: var(--c-primary); background: var(--pink-50); border: 1px solid var(--pink-200); cursor: pointer; transition: all var(--t-fast); font-family: var(--font-body); }
@@ -164,14 +164,14 @@ body.admin-body { font-family: var(--font-body); background: var(--c-bg); color:
         <a href="${pageContext.request.contextPath}/admin/dashboard" class="admin-topbar-brand">
             <i class="bi bi-hospital-fill"></i>
             CAMS
-            <span class="brand-badge">Admin</span>
+            <span class="brand-badge">Quản trị viên</span>
         </a>
     </div>
     <div class="admin-topbar-right">
         <div class="admin-topbar-user d-none d-md-flex">
             <div class="admin-avatar-sm">${fn:substring(sessionScope.user.fullName, 0, 1)}</div>
             <span>${sessionScope.user.fullName}</span>
-            <span class="admin-topbar-role"><i class="bi bi-shield-check me-1"></i>Admin</span>
+            <span class="admin-topbar-role"><i class="bi bi-shield-check me-1"></i>Quản trị viên</span>
         </div>
         <a href="${pageContext.request.contextPath}/logout" class="admin-topbar-logout">
             <i class="bi bi-box-arrow-right"></i>

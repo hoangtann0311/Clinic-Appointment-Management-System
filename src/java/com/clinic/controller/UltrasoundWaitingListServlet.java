@@ -57,22 +57,14 @@ public class UltrasoundWaitingListServlet extends HttpServlet {
             status = "Pending";
         }
         String date = request.getParameter("date");
-        String emergencyStr = request.getParameter("emergency");
-        Boolean isEmergency = null;
-        if ("true".equalsIgnoreCase(emergencyStr)) {
-            isEmergency = true;
-        } else if ("false".equalsIgnoreCase(emergencyStr)) {
-            isEmergency = false;
-        }
-
         String sortBy = ultrasoundOrderService.normalizeSortBy(request.getParameter("sortBy"));
         String sortDir = ultrasoundOrderService.normalizeSortDir(request.getParameter("sortDir"));
 
         // Lấy danh sách chỉ định siêu âm theo bộ lọc và phân trang
         List<UltrasoundWaitingPatient> waitingPatients =
-                ultrasoundOrderService.getOrders(page, PAGE_SIZE, search, status, date, isEmergency, sortBy, sortDir);
+                ultrasoundOrderService.getOrders(page, PAGE_SIZE, search, status, date, null, sortBy, sortDir);
 
-        int totalOrders = ultrasoundOrderService.countOrders(search, status, date, isEmergency);
+        int totalOrders = ultrasoundOrderService.countOrders(search, status, date, null);
         int totalPages = (int) Math.ceil((double) totalOrders / PAGE_SIZE);
         if (totalPages <= 0) totalPages = 1;
 
@@ -84,7 +76,6 @@ public class UltrasoundWaitingListServlet extends HttpServlet {
         request.setAttribute("searchParam", search);
         request.setAttribute("statusParam", status);
         request.setAttribute("dateParam", date);
-        request.setAttribute("emergencyParam", emergencyStr);
 
         request.setAttribute("sortBy", sortBy);
         request.setAttribute("sortDir", sortDir);

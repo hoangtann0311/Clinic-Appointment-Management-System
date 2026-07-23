@@ -27,7 +27,7 @@ public class AuditLogService {
         TABLE_NAME_LABELS.put("services", "Dịch Vụ");
         TABLE_NAME_LABELS.put("medicines", "Thuốc");
         TABLE_NAME_LABELS.put("appointments", "Lịch Hẹn");
-        TABLE_NAME_LABELS.put("doctor_schedules", "Lịch Trực");
+        TABLE_NAME_LABELS.put("doctor_schedules", "Lịch Làm Việc");
         TABLE_NAME_LABELS.put("time_slots", "Khung Giờ");
         TABLE_NAME_LABELS.put("medical_records", "Bệnh Án");
         TABLE_NAME_LABELS.put("prescriptions", "Đơn Thuốc");
@@ -43,7 +43,7 @@ public class AuditLogService {
         TABLE_NAME_LABELS.put("test_orders", "Chỉ Định Siêu Âm");
         TABLE_NAME_LABELS.put("ai_analysis_results", "Kết Quả AI");
         TABLE_NAME_LABELS.put("pregnancies", "Thai Kỳ");
-        TABLE_NAME_LABELS.put("sonographers", "Bác Sĩ Siêu Âm");
+        TABLE_NAME_LABELS.put("sonographers", "Bác sĩ siêu âm");
         TABLE_NAME_LABELS.put("prescription_items", "Chi Tiết Đơn Thuốc");
         TABLE_NAME_LABELS.put("invoice_items", "Chi Tiết Hoá Đơn");
         TABLE_NAME_LABELS.put("medicine_categories", "Danh Mục Thuốc");

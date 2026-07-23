@@ -1,5 +1,5 @@
 <%@ page pageEncoding="UTF-8" %>
-<link href="${pageContext.request.contextPath}/assets/css/app-ui.css?v=1" rel="stylesheet">
+<link href="${pageContext.request.contextPath}/assets/css/app-ui.css?v=202" rel="stylesheet">
 <footer class="cams-app-footer">
     <div class="container text-center">
         <p class="cams-app-footer-copyright">&copy; 2026 Hệ thống Quản lý Lịch hẹn CAMS. Bảo lưu mọi quyền.</p>

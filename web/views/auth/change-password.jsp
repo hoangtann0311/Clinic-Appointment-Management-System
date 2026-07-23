@@ -128,7 +128,7 @@
                 <div class="text-center">
                     <a href="${pageContext.request.contextPath}/home"
                        class="fw-semibold text-decoration-none">
-                        <i class="bi bi-arrow-left me-1"></i>Quay lại Dashboard
+                        <i class="bi bi-arrow-left me-1"></i>Quay lại Tổng Quan
                     </a>
                 </div>
             </form>

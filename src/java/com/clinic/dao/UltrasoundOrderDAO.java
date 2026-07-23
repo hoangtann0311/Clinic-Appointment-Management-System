@@ -34,13 +34,11 @@ public class UltrasoundOrderDAO {
         + "OR LOWER(CONVERT(NVARCHAR(255), ISNULL(s.required_room_type, ''))) LIKE N'%siêu âm%'"
         + ")";
 
-    // BR-11: Chỉ hiển thị chỉ định siêu âm khi hóa đơn POST_EXAM đã Paid,
-    // ngoại trừ ca cấp cứu được bỏ qua điều kiện thanh toán (BR-07).
+    // Chỉ hiển thị chỉ định siêu âm khi dịch vụ tương ứng đã được thanh toán.
+    // Cờ is_emergency chỉ dùng để xếp mức ưu tiên, không thay thế thanh toán.
     private static final String PAYMENT_GATE_CONDITION =
         "("
-        + "ISNULL(a.is_emergency, 0) = 1 "
-        + "OR UPPER(ISNULL(a.status, '')) = 'EMERGENCY_SOS' "
-        + "OR ((a.service_id = o.service_id OR EXISTS ("
+        + "((a.service_id = o.service_id OR EXISTS ("
         + "       SELECT 1 FROM appointment_services aps "
         + "       WHERE aps.appointment_id = a.id AND aps.service_id = o.service_id"
         + "    )) AND EXISTS ("

@@ -18,7 +18,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=Inter:wght@400;600;700&display=swap"
           rel="stylesheet">
     <!-- Custom CSS -->
-    <link href="${pageContext.request.contextPath}/assets/css/style.css?v=102" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/style.css?v=202" rel="stylesheet">
 </head>
 <body class="login-page">
 
@@ -49,7 +49,7 @@
                 </div>
                 <div class="auth-mockup-row">
                     <i class="bi bi-check-circle-fill"></i>
-                    <span class="auth-mockup-text">Thông báo khẩn cấp định vị SOS tức thì</span>
+                    <span class="auth-mockup-text">Phân tích hình ảnh siêu âm có AI hỗ trợ</span>
                 </div>
                 <div class="auth-mockup-row">
                     <i class="bi bi-check-circle-fill"></i>
@@ -110,8 +110,7 @@
                            name="email"
                            placeholder=" "
                            value="${not empty emailValue ? emailValue : ''}"
-                           required
-                           autofocus>
+                           required>
                     <label class="floating-label" for="email">Email hoặc tên đăng nhập</label>
                     <c:if test="${not empty emailError}">
                         <div class="invalid-feedback d-block">${emailError}</div>

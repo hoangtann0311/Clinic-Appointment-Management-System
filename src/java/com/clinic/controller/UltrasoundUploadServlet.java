@@ -62,8 +62,7 @@ public class UltrasoundUploadServlet extends HttpServlet {
             return;
         }
 
-        // Kiểm tra quyền chuyển đổi trạng thái
-        // Cho phép upload nếu trạng thái là InProgress hoặc Uploaded (upload thêm ảnh)
+        // Mỗi chỉ định chỉ nhận đúng một ảnh, ở bước đang thực hiện.
         var order = orderService.getById(orderId);
         if (order == null) {
             response.sendError(HttpServletResponse.SC_NOT_FOUND, "Không tìm thấy chỉ định siêu âm.");
@@ -72,13 +71,19 @@ public class UltrasoundUploadServlet extends HttpServlet {
 
         if (!orderService.isReadyForSonographer(orderId) || !orderService.checkSonographerOwnership(orderId, user.getId())) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN,
-                    "Bạn không có quyền tải ảnh cho ca siêu âm này (Đã được phụ trách bởi Bác sĩ Siêu âm khác).");
+                    "Bạn không có quyền tải ảnh cho ca siêu âm này (đã được phụ trách bởi Bác sĩ siêu âm khác).");
             return;
         }
 
-        if (!"InProgress".equalsIgnoreCase(order.getStatus()) && !"Uploaded".equalsIgnoreCase(order.getStatus())) {
+        if (!orderService.getUltrasoundImages(orderId).isEmpty()) {
+            response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId
+                    + "&error=" + java.net.URLEncoder.encode("Mỗi chỉ định chỉ được lưu một ảnh siêu âm.", "UTF-8"));
+            return;
+        }
+
+        if (!"InProgress".equalsIgnoreCase(order.getStatus())) {
             response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId 
-                    + "&error=" + java.net.URLEncoder.encode("Chỉ có thể tải ảnh lên khi trạng thái là Đang thực hiện (InProgress) hoặc Đã tải ảnh (Uploaded).", "UTF-8"));
+                    + "&error=" + java.net.URLEncoder.encode("Chỉ có thể tải một ảnh khi ca đang ở bước chụp ảnh.", "UTF-8"));
             return;
         }
 

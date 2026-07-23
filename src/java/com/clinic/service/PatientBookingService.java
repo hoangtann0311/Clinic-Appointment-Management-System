@@ -115,14 +115,14 @@ public class PatientBookingService {
      *
      * @param userId     users.id của tài khoản đang đăng nhập (dùng để book slot)
      * @param slotId     time_slots.id được chọn
-     * @param serviceIds ít nhất một dịch vụ khám mà bệnh nhân chủ động chọn.
+     * @param serviceId  một dịch vụ chính mà bệnh nhân chủ động chọn.
      *                   Phí khám bác sĩ (base fee) vẫn được tính riêng từ slot/doctor.
      * @param symptoms   triệu chứng (bắt buộc — theo BA 4.2)
      * @param lmpStr     ngày kinh cuối cùng, định dạng yyyy-MM-dd (có thể rỗng)
      * @param errors     map lỗi để trả về cho UI (key -&gt; message)
      * @return Appointment vừa tạo, hoặc {@code null} nếu thất bại (xem errors)
      */
-    public Appointment bookAppointment(int userId, int slotId, int[] serviceIds,
+    public Appointment bookAppointment(int userId, int slotId, int serviceId,
                                         String symptoms, String lmpStr,
                                         Map<String, String> errors) {
 
@@ -148,18 +148,14 @@ public class PatientBookingService {
             return null;
         }
 
-        // 2. Một lịch khám phải nêu rõ ít nhất một dịch vụ; không tạo lịch
-        // chỉ có bác sĩ/slot nhưng thiếu mục đích dịch vụ.
-        if (serviceIds == null || serviceIds.length == 0) {
-            errors.put("serviceIds", "Vui lòng chọn ít nhất một dịch vụ khám.");
+        // 2. Mỗi lịch hẹn chỉ có một dịch vụ chính.
+        if (serviceId <= 0) {
+            errors.put("serviceId", "Vui lòng chọn một dịch vụ khám.");
             return null;
         }
-        java.util.Set<Integer> uniqueServiceIds = new java.util.HashSet<>();
-        for (int sid : serviceIds) {
-            if (sid <= 0 || !uniqueServiceIds.add(sid) || serviceDAO.findServiceById(sid) == null) {
-                errors.put("serviceIds", "Có dịch vụ bổ sung không tồn tại, vui lòng chọn lại.");
-                return null;
-            }
+        if (serviceDAO.findServiceById(serviceId) == null) {
+            errors.put("serviceId", "Dịch vụ khám không tồn tại, vui lòng chọn lại.");
+            return null;
         }
 
         // 3. Triệu chứng bắt buộc (BA 4.2: "Patient nhập triệu chứng và ngày kinh cuối")
@@ -220,7 +216,7 @@ public class PatientBookingService {
         // 8. Thực hiện đặt slot và tạo appointment trong cùng một transaction
         String gestationalAge = AppointmentDAO.calculateGestationalAge(lmp, workDate);
         boolean success = appointmentDAO.bookSlotAndCreateAppointment(
-                userId, patientId, slotId, serviceIds, basePrice, symptoms.trim(), lmp, gestationalAge, errors
+                userId, patientId, slotId, serviceId, basePrice, symptoms.trim(), lmp, gestationalAge, errors
         );
 
         if (!success) {

@@ -136,11 +136,13 @@ public class UserService {
         }
         // ── Validate số điện thoại ──
         String trimmedPhone = (phone != null) ? phone.trim() : "";
-        if (!trimmedPhone.isEmpty()) {
-            if (!trimmedPhone.matches("^(0[3|5|7|8|9])[0-9]{8}$")) {
-                errors.put("phone", "Số điện thoại không hợp lệ (10 chữ số, bắt đầu 03|05|07|08|09).");
-                return false;
-            }
+        if (trimmedPhone.isEmpty()) {
+            errors.put("phone", "Vui lòng nhập số điện thoại.");
+            return false;
+        }
+        if (!trimmedPhone.matches("^0(?:3|5|7|8|9)[0-9]{8}$")) {
+            errors.put("phone", "Số điện thoại không hợp lệ (10 chữ số, bắt đầu 03, 05, 07, 08 hoặc 09).");
+            return false;
         }
 
         String trimmedEmail = email.trim().toLowerCase();
@@ -151,12 +153,10 @@ public class UserService {
             return false;
         }
 
-        // Kiểm tra số điện thoại trùng (nếu có nhập)
-        if (!trimmedPhone.isEmpty()) {
-            if (userDAO.findByPhone(trimmedPhone) != null) {
-                errors.put("phone", "Số điện thoại này đã được sử dụng bởi người dùng khác.");
-                return false;
-            }
+        // Kiểm tra số điện thoại trùng
+        if (userDAO.findByPhone(trimmedPhone) != null) {
+            errors.put("phone", "Số điện thoại này đã được sử dụng bởi người dùng khác.");
+            return false;
         }
 
         // ── Validate roleId: chỉ nhận 6 vai trò còn trong phạm vi hệ thống ──
@@ -275,7 +275,7 @@ public class UserService {
         }
 
         String trimmedPhone = (phone != null) ? phone.trim() : "";
-        if (!trimmedPhone.isEmpty() && !trimmedPhone.matches("^(0[3|5|7|8|9])[0-9]{8}$")) {
+        if (!trimmedPhone.isEmpty() && !trimmedPhone.matches("^0(?:3|5|7|8|9)[0-9]{8}$")) {
             errors.put("phone", "Số điện thoại không hợp lệ (10 chữ số, bắt đầu 03|05|07|08|09).");
             return false;
         }
@@ -449,7 +449,7 @@ public class UserService {
             if (doctor != null) {
                 try {
                     if (doctorDAO.hasActiveWorkOrAppointments(conn, doctor.getId())) {
-                        errors.put("roleId", "Bác sĩ này còn lịch khám (Pending/Confirmed/Waiting/Emergency_SOS/InProgress) hoặc Lịch làm việc tương lai chưa hoàn tất. Không thể chuyển vai trò!");
+                        errors.put("roleId", "Bác sĩ này còn lịch khám (Chờ xác nhận/Đã xác nhận/Chờ khám/Đang khám) hoặc lịch làm việc tương lai chưa hoàn tất. Không thể chuyển vai trò!");
                         conn.rollback();
                         return false;
                     }
@@ -577,7 +577,7 @@ public class UserService {
         // ── Validate số điện thoại (nếu có nhập) ──
         String trimmedPhone = (phone != null) ? phone.trim() : "";
         if (!trimmedPhone.isEmpty()) {
-            if (!trimmedPhone.matches("^(0[3|5|7|8|9])[0-9]{8}$")) {
+            if (!trimmedPhone.matches("^0(?:3|5|7|8|9)[0-9]{8}$")) {
                 errors.put("phone", "Số điện thoại không hợp lệ (10 chữ số, bắt đầu 03|05|07|08|09).");
                 return false;
             }
@@ -641,7 +641,7 @@ public class UserService {
         // Validate số điện thoại (có thể để trống)
         String trimmedPhone = (phone != null) ? phone.trim() : "";
         if (!trimmedPhone.isEmpty()) {
-            if (!trimmedPhone.matches("^(0[3|5|7|8|9])[0-9]{8}$")) {
+            if (!trimmedPhone.matches("^0(?:3|5|7|8|9)[0-9]{8}$")) {
                 errors.put("phone", "Số điện thoại không hợp lệ (10 chữ số, bắt đầu 03|05|07|08|09).");
                 return false;
             }

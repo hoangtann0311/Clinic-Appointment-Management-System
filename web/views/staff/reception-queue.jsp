@@ -5,7 +5,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Hàng Đợi Tiếp Đón - CAMS Staff</title>
+    <title>Hàng Đợi Tiếp Đón - CAMS Lễ Tân</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Google Fonts -->
@@ -13,33 +13,12 @@
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <!-- Theme CSS -->
-    <link href="${pageContext.request.contextPath}/assets/css/admin.css" rel="stylesheet">
-    <link href="${pageContext.request.contextPath}/assets/css/staff.css" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/admin.css?v=202" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/staff.css?v=202" rel="stylesheet">
 </head>
 <body class="admin-body">
 
 <c:set var="requestURI" value="${pageContext.request.servletPath}" />
-
-<!-- Global Alert Banner for SOS Active -->
-<c:if test="${activeSos > 0}">
-    <div id="global-sos-alert">
-        <div class="d-flex align-items-center gap-3">
-            <i class="bi bi-exclamation-triangle-fill fs-3" style="animation: pulse-sos 1s infinite;"></i>
-            <div>
-                <h6 class="m-0 fw-bold">🚨 PHÁT HIỆN CÓ CA KHẨN CẤP (SOS) ĐANG CHỜ!</h6>
-                <small>Hệ thống tự động chèn đầu hàng đợi và hú còi cảnh báo. Hãy tiến hành đón tiếp ngay tại cửa.</small>
-            </div>
-        </div>
-        <div class="d-flex gap-2">
-            <button class="btn btn-light btn-sm fw-bold text-danger" onclick="playSiren()">
-                <i class="bi bi-volume-up-fill"></i> Phát Còi
-            </button>
-            <button class="btn btn-outline-light btn-sm" onclick="stopSiren()">
-                <i class="bi bi-volume-mute-fill"></i> Tắt Còi
-            </button>
-        </div>
-    </div>
-</c:if>
 
 <!-- Top Header Bar (spans 100vw) -->
 <nav class="admin-topbar">
@@ -50,7 +29,7 @@
         <a href="${pageContext.request.contextPath}/admin/reception" class="admin-topbar-brand">
             <i class="bi bi-hospital-fill"></i>
             CAMS
-            <span class="brand-badge">Staff</span>
+            <span class="brand-badge">Lễ Tân</span>
         </a>
     </div>
     <div class="admin-topbar-right">
@@ -94,7 +73,7 @@
             <li class="admin-sidebar-section">Tổng quan</li>
             <li>
                 <a href="${pageContext.request.contextPath}/admin/reception" 
-                   class="${fn:contains(requestURI, '/reception') && !fn:contains(requestURI, 'booking') && !fn:contains(requestURI, 'sos') ? 'active' : ''}">
+                   class="${fn:contains(requestURI, '/reception') && !fn:contains(requestURI, 'booking') ? 'active' : ''}">
                     <i class="bi bi-speedometer2"></i>
                     <span>Hàng Đợi Tiếp Đón</span>
                 </a>
@@ -112,7 +91,7 @@
                 <a href="${pageContext.request.contextPath}/admin/reception/doctor-schedules"
                    class="${fn:contains(requestURI, 'doctor-schedules') ? 'active' : ''}">
                     <i class="bi bi-calendar-week"></i>
-                    <span>Lịch Trực Bác Sĩ</span>
+                    <span>Lịch Làm Việc Bác Sĩ</span>
                 </a>
             </li>
             <li>
@@ -120,16 +99,6 @@
                    class="${fn:contains(requestURI, '/slots') ? 'active' : ''}">
                     <i class="bi bi-grid-3x3-gap"></i>
                     <span>Khung Giờ Khám</span>
-                </a>
-            </li>
-            <li>
-                <a href="${pageContext.request.contextPath}/admin/reception/sos" 
-                   class="${fn:contains(requestURI, 'sos') ? 'active' : ''}">
-                    <i class="bi bi-bell-slash text-danger"></i>
-                    <span>Giám Sát Cảnh Báo SOS</span>
-                    <c:if test="${activeSos > 0}">
-                        <span class="badge bg-danger ms-2"><c:out value="${activeSos}"/></span>
-                    </c:if>
                 </a>
             </li>
             <li>
@@ -190,7 +159,7 @@
         <!-- Metrics Grid -->
         <div class="row g-3 mb-4">
             <%-- 1. Tổng lịch hẹn --%>
-            <div class="col-xl-4 col-md-6">
+            <div class="col-lg-6">
                 <div class="card kpi-card kpi-appointments">
                     <div class="card-body">
                         <div class="kpi-icon"><i class="bi bi-calendar-event"></i></div>
@@ -204,7 +173,7 @@
             </div>
 
             <%-- 2. Đang chờ khám --%>
-            <div class="col-xl-4 col-md-6">
+            <div class="col-lg-6">
                 <div class="card kpi-card kpi-waiting">
                     <div class="card-body">
                         <div class="kpi-icon"><i class="bi bi-hourglass-split"></i></div>
@@ -217,21 +186,6 @@
                 </div>
             </div>
 
-            <%-- 3. Ca khẩn cấp --%>
-            <div class="col-xl-4 col-md-6">
-                <div class="card kpi-card kpi-patients <c:if test='${activeSos > 0}'>sos-blink</c:if>">
-                    <div class="card-body">
-                        <div class="kpi-icon">
-                            <i class="bi bi-activity"></i>
-                        </div>
-                        <div class="kpi-content">
-                            <div class="kpi-value">${activeSos}</div>
-                            <div class="kpi-label">Ca Khẩn Cấp (SOS)</div>
-                            <div class="kpi-sub"><i class="bi bi-exclamation-circle"></i> Ưu tiên số 1</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
 
         <!-- Smart Queue List (Spans 100% width) -->
@@ -248,6 +202,18 @@
                                 <li><c:out value="${err}"/></li>
                             </c:forEach>
                         </ul>
+                    </div>
+                </c:if>
+                <c:if test="${not empty queueError}">
+                    <div class="alert alert-danger m-3">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <c:out value="${queueError}"/>
+                    </div>
+                </c:if>
+                <c:if test="${not empty queueSuccess}">
+                    <div class="alert alert-success m-3">
+                        <i class="bi bi-check-circle-fill me-2"></i>
+                        <c:out value="${queueSuccess}"/>
                     </div>
                 </c:if>
 
@@ -270,20 +236,18 @@
                         <c:forEach var="apt" items="${queue}">
                             <c:set var="statusLower" value="${fn:toLowerCase(apt.status)}"/>
 
-                            <tr class="<c:if test='${statusLower == "emergency_sos"}'>sos-blink</c:if>">
+                            <tr class="${apt.emergency ? 'table-warning' : ''}">
                                 <td>
-                                    <c:choose>
-                                        <c:when test="${statusLower == 'emergency_sos'}">
-                                            <strong class="text-danger">
-                                                <c:out value="${apt.queueNumber != null ? apt.queueNumber : 'SOS'}"/>
-                                            </strong>
-                                        </c:when>
-                                        <c:otherwise>
-                                            <strong class="text-dark">
-                                                <c:out value="${apt.queueNumber != null ? apt.queueNumber : 'Chờ cấp'}"/>
-                                            </strong>
-                                        </c:otherwise>
-                                    </c:choose>
+                                    <strong class="${apt.emergency ? 'text-warning-emphasis' : 'text-dark'}">
+                                        <c:out value="${apt.queueNumber != null ? apt.queueNumber : 'Chờ cấp'}"/>
+                                    </strong>
+                                    <c:if test="${apt.emergency}">
+                                        <div class="mt-1">
+                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                                                <i class="bi bi-arrow-up-circle-fill me-1"></i>Ưu tiên
+                                            </span>
+                                        </div>
+                                    </c:if>
                                 </td>
 
                                 <td>
@@ -336,7 +300,6 @@
                                 <td>
                                     <span class="badge-cams
                                         <c:choose>
-                                            <c:when test="${statusLower == 'emergency_sos'}">badge-sos</c:when>
                                             <c:when test="${statusLower == 'waiting'}">badge-waiting</c:when>
                                             <c:when test="${statusLower == 'confirmed'}">badge-confirmed</c:when>
                                             <c:when test="${statusLower == 'pending'}">badge-pending</c:when>
@@ -344,24 +307,34 @@
                                             <c:when test="${statusLower == 'success'}">badge-success</c:when>
                                             <c:otherwise>badge-cancelled</c:otherwise>
                                         </c:choose>">
-                                        <c:out value="${apt.status}"/>
+                                        <c:choose>
+                                            <c:when test="${statusLower == 'waiting'}">Chờ khám</c:when>
+                                            <c:when test="${statusLower == 'confirmed'}">Đã xác nhận</c:when>
+                                            <c:when test="${statusLower == 'pending'}">Chờ xác nhận</c:when>
+                                            <c:when test="${statusLower == 'inprogress'}">Đang khám</c:when>
+                                            <c:when test="${statusLower == 'success' || statusLower == 'completed'}">Hoàn thành</c:when>
+                                            <c:otherwise>Đã hủy</c:otherwise>
+                                        </c:choose>
                                     </span>
+                                    <c:if test="${apt.emergency}">
+                                        <div class="small mt-2 text-warning-emphasis"
+                                             title="Người thao tác: ${apt.prioritizedByName}; Thời gian: ${apt.prioritizedAtText}">
+                                            <i class="bi bi-info-circle me-1"></i>
+                                            <c:out value="${apt.priorityReason}"/>
+                                            <c:if test="${not empty apt.prioritizedByName}">
+                                                <br><span class="text-muted">
+                                                    Bởi <c:out value="${apt.prioritizedByName}"/>
+                                                    <c:if test="${not empty apt.prioritizedAtText}">
+                                                        lúc <c:out value="${apt.prioritizedAtText}"/>
+                                                    </c:if>
+                                                </span>
+                                            </c:if>
+                                        </div>
+                                    </c:if>
                                 </td>
 
                                 <td>
                                     <c:choose>
-                                        <c:when test="${statusLower == 'emergency_sos'}">
-                                            <form action="${pageContext.request.contextPath}/admin/reception/sos/dismiss"
-                                                  method="post"
-                                                  style="display:inline;">
-                                                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
-                                                <input type="hidden" name="id" value="${apt.id}">
-                                                <button type="submit" class="btn-cams btn-cams-sos btn-sm">
-                                                    <i class="bi bi-shield-fill-exclamation"></i> ĐÓN TIẾP KHẨN
-                                                </button>
-                                            </form>
-                                        </c:when>
-
                                         <c:when test="${statusLower == 'pending' || statusLower == 'confirmed'}">
                                             <div class="d-flex flex-wrap justify-content-center gap-1">
                                                 <c:choose>
@@ -406,15 +379,55 @@
                                         </c:when>
 
                                         <c:when test="${statusLower == 'waiting'}">
-                                            <span class="text-success fw-bold text-nowrap">
-                                                <i class="bi bi-person-fill-check"></i> Đang đợi Bác sĩ lâm sàng
-                                            </span>
+                                            <div class="d-flex flex-column align-items-center gap-2">
+                                                <span class="text-success fw-bold text-nowrap">
+                                                    <i class="bi bi-person-fill-check"></i> Đang đợi Bác sĩ lâm sàng
+                                                </span>
+                                                <c:choose>
+                                                    <c:when test="${apt.emergency}">
+                                                        <form method="post"
+                                                              action="${pageContext.request.contextPath}/admin/reception/priority"
+                                                              onsubmit="return confirm('Bỏ mức ưu tiên của ca khám này?');">
+                                                            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                                                            <input type="hidden" name="action" value="clear">
+                                                            <input type="hidden" name="id" value="${apt.id}">
+                                                            <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                                                <i class="bi bi-arrow-down-circle me-1"></i>Bỏ ưu tiên
+                                                            </button>
+                                                        </form>
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <button type="button"
+                                                                class="btn btn-sm btn-outline-warning"
+                                                                data-bs-toggle="modal"
+                                                                data-bs-target="#priorityModal"
+                                                                data-appointment-id="${apt.id}"
+                                                                data-patient-name="${fn:escapeXml(apt.patientName)}">
+                                                            <i class="bi bi-arrow-up-circle me-1"></i>Đánh dấu ưu tiên
+                                                        </button>
+                                                    </c:otherwise>
+                                                </c:choose>
+                                            </div>
                                         </c:when>
 
                                         <c:when test="${statusLower == 'inprogress'}">
-                                            <span class="text-warning fw-semibold text-nowrap">
-                                                <i class="bi bi-activity"></i> Đang khám lâm sàng
-                                            </span>
+                                            <div class="d-flex flex-column align-items-center gap-2">
+                                                <span class="text-warning fw-semibold text-nowrap">
+                                                    <i class="bi bi-activity"></i> Đang khám lâm sàng
+                                                </span>
+                                                <c:if test="${apt.emergency}">
+                                                    <form method="post"
+                                                          action="${pageContext.request.contextPath}/admin/reception/priority"
+                                                          onsubmit="return confirm('Bỏ mức ưu tiên của ca khám này?');">
+                                                        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                                                        <input type="hidden" name="action" value="clear">
+                                                        <input type="hidden" name="id" value="${apt.id}">
+                                                        <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                                            <i class="bi bi-arrow-down-circle me-1"></i>Bỏ ưu tiên
+                                                        </button>
+                                                    </form>
+                                                </c:if>
+                                            </div>
                                         </c:when>
 
                                         <c:when test="${statusLower == 'success'}">
@@ -454,85 +467,45 @@
     </main>
 </div>
 
+<div class="modal fade" id="priorityModal" tabindex="-1" aria-labelledby="priorityModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4">
+            <form method="post" action="${pageContext.request.contextPath}/admin/reception/priority">
+                <div class="modal-header border-0 pb-1">
+                    <h5 class="modal-title fw-bold" id="priorityModalLabel">
+                        <i class="bi bi-arrow-up-circle-fill text-warning me-2"></i>Đánh Dấu Ưu Tiên
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                    <input type="hidden" name="action" value="mark">
+                    <input type="hidden" name="id" id="priorityAppointmentId">
+                    <div class="alert alert-warning py-2">
+                        Ca khám của <strong id="priorityPatientName">bệnh nhân</strong>
+                        sẽ được xếp trước các ca đang chờ thông thường.
+                    </div>
+                    <label for="priorityReason" class="form-label fw-semibold">
+                        Lý do ưu tiên <span class="text-danger">*</span>
+                    </label>
+                    <textarea class="form-control" id="priorityReason" name="reason"
+                              rows="4" minlength="5" maxlength="500" required
+                              placeholder="Nhập tình trạng hoặc lý do cần ưu tiên (5–500 ký tự)"></textarea>
+                    <div class="form-text">Thông tin người thao tác và thời gian sẽ được ghi vào nhật ký.</div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-check2-circle me-1"></i>Xác nhận ưu tiên
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    let audioCtx = null;
-    let osc1 = null;
-    let osc2 = null;
-    let sirenInterval = null;
-    let activeSos = ${activeSos != null ? activeSos : 0};
-
-    function playSiren() {
-        try {
-            if (audioCtx) return;
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            osc1 = audioCtx.createOscillator();
-            osc2 = audioCtx.createOscillator();
-            let gainNode = audioCtx.createGain();
-
-            osc1.type = 'sawtooth';
-            osc1.frequency.setValueAtTime(600, audioCtx.currentTime);
-            osc2.type = 'sine';
-            osc2.frequency.setValueAtTime(500, audioCtx.currentTime);
-
-            gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
-
-            osc1.connect(gainNode);
-            osc2.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-
-            osc1.start();
-            osc2.start();
-
-            let high = true;
-            sirenInterval = setInterval(() => {
-                if (high) {
-                    osc1.frequency.exponentialRampToValueAtTime(750, audioCtx.currentTime + 0.3);
-                    osc2.frequency.exponentialRampToValueAtTime(650, audioCtx.currentTime + 0.3);
-                } else {
-                    osc1.frequency.exponentialRampToValueAtTime(450, audioCtx.currentTime + 0.3);
-                    osc2.frequency.exponentialRampToValueAtTime(350, audioCtx.currentTime + 0.3);
-                }
-                high = !high;
-            }, 400);
-        } catch (e) {
-            console.error("Web Audio API error: ", e);
-        }
-    }
-
-    function stopSiren() {
-        if (sirenInterval) {
-            clearInterval(sirenInterval);
-            sirenInterval = null;
-        }
-        if (osc1) {
-            try {
-                osc1.stop();
-            } catch (e) {
-            }
-            osc1 = null;
-        }
-        if (osc2) {
-            try {
-                osc2.stop();
-            } catch (e) {
-            }
-            osc2 = null;
-        }
-        if (audioCtx) {
-            audioCtx.close();
-            audioCtx = null;
-        }
-    }
-
-    window.addEventListener('load', () => {
-        if (activeSos > 0) {
-            document.body.addEventListener('click', function autoSirenOnInteraction() {
-                playSiren();
-                document.body.removeEventListener('click', autoSirenOnInteraction);
-            });
-        }
-    });
-
     // Sidebar Toggle Script
     function openSidebar() {
         var s = document.getElementById('adminSidebar');
@@ -561,6 +534,18 @@
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') closeSidebar();
     });
+
+    var priorityModal = document.getElementById('priorityModal');
+    if (priorityModal) {
+        priorityModal.addEventListener('show.bs.modal', function(event) {
+            var button = event.relatedTarget;
+            document.getElementById('priorityAppointmentId').value =
+                    button.getAttribute('data-appointment-id') || '';
+            document.getElementById('priorityPatientName').textContent =
+                    button.getAttribute('data-patient-name') || 'bệnh nhân';
+            document.getElementById('priorityReason').value = '';
+        });
+    }
 </script>
 
 <%@ include file="../common/standalone-footer.jsp" %>

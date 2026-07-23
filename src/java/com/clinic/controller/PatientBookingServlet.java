@@ -63,7 +63,7 @@ public class PatientBookingServlet extends HttpServlet {
         if (user == null) return;
 
         String slotIdParam = request.getParameter("slotId");
-        String[] serviceIdParams = request.getParameterValues("serviceIds");
+        String serviceIdParam = request.getParameter("serviceId");
         String symptoms = request.getParameter("symptoms");
         String lmp = request.getParameter("lastMenstrualPeriod");
         String rescheduleIdParam = request.getParameter("rescheduleId");
@@ -71,14 +71,11 @@ public class PatientBookingServlet extends HttpServlet {
         boolean isReschedule = (rescheduleIdParam != null && !rescheduleIdParam.trim().isEmpty());
         Map<String, String> errors = new HashMap<>();
         int slotId = 0;
-        int[] serviceIds = new int[0];
+        int serviceId = 0;
         try {
             slotId = Integer.parseInt(slotIdParam);
-            if (!isReschedule && serviceIdParams != null) {
-                serviceIds = new int[serviceIdParams.length];
-                for (int i = 0; i < serviceIdParams.length; i++) {
-                    serviceIds[i] = Integer.parseInt(serviceIdParams[i]);
-                }
+            if (!isReschedule && serviceIdParam != null) {
+                serviceId = Integer.parseInt(serviceIdParam);
             }
         } catch (Exception e) {
             errors.put("general", isReschedule ? "Vui lòng chọn khung giờ hợp lệ." : "Vui lòng chọn khung giờ hợp lệ.");
@@ -101,7 +98,7 @@ public class PatientBookingServlet extends HttpServlet {
                 }
             } else {
                 appointment = bookingService.bookAppointment(
-                        user.getId(), slotId, serviceIds, symptoms, lmp, errors
+                        user.getId(), slotId, serviceId, symptoms, lmp, errors
                 );
                 if (appointment != null) {
                     response.sendRedirect(request.getContextPath()

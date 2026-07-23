@@ -96,7 +96,7 @@ public class DoctorScheduleDAO {
             }
         } catch (SQLException e) {
             System.err.println("[DoctorScheduleDAO] findAll ERROR: " + e.getMessage());
-            throw new RuntimeException("Lỗi database khi lấy danh sách lịch trực", e);
+            throw new RuntimeException("Lỗi cơ sở dữ liệu khi lấy danh sách lịch làm việc", e);
         } finally {
             closeResources(conn, ps, rs);
         }
@@ -619,7 +619,7 @@ public class DoctorScheduleDAO {
                 try (ResultSet rs = seedPs.executeQuery()) {
                     if (!rs.next()) {
                         conn.rollback();
-                        return new ApproveResult(false, 0, "NOT_FOUND", "Lịch trực không tồn tại.");
+                        return new ApproveResult(false, 0, "NOT_FOUND", "Lịch làm việc không tồn tại.");
                     }
                     doctorId = rs.getInt("doctor_id");
                     workDate = rs.getDate("work_date");
@@ -632,7 +632,7 @@ public class DoctorScheduleDAO {
             try (PreparedStatement lockPs = conn.prepareStatement(
                     "SELECT id FROM roles WITH (UPDLOCK, HOLDLOCK) WHERE id = 3")) {
                 try (ResultSet rs = lockPs.executeQuery()) {
-                    if (!rs.next()) throw new SQLException("Không thể khóa quy trình duyệt lịch trực.");
+                    if (!rs.next()) throw new SQLException("Không thể khóa quy trình xác nhận lịch làm việc.");
                 }
             }
 
@@ -646,11 +646,11 @@ public class DoctorScheduleDAO {
                 try (ResultSet rs = schedulePs.executeQuery()) {
                     if (!rs.next()) {
                         conn.rollback();
-                        return new ApproveResult(false, 0, "NOT_FOUND", "Lịch trực không tồn tại.");
+                        return new ApproveResult(false, 0, "NOT_FOUND", "Lịch làm việc không tồn tại.");
                     }
                     if (!"PENDING".equalsIgnoreCase(rs.getString("status"))) {
                         conn.rollback();
-                        return new ApproveResult(false, 0, "ALREADY_PROCESSED", "Lịch trực đã được xử lý.");
+                        return new ApproveResult(false, 0, "ALREADY_PROCESSED", "Lịch làm việc đã được xử lý.");
                     }
                     doctorId = rs.getInt("doctor_id");
                     workDate = rs.getDate("work_date");
@@ -672,7 +672,7 @@ public class DoctorScheduleDAO {
                 try (ResultSet rs = conflictPs.executeQuery()) {
                     if (rs.next()) {
                         conn.rollback();
-                        return new ApproveResult(false, 0, "CONFLICT", "Bác sĩ đã có lịch trực được duyệt trùng thời gian.");
+                        return new ApproveResult(false, 0, "CONFLICT", "Bác sĩ đã có lịch làm việc được xác nhận trùng thời gian.");
                     }
                 }
             }
@@ -700,7 +700,7 @@ public class DoctorScheduleDAO {
                 approvePs.setInt(2, scheduleId);
                 if (approvePs.executeUpdate() != 1) {
                     conn.rollback();
-                    return new ApproveResult(false, 0, "ALREADY_PROCESSED", "Lịch trực đã được xử lý.");
+                    return new ApproveResult(false, 0, "ALREADY_PROCESSED", "Lịch làm việc đã được xử lý.");
                 }
             }
 
@@ -708,7 +708,7 @@ public class DoctorScheduleDAO {
                     scheduleId, doctorId, workDate, startTime, endTime, conn);
             if (slotsGenerated <= 0) {
                 conn.rollback();
-                return new ApproveResult(false, 0, "SYSTEM_ERROR", "Không thể sinh khung giờ cho lịch trực.");
+                return new ApproveResult(false, 0, "SYSTEM_ERROR", "Không thể tạo khung giờ cho lịch làm việc.");
             }
             conn.commit();
             return new ApproveResult(true, slotsGenerated, null, null);
@@ -737,7 +737,7 @@ public class DoctorScheduleDAO {
             if (rows > 0) {
                 return new CancelScheduleResult(true, null, null);
             } else {
-                return new CancelScheduleResult(false, "NOT_FOUND", "Lịch trực không tồn tại hoặc đã bị hủy.");
+                return new CancelScheduleResult(false, "NOT_FOUND", "Lịch làm việc không tồn tại hoặc đã bị hủy.");
             }
         } catch (SQLException e) {
             return new CancelScheduleResult(false, "SYSTEM_ERROR", e.getMessage());

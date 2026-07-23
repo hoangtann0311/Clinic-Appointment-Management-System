@@ -7,14 +7,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Khung Giờ Khám — CAMS Manager</title>
+    <title>Khung Giờ Khám — CAMS Quản Lý</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
           rel="stylesheet"
           integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
           crossorigin="anonymous">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="${pageContext.request.contextPath}/assets/css/admin.css" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/admin.css?v=202" rel="stylesheet">
 
     <style>
         /* Slot-specific styles — Pink theme */
@@ -60,7 +60,7 @@
         .warning-banner-text { font-size: 0.85rem; color: #bf360c; }
 
         .schedule-info-card {
-            background: linear-gradient(135deg, var(--pink-50), #fce4ec);
+            background: linear-gradient(135deg, var(--pink-50), #fff1f6);
             border: 1px solid var(--pink-200);
             border-radius: var(--r-md);
             padding: 1.25rem;
@@ -136,7 +136,7 @@
         }
         .slot-card:hover {
             border-color: var(--pink-300);
-            box-shadow: 0 2px 8px rgba(233,30,140,0.08);
+            box-shadow: 0 2px 8px rgba(184,102,137,0.08);
         }
         .slot-card.available {
             border-left: 3px solid #43a047;
@@ -175,7 +175,7 @@
         .btn-primary-pink:hover {
             background: linear-gradient(135deg, var(--pink-600), var(--pink-700));
             color: #fff; transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(233,30,140,0.3);
+            box-shadow: 0 4px 12px rgba(184,102,137,0.3);
         }
 
         .admin-pagination {
@@ -255,14 +255,14 @@
         <a href="${pageContext.request.contextPath}/manager/dashboard" class="admin-topbar-brand">
             <i class="bi bi-hospital-fill"></i>
             CAMS
-            <span class="brand-badge">Manager</span>
+            <span class="brand-badge">Quản Lý</span>
         </a>
     </div>
     <div class="admin-topbar-right">
         <div class="admin-topbar-user d-none d-md-flex">
             <div class="admin-avatar-sm">${fn:substring(sessionScope.user.fullName, 0, 1)}</div>
             <span>${sessionScope.user.fullName}</span>
-            <span class="admin-topbar-role"><i class="bi bi-briefcase-fill me-1"></i>Manager</span>
+            <span class="admin-topbar-role"><i class="bi bi-briefcase-fill me-1"></i>Quản Lý</span>
         </div>
         <a href="${pageContext.request.contextPath}/logout" class="admin-topbar-logout" title="Đăng xuất">
             <i class="bi bi-box-arrow-right"></i>
@@ -285,17 +285,17 @@
     <div class="admin-page-header">
         <div>
             <h1 class="admin-page-title">
-                <i class="bi bi-clock-fill me-2" style="color:#9c0f6e;"></i>Khung Giờ Khám
+                <i class="bi bi-clock-fill me-2" style="color:#b86689;"></i>Khung Giờ Khám
             </h1>
             <div class="admin-page-subtitle">
                 <i class="bi bi-calendar-check"></i>
-                Danh sách khung giờ khám 20 phút được sinh tự động từ lịch trực đã duyệt
+                Danh sách khung giờ khám 20 phút được sinh tự động từ lịch làm việc đã xác nhận
             </div>
         </div>
         <div>
             <a href="${pageContext.request.contextPath}/manager/schedules/?status=APPROVED"
                class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left me-1"></i>Quay lại Lịch Trực
+                <i class="bi bi-arrow-left me-1"></i>Quay lại Lịch Làm Việc
             </a>
         </div>
     </div>
@@ -308,11 +308,11 @@
             <c:choose>
                 <c:when test="${success eq 'generated'}">
                     <i class="bi bi-check-circle-fill me-2 fs-5"></i>
-                    <div><strong>Sinh khung giờ thành công!</strong> Đã tạo ${generatedCount} khung giờ khám (20 phút/slot).</div>
+                    <div><strong>Sinh khung giờ thành công!</strong> Đã tạo ${generatedCount} khung giờ khám (20 phút/khung giờ).</div>
                 </c:when>
                 <c:when test="${success eq 'deleted'}">
                     <i class="bi bi-trash-fill me-2 fs-5"></i>
-                    <div><strong>Đã xóa!</strong> Tất cả khung giờ khám của lịch trực này đã bị xóa.</div>
+                    <div><strong>Đã xóa!</strong> Tất cả khung giờ khám của lịch làm việc này đã bị xóa.</div>
                 </c:when>
                 <c:otherwise>
                     <i class="bi bi-check-circle-fill me-2 fs-5"></i>
@@ -343,9 +343,9 @@
     <c:if test="${overviewMode}">
         <div class="admin-card mb-3">
             <div class="card-header admin-card-header-link d-flex justify-content-between align-items-center">
-                <h5><i class="bi bi-list-check me-2" style="color:#9c0f6e;"></i>Lịch Trực Đã Duyệt — Quản Lý Khung Giờ</h5>
+                <h5><i class="bi bi-list-check me-2" style="color:#b86689;"></i>Lịch Làm Việc Đã Xác Nhận — Quản Lý Khung Giờ</h5>
                 <span class="badge bg-white text-dark border" style="font-size:0.78rem;">
-                    <i class="bi bi-calendar-check me-1"></i>${fn:length(approvedSchedules)} lịch trực
+                    <i class="bi bi-calendar-check me-1"></i>${fn:length(approvedSchedules)} lịch làm việc
                 </span>
             </div>
             <div class="card-body p-0">
@@ -358,7 +358,7 @@
                                         <th>STT</th>
                                         <th>Bác Sĩ</th>
                                         <th>Ngày Trực</th>
-                                        <th>Ca Trực</th>
+                                        <th>Ca Làm Việc</th>
                                         <th>Khung Giờ</th>
                                         <th style="width:140px;">Thao Tác</th>
                                     </tr>
@@ -394,7 +394,7 @@
                                                 <c:choose>
                                                     <c:when test="${count != null and count > 0}">
                                                         <span class="badge-slot-available">
-                                                            <i class="bi bi-check-circle-fill me-1"></i>${count} slots
+                                                            <i class="bi bi-check-circle-fill me-1"></i>${count} khung giờ
                                                         </span>
                                                     </c:when>
                                                     <c:otherwise>
@@ -416,7 +416,7 @@
                                                         <c:otherwise>
                                                             <a href="${pageContext.request.contextPath}/manager/time-slots/?scheduleId=${sched.id}"
                                                                class="btn btn-sm btn-primary-pink" title="Sinh khung giờ">
-                                                                <i class="bi bi-lightning-charge-fill"></i> Sinh Slot
+                                                                <i class="bi bi-lightning-charge-fill"></i> Sinh Khung Giờ
                                                             </a>
                                                         </c:otherwise>
                                                     </c:choose>
@@ -431,11 +431,11 @@
                     <c:otherwise>
                         <div class="empty-state" style="padding:2.5rem 1.5rem;">
                             <i class="bi bi-calendar-x" style="font-size:3rem;color:var(--c-muted);"></i>
-                            <h5>Chưa Có Lịch Trực Được Duyệt</h5>
-                            <p>Không có lịch trực nào ở trạng thái "Đã duyệt". Vui lòng duyệt lịch trực trước khi quản lý khung giờ khám.</p>
+                            <h5>Chưa Có Lịch Làm Việc Được Xác Nhận</h5>
+                            <p>Không có lịch làm việc nào đã được xác nhận. Vui lòng xác nhận lịch trước khi quản lý khung giờ khám.</p>
                             <a href="${pageContext.request.contextPath}/manager/schedules/?status=PENDING"
                                class="btn btn-primary-pink">
-                                <i class="bi bi-calendar-check me-1"></i>Đi Đến Duyệt Lịch Trực
+                                <i class="bi bi-calendar-check me-1"></i>Đi Đến Lịch Làm Việc
                             </a>
                         </div>
                     </c:otherwise>
@@ -450,7 +450,7 @@
     <c:if test="${not overviewMode}">
     <div class="schedule-info-card">
         <div class="schedule-info-label mb-2">
-            <i class="bi bi-info-circle-fill me-1"></i>Thông tin lịch trực #${schedule.id}
+            <i class="bi bi-info-circle-fill me-1"></i>Thông tin lịch làm việc #${schedule.id}
         </div>
         <div class="schedule-info-row">
             <div class="schedule-info-item">
@@ -477,13 +477,13 @@
             <div class="schedule-info-item">
                 <i class="bi bi-clock"></i>
                 <div>
-                    <div style="font-size:0.68rem;color:var(--c-muted);">Ca trực</div>
+                    <div style="font-size:0.68rem;color:var(--c-muted);">Ca làm việc</div>
                     <div>${schedule.shiftLabel}</div>
                 </div>
             </div>
             <div class="schedule-info-item">
                 <span class="badge-status-approved" style="font-size:0.78rem;">
-                    <i class="bi bi-check-circle me-1"></i>Đã duyệt
+                    <i class="bi bi-check-circle me-1"></i>Đã xác nhận
                 </span>
             </div>
         </div>
@@ -516,21 +516,21 @@
                 <c:if test="${bookedCount == 0}">
                     <%-- Không có booked slots → cho phép xóa và sinh lại --%>
                     <form method="post" action="${pageContext.request.contextPath}/manager/time-slots/"
-                          onsubmit="return confirm('Xác nhận XÓA TẤT CẢ khung giờ khám của lịch trực này và sinh lại?\n\nHành động này không thể hoàn tác.')">
+                          onsubmit="return confirm('Xác nhận XÓA TẤT CẢ khung giờ khám của lịch làm việc này và sinh lại?\n\nHành động này không thể hoàn tác.')">
                         <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                         <input type="hidden" name="action" value="regenerate">
                         <input type="hidden" name="scheduleId" value="${schedule.id}">
                         <button type="submit" class="btn btn-primary-pink">
-                            <i class="bi bi-arrow-repeat me-1"></i>Sinh Lại Slots
+                            <i class="bi bi-arrow-repeat me-1"></i>Sinh Lại Khung Giờ
                         </button>
                     </form>
                     <form method="post" action="${pageContext.request.contextPath}/manager/time-slots/"
-                          onsubmit="return confirm('Xác nhận XÓA TẤT CẢ khung giờ khám của lịch trực #${schedule.id}?\n\nHành động này không thể hoàn tác.')">
+                          onsubmit="return confirm('Xác nhận XÓA TẤT CẢ khung giờ khám của lịch làm việc #${schedule.id}?\n\nHành động này không thể hoàn tác.')">
                         <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                         <input type="hidden" name="action" value="delete">
                         <input type="hidden" name="scheduleId" value="${schedule.id}">
                         <button type="submit" class="btn btn-outline-danger">
-                            <i class="bi bi-trash me-1"></i>Xóa Slots
+                            <i class="bi bi-trash me-1"></i>Xóa Khung Giờ
                         </button>
                     </form>
                 </c:if>
@@ -580,7 +580,7 @@
 
     <c:if test="${param.warning eq 'NoAvailableSlotsForPriceUpdate'}">
         <div class="alert alert-warning py-2" style="font-size:0.85rem;">
-            <i class="bi bi-exclamation-triangle-fill me-1"></i>Kh&ocirc;ng c&ograve;n khung gi&#7901; tr&#7889;ng &#273;&#7875; c&#7853;p nh&#7853;t gi&aacute;; gi&aacute; c&#7911;a slot &#273;&atilde; gi&#7919;/&#273;&#7863;t &#273;&#432;&#7907;c b&#7843;o to&agrave;n.
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>Kh&ocirc;ng c&ograve;n khung gi&#7901; tr&#7889;ng &#273;&#7875; c&#7853;p nh&#7853;t gi&aacute;; gi&aacute; c&#7911;a khung gi&#7901; &#273;&atilde; gi&#7919;/&#273;&#7863;t &#273;&#432;&#7907;c b&#7843;o to&agrave;n.
         </div>
     </c:if>
     <c:if test="${success eq 'priceUpdated'}">
@@ -597,16 +597,16 @@
             <%-- CARD VIEW (Grid): dạng thẻ slot trực quan --%>
             <div class="admin-card mb-3">
                 <div class="card-header admin-card-header-link d-flex justify-content-between align-items-center">
-                    <h5><i class="bi bi-grid-3x3-gap-fill me-2" style="color:#9c0f6e;"></i>Khung Giờ Khám — Dạng Lưới</h5>
+                    <h5><i class="bi bi-grid-3x3-gap-fill me-2" style="color:#b86689;"></i>Khung Giờ Khám — Dạng Lưới</h5>
                     <span class="badge bg-white text-dark border" style="font-size:0.78rem;">
-                        <i class="bi bi-clock me-1"></i>${totalSlots} slots (20 phút/slot)
+                        <i class="bi bi-clock me-1"></i>${totalSlots} khung giờ (20 phút/khung giờ)
                     </span>
                 </div>
                 <div class="card-body">
                     <div class="slot-grid">
                         <c:forEach var="slot" items="${slots}" varStatus="loop">
                             <div class="slot-card ${fn:toLowerCase(slot.status.name())}">
-                                <div class="slot-number">Slot #${loop.index + 1 + (currentPage - 1) * pageSize}</div>
+                                <div class="slot-number">Khung giờ #${loop.index + 1 + (currentPage - 1) * pageSize}</div>
                                 <div class="slot-time">${slot.timeLabel}</div>
                                 <c:choose>
                                     <c:when test="${slot.status.name() eq 'AVAILABLE'}">
@@ -636,7 +636,7 @@
             <%-- TABLE VIEW: dạng bảng để xem chi tiết + phân trang --%>
             <div class="admin-card">
                 <div class="card-header admin-card-header-link d-flex justify-content-between align-items-center">
-                    <h5><i class="bi bi-table me-2" style="color:#9c0f6e;"></i>Danh Sách Chi Tiết</h5>
+                    <h5><i class="bi bi-table me-2" style="color:#b86689;"></i>Danh Sách Chi Tiết</h5>
                 </div>
                 <div class="card-body p-0">
                     <div class="admin-table-wrapper">
@@ -760,13 +760,13 @@
                         <i class="bi bi-clock-history"></i>
                         <h5>Chưa Có Khung Giờ Khám</h5>
                         <p>
-                            Lịch trực này chưa có khung giờ khám nào được sinh.
+                            Lịch làm việc này chưa có khung giờ khám nào được sinh.
                             <c:choose>
                                 <c:when test="${schedule.isApprovedSchedule()}">
-                                    <br>Nhấn nút <strong>"Sinh Khung Giờ Khám"</strong> bên trên để tạo các slot 20 phút.
+                                    <br>Nhấn nút <strong>"Sinh Khung Giờ Khám"</strong> bên trên để tạo các khung giờ 20 phút.
                                 </c:when>
                                 <c:otherwise>
-                                    <br>Vui lòng <strong>duyệt lịch trực</strong> trước khi sinh khung giờ khám.
+                                    <br>Vui lòng <strong>xác nhận lịch làm việc</strong> trước khi sinh khung giờ khám.
                                 </c:otherwise>
                             </c:choose>
                         </p>

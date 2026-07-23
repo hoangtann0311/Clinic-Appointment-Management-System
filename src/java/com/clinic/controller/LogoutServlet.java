@@ -41,7 +41,7 @@ public class LogoutServlet extends HttpServlet {
             session.invalidate();
         }
 
-        // Chuyển về trang login phù hợp: Admin → /admin/login, còn lại → /login
+        // Mọi vai trò dùng chung một trang đăng nhập.
         // All roles return to the common login page.
         response.sendRedirect(request.getContextPath() + "/login");
     }

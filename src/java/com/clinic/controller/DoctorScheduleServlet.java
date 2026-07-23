@@ -323,7 +323,7 @@ public class DoctorScheduleServlet extends HttpServlet {
         DoctorSchedule schedule = scheduleDAO.findById(scheduleId);
         if (schedule == null) {
             resp.sendRedirect(redirectUrl + "?error="
-                    + java.net.URLEncoder.encode("Lịch trực không tồn tại.", "UTF-8"));
+                    + java.net.URLEncoder.encode("Lịch làm việc không tồn tại.", "UTF-8"));
             return;
         }
         if (schedule.getDoctorId() != doctor.getId()) {

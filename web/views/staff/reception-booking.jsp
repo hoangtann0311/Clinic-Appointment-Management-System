@@ -6,7 +6,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Đặt Lịch Thủ Công - CAMS Staff</title>
+    <title>Đặt Lịch Thủ Công - CAMS Lễ Tân</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Google Fonts -->
@@ -14,9 +14,9 @@
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <!-- Theme CSS -->
-    <link href="${pageContext.request.contextPath}/assets/css/admin.css" rel="stylesheet">
-    <link href="${pageContext.request.contextPath}/assets/css/staff.css" rel="stylesheet">
-    <link href="${pageContext.request.contextPath}/assets/css/app-ui.css?v=1" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/admin.css?v=202" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/staff.css?v=202" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/app-ui.css?v=202" rel="stylesheet">
     <script src="${pageContext.request.contextPath}/assets/js/app-ui.js?v=1" charset="UTF-8" defer></script>
 </head>
 <body class="admin-body">
@@ -32,7 +32,7 @@
         <a href="${pageContext.request.contextPath}/admin/reception" class="admin-topbar-brand">
             <i class="bi bi-hospital-fill"></i>
             CAMS
-            <span class="brand-badge">Staff</span>
+            <span class="brand-badge">Lễ Tân</span>
         </a>
     </div>
     <div class="admin-topbar-right">
@@ -76,7 +76,7 @@
             <li class="admin-sidebar-section">Tổng quan</li>
             <li>
                 <a href="${pageContext.request.contextPath}/admin/reception" 
-                   class="${fn:contains(requestURI, '/reception') && !fn:contains(requestURI, 'booking') && !fn:contains(requestURI, 'sos') ? 'active' : ''}">
+                   class="${fn:contains(requestURI, '/reception') && !fn:contains(requestURI, 'booking') ? 'active' : ''}">
                     <i class="bi bi-speedometer2"></i>
                     <span>Hàng Đợi Tiếp Đón</span>
                 </a>
@@ -94,7 +94,7 @@
                 <a href="${pageContext.request.contextPath}/admin/reception/doctor-schedules"
                    class="${fn:contains(requestURI, 'doctor-schedules') ? 'active' : ''}">
                     <i class="bi bi-calendar-week"></i>
-                    <span>Lịch Trực Bác Sĩ</span>
+                    <span>Lịch Làm Việc Bác Sĩ</span>
                 </a>
             </li>
             <li>
@@ -102,16 +102,6 @@
                    class="${fn:contains(requestURI, '/slots') ? 'active' : ''}">
                     <i class="bi bi-grid-3x3-gap"></i>
                     <span>Khung Giờ Khám</span>
-                </a>
-            </li>
-            <li>
-                <a href="${pageContext.request.contextPath}/admin/reception/sos" 
-                   class="${fn:contains(requestURI, 'sos') ? 'active' : ''}">
-                    <i class="bi bi-bell-slash text-danger"></i>
-                    <span>Giám Sát Cảnh Báo SOS</span>
-                    <c:if test="${activeSos > 0}">
-                        <span class="badge bg-danger ms-2"><c:out value="${activeSos}"/></span>
-                    </c:if>
                 </a>
             </li>
             <li>
@@ -251,7 +241,7 @@
                                 <option value="" disabled ${empty param.timeSlot ? 'selected' : ''}>-- Chọn khung giờ --</option>
                             </select>
 
-                            <small class="text-muted mt-1 d-block">Chọn Bác sĩ lâm sàng và ngày khám để tải các slot còn trống. Không áp dụng cho ca SOS.</small>
+                            <small class="text-muted mt-1 d-block">Chọn bác sĩ và ngày khám để tải các khung giờ còn trống.</small>
                         </div>
                         <div class="col-md-4 cams-form-group">
                             <label class="cams-form-label">Tổng chi phí tạm tính</label>
@@ -289,23 +279,10 @@
                                       placeholder="Ví dụ: Đau bụng âm ỉ, trễ kinh, khám thai định kỳ..."
                                       required
                                       minlength="10"
-                                      maxlength="500"
-                                      oninput="checkSymptoms(this.value)"><c:out value="${param.symptoms}"/></textarea>
+                                      maxlength="500"><c:out value="${param.symptoms}"/></textarea>
                             <small class="text-muted">
                                 Vui lòng nhập triệu chứng/lý do khám rõ ràng, tối thiểu 10 ký tự.
                             </small>
-                        </div>
-                    </div>
-
-                    <!-- Emergency SOS Checkbox -->
-                    <div class="alert alert-danger p-3 mt-3 d-flex align-items-center justify-content-between" id="sos-panel" style="display:none !important; border-left: 5px solid #d32f2f;">
-                        <div>
-                            <h6 class="alert-heading fw-bold m-0 text-danger"><i class="bi bi-exclamation-octagon-fill"></i> PHÁT HIỆN SÀNG LỌC TRIỆU CHỨNG KHẨN CẤP (SOS)</h6>
-                            <p class="m-0 text-dark font-size-13">Bệnh nhân khai báo "đau bụng dữ dội". Hệ thống sẽ kích hoạt <strong>Chế độ khẩn cấp (Emergency_SOS)</strong> chèn ca khám lên vị trí đầu tiên của hàng đợi.</p>
-                        </div>
-                        <div class="form-check form-switch m-0">
-                            <input class="form-check-input bg-danger border-danger" type="checkbox" name="isEmergency" id="isEmergency" value="true" checked>
-                            <label class="form-check-label fw-bold text-danger" for="isEmergency">Chế độ SOS</label>
                         </div>
                     </div>
 
@@ -396,20 +373,11 @@
                     html += '<option value="" disabled>Không có khung giờ trống</option>';
                 }
                 slotSelect.innerHTML = html;
-                syncEmergencySlotRequirement();
             })
             .catch(function () {
                 slotSelect.innerHTML = '<option value="" selected>Không tải được khung giờ, vui lòng thử lại</option>';
                 slotSelect.disabled = false;
             });
-    }
-
-    function syncEmergencySlotRequirement() {
-        const emergency = document.getElementById('isEmergency').checked;
-        const slotSelect = document.getElementById('timeSlot');
-        slotSelect.required = !emergency;
-        slotSelect.disabled = emergency;
-        if (emergency) slotSelect.value = '';
     }
 
     function calculateLMPAge() {
@@ -467,20 +435,6 @@
         ageValSpan.innerText = weeks + " tuần " + days + " ngày";
     }
 
-    function checkSymptoms(text) {
-        let sosPanel = document.getElementById("sos-panel");
-        let isEmergency = document.getElementById("isEmergency");
-
-        if (text.toLowerCase().includes("đau bụng dữ dội")) {
-            sosPanel.setAttribute("style", "display: flex !important");
-            isEmergency.checked = true;
-        } else {
-            sosPanel.setAttribute("style", "display: none !important");
-            isEmergency.checked = false;
-        }
-        syncEmergencySlotRequirement();
-    }
-
     function validateForm() {
         let phone = document.getElementById("phone").value.trim();
         let name = document.getElementById("name").value.trim();
@@ -491,8 +445,7 @@
             return false;
         }
         let slot = document.getElementById("timeSlot").value;
-        let emergency = document.getElementById("isEmergency").checked;
-        if (!phone || !name || !doc || !srv || (!emergency && !slot)) {
+        if (!phone || !name || !doc || !srv || !slot) {
             alert("Vui lòng điền đầy đủ thông tin bắt buộc!");
             return false;
         }
@@ -634,11 +587,6 @@
     document.addEventListener("DOMContentLoaded", function () {
         updatePriceDisplay();
         calculateLMPAge();
-
-        const symptomsInput = document.getElementById("symptoms");
-        if (symptomsInput) {
-            checkSymptoms(symptomsInput.value);
-        }
 
         validateDob();
         onDoctorOrDateChanged();

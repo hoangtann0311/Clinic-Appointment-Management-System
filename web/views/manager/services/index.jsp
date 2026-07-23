@@ -7,19 +7,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dịch Vụ Y Tế — CAMS Manager</title>
+    <title>Dịch Vụ Y Tế — CAMS Quản Lý</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
           rel="stylesheet"
           integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
           crossorigin="anonymous">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="${pageContext.request.contextPath}/assets/css/admin.css" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/admin.css?v=202" rel="stylesheet">
 
     <style>
         /* ── Page-specific Styles ── */
         .page-header-gradient {
-            background: linear-gradient(135deg, #fff0f6 0%, #ffe0ef 40%, #fce4ec 100%);
+            background: linear-gradient(135deg, #fff9fc 0%, #fff1f6 40%, #fff1f6 100%);
             border-radius: var(--r-lg);
             padding: 1.5rem 1.75rem;
             margin-bottom: 1.5rem;
@@ -126,7 +126,7 @@
             border: 1px solid var(--c-outline); font-size: 0.82rem; padding: 0.4rem 0.7rem;
         }
         .filter-bar .form-control:focus, .filter-bar .form-select:focus {
-            border-color: var(--pink-500); box-shadow: 0 0 0 0.18rem rgba(233,30,140,0.12);
+            border-color: var(--pink-500); box-shadow: 0 0 0 0.18rem rgba(184,102,137,0.12);
         }
 
         /* Table */
@@ -193,7 +193,7 @@
         .btn-primary-pink:hover {
             background: linear-gradient(135deg, var(--pink-600), var(--pink-700));
             color: #fff; transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(233,30,140,0.3);
+            box-shadow: 0 4px 12px rgba(184,102,137,0.3);
         }
         .btn-outline-pink {
             background: #fff; border: 1.5px solid var(--pink-300); color: var(--pink-600);
@@ -294,14 +294,14 @@
         <a href="${pageContext.request.contextPath}/manager/dashboard" class="admin-topbar-brand">
             <i class="bi bi-hospital-fill"></i>
             CAMS
-            <span class="brand-badge">Manager</span>
+            <span class="brand-badge">Quản Lý</span>
         </a>
     </div>
     <div class="admin-topbar-right">
         <div class="admin-topbar-user d-none d-md-flex">
             <div class="admin-avatar-sm">${fn:substring(sessionScope.user.fullName, 0, 1)}</div>
             <span>${sessionScope.user.fullName}</span>
-            <span class="admin-topbar-role"><i class="bi bi-briefcase-fill me-1"></i>Manager</span>
+            <span class="admin-topbar-role"><i class="bi bi-briefcase-fill me-1"></i>Quản Lý</span>
         </div>
         <a href="${pageContext.request.contextPath}/logout" class="admin-topbar-logout" title="Đăng xuất">
             <i class="bi bi-box-arrow-right"></i>

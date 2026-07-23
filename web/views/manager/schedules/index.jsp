@@ -7,14 +7,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quản lý lịch trực Bác sĩ lâm sàng — CAMS Quản lý</title>
+    <title>Quản Lý Lịch Làm Việc Bác Sĩ — CAMS</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
           rel="stylesheet"
           integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
           crossorigin="anonymous">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="${pageContext.request.contextPath}/assets/css/admin.css" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/admin.css?v=202" rel="stylesheet">
 
     <style>
         /* Schedule-specific styles on top of admin.css Pink Theme */
@@ -107,11 +107,11 @@
         }
         .action-panel.active {
             border-color: var(--pink-400);
-            box-shadow: 0 8px 32px rgba(233,30,140,0.15), 0 2px 8px rgba(0,0,0,0.08);
+            box-shadow: 0 8px 32px rgba(184,102,137,0.15), 0 2px 8px rgba(0,0,0,0.08);
         }
         .action-panel-header {
             padding: 0.65rem 1rem;
-            background: linear-gradient(135deg, var(--pink-50), #fce4ec);
+            background: linear-gradient(135deg, var(--pink-50), #fff1f6);
             border-bottom: 1px solid var(--pink-200);
             display: flex; align-items: center; gap: 0.5rem;
             font-family: var(--font-display);
@@ -200,10 +200,10 @@
             position: relative;
         }
         .schedule-row-pending:hover {
-            background: linear-gradient(90deg, rgba(233,30,140,0.04), rgba(233,30,140,0.08)) !important;
+            background: linear-gradient(90deg, rgba(184,102,137,0.04), rgba(184,102,137,0.08)) !important;
         }
         .schedule-row-pending.selected {
-            background: linear-gradient(90deg, rgba(233,30,140,0.08), rgba(233,30,140,0.14)) !important;
+            background: linear-gradient(90deg, rgba(184,102,137,0.08), rgba(184,102,137,0.14)) !important;
             outline: 2px solid var(--pink-400); outline-offset: -2px;
             box-shadow: inset 4px 0 0 var(--pink-500);
         }
@@ -229,7 +229,7 @@
         .btn-primary-pink:hover {
             background: linear-gradient(135deg, var(--pink-600), var(--pink-700));
             color: #fff; transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(233,30,140,0.3);
+            box-shadow: 0 4px 12px rgba(184,102,137,0.3);
         }
 
         .kpi-mini-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; margin-bottom: 1.25rem; }
@@ -251,7 +251,7 @@
             border: 1px solid var(--c-outline); font-size: 0.85rem; padding: 0.45rem 0.75rem;
         }
         .filter-bar .form-control:focus, .filter-bar .form-select:focus {
-            border-color: var(--pink-500); box-shadow: 0 0 0 0.2rem rgba(233,30,140,0.15);
+            border-color: var(--pink-500); box-shadow: 0 0 0 0.2rem rgba(184,102,137,0.15);
         }
 
         .admin-pagination { display: flex; justify-content: center; gap: 0.25rem; margin-top: 1.25rem; }
@@ -310,14 +310,14 @@
         <a href="${pageContext.request.contextPath}/manager/dashboard" class="admin-topbar-brand">
             <i class="bi bi-hospital-fill"></i>
             CAMS
-            <span class="brand-badge">Manager</span>
+            <span class="brand-badge">Quản Lý</span>
         </a>
     </div>
     <div class="admin-topbar-right">
         <div class="admin-topbar-user d-none d-md-flex">
             <div class="admin-avatar-sm">${fn:substring(sessionScope.user.fullName, 0, 1)}</div>
             <span>${sessionScope.user.fullName}</span>
-            <span class="admin-topbar-role"><i class="bi bi-briefcase-fill me-1"></i>Manager</span>
+            <span class="admin-topbar-role"><i class="bi bi-briefcase-fill me-1"></i>Quản Lý</span>
         </div>
         <a href="${pageContext.request.contextPath}/logout" class="admin-topbar-logout" title="Đăng xuất">
             <i class="bi bi-box-arrow-right"></i>
@@ -340,11 +340,11 @@
     <div class="admin-page-header">
         <div>
             <h1 class="admin-page-title">
-                <i class="bi bi-calendar-check me-2" style="color:#9c0f6e;"></i>Duyệt Lịch Trực Bác sĩ lâm sàng
+                <i class="bi bi-calendar-check me-2" style="color:#b86689;"></i>Lịch Làm Việc Bác Sĩ
             </h1>
             <div class="admin-page-subtitle">
                 <i class="bi bi-people-fill"></i>
-                Quản lý, duyệt và từ chối các yêu cầu đăng ký lịch trực của Bác sĩ lâm sàng
+                Xác nhận hoặc từ chối đăng ký lịch làm việc của bác sĩ lâm sàng
             </div>
         </div>
     </div>
@@ -357,14 +357,14 @@
             <div class="kpi-mini-icon kmi-pending"><i class="bi bi-hourglass-split"></i></div>
             <div class="kpi-mini-body">
                 <div class="kpi-mini-value">${pendingCount}</div>
-                <div class="kpi-mini-label">Chờ Duyệt</div>
+                <div class="kpi-mini-label">Chờ Xác Nhận</div>
             </div>
         </div>
         <div class="kpi-mini" onclick="window.location.href='?status=APPROVED'" style="cursor:pointer;">
             <div class="kpi-mini-icon kmi-approved"><i class="bi bi-check-circle-fill"></i></div>
             <div class="kpi-mini-body">
                 <div class="kpi-mini-value">${approvedCount}</div>
-                <div class="kpi-mini-label">Đã Duyệt</div>
+                <div class="kpi-mini-label">Đã Xác Nhận</div>
             </div>
         </div>
         <div class="kpi-mini" onclick="window.location.href='?status=REJECTED'" style="cursor:pointer;">
@@ -385,7 +385,7 @@
             <div class="kpi-mini-icon kmi-total"><i class="bi bi-calendar-week-fill"></i></div>
             <div class="kpi-mini-body">
                 <div class="kpi-mini-value">${totalSchedules}</div>
-                <div class="kpi-mini-label">Tổng Lịch Trực</div>
+                <div class="kpi-mini-label">Tổng Lịch Làm Việc</div>
             </div>
         </div>
     </div>
@@ -398,11 +398,11 @@
             <c:choose>
                 <c:when test="${success eq 'approved'}">
                     <i class="bi bi-check-circle-fill me-2 fs-5"></i>
-                    <div><strong>Duyệt thành công!</strong> Lịch trực #${param.id} đã được phê duyệt và đưa vào lịch làm việc chính thức.</div>
+                    <div><strong>Xác nhận thành công!</strong> Lịch làm việc #${param.id} đã được đưa vào lịch chính thức.</div>
                 </c:when>
                 <c:when test="${success eq 'rejected'}">
                     <i class="bi bi-x-circle-fill me-2 fs-5"></i>
-                    <div><strong>Đã từ chối!</strong> Lịch trực #${param.id} đã bị từ chối. Bác sĩ lâm sàng sẽ nhận được thông báo kèm lý do.</div>
+                    <div><strong>Đã từ chối!</strong> Lịch làm việc #${param.id} không được xác nhận. Bác sĩ sẽ nhận được lý do.</div>
                 </c:when>
                 <c:otherwise>
                     <i class="bi bi-check-circle-fill me-2 fs-5"></i>
@@ -428,8 +428,8 @@
             <form method="get" action="${pageContext.request.contextPath}/manager/schedules/" class="filter-bar">
                 <select name="status" class="form-select">
                     <option value="">Tất cả trạng thái</option>
-                    <option value="PENDING" ${statusFilter eq 'PENDING' ? 'selected' : ''}>🟠 Chờ duyệt</option>
-                    <option value="APPROVED" ${statusFilter eq 'APPROVED' ? 'selected' : ''}>🟢 Đã duyệt</option>
+                    <option value="PENDING" ${statusFilter eq 'PENDING' ? 'selected' : ''}>🟠 Chờ xác nhận</option>
+                    <option value="APPROVED" ${statusFilter eq 'APPROVED' ? 'selected' : ''}>🟢 Đã xác nhận</option>
                     <option value="REJECTED" ${statusFilter eq 'REJECTED' ? 'selected' : ''}>🔴 Đã từ chối</option>
                 </select>
                 <select name="doctorId" class="form-select">
@@ -463,9 +463,9 @@
          ============================================================ --%>
     <div class="admin-card">
         <div class="card-header admin-card-header-link d-flex justify-content-between align-items-center">
-            <h5><i class="bi bi-calendar-check me-2" style="color:#9c0f6e;"></i>Danh Sách Lịch Trực</h5>
+            <h5><i class="bi bi-calendar-check me-2" style="color:#b86689;"></i>Danh Sách Lịch Làm Việc</h5>
             <span class="badge bg-white text-dark border" style="font-size:0.78rem;">
-                <i class="bi bi-database me-1"></i>${totalSchedules} lịch trực
+                <i class="bi bi-database me-1"></i>${totalSchedules} lịch làm việc
             </span>
         </div>
         <div class="card-body p-0">
@@ -477,11 +477,11 @@
                             <th>Bác sĩ lâm sàng</th>
                             <th>Chuyên Khoa</th>
                             <th>Ngày Trực</th>
-                            <th>Ca Trực</th>
+                            <th>Ca Làm Việc</th>
                             <th>SL Tối Đa</th>
                             <th>Trạng Thái</th>
-                            <th>Người Duyệt</th>
-                            <th>Ngày Duyệt</th>
+                            <th>Người Xác Nhận</th>
+                            <th>Ngày Xác Nhận</th>
                             <th style="width:180px;">Thao Tác</th>
                         </tr>
                     </thead>
@@ -524,10 +524,10 @@
                                         <td>
                                             <c:choose>
                                                 <c:when test="${sched.status.name() eq 'PENDING'}">
-                                                    <span class="badge-status-pending"><i class="bi bi-hourglass-split me-1"></i>Chờ duyệt</span>
+                                                    <span class="badge-status-pending"><i class="bi bi-hourglass-split me-1"></i>Chờ xác nhận</span>
                                                 </c:when>
                                                 <c:when test="${sched.status.name() eq 'APPROVED'}">
-                                                    <span class="badge-status-approved"><i class="bi bi-check-circle me-1"></i>Đã duyệt</span>
+                                                    <span class="badge-status-approved"><i class="bi bi-check-circle me-1"></i>Đã xác nhận</span>
                                                 </c:when>
                                                 <c:when test="${sched.status.name() eq 'REJECTED'}">
                                                     <span class="badge-status-rejected"><i class="bi bi-x-circle me-1"></i>Đã từ chối</span>
@@ -564,13 +564,13 @@
                                                         <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                                         <input type="hidden" name="action" value="approve">
                                                         <input type="hidden" name="id" value="${sched.id}">
-                                                        <button type="submit" class="btn btn-sm btn-approve" title="Duyệt lịch trực">
-                                                            <i class="bi bi-check-lg"></i> Duyệt
+                                                        <button type="submit" class="btn btn-sm btn-approve" title="Xác nhận lịch làm việc">
+                                                            <i class="bi bi-check-lg"></i> Xác Nhận
                                                         </button>
                                                     </form>
                                                     <%-- Nút Từ chối (icon x, đỏ) — mở modal --%>
                                                     <button type="button" class="btn btn-sm btn-reject"
-                                                            title="Từ chối lịch trực"
+                                                            title="Từ chối lịch làm việc"
                                                             onclick="openRejectModal('${sched.id}', '${fn:escapeXml(sched.doctorName)}', '${sched.shiftLabel}')">
                                                         <i class="bi bi-x-lg"></i> Từ chối
                                                     </button>
@@ -581,10 +581,10 @@
                                                     <a href="${pageContext.request.contextPath}/manager/time-slots/?scheduleId=${sched.id}"
                                                        class="btn btn-sm btn-outline-primary"
                                                        title="Xem khung giờ khám đã sinh" style="font-size:0.78rem;">
-                                                        <i class="bi bi-clock-fill"></i> Slot
+                                                        <i class="bi bi-clock-fill"></i> Khung Giờ
                                                     </a>
                                                     <button type="button" class="btn btn-sm btn-outline-danger"
-                                                            title="Hủy lịch trực"
+                                                            title="Hủy lịch làm việc"
                                                             style="font-size:0.78rem;"
                                                             onclick="openCancelModal('${sched.id}', '${fn:escapeXml(sched.doctorName)}', '${sched.shiftLabel}')">
                                                         <i class="bi bi-x-circle"></i> Hủy
@@ -603,8 +603,8 @@
                                     <td colspan="10">
                                         <div class="admin-empty-state">
                                             <i class="bi bi-calendar-x" style="font-size:3rem;color:var(--c-muted);"></i>
-                                            <h6>Không tìm thấy lịch trực</h6>
-                                            <p>Chưa có yêu cầu đăng ký lịch trực nào hoặc không khớp với bộ lọc.</p>
+                                            <h6>Không tìm thấy lịch làm việc</h6>
+                                            <p>Chưa có đăng ký lịch làm việc nào hoặc dữ liệu không khớp bộ lọc.</p>
                                         </div>
                                     </td>
                                 </tr>
@@ -651,7 +651,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="bi bi-x-circle-fill me-2" style="color:#c62828;"></i>Từ Chối Lịch Trực
+                    <i class="bi bi-x-circle-fill me-2" style="color:#c62828;"></i>Từ Chối Lịch Làm Việc
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -667,7 +667,7 @@
                                 <div class="detail-value" id="rejectDoctorName">&mdash;</div>
                             </div>
                             <div class="col-6">
-                                <div class="detail-label">Ca trực</div>
+                                <div class="detail-label">Ca làm việc</div>
                                 <div class="detail-value" id="rejectShiftLabel">&mdash;</div>
                             </div>
                         </div>
@@ -678,7 +678,7 @@
                     </label>
                     <textarea name="rejectionReason" id="rejectionReason"
                               class="form-control" rows="4" maxlength="500"
-                              placeholder="Nhập lý do từ chối (tối thiểu 10 ký tự). Ví dụ: Ca trực đã đủ nhân sự, Bác sĩ lâm sàng có lịch làm việc khác trùng giờ..."
+                              placeholder="Nhập lý do từ chối (tối thiểu 10 ký tự). Ví dụ: Ca làm việc đã đủ nhân sự hoặc bác sĩ có lịch trùng giờ..."
                               required></textarea>
                     <div class="form-text">
                         <i class="bi bi-info-circle me-1"></i>
@@ -718,7 +718,7 @@
         <div class="modal-content">
             <div class="modal-header" style="background:#eceff1 !important; border-bottom: 1px solid #b0bec5 !important;">
                 <h5 class="modal-title" style="color:#37474f;">
-                    <i class="bi bi-slash-circle-fill me-2" style="color:#546e7a;"></i>Hủy Lịch Trực
+                    <i class="bi bi-slash-circle-fill me-2" style="color:#546e7a;"></i>Hủy Lịch Làm Việc
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -734,7 +734,7 @@
                                 <div class="detail-value" id="cancelDoctorName">&mdash;</div>
                             </div>
                             <div class="col-6">
-                                <div class="detail-label">Ca trực</div>
+                                <div class="detail-label">Ca làm việc</div>
                                 <div class="detail-value" id="cancelShiftLabel">&mdash;</div>
                             </div>
                         </div>
@@ -743,7 +743,7 @@
                     <div class="alert alert-warning d-flex align-items-center" style="font-size:0.85rem;border-radius:var(--r-sm);">
                         <i class="bi bi-exclamation-triangle-fill me-2 flex-shrink-0" style="font-size:1.2rem;"></i>
                         <div>
-                            <strong>Lưu ý:</strong> Nếu lịch trực đã có bệnh nhân đặt, bạn sẽ không thể hủy trực tiếp.
+                            <strong>Lưu ý:</strong> Nếu lịch làm việc đã có bệnh nhân đặt, bạn không thể hủy trực tiếp.
                             Hệ thống sẽ yêu cầu bạn xử lý chuyển bác sĩ hoặc đổi lịch cho bệnh nhân trước.
                         </div>
                     </div>
@@ -753,7 +753,7 @@
                     </label>
                     <textarea name="cancellationReason" id="cancellationReason"
                               class="form-control" rows="3" maxlength="500"
-                              placeholder="Nhập lý do hủy lịch trực (tối thiểu 10 ký tự)..."
+                              placeholder="Nhập lý do hủy lịch làm việc (tối thiểu 10 ký tự)..."
                               required></textarea>
                     <div class="form-text">
                         <i class="bi bi-info-circle me-1"></i>
@@ -795,7 +795,7 @@
             <div class="modal-header" style="background:#fff3e0 !important; border-bottom: 1px solid #ffcc80 !important;">
                 <h5 class="modal-title" style="color:#e65100;">
                     <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                    Không Thể Hủy Lịch Trực — Có Bệnh Nhân Đã Đặt
+                    Không Thể Hủy Lịch Làm Việc — Có Bệnh Nhân Đã Đặt
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -839,9 +839,9 @@
                 <div class="mt-3 p-3" style="background:#f5f5f5;border-radius:var(--r-sm);font-size:0.85rem;">
                     <strong><i class="bi bi-lightbulb-fill me-1" style="color:#f9a825;"></i>Hướng dẫn:</strong>
                     <ul class="mb-0 mt-2">
-                        <li>Chuyển từng bệnh nhân sang Bác sĩ lâm sàng khác có lịch trực cùng ngày</li>
+                        <li>Chuyển từng bệnh nhân sang bác sĩ khác có lịch làm việc cùng ngày</li>
                         <li>Hoặc đổi lịch hẹn của bệnh nhân sang ngày khác</li>
-                        <li>Sau khi xử lý xong tất cả bệnh nhân, quay lại đây để hủy lịch trực</li>
+                        <li>Sau khi xử lý xong tất cả bệnh nhân, quay lại đây để hủy lịch làm việc</li>
                     </ul>
                 </div>
             </div>
@@ -851,7 +851,7 @@
                 </button>
                 <a href="${pageContext.request.contextPath}/manager/time-slots/?scheduleId=${cancelSchedule.id}"
                    class="btn btn-primary-pink">
-                    <i class="bi bi-arrow-right-circle me-1"></i>Đi Đến Quản Lý Slots
+                    <i class="bi bi-arrow-right-circle me-1"></i>Đi Đến Quản Lý Khung Giờ
                 </a>
             </div>
         </div>
@@ -868,7 +868,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">
-                        <i class="bi bi-info-circle-fill me-2"></i>Chi Tiết Lịch Trực #${detailSchedule.id}
+                        <i class="bi bi-info-circle-fill me-2"></i>Chi Tiết Lịch Làm Việc #${detailSchedule.id}
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -896,14 +896,14 @@
                         </div>
                         <div class="col-md-4">
                             <div class="detail-card">
-                                <div class="detail-label">Ca trực</div>
+                                <div class="detail-label">Ca làm việc</div>
                                 <div class="detail-value">${detailSchedule.shiftLabel}</div>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="detail-card">
                                 <div class="detail-label">SL tối đa</div>
-                                <div class="detail-value">${detailSchedule.maxSlots} bác sĩ</div>
+                                <div class="detail-value">${detailSchedule.maxSlots} bệnh nhân/ca</div>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -911,8 +911,8 @@
                                 <div class="detail-label">Trạng thái</div>
                                 <div class="detail-value">
                                     <c:choose>
-                                        <c:when test="${detailSchedule.status.name() eq 'PENDING'}"><span class="badge-status-pending">Chờ duyệt</span></c:when>
-                                        <c:when test="${detailSchedule.status.name() eq 'APPROVED'}"><span class="badge-status-approved">Đã duyệt</span></c:when>
+                                        <c:when test="${detailSchedule.status.name() eq 'PENDING'}"><span class="badge-status-pending">Chờ xác nhận</span></c:when>
+                                        <c:when test="${detailSchedule.status.name() eq 'APPROVED'}"><span class="badge-status-approved">Đã xác nhận</span></c:when>
                                         <c:when test="${detailSchedule.status.name() eq 'REJECTED'}"><span class="badge-status-rejected">Đã từ chối</span></c:when>
                                     </c:choose>
                                 </div>
@@ -981,10 +981,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // ── Confirm approval ──
 function confirmApproval(id, doctorName, shiftLabel) {
-    return confirm('Xác nhận DUYỆT lịch trực #' + id + '?\n\n'
+    return confirm('Xác nhận lịch làm việc #' + id + '?\n\n'
         + 'Bác sĩ: ' + doctorName + '\n'
-        + 'Ca trực: ' + shiftLabel + '\n\n'
-        + 'Lịch trực sẽ được đưa vào lịch làm việc chính thức.');
+        + 'Ca làm việc: ' + shiftLabel + '\n\n'
+        + 'Lịch này sẽ được đưa vào lịch làm việc chính thức.');
 }
 
 // ── Open reject modal ──

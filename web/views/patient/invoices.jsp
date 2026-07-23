@@ -22,6 +22,119 @@
     </div>
 </div>
 
+<c:if test="${not empty purchaseSuccess}">
+    <div class="alert alert-success border-0 shadow-sm">
+        <i class="bi bi-check-circle-fill me-2"></i><c:out value="${purchaseSuccess}"/>
+    </div>
+</c:if>
+<c:if test="${not empty purchaseError}">
+    <div class="alert alert-danger border-0 shadow-sm">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i><c:out value="${purchaseError}"/>
+    </div>
+</c:if>
+
+<c:if test="${not empty prescriptionChoices}">
+    <div class="card border-0 shadow-sm rounded-4 mb-4" id="prescription-decisions">
+        <div class="card-header bg-transparent border-0 p-4 pb-2">
+            <h5 class="fw-bold mb-1">
+                <i class="bi bi-capsule-pill me-2 text-primary"></i>Lựa Chọn Mua Thuốc
+            </h5>
+            <p class="text-muted small mb-0">
+                Đơn thuốc là chỉ định chuyên môn và luôn được lưu trong hồ sơ.
+                Hóa đơn chỉ phát sinh khi bạn chọn mua tại phòng khám.
+            </p>
+        </div>
+        <div class="card-body p-4 pt-3">
+            <div class="row g-3">
+                <c:forEach var="rx" items="${prescriptionChoices}">
+                    <div class="col-12">
+                        <div class="border rounded-4 p-3 ${rx.purchaseDecision == 'Pending' ? 'bg-primary bg-opacity-10 border-primary-subtle' : 'bg-light'}">
+                            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                                <div>
+                                    <div class="fw-bold">
+                                        Đơn <c:out value="${rx.prescriptionCode}"/>
+                                    </div>
+                                    <div class="text-muted small mt-1">
+                                        Ngày khám: <c:out value="${rx.appointmentDate}"/>
+                                        <span class="mx-1">•</span>
+                                        Bác sĩ: BS. <c:out value="${not empty rx.doctorName ? rx.doctorName : 'Chưa cập nhật'}"/>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <div class="text-muted small">Giá trị dự kiến</div>
+                                    <div class="fw-bold text-danger">
+                                        <fmt:formatNumber value="${rx.totalAmount}" pattern="#,###"/>đ
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive mt-3">
+                                <table class="table table-sm align-middle mb-0 bg-transparent">
+                                    <thead>
+                                        <tr>
+                                            <th>Thuốc</th>
+                                            <th class="text-center">Số lượng</th>
+                                            <th>Liều dùng</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <c:forEach var="item" items="${rx.items}">
+                                            <tr>
+                                                <td><c:out value="${item.medicineName}"/></td>
+                                                <td class="text-center"><c:out value="${item.quantity}"/> <c:out value="${item.medicineUnit}"/></td>
+                                                <td><c:out value="${item.dosage}"/></td>
+                                            </tr>
+                                        </c:forEach>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
+                                <a href="${pageContext.request.contextPath}/patient/medical-records?recordId=${rx.medicalRecordId}"
+                                   class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                                    <i class="bi bi-file-medical me-1"></i>Xem đơn thuốc
+                                </a>
+                                <c:choose>
+                                    <c:when test="${rx.purchaseDecision == 'Pending'}">
+                                        <div class="d-flex flex-wrap gap-2">
+                                            <form method="post"
+                                                  action="${pageContext.request.contextPath}/patient/prescription-decision">
+                                                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                                                <input type="hidden" name="prescriptionId" value="${rx.id}">
+                                                <input type="hidden" name="decision" value="decline">
+                                                <button type="submit"
+                                                        class="btn btn-sm btn-outline-secondary rounded-pill px-3"
+                                                        onclick="return confirm('Bạn xác nhận không mua thuốc tại phòng khám? Đơn thuốc vẫn được lưu để bạn xem lại.');">
+                                                    <i class="bi bi-bag-x me-1"></i>Không mua tại phòng khám
+                                                </button>
+                                            </form>
+                                            <form method="post"
+                                                  action="${pageContext.request.contextPath}/patient/prescription-decision">
+                                                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                                                <input type="hidden" name="prescriptionId" value="${rx.id}">
+                                                <input type="hidden" name="decision" value="buy">
+                                                <button type="submit"
+                                                        class="btn btn-sm btn-success rounded-pill px-3">
+                                                    <i class="bi bi-bag-check me-1"></i>Mua thuốc tại phòng khám
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-3 py-2">
+                                            <i class="bi bi-check2-circle me-1"></i>Đã chọn không mua tại phòng khám
+                                        </span>
+                                    </c:otherwise>
+                                </c:choose>
+                            </div>
+                        </div>
+                    </div>
+                </c:forEach>
+            </div>
+        </div>
+    </div>
+</c:if>
+
 <%-- Metrics Summary --%>
 <div class="row g-3 mb-4">
     <c:set var="totalCount" value="${fn:length(invoices)}" />
@@ -171,16 +284,6 @@
                                                 <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
                                                     <i class="bi bi-clock-history me-1"></i>
                                                     ${inv.paymentMethod == 'Cash' ? 'Chờ thu tiền tại quầy' : 'Chờ lễ tân xác nhận chuyển khoản'}
-                                                </span>
-                                            </c:when>
-                                            <c:when test="${inv.status == 'DeclinedPurchase'}">
-                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
-                                                    <i class="bi bi-x-circle me-1"></i>Từ chối mua thuốc
-                                                </span>
-                                            </c:when>
-                                            <c:when test="${inv.status == 'Cancelled'}">
-                                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
-                                                    <i class="bi bi-slash-circle me-1"></i>Đã hủy
                                                 </span>
                                             </c:when>
                                             <c:otherwise>

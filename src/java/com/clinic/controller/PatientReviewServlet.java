@@ -63,9 +63,12 @@ public class PatientReviewServlet extends HttpServlet {
                 return;
             }
 
-            // Payment check for prescription (BR-31, BR-32, 4.12)
-            if (!new com.clinic.dao.InvoiceDAO().isPrescriptionPaidOrDeclined(appointmentId)) {
-                response.sendRedirect(request.getContextPath() + "/patient/appointments?bookingError=ChuaThanhToanDonThuoc");
+            // Đơn thuốc là chỉ định chuyên môn. Bệnh nhân được đánh giá sau khi
+            // đã từ chối mua, hoặc đã mua và thanh toán xong.
+            if (!new com.clinic.dao.PrescriptionDAO()
+                    .isPurchaseResolvedForReview(appointmentId)) {
+                response.sendRedirect(request.getContextPath()
+                        + "/patient/appointments?bookingError=ChuaXuLyDonThuoc");
                 return;
             }
 

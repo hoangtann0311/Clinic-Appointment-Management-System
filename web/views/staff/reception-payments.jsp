@@ -5,7 +5,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Xác Nhận Thanh Toán - CAMS Staff</title>
+    <title>Xác Nhận Thanh Toán - CAMS Lễ Tân</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Google Fonts -->
@@ -13,9 +13,9 @@
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <!-- Theme CSS -->
-    <link href="${pageContext.request.contextPath}/assets/css/admin.css" rel="stylesheet">
-    <link href="${pageContext.request.contextPath}/assets/css/staff.css" rel="stylesheet">
-    <link href="${pageContext.request.contextPath}/assets/css/app-ui.css?v=1" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/admin.css?v=202" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/staff.css?v=202" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/app-ui.css?v=202" rel="stylesheet">
     <script src="${pageContext.request.contextPath}/assets/js/app-ui.js?v=1" charset="UTF-8" defer></script>
 </head>
 <body class="admin-body">
@@ -31,7 +31,7 @@
         <a href="${pageContext.request.contextPath}/admin/reception" class="admin-topbar-brand">
             <i class="bi bi-hospital-fill"></i>
             CAMS
-            <span class="brand-badge">Staff</span>
+            <span class="brand-badge">Lễ Tân</span>
         </a>
     </div>
     <div class="admin-topbar-right">
@@ -93,7 +93,7 @@
                 <a href="${pageContext.request.contextPath}/admin/reception/doctor-schedules"
                    class="${fn:contains(requestURI, 'doctor-schedules') ? 'active' : ''}">
                     <i class="bi bi-calendar-week"></i>
-                    <span>Lịch trực Bác sĩ lâm sàng</span>
+                    <span>Lịch làm việc Bác sĩ lâm sàng</span>
                 </a>
             </li>
             <li>
@@ -101,13 +101,6 @@
                    class="${fn:contains(requestURI, '/slots') ? 'active' : ''}">
                     <i class="bi bi-grid-3x3-gap"></i>
                     <span>Khung Giờ Khám</span>
-                </a>
-            </li>
-            <li>
-                <a href="${pageContext.request.contextPath}/admin/reception/sos" 
-                   class="${fn:contains(requestURI, 'sos') ? 'active' : ''}">
-                    <i class="bi bi-bell-slash text-danger"></i>
-                    <span>Giám Sát Cảnh Báo SOS</span>
                 </a>
             </li>
             <li>
@@ -134,7 +127,7 @@
                 <h1 class="admin-page-title">
                     <c:choose>
                         <c:when test="${statusParam == 'Paid'}">Lịch Sử Giao Dịch Thanh Toán</c:when>
-                        <c:when test="${statusParam == 'PendingConfirmation'}">Duyệt Xác Nhận Thanh Toán</c:when>
+                        <c:when test="${statusParam == 'PendingConfirmation'}">Xác Nhận Thanh Toán</c:when>
                         <c:otherwise>Xác Nhận Thanh Toán Hóa Đơn</c:otherwise>
                     </c:choose>
                 </h1>
@@ -185,8 +178,6 @@
                             <option value="Unpaid" ${statusParam == 'Unpaid' ? 'selected' : ''}>Chưa thanh toán</option>
                             <option value="Paid" ${statusParam == 'Paid' ? 'selected' : ''}>Đã thanh toán</option>
                             <option value="PendingConfirmation" ${statusParam == 'PendingConfirmation' ? 'selected' : ''}>Chờ xác nhận</option>
-                            <option value="declined_purchase" ${statusParam == 'declined_purchase' || statusParam == 'DeclinedPurchase' ? 'selected' : ''}>Đã từ chối mua thuốc</option>
-                            <option value="Cancelled" ${statusParam == 'Cancelled' ? 'selected' : ''}>Đã hủy</option>
                         </select>
                     </div>
                     <div class="col-md-2">
@@ -206,7 +197,7 @@
                         <button type="submit" class="btn btn-primary w-100 flex-grow-1">
                             <i class="bi bi-funnel-fill me-1"></i> Lọc dữ liệu
                         </button>
-                        <a href="${pageContext.request.contextPath}/admin/reception/payments" class="btn btn-light border" title="Reset bộ lọc">
+                        <a href="${pageContext.request.contextPath}/admin/reception/payments" class="btn btn-light border" title="Đặt lại bộ lọc">
                             <i class="bi bi-arrow-counterclockwise"></i>
                         </a>
                     </div>
@@ -309,16 +300,6 @@
                                                             <i class="bi bi-clock-history"></i> Chờ xác nhận
                                                         </span>
                                                     </c:when>
-                                                    <c:when test="${inv.status == 'declined_purchase' || inv.status == 'DeclinedPurchase'}">
-                                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle d-flex align-items-center gap-1 w-fit" title="Sản phụ từ chối mua thuốc tại phòng khám">
-                                                            <i class="bi bi-x-circle-fill"></i> Đã từ chối mua thuốc
-                                                        </span>
-                                                    </c:when>
-                                                    <c:when test="${inv.status == 'Cancelled'}">
-                                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle d-flex align-items-center gap-1 w-fit">
-                                                            <i class="bi bi-x-circle"></i> Đã hủy
-                                                        </span>
-                                                    </c:when>
                                                     <c:otherwise>
                                                         <span class="badge bg-danger-subtle text-danger border border-danger-subtle d-flex align-items-center gap-1 w-fit">
                                                             <i class="bi bi-exclamation-circle"></i> Chưa thanh toán
@@ -330,31 +311,14 @@
                                                 <div class="d-flex gap-1 flex-wrap">
                                                     <c:choose>
                                                         <c:when test="${inv.status == 'PendingConfirmation'}">
-                                                            <c:if test="${inv.status == 'PendingConfirmation'}">
-                                                                <button type="button" class="btn btn-sm btn-outline-info fw-bold d-inline-flex align-items-center gap-1"
-                                                                        data-invoice-id="${inv.id}" data-patient-name="<c:out value='${inv.patientName}' />"
-                                                                        data-amount="${inv.totalAmount}" data-appointment-id="${inv.appointmentId}"
-                                                                        data-transaction-code="<c:out value='${inv.transactionCode}' />" data-invoice-type="<c:out value='${inv.invoiceType}' />"
-                                                                        data-service-name="<c:out value='${inv.serviceName != null ? inv.serviceName : "Phí khám thai tổng quát"}' />"
-                                                                        onclick="openQRModalFromButton(this)">
-                                                                    <i class="bi bi-qr-code-scan"></i> Xem QR
-                                                                </button>
-                                                            </c:if>
                                                             <button type="button" class="btn btn-sm btn-outline-success fw-bold d-inline-flex align-items-center gap-1"
                                                                     data-invoice-id="${inv.id}" data-patient-name="<c:out value='${inv.patientName}' />"
                                                                     data-amount="${inv.totalAmount}" data-invoice-type="<c:out value='${inv.invoiceType}' />"
                                                                     data-appointment-id="${inv.appointmentId}" data-appointment-date="<c:out value='${inv.appointmentDate}' />"
                                                                     data-service-name="<c:out value='${inv.serviceName != null ? inv.serviceName : "Phí khám thai tổng quát"}' />"
                                                                     data-payment-method="<c:out value='${inv.paymentMethod}' />" onclick="openPaymentModalFromButton(this)">
-                                                                <i class="bi bi-credit-card"></i> Xác nhận Paid
+                                                                <i class="bi bi-credit-card"></i> Xác nhận đã thanh toán
                                                             </button>
-                                                            <c:if test="${inv.invoiceType == 'PRESCRIPTION'}">
-                                                                <button type="button" class="btn btn-sm btn-outline-danger fw-bold d-inline-flex align-items-center gap-1"
-                                                                        data-invoice-id="${inv.id}" data-patient-name="<c:out value='${inv.patientName}' />"
-                                                                        onclick="confirmDeclineFromButton(this)">
-                                                                    <i class="bi bi-x-circle"></i> Từ chối
-                                                                </button>
-                                                            </c:if>
                                                         </c:when>
                                                         <c:otherwise>
                                                             <button class="btn btn-sm btn-light border text-muted disabled" disabled>
@@ -472,48 +436,13 @@
                 </div>
                 <div class="modal-footer bg-light border-0">
                     <button type="button" class="btn btn-secondary border" data-bs-dismiss="modal">Hủy bỏ</button>
-                    <button type="button" class="btn btn-outline-danger fw-bold" onclick="rejectCurrentPayment()">
-                        <i class="bi bi-x-lg"></i> Từ chối thanh toán
-                    </button>
                     <button type="submit" class="btn btn-success fw-bold px-4">
-                        <i class="bi bi-check-lg"></i> Xác nhận PAID
+                        <i class="bi bi-check-lg"></i> Xác nhận đã thanh toán
                     </button>
                 </div>
             </div>
         </form>
 
-<!-- Form riêng (không lồng trong form trên) để gửi Từ chối thanh toán sang StaffEditServlet -->
-        <form id="rejectPaymentForm" method="POST" action="${pageContext.request.contextPath}/admin/reception/edit" style="display:none;">
-            <input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
-            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
-            <input type="hidden" name="id" id="rejectApptId">
-            <input type="hidden" name="invoiceId" id="rejectInvoiceIdInput">
-            <input type="hidden" name="action" value="rejectPayment">
-            <input type="hidden" name="rejectReason" id="rejectReasonInput">
-        </form>
-    </div>
-</div>
-
-<!-- View QR Code Modal -->
-<div class="modal fade" id="qrModal" tabindex="-1" aria-labelledby="qrModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-info text-white">
-                <h5 class="modal-title fw-bold text-white" id="qrModalLabel">
-                    <i class="bi bi-qr-code-scan"></i> Xem QR Code
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4">
-                <div id="qrCodeDisplay" style="height: 200px; border: 1px solid #ccc; border-radius: 5px; display: none; text-align: center;">
-                </div>
-                <div id="paymentDetails" style="margin-top: 10px; font-size: 14px; color: #333;">
-                </div>
-            </div>
-            <div class="modal-footer bg-light border-0">
-                <button type="button" class="btn btn-secondary border" data-bs-dismiss="modal">Hủy bỏ</button>
-            </div>
-        </div>
     </div>
 </div>
 
@@ -639,143 +568,9 @@
     }
 
     function validatePaymentForm() {
-        // Mã giao dịch giờ chỉ là thông tin bổ sung tuỳ chọn — bằng chứng chính là ảnh
-        // minh chứng chuyển khoản bệnh nhân đã gửi (hiển thị phía trên), nên không bắt buộc nữa.
         return true;
     }
-
-    function rejectCurrentPayment() {
-        const apptId = document.getElementById('modalAppointmentId').value;
-        const invoiceId = document.getElementById('modalInvoiceId').value;
-        if (!apptId || !invoiceId) {
-            alert('Không xác định được hóa đơn cần từ chối.');
-            return;
-        }
-        const reason = prompt('Lý do từ chối thanh toán (bệnh nhân sẽ mất slot đã giữ, phải đặt lại lịch):');
-        if (reason === null) return; // bấm Cancel
-        document.getElementById('rejectApptId').value = apptId;
-        document.getElementById('rejectInvoiceIdInput').value = invoiceId;
-        document.getElementById('rejectReasonInput').value = reason;
-        const rejectPaymentForm = document.getElementById('rejectPaymentForm');
-        if (window.CAMS && window.CAMS.preparePostForm) window.CAMS.preparePostForm(rejectPaymentForm);
-        rejectPaymentForm.submit();
-    }
-
-    const qrModal = new bootstrap.Modal(document.getElementById('qrModal'));
-
-    function openQRModalFromButton(button) {
-        const d = button.dataset;
-        openQRModal(d.invoiceId, d.patientName, Number(d.amount), d.appointmentId,
-            d.transactionCode, d.invoiceType, d.serviceName);
-    }
-
-    function openQRModal(invoiceId, patientName, amount, appointmentId, transactionCode, invoiceType, serviceName) {
-        const qrCodeDisplay = document.getElementById('qrCodeDisplay');
-        const paymentDetailsDiv = document.getElementById('paymentDetails');
-
-        // Generate VietQR URL
-        const bankAccount = "0967629020";
-        const bankName = "mb"; // MB Bank
-        const amount_long = Math.floor(parseFloat(amount));
-        const accountName = "PHONG KHAM SAN PHU";
-        const description = "CAMSHD" + appointmentId;
-
-        // VietQR API - compact format
-        const qrUrl = "https://img.vietqr.io/image/" + bankName + "-" + bankAccount + "-compact2.png?amount=" + amount_long + "&addInfo=" + encodeURIComponent(description) + "&accountName=" + encodeURIComponent(accountName);
-
-        // Create QR code display with image
-        qrCodeDisplay.innerHTML = '<img src="' + qrUrl + '" alt="QR Code" style="max-width: 200px; height: auto; object-fit: contain; border-radius: 5px;">';
-        qrCodeDisplay.style.display = 'block';
-
-        // Fetch prescription items or test orders
-        const prescriptionItems = prescriptionItemsData[invoiceId] || [];
-        const testOrders = testOrdersData[invoiceId] || [];
-
-        let itemsHtml = '';
-        if (invoiceType === 'PRESCRIPTION' && prescriptionItems.length > 0) {
-            itemsHtml += '<div style="margin-top: 10px; border-top: 1px solid #e0e0e0; padding-top: 10px;">' +
-                         '<strong>Danh sách thuốc đã kê:</strong>' +
-                         '<table class="table table-sm mb-0 mt-1" style="font-size:12px;">' +
-                         '<thead><tr><th>Tên thuốc</th><th class="text-center">SL</th><th class="text-end">Đơn giá</th></tr></thead><tbody>';
-            prescriptionItems.forEach(item => {
-                itemsHtml += '<tr><td>' + escapeHtml(item.name) + '</td><td class="text-center">' + item.quantity + '</td><td class="text-end">' + new Intl.NumberFormat('vi-VN').format(item.price) + 'đ</td></tr>';
-            });
-            itemsHtml += '</tbody></table></div>';
-        } else if (invoiceType === 'POST_EXAM' && testOrders.length > 0) {
-            itemsHtml += '<div style="margin-top: 10px; border-top: 1px solid #e0e0e0; padding-top: 10px;">' +
-                         '<strong>Danh sách chỉ định siêu âm:</strong>' +
-                         '<table class="table table-sm mb-0 mt-1" style="font-size:12px;">' +
-                         '<thead><tr><th>Tên dịch vụ</th><th class="text-end">Đơn giá</th></tr></thead><tbody>';
-            testOrders.forEach(item => {
-                itemsHtml += '<tr><td>' + escapeHtml(item.name) + '</td><td class="text-end">' + new Intl.NumberFormat('vi-VN').format(item.price) + 'đ</td></tr>';
-            });
-            itemsHtml += '</tbody></table></div>';
-        } else if (invoiceType === 'PRE_EXAM') {
-            itemsHtml += '<div style="margin-top: 10px; border-top: 1px solid #e0e0e0; padding-top: 10px;">' +
-                         '<strong>Dịch vụ khám đăng ký:</strong> <span class="fw-bold">' + escapeHtml(serviceName || 'Khám thai định kỳ') + '</span>' +
-                         '</div>';
-        }
-
-        // Display payment details
-        const formattedAmount = new Intl.NumberFormat('vi-VN').format(amount_long) + 'đ';
-        const typeLabels = {
-            'PRE_EXAM': 'Trước khám',
-            'POST_EXAM': 'Sau khám',
-            'PRESCRIPTION': 'Đơn thuốc'
-        };
-        const invoiceTypeLabel = typeLabels[invoiceType] || invoiceType;
-
-        paymentDetailsDiv.innerHTML =
-            '<div style="margin-top: 15px;">' +
-                '<div class="row">' +
-                    '<div class="col-6">' +
-                        '<strong>Bệnh nhân:</strong> ' + escapeHtml(patientName) + '<br>' +
-                        '<strong>Mã GD:</strong> <code>' + escapeHtml(transactionCode || 'Chưa nhập') + '</code>' +
-                    '</div>' +
-                    '<div class="col-6 text-end">' +
-                        '<strong>Số tiền:</strong> <span class="text-danger fw-bold">' + formattedAmount + '</span><br>' +
-                    '<strong>Phân loại:</strong> <span class="badge bg-info text-dark">' + escapeHtml(invoiceTypeLabel) + '</span>' +
-                    '</div>' +
-                '</div>' +
-                itemsHtml +
-                '<div style="margin-top: 10px; border-top: 1px solid #e0e0e0; padding-top: 10px; font-size: 13px;">' +
-                    '<strong>Thông tin chuyển khoản ngân hàng:</strong><br>' +
-                    'Ngân hàng: <strong>MB Bank</strong><br>' +
-                    'Số TK: <strong>' + bankAccount + '</strong><br>' +
-                    'Chủ TK: <strong>' + accountName + '</strong><br>' +
-                    'Nội dung: <strong>' + description + '</strong>' +
-                '</div>' +
-            '</div>';
-
-        qrModal.show();
-    }
-
-    function confirmDecline(invoiceId, patientName) {
-        if (confirm("Xác nhận sản phụ '" + patientName + "' từ chối mua đơn thuốc này? Trạng thái hóa đơn sẽ chuyển thành 'Từ chối mua thuốc' và đơn thuốc sẽ bị Hủy.")) {
-            document.getElementById('declineInvoiceId').value = invoiceId;
-            const declineForm = document.getElementById('declineForm');
-            if (window.CAMS && window.CAMS.preparePostForm) window.CAMS.preparePostForm(declineForm);
-            declineForm.submit();
-        }
-    }
-
-    function confirmDeclineFromButton(button) {
-        confirmDecline(button.dataset.invoiceId, button.dataset.patientName);
-    }
 </script>
-
-<!-- Hidden Form for Decline Purchase -->
-<form id="declineForm" method="POST" action="${pageContext.request.contextPath}/admin/reception/payments" style="display:none;">
-    <input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
-    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
-    <input type="hidden" name="invoiceId" id="declineInvoiceId">
-    <input type="hidden" name="action" value="decline">
-    <input type="hidden" name="search" value="${searchParam}">
-    <input type="hidden" name="status" value="${statusParam}">
-    <input type="hidden" name="type" value="${typeParam}">
-    <input type="hidden" name="date" value="${dateParam}">
-    <input type="hidden" name="page" value="${currentPage}">
-</form>
 
 </body>
 </html>

@@ -6,15 +6,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quản Lý Bác Sĩ — Admin CAMS</title>
+    <title>Quản Lý Bác Sĩ — CAMS Quản Trị</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
           rel="stylesheet"
           integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
           crossorigin="anonymous">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <link href="${pageContext.request.contextPath}/assets/css/style.css" rel="stylesheet">
-    <link href="${pageContext.request.contextPath}/assets/css/admin.css" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/style.css?v=202" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/admin.css?v=202" rel="stylesheet">
     <style>
         :root { --bs-body-font-family: 'Be Vietnam Pro', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body.admin-body { font-family: var(--bs-body-font-family); background: #f7f3f5; }
@@ -28,14 +28,14 @@
             <i class="bi bi-list"></i>
         </button>
         <a href="${pageContext.request.contextPath}/admin/dashboard" class="admin-topbar-brand">
-            <i class="bi bi-hospital"></i> CAMS <span>Admin</span>
+            <i class="bi bi-hospital-fill"></i> CAMS <span class="brand-badge">Quản trị viên</span>
         </a>
     </div>
     <div class="admin-topbar-right">
         <div class="admin-topbar-user d-none d-md-flex">
             <div class="admin-avatar-sm">${fn:substring(sessionScope.user.fullName, 0, 1)}</div>
             <span>${sessionScope.user.fullName}</span>
-            <span class="admin-topbar-role"><i class="bi bi-shield-check me-1"></i>Admin</span>
+            <span class="admin-topbar-role"><i class="bi bi-shield-check me-1"></i>Quản trị viên</span>
         </div>
         <a href="${pageContext.request.contextPath}/logout" class="admin-topbar-logout">
             <i class="bi bi-box-arrow-right"></i> <span class="d-none d-md-inline">Đăng xuất</span>
@@ -54,7 +54,7 @@
         <p>Tính năng <strong>Quản Lý Bác Sĩ</strong> đang được xây dựng và sẽ sớm ra mắt.</p>
         <a href="${pageContext.request.contextPath}/admin/dashboard" class="btn rounded-3 fw-medium"
            style="background:var(--cams-tertiary-container);color:var(--cams-on-tertiary-container);border:none;padding:0.6rem 1.5rem;">
-            <i class="bi bi-arrow-left me-2"></i>Quay lại Dashboard
+            <i class="bi bi-arrow-left me-2"></i>Quay lại Tổng Quan
         </a>
     </div>
 </main>

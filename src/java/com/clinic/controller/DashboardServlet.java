@@ -1,14 +1,10 @@
 package com.clinic.controller;
 
-import com.clinic.dao.NotificationDAO;
-import com.clinic.dao.ReportDAO;
 import com.clinic.model.Appointment;
-import com.clinic.model.Notification;
 import com.clinic.model.User;
 import com.clinic.service.AdminDashboardService;
 import com.clinic.service.DashboardService;
 import com.clinic.service.PatientBookingService;
-import com.clinic.service.ReportService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -19,6 +15,7 @@ import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,7 +46,7 @@ public class DashboardServlet extends HttpServlet {
         ROLE_NAMES.put(3, "Quản Lý");
         ROLE_NAMES.put(4, "Nhân Viên");
         ROLE_NAMES.put(5, "Bệnh Nhân");
-        ROLE_NAMES.put(6, "Bác Sĩ Siêu Âm");
+        ROLE_NAMES.put(6, "Bác sĩ siêu âm");
     }
 
     @Override
@@ -67,7 +64,7 @@ public class DashboardServlet extends HttpServlet {
         String roleName = ROLE_NAMES.getOrDefault(roleId, "Người Dùng");
 
         request.setAttribute("roleName", roleName);
-        request.setAttribute("dashboardTitle", "Dashboard " + roleName);
+        request.setAttribute("dashboardTitle", "Tổng Quan " + roleName);
 
         // Ngày hiện tại cho hiển thị
         LocalDate today = LocalDate.now();
@@ -171,13 +168,6 @@ public class DashboardServlet extends HttpServlet {
         request.setAttribute("totalServices", serviceService.getTotalServices(null, null, countMaxDate));
         request.setAttribute("totalMedicines", medicineService.getTotalMedicines(null, null, countMaxDate));
 
-        // Số dịch vụ và thuốc đang active — lọc theo ngày tạo nếu có date filter
-        request.setAttribute("activeServicesCount", serviceService.getTotalServices(null, true, countMaxDate));
-        request.setAttribute("activeMedicinesCount", medicineService.getTotalMedicines(null, true, countMaxDate));
-
-        // ─── Widget "Top Dịch Vụ" — 5 dịch vụ có lượt sử dụng cao nhất trong khoảng ngày ───
-        request.setAttribute("topServicesToday", statsService.getTopServicesByUsage(5, dateFrom, dateTo));
-
         // ─── Widget "Cảnh Báo Tồn Kho" — thuốc sắp hết (stock ≤ 10) ───
         request.setAttribute("lowStockMedicines", medicineService.getLowStockMedicines(10, 5));
 
@@ -199,23 +189,13 @@ public class DashboardServlet extends HttpServlet {
         request.setAttribute("revenueGrowthFormatted",
                 com.clinic.service.ServiceStatisticsService.formatGrowthPercent(revenueGrowthRate));
 
-        // ─── Thống kê dịch vụ (Service Statistics KPI) — theo khoảng ngày ───
+        // ─── KPI dịch vụ cốt lõi — theo khoảng ngày ───
         int totalUsage = statsService.getTotalUsage(dateFrom, dateTo);
         double totalRevenue = statsService.getTotalRevenue(dateFrom, dateTo);
-        double usageGrowthRate = statsService.getUsageGrowthRate(dateFrom, dateTo);
-        String topServiceName = statsService.getTopServiceName(dateFrom, dateTo);
-        int topServiceUsage = statsService.getTopServiceUsage(dateFrom, dateTo);
-        int servicesUsed = statsService.getServicesUsed(dateFrom, dateTo);
 
         request.setAttribute("totalUsageToday", totalUsage);
         request.setAttribute("totalRevenueTodayFormatted",
                 com.clinic.service.ServiceStatisticsService.formatCurrency(totalRevenue));
-        request.setAttribute("usageGrowthRate", usageGrowthRate);
-        request.setAttribute("usageGrowthFormatted",
-                com.clinic.service.ServiceStatisticsService.formatGrowthPercent(usageGrowthRate));
-        request.setAttribute("topServiceName", topServiceName);
-        request.setAttribute("topServiceUsage", topServiceUsage);
-        request.setAttribute("servicesUsedToday", servicesUsed);
 
         // ─── Dữ liệu cho hiển thị khoảng ngày ───
         DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -232,7 +212,6 @@ public class DashboardServlet extends HttpServlet {
                     dateFrom.format(dateFmt) + " → " + dateTo.format(dateFmt));
         }
         DashboardService dashboardService = new DashboardService();
-        ReportService reportService = new ReportService();
 
         int totalPatients = isCustomRange
                 ? dashboardService.getTotalPatients(dateFrom, dateTo)
@@ -252,22 +231,12 @@ public class DashboardServlet extends HttpServlet {
         double revenueRaw = isCustomRange
                 ? dashboardService.getRevenueRaw(dateFrom, dateTo)
                 : dashboardService.getRevenueAllRaw();
-        int emergencyCases = isCustomRange
-                ? dashboardService.getEmergencyCases(dateFrom, dateTo)
-                : dashboardService.getEmergencyCasesAll();
         int completedCases = isCustomRange
                 ? dashboardService.getSuccessfulCases(dateFrom, dateTo)
                 : dashboardService.getSuccessfulCasesAll();
-        int cancelledCount = isCustomRange
-                ? dashboardService.getCancelled(dateFrom, dateTo)
-                : dashboardService.getCancelledAll();
         int newPatients = isCustomRange
                 ? dashboardService.getTotalPatients(dateFrom, dateTo)
                 : dashboardService.getTotalPatients(today, today);
-
-        double completionRate = totalAppointments == 0 ? 0.0 : completedCases * 100.0 / totalAppointments;
-        double cancellationRate = totalAppointments == 0 ? 0.0 : cancelledCount * 100.0 / totalAppointments;
-        double emergencyRate = totalAppointments == 0 ? 0.0 : emergencyCases * 100.0 / totalAppointments;
 
         request.setAttribute("totalPatients", totalPatients);
         request.setAttribute("totalAppointments", totalAppointments);
@@ -275,52 +244,42 @@ public class DashboardServlet extends HttpServlet {
         request.setAttribute("doctorsWorking", doctorsWorking);
         request.setAttribute("ultrasoundCases", ultrasoundCases);
         request.setAttribute("revenue", DashboardService.formatCurrency(revenueRaw));
-        request.setAttribute("emergencyCases", emergencyCases);
         request.setAttribute("completedCases", completedCases);
-        request.setAttribute("completionRate", String.format("%.1f%%", completionRate));
         request.setAttribute("newPatients", newPatients);
-        request.setAttribute("cancelledCount", cancelledCount);
-        request.setAttribute("cancellationRate", String.format("%.1f%%", cancellationRate));
-        request.setAttribute("emergencyRate", String.format("%.1f%%", emergencyRate));
 
-        Map<String, Integer> appointmentChart = isCustomRange
-                ? dashboardService.getAppointmentsChartData(dateFrom, dateTo)
-                : dashboardService.getAppointmentsChartData();
-        request.setAttribute("apptChartLabels", appointmentChart.keySet());
-        request.setAttribute("apptChartValues", appointmentChart.values());
-        request.setAttribute("hasApptData", appointmentChart.values().stream().anyMatch(value -> value > 0));
+        // Doanh thu hôm nay (từ DashboardService — invoice-level, chỉ tính paid)
+        request.setAttribute("revenueToday", dashboardService.getRevenueToday());
 
-        List<ReportDAO.StatusBreakdown> statusBreakdown = isCustomRange
-                ? reportService.getStatusBreakdown(dateFrom, dateTo)
-                : reportService.getStatusBreakdown();
-        request.setAttribute("statusBreakdown", statusBreakdown);
-
+        // Biểu đồ doanh thu 7 ngày
         Map<String, Double> revenueChart = isCustomRange
-                ? reportService.getDailyRevenue(dateFrom, dateTo)
+                ? statsService.getDailyRevenue(dateFrom, dateTo)
                 : statsService.getRevenueLast7Days();
         request.setAttribute("mgrRevenueChartLabels", revenueChart.keySet());
         request.setAttribute("mgrRevenueChartValues", revenueChart.values());
 
-        Map<String, Double> revenue12Months = dashboardService.getRevenueChartData(dateTo);
-        request.setAttribute("mgrRevenue12MonthsLabels", revenue12Months.keySet());
-        request.setAttribute("mgrRevenue12MonthsValues", revenue12Months.values());
+        // Biểu đồ doanh thu 30 ngày
+        Map<String, Double> revenue30 = statsService.getDailyRevenue(today.minusDays(29), today);
+        request.setAttribute("mgrRevenue30Labels", new ArrayList<>(revenue30.keySet()));
+        request.setAttribute("mgrRevenue30Values", new ArrayList<>(revenue30.values()));
 
-        LocalDate dashboardHistoryStart = LocalDate.of(2000, 1, 1);
-        request.setAttribute("doctorPerformance", isCustomRange
-                ? dashboardService.getDoctorPerformance(dateFrom, dateTo)
-                : dashboardService.getDoctorPerformance(dashboardHistoryStart, today));
         request.setAttribute("todaySchedules", isCustomRange
                 ? dashboardService.getSchedules(dateTo)
                 : dashboardService.getTodaySchedules());
-        request.setAttribute("ultrasoundStats", isCustomRange
-                ? dashboardService.getUltrasoundStats(dateFrom, dateTo)
-                : dashboardService.getUltrasoundStats());
-        request.setAttribute("recentPatients", isCustomRange
-                ? dashboardService.getRecentPatients(8, dateFrom, dateTo)
-                : dashboardService.getRecentPatients(8));
-        request.setAttribute("operationalAlerts", isCustomRange
-                ? dashboardService.getSystemAlerts(dateFrom, dateTo)
-                : dashboardService.getSystemAlerts());
+
+        // ─── Thống kê dịch vụ ───
+        request.setAttribute("topServicesByUsage", statsService.getTopServicesByUsage(8, dateFrom, dateTo));
+        request.setAttribute("topServicesByRevenue", statsService.getTopServicesByTotalRevenue(8));
+        request.setAttribute("categoryRevenueBreakdown", statsService.getCategoryRevenueBreakdown());
+        Map<String, Integer> usageDays = statsService.getUsageLast7Days();
+        request.setAttribute("serviceUsageLast7DaysLabels", new ArrayList<>(usageDays.keySet()));
+        request.setAttribute("serviceUsageLast7DaysValues", new ArrayList<>(usageDays.values()));
+
+        // ─── Dữ liệu biểu đồ lịch hẹn ───
+        Map<String, Integer> apptTrend = isCustomRange
+                ? dashboardService.getAppointmentsChartData(dateFrom, dateTo)
+                : dashboardService.getAppointmentsChartData();
+        request.setAttribute("mgrApptChartLabels", new ArrayList<>(apptTrend.keySet()));
+        request.setAttribute("mgrApptChartValues", new ArrayList<>(apptTrend.values()));
 
     }
 
@@ -389,12 +348,6 @@ public class DashboardServlet extends HttpServlet {
         request.setAttribute("unverifiedAccounts", isCustomRange
                 ? adminDashboardService.getUnverifiedAccounts(dateFrom, dateTo)
                 : adminDashboardService.getUnverifiedAccounts());
-        request.setAttribute("totalRoles", isCustomRange
-                ? adminDashboardService.getTotalRoles(dateFrom, dateTo)
-                : adminDashboardService.getTotalRoles());
-        request.setAttribute("totalPermissions", isCustomRange
-                ? adminDashboardService.getTotalPermissions(dateFrom, dateTo)
-                : adminDashboardService.getTotalPermissions());
         request.setAttribute("loginsToday", isCustomRange
                 ? adminDashboardService.getLogins(dateFrom, dateTo)
                 : adminDashboardService.getLoginsToday());
@@ -494,7 +447,7 @@ public class DashboardServlet extends HttpServlet {
                     .filter(appointment -> {
                         String status = appointment.getStatus();
                         return ("Pending".equals(status) || "Confirmed".equals(status)
-                                || "Waiting".equals(status) || "Emergency_SOS".equals(status))
+                                || "Waiting".equals(status))
                                 && appointment.getAppointmentDate() != null
                                 && !appointment.getAppointmentDate().isBefore(today);
                     })
@@ -509,20 +462,11 @@ public class DashboardServlet extends HttpServlet {
                     })
                     .collect(Collectors.toList());
 
-            NotificationDAO notificationDAO = new NotificationDAO();
-            List<Notification> notifications = notificationDAO.getByUserId(userId);
-            List<Notification> recentNotifications = notifications.size() > 3
-                    ? notifications.subList(0, 3) : notifications;
-
             request.setAttribute("upcomingAppts", upcoming);
             request.setAttribute("upcomingAppointment", upcoming.isEmpty() ? null : upcoming.get(0));
-            request.setAttribute("recentNotifs", recentNotifications);
-            request.setAttribute("unreadNotifCount", notificationDAO.countUnread(userId));
         } catch (Exception e) {
             request.setAttribute("upcomingAppts", List.of());
             request.setAttribute("upcomingAppointment", null);
-            request.setAttribute("recentNotifs", List.of());
-            request.setAttribute("unreadNotifCount", 0);
         }
     }
 

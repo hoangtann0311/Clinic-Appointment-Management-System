@@ -249,6 +249,7 @@ public class ServiceStatisticsDAO {
         private double revenueToday;
         private double revenueYesterday;
         private int totalUsage;        // tổng lượt sử dụng từ trước đến nay
+        private double totalRevenue;   // tổng doanh thu từ trước đến nay
 
         public int getServiceId() { return serviceId; }
         public void setServiceId(int serviceId) { this.serviceId = serviceId; }
@@ -272,6 +273,8 @@ public class ServiceStatisticsDAO {
         public void setRevenueYesterday(double revenueYesterday) { this.revenueYesterday = revenueYesterday; }
         public int getTotalUsage() { return totalUsage; }
         public void setTotalUsage(int totalUsage) { this.totalUsage = totalUsage; }
+        public double getTotalRevenue() { return totalRevenue; }
+        public void setTotalRevenue(double totalRevenue) { this.totalRevenue = totalRevenue; }
 
         /** Phần trăm thay đổi lượt sử dụng: hôm nay so với hôm qua. */
         public double getUsageGrowthPercent() {
@@ -470,6 +473,13 @@ public class ServiceStatisticsDAO {
      * Doanh thu dịch vụ 7 ngày, kết thúc tại endDate.
      */
     public Map<String, Double> getRevenueLast7Days(LocalDate endDate) {
+        return getDailyRevenue(endDate.minusDays(6), endDate);
+    }
+
+    /**
+     * Doanh thu dịch vụ theo từng ngày trong khoảng được chọn.
+     */
+    public Map<String, Double> getDailyRevenue(LocalDate startDate, LocalDate endDate) {
         String sql =
             "SELECT a.appointment_date, ISNULL(SUM(ii.subtotal), 0) AS total "
             + "FROM invoice_items ii "
@@ -482,7 +492,6 @@ public class ServiceStatisticsDAO {
             + "GROUP BY a.appointment_date "
             + "ORDER BY a.appointment_date";
 
-        LocalDate startDate = endDate.minusDays(6);
         Map<String, Double> result = new LinkedHashMap<>();
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM");
         for (LocalDate d = startDate; !d.isAfter(endDate); d = d.plusDays(1)) {
@@ -507,7 +516,7 @@ public class ServiceStatisticsDAO {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("[ServiceStatisticsDAO] getRevenueLast7Days ERROR: " + e.getMessage());
+            System.err.println("[ServiceStatisticsDAO] getDailyRevenue ERROR: " + e.getMessage());
         } finally {
             closeResources(conn, ps, rs);
         }
@@ -804,7 +813,7 @@ public class ServiceStatisticsDAO {
                 d.categoryName = rs.getString("category_name");
                 try { d.categoryIcon = rs.getString("category_icon"); } catch (SQLException e) { d.categoryIcon = null; }
                 d.totalUsage = rs.getInt("total_usage");
-                d.revenueToday = rs.getDouble("total_revenue"); // Tạm dùng field revenueToday để chứa total_revenue
+                d.totalRevenue = rs.getDouble("total_revenue");
                 d.usageToday = rs.getInt("total_usage");
                 list.add(d);
             }

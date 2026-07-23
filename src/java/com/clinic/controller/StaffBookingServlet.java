@@ -40,7 +40,6 @@ public class StaffBookingServlet extends HttpServlet {
         req.setAttribute("doctors", staffReceptionService.getAllDoctors());
         req.setAttribute("services", staffReceptionService.getAllServices());
         req.setAttribute("today", currentDate.toString());
-        req.setAttribute("activeSos", staffReceptionService.getWidgetActiveSos());
 
         req.getRequestDispatcher("/views/staff/reception-booking.jsp").forward(req, resp);
     }
@@ -63,13 +62,9 @@ public class StaffBookingServlet extends HttpServlet {
         String timeSlot = req.getParameter("timeSlot");
         String symptoms = req.getParameter("symptoms");
         String lmp = req.getParameter("lastMenstrualPeriod");
-        String isEmergencyParam = req.getParameter("isEmergency");
-
-        boolean isEmergency = "true".equals(isEmergencyParam);
-
         try {
             Appointment appt = staffReceptionService.createManualBooking(
-                    name, phone, dob, doctorId, serviceId, appDate, timeSlot, symptoms, lmp, isEmergency
+                    name, phone, dob, doctorId, serviceId, appDate, timeSlot, symptoms, lmp, false
             );
 
             // Thông báo cho bác sĩ về lịch hẹn mới
@@ -97,7 +92,6 @@ public class StaffBookingServlet extends HttpServlet {
             req.setAttribute("doctors", staffReceptionService.getAllDoctors());
             req.setAttribute("services", staffReceptionService.getAllServices());
             req.setAttribute("today", currentDate.toString());
-            req.setAttribute("activeSos", staffReceptionService.getWidgetActiveSos());
 
             req.getRequestDispatcher("/views/staff/reception-booking.jsp").forward(req, resp);
         }

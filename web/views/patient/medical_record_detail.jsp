@@ -191,8 +191,32 @@
                                         <c:when test="${prescription.status == 'cancelled'}">bg-danger</c:when>
                                         <c:otherwise>bg-secondary</c:otherwise>
                                     </c:choose>">
-                                    ${prescription.status}
+                                    <c:choose>
+                                        <c:when test="${prescription.status == 'issued'}">Đã kê</c:when>
+                                        <c:when test="${prescription.status == 'cancelled'}">Đã hủy</c:when>
+                                        <c:otherwise>Đang xử lý</c:otherwise>
+                                    </c:choose>
                                 </span>
+                            </div>
+                            <div class="mb-3">
+                                <c:choose>
+                                    <c:when test="${prescription.purchaseDecision == 'Accepted'}">
+                                        <span class="badge bg-success-subtle text-success border">
+                                            <i class="bi bi-bag-check me-1"></i>Mua thuốc tại phòng khám
+                                        </span>
+                                    </c:when>
+                                    <c:when test="${prescription.purchaseDecision == 'Declined'}">
+                                        <span class="badge bg-secondary-subtle text-secondary border">
+                                            <i class="bi bi-bag-x me-1"></i>Không mua tại phòng khám
+                                        </span>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <a href="${pageContext.request.contextPath}/patient/invoices#prescription-decisions"
+                                           class="badge bg-warning-subtle text-warning-emphasis border text-decoration-none">
+                                            <i class="bi bi-hourglass-split me-1"></i>Chờ lựa chọn mua thuốc
+                                        </a>
+                                    </c:otherwise>
+                                </c:choose>
                             </div>
 
                             <c:choose>
@@ -244,7 +268,7 @@
                                 <span class="fw-semibold">
                                     <i class="bi bi-clipboard2-pulse me-1 text-info"></i>
                                     Lần siêu âm ${loop.index + 1}
-                                    <span class="badge bg-light text-dark border ms-1">${order.status}</span>
+                                    <span class="badge bg-light text-dark border ms-1">Đã xác nhận</span>
                                 </span>
                                 <small class="text-muted">${order.createdAtText}</small>
                             </div>
@@ -283,7 +307,7 @@
 
                                 <div class="col-md-7">
                                     <div class="patient-report-title fw-bold mb-2">
-                                        <i class="bi bi-file-earmark-medical me-1"></i>Phiếu kết quả siêu âm đã được Bác sĩ Siêu âm ký
+                                        <i class="bi bi-file-earmark-medical me-1"></i>Phiếu kết quả siêu âm đã được Bác sĩ siêu âm ký
                                     </div>
                                     <c:if test="${not empty report}">
                                         <div class="rounded-3 p-3 h-100" style="background:#f0f8ff;border:1px solid #b8d4f0;">

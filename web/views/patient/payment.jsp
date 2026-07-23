@@ -11,22 +11,15 @@
         transition: border-color 0.2s, box-shadow 0.2s, transform 0.1s;
     }
     .payment-method-card:hover {
-        border-color: #0d6efd;
-        box-shadow: 0 0 0 3px rgba(13,110,253,0.12);
+        border-color: #b86689;
+        box-shadow: 0 0 0 3px rgba(184,102,137,0.12);
         transform: translateY(-2px);
     }
     .payment-method-card.selected {
-        border-color: #0d6efd;
-        background: #f0f6ff;
+        border-color: #b86689;
+        background: #fff1f6;
     }
     .payment-method-card input[type="radio"] { display: none; }
-    .qr-box {
-        background: #fff;
-        border: 2px dashed #0d6efd;
-        border-radius: 12px;
-        padding: 20px;
-        text-align: center;
-    }
     .invoice-hero {
         background: linear-gradient(135deg, #f8f9fa, #e9ecef);
         border-radius: 16px;
@@ -36,7 +29,7 @@
     .invoice-hero .amount {
         font-size: 2rem;
         font-weight: 800;
-        color: #dc3545;
+        color: #b86689;
     }
 </style>
 
@@ -45,14 +38,14 @@
 
         <%-- HEADER --%>
         <div class="d-flex align-items-center gap-3 mb-4">
-            <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#11998e,#38ef7d);
+            <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#d27b9f,#a75e7d);
                         display:flex;align-items:center;justify-content:center;font-size:1.6rem;color:#fff;flex-shrink:0;">
                 <i class="bi bi-credit-card-2-front-fill"></i>
             </div>
             <div>
                 <h2 class="fw-bold mb-0">
                     <c:choose>
-                        <c:when test="${invoiceType == 'POST_EXAM'}">Thanh Toán Dịch Vụ Phát Sinh / Đơn Thuốc</c:when>
+                    <c:when test="${invoiceType == 'POST_EXAM'}">Thanh Toán Chỉ Định Sau Khám</c:when>
                         <c:when test="${invoiceType == 'PRESCRIPTION'}">Thanh Toán Đơn Thuốc</c:when>
                         <c:otherwise>Thanh Toán Hóa Đơn Lâm Sàng</c:otherwise>
                     </c:choose>
@@ -97,16 +90,10 @@
                             <div class="col-6"><span class="text-muted small">Ngày khám</span><div class="fw-bold">${appointment.appointmentDate}</div></div>
                             <div class="col-6"><span class="text-muted small">Giờ khám</span><div class="fw-bold">${appointment.timeSlot}</div></div>
                             <div class="col-6"><span class="text-muted small">Dịch vụ</span><div class="fw-bold">${appointment.serviceName}</div></div>
-                            <div class="col-6"><span class="text-muted small">Phương thức</span><div class="fw-bold">${invoice.paymentMethod}</div></div>
+                            <div class="col-6"><span class="text-muted small">Phương thức</span><div class="fw-bold">${invoice.paymentMethod == 'Cash' ? 'Tiền mặt' : 'Chuyển khoản'}</div></div>
                             <div class="col-6"><span class="text-muted small">Trạng thái</span><div><span class="badge bg-success">Đã thanh toán</span></div></div>
                             <c:if test="${not empty invoice.transactionCode}">
                                 <div class="col-12"><span class="text-muted small">Mã giao dịch</span><div><code>${invoice.transactionCode}</code></div></div>
-                            </c:if>
-                            <c:if test="${not empty invoice.proofImagePath}">
-                                <div class="col-12">
-                                    <span class="text-muted small">Ảnh minh chứng chuyển khoản</span>
-                                    <div><img src="${pageContext.request.contextPath}${invoice.proofImagePath}" alt="Minh chứng chuyển khoản" class="img-fluid rounded-3 border mt-1" style="max-height: 200px;"></div>
-                                </div>
                             </c:if>
                             <c:if test="${invoiceType == 'PRESCRIPTION' && not empty prescriptionItems}">
                                 <div class="col-12">
@@ -204,12 +191,6 @@
                                 <c:if test="${not empty invoice.transactionCode}">
                                     <div class="col-12"><span class="text-muted small">Mã giao dịch</span><div><code>${invoice.transactionCode}</code></div></div>
                                 </c:if>
-                                <c:if test="${not empty invoice.proofImagePath}">
-                                    <div class="col-12">
-                                        <span class="text-muted small">Ảnh minh chứng chuyển khoản</span>
-                                        <div><img src="${pageContext.request.contextPath}${invoice.proofImagePath}" alt="Minh chứng chuyển khoản" class="img-fluid rounded-3 border mt-1" style="max-height: 200px;"></div>
-                                    </div>
-                                </c:if>
                             </div>
                             <c:if test="${invoiceType == 'PRESCRIPTION' && not empty prescriptionItems}">
                                 <hr class="my-3">
@@ -267,13 +248,6 @@
                                     </table>
                                 </div>
                             </c:if>
-                            <c:if test="${invoiceType == 'PRESCRIPTION' && not empty previousPrescriptionTotal && previousPrescriptionTotal > 0}">
-                                <div class="alert alert-info mt-2 mb-0">
-                                    <i class="bi bi-info-circle me-1"></i>
-                                    Đơn thuốc đã được cập nhật. Bạn đã thanh toán <strong><fmt:formatNumber value="${previousPrescriptionTotal}" pattern="#,###"/>đ</strong> trước đó.
-                                    Phần chênh lệch cần thanh toán thêm: <strong class="text-danger"><fmt:formatNumber value="${invoice.totalAmount}" pattern="#,###"/>đ</strong>.
-                                </div>
-                            </c:if>
                             <hr class="my-3">
                             <div class="d-flex justify-content-between align-items-center">
                                 <span class="text-muted fw-semibold">TỔNG TIỀN</span>
@@ -290,7 +264,7 @@
         </c:if>
 
         <%-- ==================== UNPAID: chi tiết rõ + form thanh toán ==================== --%>
-        <c:if test="${invoice.status != 'Paid' && invoice.status != 'PendingConfirmation'}">
+        <c:if test="${invoice.status == 'Unpaid'}">
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-transparent border-0 pb-0 fw-bold">
                     <i class="bi bi-receipt me-2 text-primary"></i>Chi Tiết Hóa Đơn
@@ -382,7 +356,7 @@
                 <div class="card-body">
                     <c:if test="${not empty holdExpiresAtMillis}">
                         <div id="holdCountdownBox" class="alert alert-warning d-flex align-items-center justify-content-between mb-3">
-                            <span><i class="bi bi-hourglass-split me-2"></i>Slot đang được giữ chỗ cho bạn, vui lòng gửi thanh toán trước khi hết giờ:</span>
+                            <span><i class="bi bi-hourglass-split me-2"></i>Khung giờ đang được giữ chỗ cho bạn, vui lòng gửi yêu cầu thanh toán trước khi hết thời gian:</span>
                             <strong id="holdCountdownText" class="fs-5">--:--</strong>
                         </div>
                         <div id="holdExpiredBox" class="alert alert-danger" style="display:none;">
@@ -425,30 +399,19 @@
                         </div>
 
                         <div id="bankPanel" style="display:none;">
-                            <div class="qr-box mb-3">
-                                <div class="fw-bold mb-3"><i class="bi bi-qr-code-scan me-2 text-primary"></i>Quét Mã QR Thanh Toán</div>
-
-                                <div class="text-center mb-3">
-                                    <img src="https://img.vietqr.io/image/mb-0967629020-compact2.png?amount=${invoice.totalAmount.longValue()}&addInfo=${transferContentEncoded}&accountName=PHONG%20KHAM%20SAN%20PHU"
-                                         alt="VietQR Code"
-                                         class="img-fluid border rounded-3 p-2 bg-white"
-                                         style="max-width: 220px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
-                                    <div class="form-text text-muted mt-2">Sử dụng ứng dụng ngân hàng quét mã để tự động điền thông tin</div>
-                                </div>
-
+                            <div class="border rounded-3 p-3 mb-3 bg-light">
+                                <div class="fw-bold mb-2"><i class="bi bi-bank me-2"></i>Thông Tin Chuyển Khoản</div>
                                 <table class="table table-sm mb-0 text-start">
                                     <tr><td class="text-muted">Ngân hàng</td><td><strong>MB Bank (Ngân hàng Quân đội)</strong></td></tr>
                                     <tr><td class="text-muted">Số tài khoản</td><td><strong>0967629020</strong></td></tr>
                                     <tr><td class="text-muted">Chủ tài khoản</td><td><strong>PHONG KHAM SAN PHU</strong></td></tr>
                                     <tr><td class="text-muted">Số tiền</td>
                                         <td><strong class="text-success"><fmt:formatNumber value="${invoice.totalAmount}" pattern="#,###"/>đ</strong></td></tr>
-                                    <tr><td class="text-muted">Nội dung CK</td>
-                                        <td><strong>${transferContent}</strong></td></tr>
                                 </table>
                             </div>
 
                             <div class="alert alert-info mb-0 small">
-                                Sau khi chuyển khoản, hãy gửi yêu cầu. Nhân viên lễ tân sẽ kiểm tra và xác nhận thanh toán.
+                                Chuyển đúng số tiền, sau đó gửi yêu cầu. Không cần tải ảnh minh chứng; lễ tân sẽ đối chiếu và xác nhận.
                             </div>
                         </div>
 
@@ -459,6 +422,12 @@
                         </div>
                     </form>
                 </div>
+            </div>
+        </c:if>
+
+        <c:if test="${invoice.status != 'Paid' && invoice.status != 'PendingConfirmation' && invoice.status != 'Unpaid'}">
+            <div class="alert alert-secondary">
+                <i class="bi bi-info-circle me-2"></i>Hóa đơn này thuộc dữ liệu trạng thái cũ. Vui lòng liên hệ lễ tân để được hỗ trợ.
             </div>
         </c:if>
 

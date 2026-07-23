@@ -1,538 +1,835 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
-<%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
+<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
 <jsp:include page="../common/header.jsp" />
 
-<%-- CSS and document shell are provided once by common/header.jsp. --%>
-    <!-- Prism.js Tomorrow Night Theme for premium code highlighting -->
-    <link href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
-    <style>
-        /* Fix horizontal scrollbar and optimize responsiveness */
-        html, body {
-            max-width: 100%;
-            overflow-x: hidden;
-        }
-        .admin-main {
-            max-width: 100%;
-            overflow-x: hidden !important;
-        }
-        .admin-card {
-            min-width: 0;
-            max-width: 100%;
-            overflow: hidden;
-        }
-        .code-container {
-            position: relative;
-            border-radius: 8px;
-            overflow: hidden;
-            background: #1d1f21;
-            max-width: 100%;
-        }
-        .btn-copy {
-            position: absolute;
-            top: 10px;
-            right: 15px;
-            z-index: 10;
-            background: rgba(255, 255, 255, 0.1);
-            color: #ddd;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 4px 10px;
-            font-size: 0.75rem;
-            border-radius: 4px;
-            transition: all 0.2s;
-        }
-        .btn-copy:hover {
-            background: rgba(255, 255, 255, 0.25);
-            color: #fff;
-            border-color: #fff;
-        }
-        pre[class*="language-"] {
-            margin: 0 !important;
-            padding: 1.5rem !important;
-            max-height: 600px;
-            overflow: auto !important;
-            max-width: 100% !important;
-        }
-        .badge-ai {
-            background: linear-gradient(135deg, #7b1fa2, #e91e63);
-            color: #fff;
-            padding: 4px 12px;
-            border-radius: 999px;
-            font-size: 0.72rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-    </style>
-<div class="admin-page-header">
-    <div class="admin-page-header-left">
-        <h1 class="admin-page-title">Cấu Hình & Mã Nguồn Model AI</h1>
-        <div class="admin-page-subtitle">
-            Tổng quan &gt; Pipeline tích hợp nhận diện & phân vùng u xơ tử cung
-        </div>
-    </div>
-    <div>
-        <span class="badge-ai"><i class="bi bi-robot"></i> YOLOv3 & U-Net Hybrid</span>
-    </div>
-</div>
-
-<!-- Welcome/Overview Banner -->
-<div class="admin-welcome-banner mb-4">
-    <div>
-        <h2>
-            <i class="bi bi-cpu-fill"></i>
-            Hệ Thống Phân Tích Hình Ảnh Siêu Âm CAMS AI
-        </h2>
-        <p>Hệ thống sử dụng mô hình kết hợp (Hybrid Model): <strong>YOLOv3</strong> định vị vùng nghi ngờ u xơ tử cung (Bounding Box) và <strong>U-Net</strong> phân vùng chi tiết tế bào (Segmentation Mask) nhằm hỗ trợ bác sĩ chẩn đoán chính xác.</p>
-    </div>
-</div>
-
-<div class="row g-4">
-    <!-- Left Column: Explanation and Flowchart (balanced proportions) -->
-    <div class="col-xl-5 col-lg-6">
-        <div class="admin-card mb-4">
-            <div class="card-header">
-                <h5><i class="bi bi-diagram-3-fill"></i> Sơ Đồ Hoạt Động (Pipeline)</h5>
-            </div>
-            <div class="card-body">
-                <ol class="list-group list-group-numbered list-group-flush mb-0">
-                    <li class="list-group-item d-flex justify-content-between align-items-start py-3">
-                        <div class="ms-2 me-auto">
-                            <div class="fw-bold">Tải ảnh siêu âm đầu vào</div>
-                            Ảnh siêu âm tử cung được Bác sĩ Siêu âm tải lên hệ thống phân tích.
-                        </div>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between align-items-start py-3">
-                        <div class="ms-2 me-auto">
-                            <div class="fw-bold">Nhận diện bằng YOLOv3</div>
-                            Định vị vùng nghi ngờ chứa u xơ với độ tin cậy tối thiểu <code>0.30</code>.
-                        </div>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between align-items-start py-3">
-                        <div class="ms-2 me-auto">
-                            <div class="fw-bold">Mở rộng Bounding Box (Padding)</div>
-                            Mở rộng hộp giới hạn ra thêm <code>5%</code> để tránh mất rìa tổn thương.
-                        </div>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between align-items-start py-3">
-                        <div class="ms-2 me-auto">
-                            <div class="fw-bold">Phân vùng bằng U-Net</div>
-                            Đưa ảnh về kích thước <code>512x512</code>, chạy mô hình U-Net dự đoán xác suất và lọc qua ngưỡng <code>0.65</code>.
-                        </div>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between align-items-start py-3">
-                        <div class="ms-2 me-auto">
-                            <div class="fw-bold">Hậu xử lý mặt nạ (Post-process)</div>
-                            Chỉ giữ lại vùng mặt nạ nằm trong Bounding Box của YOLO, lọc nhiễu bằng thuật toán Connected Components để giữ lại vùng có diện tích lớn nhất.
-                        </div>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between align-items-start py-3">
-                        <div class="ms-2 me-auto">
-                            <div class="fw-bold">Vẽ đè kết quả chẩn đoán</div>
-                            Vẽ hộp YOLO (màu xanh lá) và tô màu vùng u xơ (màu đỏ trong suốt) đè lên ảnh gốc để hiển thị cho bác sĩ.
-                        </div>
-                    </li>
-                </ol>
-            </div>
-        </div>
-
-        <div class="admin-card">
-            <div class="card-header">
-                <h5><i class="bi bi-gear-wide-connected"></i> Thông Số Siêu Tham Số</h5>
-            </div>
-            <div class="card-body">
-                <table class="table table-sm table-striped mb-0 small">
-                    <thead>
-                        <tr>
-                            <th>Tham số</th>
-                            <th>Giá trị</th>
-                            <th>Ý nghĩa</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><code>MIN_DETECTION_CONFIDENCE</code></td>
-                            <td><strong>0.30</strong></td>
-                            <td>Độ tin cậy tối thiểu của YOLO</td>
-                        </tr>
-                        <tr>
-                            <td><code>BOX_PADDING_RATIO</code></td>
-                            <td><strong>0.05 (5%)</strong></td>
-                            <td>Tỷ lệ mở rộng khung nhận diện</td>
-                        </tr>
-                        <tr>
-                            <td><code>SEG_THRESHOLD</code></td>
-                            <td><strong>0.65</strong></td>
-                            <td>Ngưỡng nhị phân hóa mặt nạ U-Net</td>
-                        </tr>
-                        <tr>
-                            <td><code>MIN_SEG_AREA</code></td>
-                            <td><strong>500 pixels</strong></td>
-                            <td>Diện tích mặt nạ tối thiểu tránh nhiễu</td>
-                        </tr>
-                        <tr>
-                            <td><code>IMAGE_SIZE</code></td>
-                            <td><strong>512 x 512</strong></td>
-                            <td>Đầu vào chuẩn của mô hình U-Net</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- Right Column: Code Tabs (balanced proportions) -->
-    <div class="col-xl-7 col-lg-6">
-        <div class="admin-card">
-            <div class="card-header p-2 bg-light">
-                <ul class="nav nav-pills" id="codeTabs" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="metrics-tab" data-bs-toggle="tab" data-bs-target="#metrics" type="button" role="tab" aria-controls="metrics" aria-selected="true">
-                            <i class="bi bi-graph-up-arrow"></i> Chỉ Số Đánh Giá & Huấn Luyện
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="predict-tab" data-bs-toggle="tab" data-bs-target="#predict" type="button" role="tab" aria-controls="predict" aria-selected="false">
-                            <i class="bi bi-filetype-py"></i> predict_for_web.py (Pipeline)
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="unet-tab" data-bs-toggle="tab" data-bs-target="#unet" type="button" role="tab" aria-controls="unet" aria-selected="false">
-                            <i class="bi bi-filetype-py"></i> train_unet_approved37.py (U-Net)
-                        </button>
-                    </li>
-                </ul>
-            </div>
-            <div class="card-body p-0">
-                <div class="tab-content" id="codeTabsContent">
-                    <!-- Tab 1: Metrics & Evaluation -->
-                    <div class="tab-pane fade show active" id="metrics" role="tabpanel" aria-labelledby="metrics-tab">
-                        <div class="p-4 bg-white rounded-bottom">
-                            <div class="row g-4">
-                                <div class="col-lg-6">
-                                    <h5 class="fw-bold text-primary mb-3">
-                                        <i class="bi bi-graph-up"></i> Đồ Thị Huấn Luyện (Loss & Metrics Curves)
-                                    </h5>
-                                    <div class="border rounded p-2 text-center bg-light">
-                                        <img src="${pageContext.request.contextPath}/assets/images/ai-metrics/training_curves.png" 
-                                             alt="Đồ thị huấn luyện AI" 
-                                             class="img-fluid rounded" 
-                                             style="max-height: 380px;">
-                                    </div>
-                                    <p class="text-muted small mt-2 text-center">
-                                        *Hình: Đồ thị BCE+Dice Loss giảm dần và chỉ số Dice/IoU tăng dần qua 80 epochs.
-                                    </p>
-                                </div>
-                                <div class="col-lg-6">
-                                    <h5 class="fw-bold text-primary mb-3">
-                                        <i class="bi bi-shield-check"></i> Chỉ Số Đánh Giá Mô Hình (Evaluation Metrics)
-                                    </h5>
-                                    <div class="table-responsive">
-                                        <table class="table table-bordered table-striped align-middle small mb-4">
-                                            <thead class="table-dark">
-                                                <tr>
-                                                    <th>Tên Chỉ Số</th>
-                                                    <th>Giá trị</th>
-                                                    <th>Ngưỡng Đạt</th>
-                                                    <th>Giải Thích Ý Nghĩa</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr>
-                                                    <td><strong>Dice Coefficient (F1-Score)</strong></td>
-                                                    <td><span class="badge bg-success">0.8942</span></td>
-                                                    <td>&gt; 0.80</td>
-                                                    <td>Đánh giá độ tương đồng diện tích phân vùng u xơ.</td>
-                                                </tr>
-                                                <tr>
-                                                    <td><strong>Mean IoU (Jaccard Index)</strong></td>
-                                                    <td><span class="badge bg-success">0.8125</span></td>
-                                                    <td>&gt; 0.75</td>
-                                                    <td>Tỷ lệ phần giao trên phần hợp giữa dự đoán và thực tế.</td>
-                                                </tr>
-                                                <tr>
-                                                    <td><strong>YOLO mAP@0.5</strong></td>
-                                                    <td><span class="badge bg-primary">0.9105</span></td>
-                                                    <td>&gt; 0.85</td>
-                                                    <td>Độ chính xác trung bình của định vị hộp giới hạn.</td>
-                                                </tr>
-                                                <tr>
-                                                    <td><strong>Precision (Độ chính xác)</strong></td>
-                                                    <td><span class="badge bg-primary">0.8876</span></td>
-                                                    <td>&gt; 0.80</td>
-                                                    <td>Tỷ lệ dự đoán u xơ đúng trên tổng số ca báo phát hiện.</td>
-                                                </tr>
-                                                <tr>
-                                                    <td><strong>Recall (Độ nhạy)</strong></td>
-                                                    <td><span class="badge bg-primary">0.9012</span></td>
-                                                    <td>&gt; 0.85</td>
-                                                    <td>Tỷ lệ phát hiện thành công u xơ tránh bỏ sót ca bệnh.</td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    
-                                    <h5 class="fw-bold text-primary mb-2">
-                                        <i class="bi bi-database-fill"></i> Tập Dữ Liệu Huấn Luyện (Dataset)
-                                    </h5>
-                                    <p class="small mb-0">
-                                        Mô hình được huấn luyện trên tập dữ liệu siêu âm tử cung đã được gán nhãn thủ công (Ground Truth) bởi các chuyên gia sản phụ khoa hàng đầu:
-                                    </p>
-                                    <ul class="small mt-1 text-muted">
-                                        <li><strong>Tổng số ảnh siêu âm:</strong> 1,280 ảnh.</li>
-                                        <li><strong>Phân chia tập dữ liệu:</strong> Train (80% ~ 1,024 ảnh) | Val (10% ~ 128 ảnh) | Test (10% ~ 128 ảnh).</li>
-                                        <li><strong>Augmentation (Tăng cường dữ liệu):</strong> H-Flip, V-Flip, Xoay góc ngẫu nhiên, Điều chỉnh độ sáng tối để tăng tính tổng quát hóa cho mô hình.</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Tab 2: Pipeline Code -->
-                    <div class="tab-pane fade" id="predict" role="tabpanel" aria-labelledby="predict-tab">
-                        <div class="code-container">
-                            <button class="btn btn-copy" onclick="copyCode('predict-code')"><i class="bi bi-copy"></i> Sao chép</button>
-                            <pre><code id="predict-code" class="language-python"># predict_for_web.py — Tích hợp YOLOv3 và U-Net phân tích u xơ tử cung
-import json
-import sys
-import numpy as np
-import cv2
-import torch
-from PIL import Image, ImageDraw, ImageFont
-from pathlib import Path
-
-from yolo import YOLO
-from train_unet_approved37 import UNetSmall, IMAGE_SIZE
-
-MIN_DETECTION_CONFIDENCE = 0.3
-BOX_PADDING_RATIO = 0.05
-SEG_THRESHOLD = 0.65
-MIN_SEG_AREA = 500
-
-def expand_box(box, image_width, image_height, padding_ratio):
-    xmin, ymin, xmax, ymax = int(box["xmin"]), int(box["ymin"]), int(box["xmax"]), int(box["ymax"])
-    box_width, box_height = xmax - xmin, ymax - ymin
-    pad_x, pad_y = int(box_width * padding_ratio), int(box_height * padding_ratio)
-    
-    xmin = max(0, xmin - pad_x)
-    ymin = max(0, ymin - pad_y)
-    xmax = min(image_width, xmax + pad_x)
-    ymax = min(image_height, ymax + pad_y)
-    return xmin, ymin, xmax, ymax
-
-def predict_segmentation_full_image(model, device, image):
-    # Preprocess
-    img_resized = image.convert("RGB").resize((IMAGE_SIZE, IMAGE_SIZE), Image.BILINEAR)
-    img_array = np.array(img_resized).astype(np.float32) / 255.0
-    input_tensor = torch.from_numpy(img_array.transpose(2, 0, 1)).float().unsqueeze(0).to(device)
-
-    # Predict
-    with torch.no_grad():
-        logits = model(input_tensor)
-        prob = torch.sigmoid(logits)[0, 0]
-
-    pred_array = prob.detach().cpu().numpy()
-    mask_array = (pred_array >= SEG_THRESHOLD).astype(np.uint8) * 255
-    mask = Image.fromarray(mask_array, mode="L")
-    return mask.resize(image.size, Image.NEAREST)
-
-def postprocess_mask(mask):
-    mask_array = np.array(mask).astype(np.uint8)
-    num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(mask_array, connectivity=8)
-    if num_labels <= 1:
-        return Image.fromarray(np.zeros_like(mask_array), mode="L")
-
-    largest_label = 1 + np.argmax(stats[1:, cv2.CC_STAT_AREA])
-    largest_area = stats[largest_label, cv2.CC_STAT_AREA]
-
-    if largest_area < MIN_SEG_AREA:
-        cleaned = np.zeros_like(mask_array)
-    else:
-        cleaned = (labels == largest_label).astype(np.uint8) * 255
-    return Image.fromarray(cleaned, mode="L")
-
-def create_overlay_result(original_image, final_mask, best_box):
-    result = original_image.convert("RGBA")
-    mask_array = np.array(final_mask)
-    
-    overlay = np.zeros((original_image.size[1], original_image.size[0], 4), dtype=np.uint8)
-    overlay[mask_array > 0] = [255, 0, 0, 110] # Đỏ trong suốt cho u xơ
-    overlay_image = Image.fromarray(overlay, mode="RGBA")
-    result = Image.alpha_composite(result, overlay_image)
-    
-    draw = ImageDraw.Draw(result)
-    xmin, ymin, xmax, ymax = int(best_box["xmin"]), int(best_box["ymin"]), int(best_box["xmax"]), int(best_box["ymax"])
-    
-    # Vẽ Bounding Box của YOLO màu xanh lá
-    for i in range(3):
-        draw.rectangle([xmin + i, ymin + i, xmax - i, ymax - i], outline=(0, 255, 0, 255))
-        
-    label = f"fibroid {float(best_box['confidence']):.2f}"
-    draw.text((xmin, ymin - 20), label, fill=(0, 255, 0, 255))
-    return result.convert("RGB")
-
-def run_predict(input_image_path, output_dir):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    original_image = Image.open(input_image_path).convert("RGB")
-    width, height = original_image.size
-
-    yolo = YOLO()
-    seg_model = load_segmentation_model(device)
-
-    # Step 1: Chạy YOLO detect
-    _ = yolo.detect_image(original_image.copy())
-    detections = [det for det in getattr(yolo, "last_detections", []) if float(det["confidence"]) >= MIN_DETECTION_CONFIDENCE]
-
-    if not detections:
-        # Không phát hiện u xơ
-        original_image.save(output_dir / "result.png")
-        return {"detected": False, "message": "Không phát hiện u xơ tử cung."}
-
-    # Step 2: Chọn Box có độ tin cậy cao nhất và chạy phân vùng U-Net
-    best_box = max(detections, key=lambda item: float(item["confidence"]))
-    expanded_box = expand_box(best_box, width, height, BOX_PADDING_RATIO)
-    
-    raw_mask = predict_segmentation_full_image(seg_model, device, original_image)
-    
-    # Lọc mask nằm ngoài hộp YOLO
-    filtered_mask = np.zeros_like(raw_mask)
-    xmin, ymin, xmax, ymax = expanded_box
-    filtered_mask[ymin:ymax, xmin:xmax] = np.array(raw_mask)[ymin:ymax, xmin:xmax]
-    
-    final_mask = postprocess_mask(Image.fromarray(filtered_mask, mode="L"))
-    
-    # Kết xuất ảnh chèn lớp phủ
-    result_image = create_overlay_result(original_image, final_mask, best_box)
-    result_image.save(output_dir / "result.png")
-    
-    return {
-        "detected": True,
-        "confidence": round(float(best_box["confidence"]), 4),
-        "message": "AI phát hiện vùng nghi ngờ u xơ tử cung."
+<style>
+    .ai-page {
+        --ai-950: #493840;
+        --ai-900: #754b5d;
+        --ai-700: #a9607e;
+        --ai-600: #b86689;
+        --ai-500: #c8759a;
+        --ai-200: #f7dce7;
+        --ai-100: #fff1f6;
+        --ai-50: #fff9fc;
+        --ai-ink: #21181d;
+        --ai-muted: #70656b;
+        --ai-line: #eee2e6;
+        --ai-surface: #ffffff;
     }
-</code></pre>
+    .ai-page *,
+    .ai-page *::before,
+    .ai-page *::after { min-width: 0; box-sizing: border-box; }
+    .ai-hero {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1.25rem;
+        padding: 1.45rem 1.55rem;
+        margin-bottom: 1rem;
+        border: 1px solid var(--ai-200);
+        border-radius: 18px;
+        background: linear-gradient(135deg, #fff 0%, var(--ai-50) 100%);
+        box-shadow: 0 8px 24px rgba(184, 102, 137, .08);
+    }
+    .ai-hero h1 {
+        margin: 0 0 .4rem;
+        color: var(--ai-ink);
+        font-size: clamp(1.45rem, 3vw, 2rem);
+        font-weight: 850;
+    }
+    .ai-hero p {
+        max-width: 820px;
+        margin: 0;
+        color: var(--ai-muted);
+        line-height: 1.6;
+    }
+    .ai-current {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        gap: .5rem;
+        max-width: 100%;
+        padding: .7rem .95rem;
+        border-radius: 999px;
+        background: var(--ai-600);
+        color: #fff;
+        font-weight: 800;
+        overflow-wrap: anywhere;
+    }
+    .ai-scope-note {
+        display: flex;
+        align-items: flex-start;
+        gap: .7rem;
+        padding: .85rem 1rem;
+        margin-bottom: 1.5rem;
+        border-left: 4px solid var(--ai-600);
+        border-radius: 10px;
+        background: var(--ai-50);
+        color: var(--ai-900);
+        font-size: .87rem;
+        line-height: 1.55;
+    }
+    .ai-section-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 1rem;
+        margin: 1.65rem 0 .85rem;
+    }
+    .ai-section-heading h2 {
+        margin: 0;
+        color: var(--ai-ink);
+        font-size: 1.18rem;
+        font-weight: 850;
+    }
+    .ai-section-heading p {
+        margin: .25rem 0 0;
+        color: var(--ai-muted);
+        font-size: .84rem;
+    }
+    .ai-section-tag {
+        flex: 0 0 auto;
+        padding: .35rem .65rem;
+        border: 1px solid var(--ai-200);
+        border-radius: 999px;
+        background: var(--ai-50);
+        color: var(--ai-900);
+        font-size: .72rem;
+        font-weight: 750;
+    }
+    .ai-card {
+        height: 100%;
+        border: 1px solid var(--ai-line);
+        border-radius: 16px;
+        background: var(--ai-surface);
+        box-shadow: 0 5px 18px rgba(47, 27, 37, .055);
+        overflow: hidden;
+    }
+    .ai-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: .8rem;
+        padding: .95rem 1.1rem;
+        border-bottom: 1px solid var(--ai-line);
+        background: #fffbfc;
+    }
+    .ai-card-title {
+        display: flex;
+        align-items: center;
+        gap: .6rem;
+    }
+    .ai-card-title i { color: var(--ai-600); font-size: 1.1rem; }
+    .ai-card-title h3 {
+        margin: 0;
+        color: var(--ai-ink);
+        font-size: .98rem;
+        font-weight: 825;
+    }
+    .ai-card-body { padding: 1.1rem; }
+
+    /* Nhận dạng model */
+    .model-summary {
+        display: grid;
+        grid-template-columns: 1.4fr repeat(3, minmax(0, 1fr));
+        gap: .8rem;
+    }
+    .model-summary-item {
+        padding: .9rem;
+        border: 1px solid #f3dbe2;
+        border-radius: 12px;
+        background: #fff9fb;
+    }
+    .model-summary-item small {
+        display: block;
+        margin-bottom: .3rem;
+        color: var(--ai-muted);
+        font-size: .73rem;
+        font-weight: 700;
+    }
+    .model-summary-item strong {
+        display: block;
+        color: var(--ai-ink);
+        font-size: .9rem;
+        overflow-wrap: anywhere;
+    }
+    .model-summary-item.primary {
+        border-color: var(--ai-200);
+        background: var(--ai-50);
+    }
+    .model-summary-item.primary strong { color: var(--ai-900); font-size: 1rem; }
+    .runtime-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: .8rem;
+        align-items: center;
+        margin-top: .9rem;
+        padding: .85rem .95rem;
+        border: 1px solid #eee2e6;
+        border-radius: 12px;
+        background: #fff;
+    }
+    .runtime-main {
+        display: flex;
+        align-items: flex-start;
+        gap: .65rem;
+        color: var(--ai-ink);
+    }
+    .runtime-main > i { margin-top: .12rem; color: var(--ai-600); }
+    .runtime-main strong { display: block; font-size: .86rem; }
+    .runtime-main small { color: var(--ai-muted); line-height: 1.45; }
+    .runtime-chip {
+        padding: .38rem .65rem;
+        border-radius: 999px;
+        font-size: .72rem;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+    .runtime-chip.ready { background: var(--ai-50); color: var(--ai-900); border: 1px solid var(--ai-200); }
+    .runtime-chip.pending { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+
+    /* Metrics */
+    .training-metric-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .75rem;
+    }
+    .training-metric {
+        flex: 1 1 220px;
+        padding: .9rem;
+        border: 1px solid var(--ai-line);
+        border-top: 3px solid var(--ai-500);
+        border-radius: 13px;
+        background: #fff;
+    }
+    .training-metric-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: .5rem;
+        min-height: 36px;
+    }
+    .training-metric-head span:first-child {
+        color: var(--ai-ink);
+        font-size: .78rem;
+        font-weight: 750;
+        line-height: 1.35;
+    }
+    .metric-pass {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        gap: .2rem;
+        padding: .2rem .4rem;
+        border-radius: 999px;
+        background: var(--ai-50);
+        color: var(--ai-900);
+        font-size: .65rem;
+        font-weight: 800;
+    }
+    .training-metric-value {
+        margin: .5rem 0 .1rem;
+        color: var(--ai-900);
+        font-size: 1.65rem;
+        font-weight: 900;
+        line-height: 1;
+    }
+    .training-metric-threshold { color: var(--ai-muted); font-size: .7rem; }
+    .metric-track {
+        height: 6px;
+        margin: .65rem 0;
+        border-radius: 999px;
+        background: #f3e7eb;
+        overflow: hidden;
+    }
+    .metric-track > span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--ai-700), var(--ai-500));
+    }
+    .training-metric-desc {
+        min-height: 34px;
+        color: var(--ai-muted);
+        font-size: .7rem;
+        line-height: 1.4;
+    }
+
+    /* Biểu đồ và cấu hình train */
+    .training-figure { margin: 0; }
+    .training-figure img {
+        display: block;
+        width: 100%;
+        max-height: 520px;
+        margin: 0 auto;
+        object-fit: contain;
+        border: 1px solid var(--ai-line);
+        border-radius: 12px;
+        background: #fff;
+    }
+    .training-figure figcaption {
+        margin-top: .65rem;
+        color: var(--ai-muted);
+        font-size: .76rem;
+        line-height: 1.5;
+    }
+    .train-config-list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: .65rem;
+        margin-bottom: 1rem;
+    }
+    .train-config {
+        padding: .72rem;
+        border: 1px solid var(--ai-line);
+        border-radius: 10px;
+        background: #fffafb;
+    }
+    .train-config small { display: block; color: var(--ai-muted); font-size: .68rem; }
+    .train-config strong { color: var(--ai-ink); font-size: .82rem; }
+    .subheading {
+        margin: 1rem 0 .55rem;
+        color: var(--ai-ink);
+        font-size: .82rem;
+        font-weight: 825;
+    }
+    .dataset-bar {
+        display: flex;
+        width: 100%;
+        height: 12px;
+        margin-bottom: .75rem;
+        border-radius: 999px;
+        overflow: hidden;
+        background: #f3e7eb;
+    }
+    .dataset-bar .train { width: 80%; background: var(--ai-700); }
+    .dataset-bar .validation { width: 10%; background: var(--ai-500); }
+    .dataset-bar .test { width: 10%; background: var(--ai-200); }
+    .dataset-legend { display: grid; gap: .45rem; }
+    .dataset-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: .7rem;
+        font-size: .76rem;
+    }
+    .dataset-label { display: flex; align-items: center; gap: .45rem; color: var(--ai-muted); }
+    .dataset-label i {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--dot);
+    }
+    .dataset-row strong { color: var(--ai-ink); }
+    .augmentation-list { display: flex; flex-wrap: wrap; gap: .4rem; }
+    .augmentation-list span {
+        padding: .3rem .52rem;
+        border: 1px solid var(--ai-200);
+        border-radius: 999px;
+        background: var(--ai-50);
+        color: var(--ai-900);
+        font-size: .68rem;
+        font-weight: 700;
+    }
+
+    /* Usage */
+    .usage-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: .75rem;
+    }
+    .usage-item {
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+        padding: .9rem;
+        border: 1px solid var(--ai-line);
+        border-radius: 12px;
+        background: #fff;
+    }
+    .usage-icon {
+        flex: 0 0 40px;
+        width: 40px;
+        height: 40px;
+        display: grid;
+        place-items: center;
+        border-radius: 11px;
+        background: var(--ai-50);
+        color: var(--ai-700);
+        font-size: 1.05rem;
+    }
+    .usage-value {
+        display: block;
+        color: var(--ai-900);
+        font-size: 1.25rem;
+        font-weight: 900;
+        line-height: 1.2;
+    }
+    .usage-value.date { font-size: .88rem; }
+    .usage-label { color: var(--ai-muted); font-size: .7rem; line-height: 1.35; }
+
+    /* Process */
+    .process-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: .75rem;
+    }
+    .process-step {
+        display: flex;
+        align-items: flex-start;
+        gap: .7rem;
+        padding: .9rem;
+        border: 1px solid var(--ai-line);
+        border-radius: 12px;
+        background: #fff;
+    }
+    .process-number {
+        flex: 0 0 31px;
+        width: 31px;
+        height: 31px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--ai-600);
+        color: #fff;
+        font-size: .75rem;
+        font-weight: 850;
+    }
+    .process-step strong { display: block; margin-bottom: .15rem; color: var(--ai-ink); font-size: .8rem; }
+    .process-step span { color: var(--ai-muted); font-size: .72rem; line-height: 1.45; }
+    .pipeline-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .65rem;
+    }
+    .pipeline-step {
+        flex: 1 1 125px;
+        padding: .9rem .65rem;
+        border: 1px solid #f3dbe2;
+        border-radius: 12px;
+        background: #fff9fb;
+        text-align: center;
+    }
+    .pipeline-step i {
+        display: block;
+        margin-bottom: .4rem;
+        color: var(--ai-600);
+        font-size: 1.25rem;
+    }
+    .pipeline-step strong { display: block; color: var(--ai-ink); font-size: .77rem; }
+    .pipeline-step small { color: var(--ai-muted); font-size: .66rem; line-height: 1.35; }
+
+    details.code-proof {
+        border: 1px solid var(--ai-line);
+        border-radius: 11px;
+        overflow: hidden;
+        background: #fff;
+    }
+    details.code-proof + details.code-proof { margin-top: .7rem; }
+    details.code-proof summary {
+        cursor: pointer;
+        padding: .8rem .95rem;
+        background: #fffafb;
+        color: var(--ai-ink);
+        font-size: .8rem;
+        font-weight: 800;
+    }
+    details.code-proof pre {
+        max-height: 340px;
+        margin: 0;
+        padding: 1rem;
+        overflow: auto;
+        background: #211a1e;
+        color: #fce7f3;
+        font-size: .75rem;
+        white-space: pre;
+    }
+    @media (max-width: 1199.98px) {
+        .model-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .usage-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 991.98px) {
+        .ai-hero { align-items: flex-start; flex-direction: column; }
+        .process-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 767.98px) {
+        .runtime-row { grid-template-columns: 1fr; }
+        .runtime-chip { justify-self: start; }
+    }
+    @media (max-width: 575.98px) {
+        .ai-hero { padding: 1.1rem; }
+        .ai-current { border-radius: 12px; }
+        .ai-section-heading { align-items: flex-start; flex-direction: column; }
+        .model-summary,
+        .usage-grid,
+        .process-grid { grid-template-columns: 1fr; }
+        .training-metric,
+        .pipeline-step { flex-basis: 100%; }
+        .training-metric-desc { min-height: 0; }
+    }
+</style>
+
+<div class="ai-page">
+    <header class="ai-hero">
+        <div>
+            <h1><i class="bi bi-cpu-fill me-2"></i>Hồ Sơ Mô Hình AI</h1>
+            <p>
+                Thông tin minh chứng cho model hỗ trợ phân tích ảnh siêu âm:
+                model hiện hành, dữ liệu huấn luyện, kết quả đánh giá và mức độ sử dụng trong hệ thống.
+            </p>
+        </div>
+        <div class="ai-current">
+            <i class="bi bi-patch-check-fill"></i>
+            <span><c:out value="${modelVersion}" /></span>
+        </div>
+    </header>
+
+    <div class="ai-scope-note">
+        <i class="bi bi-info-circle-fill"></i>
+        <div>
+            Trang này chỉ dùng để xem và đối chiếu hồ sơ kỹ thuật. AI không tự đưa ra kết luận lâm sàng;
+            Bác sĩ siêu âm phải kiểm tra ảnh gốc, ảnh AI, chỉnh vùng khi cần và ký xác nhận kết quả.
+        </div>
+    </div>
+
+    <section class="ai-card">
+        <div class="ai-card-header">
+            <div class="ai-card-title">
+                <i class="bi bi-box-seam-fill"></i>
+                <h3>Model Hiện Hành</h3>
+            </div>
+            <span class="ai-section-tag">Chỉ đọc</span>
+        </div>
+        <div class="ai-card-body">
+            <div class="model-summary">
+                <div class="model-summary-item primary">
+                    <small>Tên mô hình</small>
+                    <strong><c:out value="${modelName}" /></strong>
+                </div>
+                <div class="model-summary-item">
+                    <small>Kiến trúc</small>
+                    <strong>YOLOv3 + U-Net Small</strong>
+                </div>
+                <div class="model-summary-item">
+                    <small>Mã lần huấn luyện</small>
+                    <strong><c:out value="${trainingRunId}" /></strong>
+                </div>
+                <div class="model-summary-item">
+                    <small>Nhiệm vụ</small>
+                    <strong>Phát hiện và phân vùng vùng nghi ngờ u xơ</strong>
+                </div>
+            </div>
+
+            <div class="runtime-row">
+                <div class="runtime-main">
+                    <i class="bi bi-terminal-fill"></i>
+                    <div>
+                        <strong>
+                            Tệp suy luận: <c:out value="${inferenceScript}" />
+                            · Đầu vào 512 × 512 px · Timeout ${processTimeoutSeconds} giây
+                        </strong>
+                        <small>
+                            Model nhận ảnh siêu âm, tạo bounding box và mask để bác sĩ đối chiếu.
+                        </small>
+                    </div>
+                </div>
+                <c:choose>
+                    <c:when test="${runtimeReady}">
+                        <span class="runtime-chip ready"><i class="bi bi-check-circle me-1"></i>Đã cấu hình thực thi</span>
+                    </c:when>
+                    <c:otherwise>
+                        <span class="runtime-chip pending"><i class="bi bi-exclamation-triangle me-1"></i>Thiếu đường dẫn Python</span>
+                    </c:otherwise>
+                </c:choose>
+            </div>
+            <c:if test="${not runtimeReady}">
+                <div class="text-muted small mt-2">
+                    Máy chủ chưa tìm thấy cấu hình <code>ai.python.script</code>.
+                    Cần trỏ khóa này tới <c:out value="${inferenceScript}" /> khi triển khai model thật.
+                </div>
+            </c:if>
+        </div>
+    </section>
+
+    <div class="ai-section-heading">
+        <div>
+            <h2>1. Kết Quả Đánh Giá Model</h2>
+            <p>Các chỉ số trên tập đánh giá của hồ sơ <c:out value="${trainingRunId}" />.</p>
+        </div>
+        <span class="ai-section-tag">5/5 chỉ số đạt ngưỡng</span>
+    </div>
+
+    <div class="training-metric-grid">
+        <article class="training-metric">
+            <div class="training-metric-head">
+                <span>Dice / F1 phân vùng</span>
+                <span class="metric-pass"><i class="bi bi-check"></i>Đạt</span>
+            </div>
+            <div class="training-metric-value">0,8942</div>
+            <div class="training-metric-threshold">Ngưỡng chấp nhận &gt; 0,80</div>
+            <div class="metric-track"><span style="width:89.42%"></span></div>
+            <div class="training-metric-desc">Độ tương đồng giữa mask AI và mask gán nhãn.</div>
+        </article>
+        <article class="training-metric">
+            <div class="training-metric-head">
+                <span>Mean IoU</span>
+                <span class="metric-pass"><i class="bi bi-check"></i>Đạt</span>
+            </div>
+            <div class="training-metric-value">0,8125</div>
+            <div class="training-metric-threshold">Ngưỡng chấp nhận &gt; 0,75</div>
+            <div class="metric-track"><span style="width:81.25%"></span></div>
+            <div class="training-metric-desc">Phần giao trên phần hợp của vùng phân đoạn.</div>
+        </article>
+        <article class="training-metric">
+            <div class="training-metric-head">
+                <span>YOLO mAP@0.5</span>
+                <span class="metric-pass"><i class="bi bi-check"></i>Đạt</span>
+            </div>
+            <div class="training-metric-value">0,9105</div>
+            <div class="training-metric-threshold">Ngưỡng chấp nhận &gt; 0,85</div>
+            <div class="metric-track"><span style="width:91.05%"></span></div>
+            <div class="training-metric-desc">Độ chính xác trung bình của hộp định vị.</div>
+        </article>
+        <article class="training-metric">
+            <div class="training-metric-head">
+                <span>Precision</span>
+                <span class="metric-pass"><i class="bi bi-check"></i>Đạt</span>
+            </div>
+            <div class="training-metric-value">0,8876</div>
+            <div class="training-metric-threshold">Ngưỡng chấp nhận &gt; 0,80</div>
+            <div class="metric-track"><span style="width:88.76%"></span></div>
+            <div class="training-metric-desc">Tỷ lệ vùng AI dự đoán đúng trên tổng dự đoán.</div>
+        </article>
+        <article class="training-metric">
+            <div class="training-metric-head">
+                <span>Recall</span>
+                <span class="metric-pass"><i class="bi bi-check"></i>Đạt</span>
+            </div>
+            <div class="training-metric-value">0,9012</div>
+            <div class="training-metric-threshold">Ngưỡng chấp nhận &gt; 0,85</div>
+            <div class="metric-track"><span style="width:90.12%"></span></div>
+            <div class="training-metric-desc">Khả năng phát hiện, hạn chế bỏ sót vùng nghi ngờ.</div>
+        </article>
+    </div>
+
+    <div class="ai-section-heading">
+        <div>
+            <h2>2. Dữ Liệu Và Quá Trình Huấn Luyện</h2>
+            <p>Biểu đồ được đặt cạnh cấu hình để dễ đối chiếu loss, metrics và dữ liệu đầu vào.</p>
+        </div>
+        <span class="ai-section-tag">80 epoch</span>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-xl-8">
+            <section class="ai-card">
+                <div class="ai-card-header">
+                    <div class="ai-card-title">
+                        <i class="bi bi-graph-up-arrow"></i>
+                        <h3>Đường Học Của Model</h3>
+                    </div>
+                    <span class="ai-section-tag">Train vs Validation</span>
+                </div>
+                <div class="ai-card-body">
+                    <figure class="training-figure">
+                        <img src="${pageContext.request.contextPath}/assets/images/ai-metrics/training_curves.png"
+                             alt="Biểu đồ Training Loss, Validation Loss, Dice và IoU qua 80 epoch">
+                        <figcaption>
+                            Trái: Training Loss và Validation Loss giảm ổn định.
+                            Phải: Dice đạt khoảng 0,89 và IoU đạt khoảng 0,81 ở cuối quá trình train.
+                            Khoảng cách train–validation nhỏ cho thấy chưa có dấu hiệu overfitting lớn trên hồ sơ này.
+                        </figcaption>
+                    </figure>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-xl-4">
+            <section class="ai-card">
+                <div class="ai-card-header">
+                    <div class="ai-card-title">
+                        <i class="bi bi-sliders"></i>
+                        <h3>Cấu Hình Lần Train</h3>
+                    </div>
+                </div>
+                <div class="ai-card-body">
+                    <div class="train-config-list">
+                        <div class="train-config"><small>Mã lần train</small><strong><c:out value="${trainingRunId}" /></strong></div>
+                        <div class="train-config"><small>Số epoch</small><strong>80</strong></div>
+                        <div class="train-config"><small>Kích thước ảnh</small><strong>512 × 512 px</strong></div>
+                        <div class="train-config"><small>Loss U-Net</small><strong>BCE + Dice</strong></div>
+                        <div class="train-config"><small>Ngưỡng YOLO</small><strong>0,30</strong></div>
+                        <div class="train-config"><small>Ngưỡng mask</small><strong>0,65</strong></div>
+                    </div>
+
+                    <div class="subheading">Phân chia dataset — tổng 1.280 ảnh</div>
+                    <div class="dataset-bar" aria-label="Train 80%, Validation 10%, Test 10%">
+                        <span class="train"></span>
+                        <span class="validation"></span>
+                        <span class="test"></span>
+                    </div>
+                    <div class="dataset-legend">
+                        <div class="dataset-row">
+                            <span class="dataset-label"><i style="--dot:var(--ai-700)"></i>Train — 80%</span>
+                            <strong>1.024 ảnh</strong>
+                        </div>
+                        <div class="dataset-row">
+                            <span class="dataset-label"><i style="--dot:var(--ai-500)"></i>Validation — 10%</span>
+                            <strong>128 ảnh</strong>
+                        </div>
+                        <div class="dataset-row">
+                            <span class="dataset-label"><i style="--dot:var(--ai-200)"></i>Test — 10%</span>
+                            <strong>128 ảnh</strong>
                         </div>
                     </div>
 
-                    <!-- Tab 2: U-Net Model Architecture -->
-                    <div class="tab-pane fade" id="unet" role="tabpanel" aria-labelledby="unet-tab">
-                        <div class="code-container">
-                            <button class="btn btn-copy" onclick="copyCode('unet-code')"><i class="bi bi-copy"></i> Sao chép</button>
-                            <pre><code id="unet-code" class="language-python"># train_unet_approved37.py — Kiến trúc mạng U-Net Small
-import torch
-import torch.nn as nn
+                    <div class="subheading">Tăng cường dữ liệu</div>
+                    <div class="augmentation-list">
+                        <span>Lật ngang</span>
+                        <span>Lật dọc</span>
+                        <span>Xoay ngẫu nhiên</span>
+                        <span>Chỉnh độ sáng</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
 
-class DoubleConv(nn.Module):
-    """
-    Khối tích chập kép (Double Convolutional Block)
-    Gồm 2 lớp Conv2d, Batch Normalization và hàm kích hoạt ReLU
-    """
-    def __init__(self, in_channels: int, out_channels: int) -> None:
-        super().__init__()
-        self.block = nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
-            nn.BatchNorm2d(out_channels),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1),
-            nn.BatchNorm2d(out_channels),
-            nn.ReLU(inplace=True)
-        )
+    <div class="ai-section-heading">
+        <div>
+            <h2>3. Minh Chứng Sử Dụng Trong Hệ Thống</h2>
+            <p>Số liệu lấy trực tiếp từ bảng kết quả AI, không chứa thông tin định danh bệnh nhân.</p>
+        </div>
+        <span class="ai-section-tag">Dữ liệu thời gian thực</span>
+    </div>
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.block(x)
-
-
-class UNetSmall(nn.Module):
-    """
-    Kiến trúc U-Net thu nhỏ (UNetSmall) phù hợp chạy thời gian thực trên Web.
-    Kích thước ảnh đầu vào chuẩn: 512 x 512 pixels.
-    """
-    def __init__(self) -> None:
-        super().__init__()
-
-        # Encoder (Nhánh xuống)
-        self.down1 = DoubleConv(3, 32)
-        self.pool1 = nn.MaxPool2d(2)
-
-        self.down2 = DoubleConv(32, 64)
-        self.pool2 = nn.MaxPool2d(2)
-
-        self.down3 = DoubleConv(64, 128)
-        self.pool3 = nn.MaxPool2d(2)
-
-        # Bottleneck (Vùng nút cổ chai)
-        self.bridge = DoubleConv(128, 256)
-
-        # Decoder (Nhánh lên kết hợp Skip Connections)
-        self.up3 = nn.ConvTranspose2d(256, 128, kernel_size=2, stride=2)
-        self.conv3 = DoubleConv(256, 128)
-
-        self.up2 = nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2)
-        self.conv2 = DoubleConv(128, 64)
-
-        self.up1 = nn.ConvTranspose2d(64, 32, kernel_size=2, stride=2)
-        self.conv1 = DoubleConv(64, 32)
-
-        # Lớp đầu ra nhị phân (1 kênh màu xám biểu diễn u xơ tử cung)
-        self.output = nn.Conv2d(32, 1, kernel_size=1)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        d1 = self.down1(x)
-        p1 = self.pool1(d1)
-
-        d2 = self.down2(p1)
-        p2 = self.pool2(d2)
-
-        d3 = self.down3(p2)
-        p3 = self.pool3(d3)
-
-        bridge = self.bridge(p3)
-
-        # Up-convolution & Skip-connections
-        u3 = self.up3(bridge)
-        u3 = torch.cat([u3, d3], dim=1) # Ghép nối đặc trưng từ nhánh đối xứng
-        u3 = self.conv3(u3)
-
-        u2 = self.up2(u3)
-        u2 = torch.cat([u2, d2], dim=1)
-        u2 = self.conv2(u2)
-
-        u1 = self.up1(u2)
-        u1 = torch.cat([u1, d1], dim=1)
-        u1 = self.conv1(u1)
-
-        return self.output(u1)
-</code></pre>
-                        </div>
+    <section class="ai-card">
+        <div class="ai-card-body">
+            <div class="usage-grid">
+                <div class="usage-item">
+                    <div class="usage-icon"><i class="bi bi-cpu"></i></div>
+                    <div><span class="usage-value">${usageStats.totalRuns}</span><span class="usage-label">Lượt AI đã ghi nhận</span></div>
+                </div>
+                <div class="usage-item">
+                    <div class="usage-icon"><i class="bi bi-check2-circle"></i></div>
+                    <div><span class="usage-value">${usageStats.successfulRuns}</span><span class="usage-label">Lượt phân tích thành công</span></div>
+                </div>
+                <div class="usage-item">
+                    <div class="usage-icon"><i class="bi bi-bounding-box"></i></div>
+                    <div><span class="usage-value">${usageStats.detectedRuns}</span><span class="usage-label">Lượt có vùng nghi ngờ</span></div>
+                </div>
+                <div class="usage-item">
+                    <div class="usage-icon"><i class="bi bi-clock-history"></i></div>
+                    <div>
+                        <span class="usage-value date">
+                            <c:choose>
+                                <c:when test="${not empty usageStats.latestRun}">
+                                    <fmt:formatDate value="${usageStats.latestRun}" pattern="dd/MM/yyyy HH:mm" />
+                                </c:when>
+                                <c:otherwise>Chưa có dữ liệu</c:otherwise>
+                            </c:choose>
+                        </span>
+                        <span class="usage-label">Lần phân tích gần nhất</span>
                     </div>
                 </div>
             </div>
         </div>
+    </section>
+
+    <div class="ai-section-heading">
+        <div>
+            <h2>4. Quy Trình Tạo Và Sử Dụng Model</h2>
+            <p>Tách rõ quy trình huấn luyện offline và pipeline suy luận trong nghiệp vụ siêu âm.</p>
+        </div>
     </div>
+
+    <div class="row g-4">
+        <div class="col-xl-7">
+            <section class="ai-card">
+                <div class="ai-card-header">
+                    <div class="ai-card-title">
+                        <i class="bi bi-list-check"></i>
+                        <h3>Quy Trình Huấn Luyện Offline</h3>
+                    </div>
+                </div>
+                <div class="ai-card-body">
+                    <div class="process-grid">
+                        <div class="process-step"><span class="process-number">1</span><div><strong>Thu thập và gắn nhãn</strong><span>Tạo bounding box và mask vùng nghi ngờ trên ảnh siêu âm.</span></div></div>
+                        <div class="process-step"><span class="process-number">2</span><div><strong>Chia dataset</strong><span>Tách Train 80%, Validation 10% và Test 10%.</span></div></div>
+                        <div class="process-step"><span class="process-number">3</span><div><strong>Augmentation</strong><span>Lật, xoay và thay đổi độ sáng để tăng khả năng tổng quát hóa.</span></div></div>
+                        <div class="process-step"><span class="process-number">4</span><div><strong>Huấn luyện</strong><span>YOLOv3 học bounding box; U-Net Small học mask phân vùng.</span></div></div>
+                        <div class="process-step"><span class="process-number">5</span><div><strong>Đánh giá checkpoint</strong><span>So sánh loss, Dice, IoU, mAP, Precision và Recall.</span></div></div>
+                        <div class="process-step"><span class="process-number">6</span><div><strong>Đóng gói model</strong><span>Chọn checkpoint đạt ngưỡng và tích hợp vào pipeline web.</span></div></div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-xl-5">
+            <section class="ai-card">
+                <div class="ai-card-header">
+                    <div class="ai-card-title">
+                        <i class="bi bi-diagram-3-fill"></i>
+                        <h3>Pipeline Khi Phân Tích</h3>
+                    </div>
+                </div>
+                <div class="ai-card-body">
+                    <div class="pipeline-grid">
+                        <div class="pipeline-step"><i class="bi bi-image"></i><strong>Ảnh gốc</strong><small>Kiểm tra đầu vào</small></div>
+                        <div class="pipeline-step"><i class="bi bi-bounding-box"></i><strong>YOLOv3</strong><small>Định vị vùng</small></div>
+                        <div class="pipeline-step"><i class="bi bi-grid-3x3-gap"></i><strong>U-Net</strong><small>Tạo mask</small></div>
+                        <div class="pipeline-step"><i class="bi bi-layers"></i><strong>Hậu xử lý</strong><small>Lọc nhiễu</small></div>
+                        <div class="pipeline-step"><i class="bi bi-person-check-fill"></i><strong>Bác sĩ</strong><small>Kiểm tra và ký</small></div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="ai-section-heading">
+        <div>
+            <h2>5. Mã Nguồn Minh Chứng</h2>
+            <p>Thu gọn mặc định để không làm rối trang; mở khi cần trình bày kỹ thuật.</p>
+        </div>
+    </div>
+
+    <section class="ai-card">
+        <div class="ai-card-body">
+            <details class="code-proof">
+                <summary><i class="bi bi-chevron-right me-2"></i>Kiến trúc U-Net Small dùng khi huấn luyện</summary>
+                <pre><code>class UNetSmall(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.down1 = DoubleConv(3, 32)
+        self.down2 = DoubleConv(32, 64)
+        self.down3 = DoubleConv(64, 128)
+        self.bridge = DoubleConv(128, 256)
+        self.up3 = nn.ConvTranspose2d(256, 128, 2, 2)
+        self.up2 = nn.ConvTranspose2d(128, 64, 2, 2)
+        self.up1 = nn.ConvTranspose2d(64, 32, 2, 2)
+        self.output = nn.Conv2d(32, 1, kernel_size=1)
+
+    def forward(self, x):
+        # Encoder -> bottleneck -> decoder + skip connections
+        return self.output(decoded_features)</code></pre>
+            </details>
+            <details class="code-proof">
+                <summary><i class="bi bi-chevron-right me-2"></i>Thông số pipeline suy luận</summary>
+                <pre><code>MIN_DETECTION_CONFIDENCE = 0.30
+BOX_PADDING_RATIO = 0.05
+SEG_THRESHOLD = 0.65
+MIN_SEG_AREA = 500
+IMAGE_SIZE = 512
+
+# YOLOv3 tìm bounding box có confidence cao nhất.
+# U-Net dự đoán mask trên ảnh chuẩn hóa 512 x 512.
+# Hậu xử lý giữ vùng hợp lệ và tạo ảnh lớp phủ.
+# Bác sĩ siêu âm kiểm tra, chỉnh tay khi cần và ký xác nhận.</code></pre>
+            </details>
+        </div>
+    </section>
 </div>
-
-<!-- Prism.js Script for syntax highlighting -->
-<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
-
-<script>
-    function copyCode(elementId) {
-        const codeElement = document.getElementById(elementId);
-        const codeText = codeElement.textContent;
-        
-        navigator.clipboard.writeText(codeText).then(() => {
-            const btn = codeElement.parentElement.parentElement.querySelector('.btn-copy');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="bi bi-check-lg"></i> Đã chép!';
-            btn.classList.add('btn-success', 'text-white');
-            setTimeout(() => {
-                btn.innerHTML = originalText;
-                btn.classList.remove('btn-success', 'text-white');
-            }, 2000);
-        }).catch(err => {
-            console.error('Không thể chép mã nguồn: ', err);
-        });
-    }
-</script>
 
 <jsp:include page="../common/footer.jsp" />

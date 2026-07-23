@@ -163,7 +163,7 @@ public class User implements Serializable {
                 case 3: return "Quản lý";
                 case 4: return "Nhân viên lễ tân";
                 case 5: return "Bệnh nhân";
-                case 6: return "Bác sĩ Siêu âm";
+                case 6: return "Bác sĩ siêu âm";
                 default: return "—";
             }
         }
@@ -173,7 +173,7 @@ public class User implements Serializable {
             case "Manager":     return "Quản lý";
             case "Staff":       return "Nhân viên lễ tân";
             case "Patient":     return "Bệnh nhân";
-            case "Sonographer": return "Bác sĩ Siêu âm";
+            case "Sonographer": return "Bác sĩ siêu âm";
             default:            return roleName;
         }
     }

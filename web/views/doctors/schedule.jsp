@@ -6,7 +6,7 @@
 <%-- ── Banner ──────────────────────────────────────────────────────────────── --%>
 <div class="row mb-4">
     <div class="col-12">
-        <div class="card border-0 rounded-4" style="background: linear-gradient(135deg,#e91e8c,#c2185b); color:#fff;">
+        <div class="card border-0 rounded-4" style="background: linear-gradient(135deg,#d27b9f,#b86689); color:#fff;">
             <div class="card-body p-4">
                 <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
                     <div>
@@ -15,7 +15,7 @@
                         </h2>
                         <p class="mb-0 opacity-75 fs-6">
                             BS. <strong>${doctor.fullName}</strong> &mdash;
-                            Đăng ký lịch trực và xem trạng thái phê duyệt
+                            Đăng ký lịch làm việc và xem trạng thái xác nhận
                         </p>
                     </div>
                     <button class="btn btn-light fw-semibold px-4 rounded-pill"
@@ -33,8 +33,8 @@
     <div class="alert alert-success alert-dismissible fade show rounded-3 mb-3" role="alert">
         <i class="bi bi-check-circle-fill me-2"></i>
         <c:choose>
-            <c:when test="${success == 'created'}">Đăng ký lịch làm việc thành công! Chờ Manager phê duyệt.</c:when>
-            <c:when test="${success == 'cancelled'}">Đã hủy đăng ký lịch trực thành công.</c:when>
+            <c:when test="${success == 'created'}">Đăng ký lịch làm việc thành công! Vui lòng chờ quản lý xác nhận.</c:when>
+            <c:when test="${success == 'cancelled'}">Đã hủy đăng ký lịch làm việc thành công.</c:when>
             <c:otherwise>Thao tác thành công.</c:otherwise>
         </c:choose>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -58,7 +58,7 @@
         <div class="card border-0 rounded-4 h-100 text-center p-3" style="background:#fff8f0;">
             <div class="fs-1 fw-bold text-warning">${pendingCount}</div>
             <div class="small text-muted mt-1">
-                <i class="bi bi-hourglass-split me-1"></i>Chờ Duyệt
+                <i class="bi bi-hourglass-split me-1"></i>Chờ Xác Nhận
             </div>
         </div>
     </div>
@@ -66,7 +66,7 @@
         <div class="card border-0 rounded-4 h-100 text-center p-3" style="background:#e8fdf0;">
             <div class="fs-1 fw-bold text-success">${approvedCount}</div>
             <div class="small text-muted mt-1">
-                <i class="bi bi-check-circle me-1"></i>Đã Duyệt
+                <i class="bi bi-check-circle me-1"></i>Đã Xác Nhận
             </div>
         </div>
     </div>
@@ -89,8 +89,8 @@
                 <label class="form-label small fw-medium mb-1">Trạng thái</label>
                 <select name="status" class="form-select form-select-sm rounded-3">
                     <option value="">-- Tất cả --</option>
-                    <option value="PENDING"   ${statusFilter == 'PENDING'   ? 'selected' : ''}>Chờ duyệt</option>
-                    <option value="APPROVED"  ${statusFilter == 'APPROVED'  ? 'selected' : ''}>Đã duyệt</option>
+                    <option value="PENDING"   ${statusFilter == 'PENDING'   ? 'selected' : ''}>Chờ xác nhận</option>
+                    <option value="APPROVED"  ${statusFilter == 'APPROVED'  ? 'selected' : ''}>Đã xác nhận</option>
                     <option value="REJECTED"  ${statusFilter == 'REJECTED'  ? 'selected' : ''}>Đã từ chối</option>
                     <option value="CANCELLED" ${statusFilter == 'CANCELLED' ? 'selected' : ''}>Đã hủy</option>
                 </select>
@@ -151,8 +151,8 @@
 
         <%-- Chú thích --%>
         <div class="d-flex gap-3 mb-3 flex-wrap small">
-            <span><span class="badge bg-warning text-dark">●</span> Chờ duyệt</span>
-            <span><span class="badge bg-success">●</span> Đã duyệt</span>
+            <span><span class="badge bg-warning text-dark">●</span> Chờ xác nhận</span>
+            <span><span class="badge bg-success">●</span> Đã xác nhận</span>
             <span><span class="badge bg-danger">●</span> Từ chối</span>
             <span><span class="badge bg-secondary">●</span> Đã hủy</span>
         </div>
@@ -258,12 +258,12 @@
                                         <c:choose>
                                             <c:when test="${s.status.name() == 'PENDING'}">
                                                 <span class="badge bg-warning text-dark rounded-pill px-3">
-                                                    <i class="bi bi-hourglass-split me-1"></i>Chờ duyệt
+                                                    <i class="bi bi-hourglass-split me-1"></i>Chờ xác nhận
                                                 </span>
                                             </c:when>
                                             <c:when test="${s.status.name() == 'APPROVED'}">
                                                 <span class="badge bg-success rounded-pill px-3">
-                                                    <i class="bi bi-check-circle me-1"></i>Đã duyệt
+                                                    <i class="bi bi-check-circle me-1"></i>Đã xác nhận
                                                 </span>
                                             </c:when>
                                             <c:when test="${s.status.name() == 'REJECTED'}">
@@ -374,7 +374,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 rounded-4 shadow">
             <div class="modal-header rounded-top-4 text-white border-0"
-                 style="background: linear-gradient(135deg,#e91e8c,#c2185b);">
+                 style="background: linear-gradient(135deg,#d27b9f,#b86689);">
                 <h5 class="modal-title fw-bold" id="createModalLabel">
                     <i class="bi bi-calendar2-plus me-2"></i>Đăng Ký Lịch Làm Việc
                 </h5>
@@ -515,7 +515,7 @@
                 </div>
                 <h5 class="fw-bold mb-2">Xác Nhận Hủy Lịch</h5>
                 <p class="text-muted small mb-4">
-                    Bạn có chắc muốn hủy đăng ký lịch trực này không?<br>
+                    Bạn có chắc muốn hủy đăng ký lịch làm việc này không?<br>
                     Hành động này không thể hoàn tác.
                 </p>
                 <form method="post" action="${pageContext.request.contextPath}/doctor/schedules"
@@ -670,8 +670,8 @@
         return '#e2e3e5';
     }
     function statusLabel(st) {
-        if (st === 'APPROVED')  return 'Đã duyệt';
-        if (st === 'PENDING')   return 'Chờ duyệt';
+        if (st === 'APPROVED')  return 'Đã xác nhận';
+        if (st === 'PENDING')   return 'Chờ xác nhận';
         if (st === 'REJECTED')  return 'Từ chối';
         if (st === 'CANCELLED') return 'Đã hủy';
         return st;
@@ -711,7 +711,7 @@
 
                     html += '<td style="' + cellStyle + '" class="p-1">';
                     html += '<div class="fw-bold small mb-1" style="' +
-                        (isToday ? 'color:#e91e8c;' : 'color:#555;') + '">' +
+                        (isToday ? 'color:#d27b9f;' : 'color:#555;') + '">' +
                         day + '</div>';
 
                     events.forEach(function(ev) {

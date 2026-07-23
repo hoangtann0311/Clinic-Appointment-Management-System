@@ -73,13 +73,10 @@
                                             <span class="appointment-status-chip status-confirmed">Đã xác nhận</span>
                                         </c:when>
                                         <c:when test="${statusLower == 'pending'}">
-                                            <span class="appointment-status-chip status-pending">Chờ duyệt</span>
+                                            <span class="appointment-status-chip status-pending">Chờ xác nhận</span>
                                         </c:when>
                                         <c:when test="${statusLower == 'waiting'}">
                                             <span class="appointment-status-chip status-waiting">Chờ khám</span>
-                                        </c:when>
-                                        <c:when test="${statusLower == 'emergency_sos'}">
-                                            <span class="appointment-status-chip status-sos">Khẩn cấp</span>
                                         </c:when>
                                         <c:when test="${statusLower == 'success' || statusLower == 'completed'}">
                                             <span class="appointment-status-chip status-success">Hoàn thành</span>
@@ -138,6 +135,14 @@
                                             </a>
                                         </c:if>
 
+                                        <c:if test="${not empty pendingPrescriptionChoices[a.id]}">
+                                            <a href="${pageContext.request.contextPath}/patient/invoices#prescription-decisions"
+                                               class="btn btn-sm btn-outline-success fw-bold"
+                                               title="Chọn mua hoặc không mua thuốc tại phòng khám">
+                                                <i class="bi bi-ui-checks me-1"></i>Chọn mua thuốc
+                                            </a>
+                                        </c:if>
+
                                         <%-- Đổi lịch (Pending/Confirmed) --%>
                                         <c:if test="${a.status == 'Pending' || a.status == 'Confirmed'}">
                                             <a href="${pageContext.request.contextPath}/patient/booking?rescheduleId=${a.id}"
@@ -162,32 +167,8 @@
                                             </form>
                                         </c:if>
 
-                                        <%-- SOS button --%>
-                                        <c:choose>
-                                            <c:when test="${a.status == 'Emergency_SOS'}">
-                                                <%-- Đã là SOS rồi → hiện badge disabled --%>
-                                                <span class="btn btn-sm btn-danger disabled opacity-75"
-                                                      title="Lịch hẹn đã được đánh dấu khẩn cấp">
-                                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>SOS đang xử lý
-                                                </span>
-                                            </c:when>
-                                            <c:when test="${a.status == 'Confirmed'}">
-                                                <%-- Có thể kích hoạt SOS → mở modal xác nhận --%>
-                                                <button type="button"
-                                                        class="btn btn-sm btn-danger"
-                                                        title="Báo khẩn cấp SOS"
-                                                        data-bs-toggle="modal"
-                                                        data-bs-target="#sosModal"
-                                                        data-appt-id="${a.id}"
-                                                        data-appt-date="${a.appointmentDate}"
-                                                        data-appt-time="${a.timeSlot}">
-                                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>SOS
-                                                </button>
-                                            </c:when>
-                                        </c:choose>
-
                                         <%-- Đánh giá bác sĩ (chỉ khi hoàn thành) --%>
-                                        <c:if test="${statusLower == 'success' || statusLower == 'completed'}">
+                                        <c:if test="${(statusLower == 'success' || statusLower == 'completed') && prescriptionPurchaseResolved[a.id]}">
                                             <button type="button"
                                                     class="btn btn-sm btn-outline-primary"
                                                     data-bs-toggle="modal"
@@ -196,6 +177,12 @@
                                                     data-doctor="${a.doctor.fullName}"
                                                     title="Đánh giá bác sĩ">
                                                 <i class="bi bi-star me-1"></i>Đánh giá
+                                            </button>
+                                        </c:if>
+                                        <c:if test="${(statusLower == 'success' || statusLower == 'completed') && !prescriptionPurchaseResolved[a.id]}">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" disabled
+                                                    title="Cần hoàn tất lựa chọn mua thuốc hoặc thanh toán hóa đơn thuốc trước">
+                                                <i class="bi bi-lock me-1"></i>Chưa thể đánh giá
                                             </button>
                                         </c:if>
                                     </div>
@@ -212,53 +199,6 @@
         </div>
     </c:otherwise>
 </c:choose>
-
-<%-- ══════════════════════════ Modal SOS ══════════════════════════ --%>
-<div class="modal fade" id="sosModal" tabindex="-1" aria-labelledby="sosModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow-lg">
-            <div class="modal-header border-0 pb-0" style="background:linear-gradient(135deg,#dc3545,#b02a37);border-radius:1rem 1rem 0 0;">
-                <h5 class="modal-title fw-bold text-white" id="sosModalLabel">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Báo Động Khẩn Cấp SOS
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <form method="post" action="${pageContext.request.contextPath}/patient/appointments" id="sosForm">
-                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
-                <input type="hidden" name="action" value="sos">
-                <input type="hidden" name="appointmentId" id="sosApptId">
-                <div class="modal-body p-4">
-                    <div class="alert alert-danger d-flex align-items-start gap-2 mb-3" role="alert">
-                        <i class="bi bi-shield-exclamation fs-5 flex-shrink-0 mt-1"></i>
-                        <div>
-                            <strong>Lưu ý quan trọng:</strong> Chỉ kích hoạt khi tình trạng sức khoẻ
-                            thực sự khẩn cấp. Hệ thống sẽ ưu tiên điều phối bác sĩ đến ngay lập tức.
-                        </div>
-                    </div>
-                    <p class="text-muted small mb-3">
-                        Lịch hẹn ngày <strong id="sosApptDate"></strong>, giờ <strong id="sosApptTime"></strong>
-                        sẽ được chuyển sang trạng thái <span class="badge bg-danger">Khẩn cấp SOS</span>.
-                    </p>
-                    <div class="mb-3">
-                        <label for="sosSymptoms" class="form-label fw-semibold">
-                            Mô tả triệu chứng khẩn cấp <span class="text-danger">*</span>
-                        </label>
-                        <textarea name="symptoms" id="sosSymptoms" class="form-control" rows="3"
-                                  placeholder="VD: Đau ngực dữ dội, khó thở, chóng mặt..."
-                                  required minlength="5" maxlength="500"></textarea>
-                        <div class="form-text">Mô tả ngắn gọn để bác sĩ chuẩn bị trước.</div>
-                    </div>
-                </div>
-                <div class="modal-footer border-0 pt-0">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Huỷ bỏ</button>
-                    <button type="submit" class="btn btn-danger fw-semibold">
-                        <i class="bi bi-exclamation-triangle-fill me-1"></i>Xác nhận kích hoạt SOS
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 
 <%-- Modal đánh giá bác sĩ --%>
 <div class="modal fade" id="reviewModal" tabindex="-1" aria-labelledby="reviewModalLabel" aria-hidden="true">
@@ -311,15 +251,6 @@ document.getElementById('reviewModal') && document.getElementById('reviewModal')
     var btn = e.relatedTarget;
     document.getElementById('reviewApptId').value = btn.dataset.apptId;
     document.getElementById('reviewDoctorName').textContent = 'BS. ' + btn.dataset.doctor;
-});
-
-// Gán dữ liệu vào SOS modal khi mở
-document.getElementById('sosModal') && document.getElementById('sosModal').addEventListener('show.bs.modal', function (e) {
-    var btn = e.relatedTarget;
-    document.getElementById('sosApptId').value   = btn.dataset.apptId;
-    document.getElementById('sosApptDate').textContent = btn.dataset.apptDate || '—';
-    document.getElementById('sosApptTime').textContent = btn.dataset.apptTime || '—';
-    document.getElementById('sosSymptoms').value = '';
 });
 
 // Star rating interaction

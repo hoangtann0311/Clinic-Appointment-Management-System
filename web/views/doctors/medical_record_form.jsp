@@ -179,7 +179,7 @@
     <div class="alert alert-warning rounded-3 mb-3 d-flex align-items-center gap-2">
       <i class="bi bi-hourglass-split fs-5"></i>
       <div>
-        <strong>Hồ sơ chưa hoàn tất (Draft).</strong>
+        <strong>Hồ sơ đang ở trạng thái nháp.</strong>
         Vui lòng kiểm tra kết quả cận lâm sàng, cập nhật chẩn đoán và bấm <strong>Chốt hồ sơ &amp; hoàn thành khám</strong> để kết thúc ca.
       </div>
     </div>
@@ -190,7 +190,7 @@
       <i class="bi bi-check-circle-fill fs-5"></i>
       <c:choose>
         <c:when test="${param.billing == 'additional'}">
-          <span><strong>Đã tạo chỉ định siêu âm bổ sung.</strong> Đã phát sinh hóa đơn sau khám; KTV sẽ thực hiện sau khi xác nhận thanh toán.</span>
+          <span><strong>Đã tạo chỉ định siêu âm ngoài dịch vụ đã đặt.</strong> Đã phát sinh hóa đơn sau khám; Bác sĩ siêu âm sẽ thực hiện sau khi xác nhận thanh toán.</span>
         </c:when>
         <c:otherwise>
           <span><strong>Đã tạo chỉ định siêu âm.</strong> Dịch vụ đã nằm trong lịch hẹn (không phát sinh chi phí).</span>
@@ -262,7 +262,7 @@
               ${fn:toUpperCase(fn:substring(record.patientName,0,1))}
             </div>
             <h6 class="fw-bold mb-1">${record.patientName}</h6>
-            <span class="badge bg-secondary-subtle text-secondary small px-2 py-1">Mã BN: #P-${record.patientId > 0 ? record.patientId : 'N/A'}</span>
+            <span class="badge bg-secondary-subtle text-secondary small px-2 py-1">Mã BN: ${record.patientId > 0 ? '#P-' : ''}${record.patientId > 0 ? record.patientId : 'Chưa có'}</span>
           </div>
           <hr class="my-3 opacity-50">
 
@@ -363,7 +363,7 @@
         <div class="card rounded-4 border-0 shadow-sm">
           <div class="card-body p-3">
             <div class="fw-semibold small text-uppercase text-muted mb-1"><i class="bi bi-soundwave me-1 text-primary"></i>Kết quả siêu âm</div>
-            <p class="small text-muted mb-2">Xem hình ảnh siêu âm gốc và phân tích từ KTV/AI.</p>
+            <p class="small text-muted mb-2">Xem ảnh siêu âm gốc, ảnh AI hỗ trợ và vùng Bác sĩ siêu âm xác nhận.</p>
             <a href="${pageContext.request.contextPath}/doctor/results?recordId=${record.id}"
                class="btn btn-outline-primary btn-sm rounded-pill w-100 fw-medium">
               <i class="bi bi-clipboard2-pulse me-1"></i>Xem kết quả siêu âm
@@ -840,7 +840,7 @@
                   </a>
 
                   <button type="button" onclick="doSubmit('draft')" id="btnDraft" class="btn btn-outline-warning rounded-3 px-4">
-                    <i class="bi bi-file-earmark me-2"></i>Lưu nháp (Draft)
+                    <i class="bi bi-file-earmark me-2"></i>Lưu nháp
                   </button>
 
                   <button type="button" onclick="confirmAndSubmitFinal()" id="btnFinal" class="btn btn-success rounded-3 px-4 ms-auto fw-semibold">
@@ -875,7 +875,7 @@
         <div class="modal-body p-4">
           <p class="mb-2">Bạn có chắc chắn muốn chốt hồ sơ bệnh án cho bệnh nhân <strong>${record.patientName}</strong>?</p>
           <ul class="small text-muted mb-3">
-            <li>Lịch hẹn sẽ chuyển sang trạng thái <strong>Hoàn thành (Completed)</strong>.</li>
+            <li>Lịch hẹn sẽ chuyển sang trạng thái <strong>Hoàn thành</strong>.</li>
             <li>Hồ sơ bệnh án sẽ đóng chỉnh sửa chính thức.</li>
           </ul>
           <div id="modalSummary" class="p-3 bg-light rounded-3 small"></div>
@@ -1048,7 +1048,8 @@
       const seenMed = new Set();
       rxSelects.forEach(sel => {
         if (firstError || !sel.value) return;
-        const row = sel.closest('tr');
+        const row = sel.closest('.rx-medicine-row');
+        if (!row) return;
         const qtyEl = row.querySelector('input[name="quantity[]"]');
         const dosageEl = row.querySelector('input[name="dosage[]"]');
         const q = parseInt(qtyEl.value);

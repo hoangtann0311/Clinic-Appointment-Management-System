@@ -13,7 +13,7 @@
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <!-- Theme CSS -->
-    <link href="${pageContext.request.contextPath}/assets/css/style.css" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/style.css?v=202" rel="stylesheet">
 </head>
 <body>
 
@@ -62,7 +62,7 @@
                         Hành Trình Chăm Sóc Sức Khỏe,<br>Trọn Vẹn Cùng <span>CAMS</span>
                     </h1>
                     <p class="hero-sub">
-                        Hệ thống quản lý phòng khám và đặt lịch chăm sóc sức khỏe thông minh. Đồng hành cùng bạn trên mọi hành trình sức khỏe với trải nghiệm đặt lịch nhanh chóng, nhắc lịch khám tự động và cảnh báo cấp cứu SOS 24/7.
+                        Hệ thống quản lý phòng khám và đặt lịch chăm sóc sức khỏe thông minh. Đồng hành cùng bạn với trải nghiệm đặt lịch nhanh chóng, quy trình siêu âm rõ ràng và hồ sơ khám tập trung.
                     </p>
                     <div class="d-flex flex-wrap gap-3">
                         <a href="${pageContext.request.contextPath}/register" class="btn-home-primary px-4 py-3 fs-6">
@@ -111,17 +111,16 @@
                             <div class="mockup-task-item">
                                 <i class="bi bi-circle text-muted"></i>
                                 <div>
-                                    <div class="mockup-task-title">Đếm cử động thai nhi (Kick counter)</div>
-                                    <div class="mockup-task-desc">Theo dõi cử động của bé vào lúc 20:00 tối</div>
+                                    <div class="mockup-task-title">Xem kết quả siêu âm</div>
+                                    <div class="mockup-task-desc">Ảnh gốc, ảnh AI hỗ trợ và kết luận đã ký của bác sĩ</div>
                                 </div>
                             </div>
 
-                            <!-- Emergency SOS Widget Mockup -->
                             <div class="mockup-alert-panel">
-                                <i class="bi bi-exclamation-triangle-fill"></i>
+                                <i class="bi bi-check-circle-fill"></i>
                                 <div>
-                                    <div class="fw-bold text-danger" style="font-size: 0.85rem;">Nút khẩn cấp SOS kích hoạt</div>
-                                    <div class="text-muted" style="font-size: 0.75rem;">Một chạm để kết nối trực tiếp với bác sĩ trực ca của phòng khám khi có bất thường.</div>
+                                    <div class="fw-bold text-danger" style="font-size: 0.85rem;">Kết quả được xác nhận chuyên môn</div>
+                                    <div class="text-muted" style="font-size: 0.75rem;">Bác sĩ siêu âm kiểm tra phân tích AI, ký xác nhận và chuyển kết quả cho bác sĩ lâm sàng.</div>
                                 </div>
                             </div>
                         </div>
@@ -166,12 +165,12 @@
 
                 <div class="col-md-6 col-lg-3 scroll-reveal reveal-delay-3">
                     <div class="feature-card">
-                        <div class="feature-icon-circle" style="background-color: #fff1f2; color: #e11d48;">
-                            <i class="bi bi-activity"></i>
+                        <div class="feature-icon-circle" style="background-color: #DBEAFE; color: #2563EB;">
+                            <i class="bi bi-image"></i>
                         </div>
-                        <h5 class="fw-bold text-dark mb-3">Cảnh Báo Đỏ SOS</h5>
+                        <h5 class="fw-bold text-dark mb-3">Siêu Âm Hỗ Trợ AI</h5>
                         <p class="text-muted mb-0 font-size-14">
-                            Kênh kết nối y tế khẩn cấp, tự động định vị GPS và gửi chuông cảnh báo âm lượng lớn tới bác sĩ khi sản phụ gặp triệu chứng nguy hiểm.
+                            Bác sĩ siêu âm đối chiếu ảnh gốc với kết quả AI, có thể khoanh vùng thủ công, ký xác nhận và chuyển kết quả cho bác sĩ lâm sàng.
                         </p>
                     </div>
                 </div>
@@ -323,12 +322,12 @@
 
                 <div class="faq-item scroll-reveal">
                     <button class="faq-btn collapsed text-start" type="button" data-bs-toggle="collapse" data-bs-target="#faq2" aria-expanded="false" aria-controls="faq2">
-                        Tính năng SOS khẩn cấp hoạt động như thế nào?
+                        Kết quả siêu âm được xử lý như thế nào?
                         <i class="bi bi-chevron-down"></i>
                     </button>
                     <div id="faq2" class="collapse" data-bs-parent="#faq">
                         <div class="faq-body">
-                            Tính năng SOS dùng trong tình huống khẩn cấp khi sản phụ gặp nguy hiểm tại nhà hoặc trên đường. Khi kích hoạt qua Zalo OA hoặc ứng dụng, tọa độ GPS sẽ được gửi về quầy lễ tân để điều phối hỗ trợ y tế nhanh nhất. Đồng thời, nếu sản phụ đến thẳng quầy trong trạng thái nguy kịch, lễ tân sẽ kích hoạt báo động đỏ tại chỗ để chèn hồ sơ lên đầu hàng đợi khám.
+                            Sau khi bác sĩ lâm sàng tạo chỉ định, bác sĩ siêu âm tải một ảnh gốc, chạy AI một lần để hỗ trợ phân tích, kiểm tra lại kết quả và có thể khoanh vùng thủ công. Báo cáo chỉ được chuyển tiếp sau khi bác sĩ siêu âm hoàn tất thông tin và ký xác nhận.
                         </div>
                     </div>
                 </div>

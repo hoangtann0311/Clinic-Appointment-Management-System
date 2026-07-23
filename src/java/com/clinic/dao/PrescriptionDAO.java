@@ -24,12 +24,15 @@ public class PrescriptionDAO {
     public Prescription getByMedicalRecordId(int medicalRecordId) {
         String sql =
             "SELECT p.id, p.medical_record_id, p.prescription_code, p.status, p.created_at, " +
+            "       p.purchase_decision, p.purchase_decided_at, p.purchase_decided_by, " +
+            "       a.id AS appointment_id, d.full_name AS doctor_name, " +
             "       pt.full_name AS patient_name, " +
             "       CONVERT(varchar, a.appointment_date, 23) AS appointment_date " +
             "FROM   prescriptions p " +
             "JOIN   medical_records mr ON p.medical_record_id = mr.id " +
             "JOIN   appointments a     ON mr.appointment_id = a.id " +
             "JOIN   patients pt        ON a.patient_id = pt.id " +
+            "LEFT JOIN doctors d        ON a.doctor_id = d.id " +
             "WHERE  p.medical_record_id = ?";
 
         try (Connection conn = DatabaseConfig.getConnection();
@@ -53,12 +56,15 @@ public class PrescriptionDAO {
     public Prescription getById(int prescriptionId) {
         String sql =
             "SELECT p.id, p.medical_record_id, p.prescription_code, p.status, p.created_at, " +
+            "       p.purchase_decision, p.purchase_decided_at, p.purchase_decided_by, " +
+            "       a.id AS appointment_id, d.full_name AS doctor_name, " +
             "       pt.full_name AS patient_name, " +
             "       CONVERT(varchar, a.appointment_date, 23) AS appointment_date " +
             "FROM   prescriptions p " +
             "JOIN   medical_records mr ON p.medical_record_id = mr.id " +
             "JOIN   appointments a     ON mr.appointment_id = a.id " +
             "JOIN   patients pt        ON a.patient_id = pt.id " +
+            "LEFT JOIN doctors d        ON a.doctor_id = d.id " +
             "WHERE  p.id = ?";
 
         try (Connection conn = DatabaseConfig.getConnection();
@@ -91,8 +97,8 @@ public class PrescriptionDAO {
 
     public int create(Connection conn, int medicalRecordId, String prescriptionCode) throws SQLException {
         String sql =
-            "INSERT INTO prescriptions (medical_record_id, prescription_code, status, created_at) " +
-            "VALUES (?, ?, 'issued', ?)";
+            "INSERT INTO prescriptions (medical_record_id, prescription_code, status, created_at, " +
+            "purchase_decision) VALUES (?, ?, 'issued', ?, 'Pending')";
 
         try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt(1, medicalRecordId);
@@ -318,6 +324,98 @@ public class PrescriptionDAO {
         }
     }
 
+    /**
+     * Bác sĩ chỉ lưu chỉ định chuyên môn. Khi đơn còn ở giai đoạn soạn/chốt,
+     * mọi quyết định mua phải quay về Pending và không được sinh hóa đơn.
+     */
+    public void resetPurchaseDecision(Connection conn, int prescriptionId) throws SQLException {
+        String sql = "UPDATE prescriptions SET purchase_decision = 'Pending', "
+                + "purchase_decided_at = NULL, purchase_decided_by = NULL "
+                + "WHERE id = ? AND purchase_decision = 'Pending'";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, prescriptionId);
+            ps.executeUpdate();
+        }
+    }
+
+    /**
+     * Danh sách đơn thuốc bệnh nhân cần quyết định hoặc đã từ chối mua tại
+     * phòng khám. Đơn đã chọn mua được theo dõi qua hóa đơn.
+     */
+    public List<Prescription> getPatientPurchaseChoices(int userId) {
+        String sql =
+            "SELECT p.id, p.medical_record_id, p.prescription_code, p.status, p.created_at, " +
+            "       p.purchase_decision, p.purchase_decided_at, p.purchase_decided_by, " +
+            "       a.id AS appointment_id, d.full_name AS doctor_name, " +
+            "       COALESCE(u.full_name, pt.full_name) AS patient_name, " +
+            "       CONVERT(varchar, a.appointment_date, 23) AS appointment_date, " +
+            "       SUM(CAST(pi.quantity AS decimal(18,2)) * ISNULL(m.price, 0)) AS total_amount " +
+            "FROM prescriptions p " +
+            "JOIN medical_records mr ON mr.id = p.medical_record_id " +
+            "JOIN appointments a ON a.id = mr.appointment_id " +
+            "JOIN patients pt ON pt.id = a.patient_id " +
+            "LEFT JOIN users u ON u.id = pt.user_id " +
+            "LEFT JOIN doctors d ON d.id = a.doctor_id " +
+            "JOIN prescription_items pi ON pi.prescription_id = p.id " +
+            "JOIN medicines m ON m.id = pi.medicine_id " +
+            "WHERE pt.user_id = ? AND p.status = 'issued' " +
+            "  AND p.purchase_decision IN ('Pending', 'Declined') " +
+            "GROUP BY p.id, p.medical_record_id, p.prescription_code, p.status, p.created_at, " +
+            "         p.purchase_decision, p.purchase_decided_at, p.purchase_decided_by, " +
+            "         a.id, d.full_name, COALESCE(u.full_name, pt.full_name), a.appointment_date " +
+            "ORDER BY p.id DESC";
+        List<Prescription> result = new ArrayList<>();
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Prescription p = mapPrescription(rs);
+                    p.setTotalAmount(rs.getBigDecimal("total_amount"));
+                    result.add(p);
+                }
+            }
+            for (Prescription prescription : result) {
+                prescription.setItems(
+                        getItemsByPrescriptionId(prescription.getId(), conn));
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Không thể tải lựa chọn mua thuốc", e);
+        }
+        return result;
+    }
+
+    /**
+     * Cho phép đánh giá khi không có đơn thuốc, đơn không có thuốc, bệnh nhân
+     * đã từ chối mua, hoặc hóa đơn của lựa chọn mua đã thanh toán.
+     */
+    public boolean isPurchaseResolvedForReview(int appointmentId) {
+        String sql =
+            "SELECT TOP 1 p.purchase_decision, " +
+            "       CASE WHEN EXISTS (SELECT 1 FROM prescription_items pi WHERE pi.prescription_id = p.id) " +
+            "            THEN 1 ELSE 0 END AS has_items, " +
+            "       CASE WHEN EXISTS (SELECT 1 FROM invoices i WHERE i.appointment_id = a.id " +
+            "                 AND UPPER(i.invoice_type) = 'PRESCRIPTION' AND i.status = 'Paid') " +
+            "            THEN 1 ELSE 0 END AS is_paid " +
+            "FROM appointments a " +
+            "LEFT JOIN medical_records mr ON mr.appointment_id = a.id " +
+            "LEFT JOIN prescriptions p ON p.medical_record_id = mr.id " +
+            "WHERE a.id = ? ORDER BY p.id DESC";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, appointmentId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next() || rs.getString("purchase_decision") == null) return true;
+                if (!rs.getBoolean("has_items")) return true;
+                String decision = rs.getString("purchase_decision");
+                return "Declined".equalsIgnoreCase(decision)
+                        || ("Accepted".equalsIgnoreCase(decision) && rs.getBoolean("is_paid"));
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Không thể kiểm tra quyết định mua thuốc", e);
+        }
+    }
+
     // ── Medicines lookup ─────────────────────────────────────────────────────
 
     /**
@@ -408,8 +506,15 @@ public class PrescriptionDAO {
         p.setStatus(rs.getString("status"));
         Timestamp ts = rs.getTimestamp("created_at");
         if (ts != null) p.setCreatedAt(ts.toLocalDateTime());
+        p.setPurchaseDecision(rs.getString("purchase_decision"));
+        Timestamp decidedAt = rs.getTimestamp("purchase_decided_at");
+        if (decidedAt != null) p.setPurchaseDecidedAt(decidedAt.toLocalDateTime());
+        int decidedBy = rs.getInt("purchase_decided_by");
+        if (!rs.wasNull()) p.setPurchaseDecidedBy(decidedBy);
         p.setPatientName(rs.getString("patient_name"));
         p.setAppointmentDate(rs.getString("appointment_date"));
+        p.setAppointmentId(rs.getInt("appointment_id"));
+        p.setDoctorName(rs.getString("doctor_name"));
         return p;
     }
 }
