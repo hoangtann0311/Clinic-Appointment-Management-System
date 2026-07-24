@@ -167,15 +167,21 @@ public class UserDAO {
 
     private User findByEmailInternal(String email, boolean fullColumns) {
         String sql;
+        // ORDER BY: ưu tiên tài khoản Active trước, sau đó Pending Verification,
+        // rồi mới đến Inactive/Locked. Khắc phục tình trạng khi có 2 tài khoản
+        // cùng email (1 cũ Inactive + 1 mới Active), login trả về tk cũ → báo lỗi.
+        String orderBy = " ORDER BY CASE WHEN status = 'Active' THEN 0"
+                       + " WHEN status = 'Pending Verification' THEN 1 ELSE 2 END";
         if (fullColumns) {
             sql = "SELECT id, full_name, " + DECRYPT_EMAIL + ", username, password_hash, "
                 + DECRYPT_PHONE + ", role_id, status, "
                 + "verification_token, is_verified, google_id, auth_provider, is_deleted, created_at "
-                + "FROM users WHERE " + WHERE_EMAIL_EQUAL + " AND (is_deleted = 0 OR is_deleted IS NULL)";
+                + "FROM users WHERE " + WHERE_EMAIL_EQUAL + " AND (is_deleted = 0 OR is_deleted IS NULL)"
+                + orderBy;
         } else {
             sql = "SELECT id, full_name, " + DECRYPT_EMAIL + ", password_hash, "
                 + DECRYPT_PHONE + ", role_id, status "
-                + "FROM users WHERE " + WHERE_EMAIL_EQUAL;
+                + "FROM users WHERE " + WHERE_EMAIL_EQUAL + orderBy;
         }
 
         Connection conn = null;
@@ -201,12 +207,15 @@ public class UserDAO {
     }
 
     private User findByEmailPlaintext(String email, boolean fullColumns) {
+        String orderBy = " ORDER BY CASE WHEN status = 'Active' THEN 0"
+                       + " WHEN status = 'Pending Verification' THEN 1 ELSE 2 END";
         String sql = fullColumns
             ? "SELECT id, full_name, email, username, password_hash, phone, role_id, status, "
               + "verification_token, is_verified, google_id, auth_provider, is_deleted, created_at "
               + "FROM users WHERE (email = ? OR username = ?) AND (is_deleted = 0 OR is_deleted IS NULL)"
+              + orderBy
             : "SELECT id, full_name, email, username, password_hash, phone, role_id, status "
-              + "FROM users WHERE (email = ? OR username = ?)";
+              + "FROM users WHERE (email = ? OR username = ?)" + orderBy;
         Connection conn = null;
         PreparedStatement ps = null;
         ResultSet rs = null;
@@ -425,10 +434,14 @@ public class UserDAO {
      * @return User nếu tìm thấy, null nếu không tìm thấy
      */
     public User findByPhone(String phone) {
+        // ORDER BY: ưu tiên tài khoản Active trước (giống findByEmail)
+        String orderBy = " ORDER BY CASE WHEN status = 'Active' THEN 0"
+                       + " WHEN status = 'Pending Verification' THEN 1 ELSE 2 END";
         String sql = "SELECT id, full_name, username, " + DECRYPT_EMAIL + ", password_hash, "
                    + DECRYPT_PHONE + ", role_id, status, "
                    + "verification_token, is_verified, google_id, auth_provider, is_deleted, created_at "
-                   + "FROM users WHERE " + WHERE_PHONE_EQUAL + " AND is_deleted = 0";
+                   + "FROM users WHERE " + WHERE_PHONE_EQUAL + " AND is_deleted = 0"
+                   + orderBy;
 
         Connection conn = null;
         PreparedStatement ps = null;
@@ -542,10 +555,13 @@ public class UserDAO {
      * @return User nếu tìm thấy, null nếu không tìm thấy
      */
     public User findByGoogleId(String googleId) {
+        // ORDER BY: ưu tiên Active trước, tránh trả về tk Inactive khi có tk Active cùng google_id
         String sql = "SELECT id, full_name, username, " + DECRYPT_EMAIL + ", password_hash, "
                    + DECRYPT_PHONE + ", role_id, status, "
                    + "verification_token, is_verified, google_id, auth_provider, is_deleted, created_at "
-                   + "FROM users WHERE google_id = ? AND is_deleted = 0";
+                   + "FROM users WHERE google_id = ? AND is_deleted = 0 "
+                   + "ORDER BY CASE WHEN status = 'Active' THEN 0"
+                   + " WHEN status = 'Pending Verification' THEN 1 ELSE 2 END";
 
         Connection conn = null;
         PreparedStatement ps = null;
@@ -815,6 +831,80 @@ public class UserDAO {
             throw new RuntimeException("Lỗi database khi thống kê users theo vai trò", e);
         }
         return result;
+    }
+
+    /**
+     * Tìm user Active theo email (không bị xoá), loại trừ một userId.
+     * Dùng để kiểm tra xem có tài khoản Active nào khác trùng email không.
+     *
+     * @param email         email cần kiểm tra
+     * @param excludeUserId userId cần loại trừ (thường là chính user đang được kích hoạt)
+     * @return User Active nếu tìm thấy, null nếu không
+     */
+    public User findActiveByEmailExcept(String email, int excludeUserId) {
+        String sql = "SELECT id, full_name, " + DECRYPT_EMAIL + ", username, password_hash, "
+                   + DECRYPT_PHONE + ", role_id, status, "
+                   + "verification_token, is_verified, google_id, auth_provider, is_deleted, created_at "
+                   + "FROM users WHERE " + WHERE_EMAIL_EQUAL
+                   + " AND status = 'Active' AND id != ? AND (is_deleted = 0 OR is_deleted IS NULL)";
+
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, email);
+            ps.setInt(2, excludeUserId);
+            rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return mapRowToUser(rs);
+            }
+        } catch (SQLException e) {
+            System.err.println("[UserDAO] Lỗi khi tìm Active user theo email (exclude " + excludeUserId + "): " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return null;
+    }
+
+    /**
+     * Tìm user Active theo số điện thoại (không bị xoá), loại trừ một userId.
+     * Dùng để kiểm tra xem có tài khoản Active nào khác trùng phone không.
+     *
+     * @param phone         số điện thoại cần kiểm tra
+     * @param excludeUserId userId cần loại trừ
+     * @return User Active nếu tìm thấy, null nếu không
+     */
+    public User findActiveByPhoneExcept(String phone, int excludeUserId) {
+        String sql = "SELECT id, full_name, " + DECRYPT_EMAIL + ", username, password_hash, "
+                   + DECRYPT_PHONE + ", role_id, status, "
+                   + "verification_token, is_verified, google_id, auth_provider, is_deleted, created_at "
+                   + "FROM users WHERE " + WHERE_PHONE_EQUAL
+                   + " AND status = 'Active' AND id != ? AND (is_deleted = 0 OR is_deleted IS NULL)";
+
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, phone);
+            ps.setInt(2, excludeUserId);
+            rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return mapRowToUser(rs);
+            }
+        } catch (SQLException e) {
+            System.err.println("[UserDAO] Lỗi khi tìm Active user theo phone (exclude " + excludeUserId + "): " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return null;
     }
 
     /**

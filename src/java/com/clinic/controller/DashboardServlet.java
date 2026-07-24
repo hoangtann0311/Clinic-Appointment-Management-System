@@ -184,31 +184,49 @@ public class DashboardServlet extends HttpServlet {
         // ─── Widget "Cảnh Báo Tồn Kho" — thuốc sắp hết (stock ≤ 10) ───
         request.setAttribute("lowStockMedicines", medicineService.getLowStockMedicines(10, 5));
 
+        // ─── DashboardService (dùng cho doanh thu tổng hợp: dịch vụ + thuốc) ───
+        DashboardService dashboardService = new DashboardService();
+
         // ─── Doanh thu khoảng trước cho KPI card so sánh ───
+        // Sử dụng invoices.total_amount — bao gồm cả dịch vụ và thuốc
         double revenuePrevious;
         double revenueGrowthRate;
         if (isCustomRange) {
-            revenuePrevious = statsService.getTotalRevenue(
+            revenuePrevious = dashboardService.getRevenueRaw(
                     statsDAO_prevFrom(dateFrom, dateTo),
                     statsDAO_prevTo(dateFrom, dateTo));
-            revenueGrowthRate = statsService.getRevenueGrowthRate(dateFrom, dateTo);
+            double currentRevenue = dashboardService.getRevenueRaw(dateFrom, dateTo);
+            if (revenuePrevious == 0 && currentRevenue == 0) {
+                revenueGrowthRate = 0;
+            } else if (revenuePrevious == 0) {
+                revenueGrowthRate = 100.0;
+            } else {
+                revenueGrowthRate = ((currentRevenue - revenuePrevious) / revenuePrevious) * 100.0;
+            }
         } else {
-            revenuePrevious = statsService.getTotalRevenueYesterday();
-            revenueGrowthRate = statsService.getRevenueGrowthRate();
+            revenuePrevious = dashboardService.getTotalRevenueYesterday();
+            double todayRevenue = dashboardService.getRevenueRaw(dateFrom, dateTo);
+            if (revenuePrevious == 0 && todayRevenue == 0) {
+                revenueGrowthRate = 0;
+            } else if (revenuePrevious == 0) {
+                revenueGrowthRate = 100.0;
+            } else {
+                revenueGrowthRate = ((todayRevenue - revenuePrevious) / revenuePrevious) * 100.0;
+            }
         }
         request.setAttribute("revenueYesterdayFormatted",
-                com.clinic.service.ServiceStatisticsService.formatCurrency(revenuePrevious));
+                DashboardService.formatCurrency(revenuePrevious));
         request.setAttribute("revenueGrowthRate", revenueGrowthRate);
         request.setAttribute("revenueGrowthFormatted",
                 com.clinic.service.ServiceStatisticsService.formatGrowthPercent(revenueGrowthRate));
 
         // ─── KPI dịch vụ cốt lõi — theo khoảng ngày ───
         int totalUsage = statsService.getTotalUsage(dateFrom, dateTo);
-        double totalRevenue = statsService.getTotalRevenue(dateFrom, dateTo);
+        double totalRevenue = dashboardService.getRevenueRaw(dateFrom, dateTo);
 
         request.setAttribute("totalUsageToday", totalUsage);
         request.setAttribute("totalRevenueTodayFormatted",
-                com.clinic.service.ServiceStatisticsService.formatCurrency(totalRevenue));
+                DashboardService.formatCurrency(totalRevenue));
 
         // ─── Dữ liệu cho hiển thị khoảng ngày ───
         DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -235,8 +253,6 @@ public class DashboardServlet extends HttpServlet {
             kpiLabel = "Doanh Thu (" + dateFrom.format(dateFmt) + " → " + dateTo.format(dateFmt) + ")";
         }
         request.setAttribute("revenueKpiLabel", kpiLabel);
-
-        DashboardService dashboardService = new DashboardService();
 
         int totalPatients = isCustomRange
                 ? dashboardService.getTotalPatients(dateFrom, dateTo)
@@ -269,22 +285,24 @@ public class DashboardServlet extends HttpServlet {
         request.setAttribute("doctorsWorking", doctorsWorking);
         request.setAttribute("ultrasoundCases", ultrasoundCases);
         request.setAttribute("revenue", DashboardService.formatCurrency(revenueRaw));
+        request.setAttribute("revenueTotalRaw", revenueRaw);
         request.setAttribute("completedCases", completedCases);
         request.setAttribute("newPatients", newPatients);
 
-        // Doanh thu (từ ServiceStatisticsService — đồng bộ với biểu đồ, theo khoảng ngày)
+        // Doanh thu hiển thị trên KPI card — từ invoices.total_amount (dịch vụ + thuốc)
         request.setAttribute("revenueToday",
-                com.clinic.service.ServiceStatisticsService.formatCurrency(totalRevenue));
+                DashboardService.formatCurrency(totalRevenue));
+        request.setAttribute("revenueTodayRaw", totalRevenue);
 
-        // Biểu đồ doanh thu 7 ngày
+        // Biểu đồ doanh thu 7 ngày — từ invoices.total_amount (dịch vụ + thuốc)
         Map<String, Double> revenueChart = isCustomRange
-                ? statsService.getDailyRevenue(dateFrom, dateTo)
-                : statsService.getRevenueLast7Days();
+                ? dashboardService.getDailyRevenue(dateFrom, dateTo)
+                : dashboardService.getDailyRevenue(today.minusDays(6), today);
         request.setAttribute("mgrRevenueChartLabels", revenueChart.keySet());
         request.setAttribute("mgrRevenueChartValues", revenueChart.values());
 
-        // Biểu đồ doanh thu 30 ngày
-        Map<String, Double> revenue30 = statsService.getDailyRevenue(today.minusDays(29), today);
+        // Biểu đồ doanh thu 30 ngày — từ invoices.total_amount (dịch vụ + thuốc)
+        Map<String, Double> revenue30 = dashboardService.getDailyRevenue(today.minusDays(29), today);
         request.setAttribute("mgrRevenue30Labels", new ArrayList<>(revenue30.keySet()));
         request.setAttribute("mgrRevenue30Values", new ArrayList<>(revenue30.values()));
 

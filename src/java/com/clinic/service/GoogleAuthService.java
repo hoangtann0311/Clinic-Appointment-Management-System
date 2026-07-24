@@ -4,6 +4,7 @@ import com.clinic.config.GoogleConfig;
 import com.clinic.dao.UserDAO;
 import com.clinic.model.User;
 import com.clinic.model.enums.UserStatus;
+import com.clinic.utils.EmailUtil;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -14,6 +15,7 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Service xử lý đăng nhập bằng Google OAuth 2.0.
@@ -247,51 +249,149 @@ public class GoogleAuthService {
         String email = googleInfo.getEmail();
         String name = googleInfo.getName();
 
-        // Bước 1: Tìm user theo google_id
-        User user = userDAO.findByGoogleId(googleId);
-        if (user != null) {
-            // Đã từng đăng nhập bằng Google → kiểm tra trạng thái tài khoản
-            checkAccountStatus(user);
-            clearSensitiveData(user);
-            System.out.println(">>> Google login: existing Google user - " + user.getEmail()
-                    + " (id=" + user.getId() + ")");
-            return user;
+        // Luôn resolve bằng cả 2 cách: email và googleId.
+        // findByEmail có ORDER BY ưu tiên Active → tránh tình trạng
+        // googleId gắn với tk cũ/Inactive/Patient mà email lại có tk Manager Active.
+        User emailUser = userDAO.findByEmail(email);
+        User googleUser = userDAO.findByGoogleId(googleId);
+
+        // Hợp nhất: nếu cả 2 cùng tồn tại nhưng khác user, merge về user "tốt nhất"
+        User resolvedUser = resolveBestUser(emailUser, googleUser, email, googleId);
+
+        if (resolvedUser != null) {
+            // Nếu INACTIVE: Google đã xác thực danh tính → tự động kích hoạt lại
+            if (UserStatus.INACTIVE.getValue().equalsIgnoreCase(resolvedUser.getStatus())) {
+                reactivateUser(resolvedUser);
+            } else {
+                checkAccountStatus(resolvedUser);
+            }
+            clearSensitiveData(resolvedUser);
+            System.out.println(">>> Google login: resolved user - " + resolvedUser.getEmail()
+                    + " (id=" + resolvedUser.getId()
+                    + ", role=" + resolvedUser.getRoleId()
+                    + ", status=" + resolvedUser.getStatus() + ")");
+            return resolvedUser;
         }
 
-        // Bước 2: Tìm user theo email (có thể đã đăng ký bằng form local)
-        user = userDAO.findByEmail(email);
-        if (user != null) {
-            // Email đã tồn tại → liên kết Google ID với tài khoản này
-            userDAO.updateGoogleId(user.getId(), googleId);
-            user.setGoogleId(googleId);
-            user.setAuthProvider("google");
-            checkAccountStatus(user);
-            clearSensitiveData(user);
-            System.out.println(">>> Google login: linked Google ID to existing user - " + user.getEmail()
-                    + " (id=" + user.getId() + ")");
-            return user;
-        }
+        // Bước 3: Tài khoản Google lần đầu — tạo user với trạng thái PENDING_VERIFICATION.
+        // Gửi email xác nhận. Người dùng phải click link trong email để kích hoạt,
+        // sau đó mới có thể đăng nhập bằng Google và vào hệ thống.
+        String verificationToken = UUID.randomUUID().toString();
 
-        // Bước 3: Không tìm thấy → tạo user mới với role Patient
         User newUser = new User();
         newUser.setFullName(name != null ? name : "Google User");
         newUser.setEmail(email);
         newUser.setPasswordHash(null);          // Google user không có mật khẩu
         newUser.setPhone(null);
         newUser.setRoleId(AuthService.ROLE_PATIENT);
-        newUser.setStatus(UserStatus.ACTIVE.getValue());
-        newUser.setVerified(true);              // Google đã xác thực email
-        newUser.setVerificationToken(null);
+        newUser.setStatus(UserStatus.PENDING_VERIFICATION.getValue());
+        newUser.setVerified(false);             // Cần xác nhận email trước
+        newUser.setVerificationToken(verificationToken);
         newUser.setGoogleId(googleId);
         newUser.setUsername(email);
         newUser.setAuthProvider("google");
 
         int generatedId = userDAO.insert(newUser);
         newUser.setId(generatedId);
-        clearSensitiveData(newUser);
-        System.out.println(">>> Google login: created new user - " + newUser.getEmail()
-                + " (id=" + newUser.getId() + ", role=Patient)");
-        return newUser;
+        System.out.println(">>> Google login: created pending user - " + newUser.getEmail()
+                + " (id=" + newUser.getId() + ", status=PENDING_VERIFICATION)");
+
+        // Gửi email xác nhận đăng ký Google (đồng bộ để bắt lỗi ngay)
+        String verificationLink = "http://localhost:8080/ClinicAppointmentManagementSystem"
+                + "/verify-email?token=" + verificationToken;
+        String emailError = null;
+        try {
+            EmailUtil.sendGoogleConfirmationSync(email,
+                    name != null ? name : "Google User", verificationToken);
+            System.out.println(">>> Google login: verification email SENT to " + email);
+        } catch (Exception e) {
+            emailError = e.getMessage();
+            System.err.println(">>> Google login: FAILED to send email to " + email
+                    + " - " + emailError);
+            e.printStackTrace(System.err);
+        }
+
+        // Thông báo cho người dùng (kèm link nếu email không gửi được)
+        String message = "Tài khoản Google của bạn cần xác nhận email trước khi đăng nhập. ";
+        if (emailError != null) {
+            message += "Hệ thống không gửi được email xác nhận (" + emailError + "). "
+                    + "Vui lòng dùng link sau để xác nhận: " + verificationLink;
+        } else {
+            message += "Một email xác nhận đã được gửi đến " + email
+                    + ". Vui lòng kiểm tra hộp thư (cả Spam) và nhấp vào link để kích hoạt tài khoản. "
+                    + "Sau khi xác nhận, hãy đăng nhập lại bằng Google.";
+        }
+        throw new GoogleAuthException(message);
+    }
+
+    /**
+     * Chọn user tốt nhất khi có nhiều tài khoản cùng email.
+     * Ưu tiên: Active > Pending > Inactive/Locked.
+     * Nếu cùng trạng thái: emailUser được ưu tiên (vì findByEmail đã ORDER BY).
+     * Merge googleId về user thắng cuộc nếu cần.
+     */
+    private User resolveBestUser(User emailUser, User googleUser,
+                                  String email, String googleId) {
+        // Chỉ có 1 user hoặc không có user nào
+        if (emailUser == null && googleUser == null) return null;
+        if (emailUser == null) return googleUser;
+        if (googleUser == null) {
+            // Email user tồn tại, chưa có googleId → liên kết
+            linkGoogleId(emailUser, googleId);
+            return emailUser;
+        }
+
+        // Cả 2 cùng tồn tại và là cùng 1 user
+        if (emailUser.getId() == googleUser.getId()) return emailUser;
+
+        // 2 user khác nhau cùng email → chọn user tốt nhất
+        int emailScore = statusScore(emailUser.getStatus());
+        int googleScore = statusScore(googleUser.getStatus());
+
+        System.out.println(">>> Google login: duplicate email " + email
+                + " — emailUser(id=" + emailUser.getId() + ", status=" + emailUser.getStatus()
+                + ", score=" + emailScore + ")"
+                + " vs googleUser(id=" + googleUser.getId() + ", status=" + googleUser.getStatus()
+                + ", score=" + googleScore + ")");
+
+        if (emailScore <= googleScore) {
+            // emailUser tốt hơn hoặc bằng → merge googleId về emailUser
+            linkGoogleId(emailUser, googleId);
+            System.out.println(">>> Google login: chose emailUser id=" + emailUser.getId());
+            return emailUser;
+        } else {
+            // googleUser tốt hơn → dùng googleUser
+            System.out.println(">>> Google login: chose googleUser id=" + googleUser.getId());
+            return googleUser;
+        }
+    }
+
+    /** Điểm trạng thái: càng thấp càng tốt. */
+    private int statusScore(String status) {
+        if (UserStatus.ACTIVE.getValue().equalsIgnoreCase(status)) return 0;
+        if (UserStatus.PENDING_VERIFICATION.getValue().equalsIgnoreCase(status)) return 1;
+        return 2; // INACTIVE, LOCKED, etc.
+    }
+
+    /** Liên kết googleId với user + cập nhật auth_provider. */
+    private void linkGoogleId(User user, String googleId) {
+        if (googleId == null || googleId.isEmpty()) return;
+        if (googleId.equals(user.getGoogleId())) return; // đã liên kết
+        userDAO.updateGoogleId(user.getId(), googleId);
+        user.setGoogleId(googleId);
+        user.setAuthProvider("google");
+        System.out.println(">>> Google login: linked googleId to user id=" + user.getId());
+    }
+
+    /**
+     * Kích hoạt lại tài khoản INACTIVE khi người dùng đăng nhập qua Google.
+     * Google đã xác thực danh tính → đủ tin cậy để mở lại tài khoản.
+     */
+    private void reactivateUser(User user) {
+        userDAO.updateStatus(user.getId(), UserStatus.ACTIVE.getValue());
+        user.setStatus(UserStatus.ACTIVE.getValue());
+        System.out.println(">>> Google login: reactivated INACTIVE account - " + user.getEmail()
+                + " (id=" + user.getId() + ")");
     }
 
     /**
@@ -304,7 +404,57 @@ public class GoogleAuthService {
         if (UserStatus.INACTIVE.getValue().equalsIgnoreCase(user.getStatus())) {
             throw new GoogleAuthException("Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.");
         }
-        // Google user không cần kiểm tra PENDING_VERIFICATION vì email đã được Google xác thực
+        if (UserStatus.PENDING_VERIFICATION.getValue().equalsIgnoreCase(user.getStatus())) {
+            // Tài khoản Google đang chờ xác nhận email → gửi lại email xác nhận
+            String token = user.getVerificationToken();
+            if (token == null || token.isEmpty()) {
+                token = UUID.randomUUID().toString();
+                user.setVerificationToken(token);
+                updateVerificationToken(user.getId(), token);
+            }
+            String verifyLink = "http://localhost:8080/ClinicAppointmentManagementSystem"
+                    + "/verify-email?token=" + token;
+            String emailError = null;
+            try {
+                EmailUtil.sendGoogleConfirmationSync(
+                        user.getEmail(), user.getFullName(), token);
+            } catch (Exception e) {
+                emailError = e.getMessage();
+                System.err.println(">>> Google login: FAILED to resend email - " + e.getMessage());
+            }
+            String message = "Tài khoản Google của bạn đang chờ xác nhận. ";
+            if (emailError != null) {
+                message += "Không gửi được email (" + emailError + "). "
+                        + "Dùng link sau để xác nhận: " + verifyLink;
+            } else {
+                message += "Một email xác nhận mới đã được gửi đến " + user.getEmail()
+                        + ". Vui lòng kiểm tra hộp thư và nhấp vào link để kích hoạt tài khoản.";
+            }
+            throw new GoogleAuthException(message);
+        }
+    }
+
+    /**
+     * Cập nhật verification token cho user trong DB.
+     */
+    private void updateVerificationToken(int userId, String token) {
+        try {
+            java.sql.Connection conn = null;
+            java.sql.PreparedStatement ps = null;
+            try {
+                conn = com.clinic.config.DatabaseConfig.getConnection();
+                String sql = "UPDATE users SET verification_token = ? WHERE id = ?";
+                ps = conn.prepareStatement(sql);
+                ps.setString(1, token);
+                ps.setInt(2, userId);
+                ps.executeUpdate();
+            } finally {
+                if (ps != null) ps.close();
+                if (conn != null) conn.close();
+            }
+        } catch (Exception e) {
+            System.err.println("[GoogleAuthService] updateVerificationToken error: " + e.getMessage());
+        }
     }
 
     /**

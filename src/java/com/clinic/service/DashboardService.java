@@ -308,6 +308,19 @@ public class DashboardService {
         }
     }
 
+    /**
+     * Doanh thu ngày hôm qua — tổng tất cả hóa đơn đã thanh toán
+     * (bao gồm cả dịch vụ và thuốc).
+     */
+    public double getTotalRevenueYesterday() {
+        try {
+            return dashboardDAO.sumRevenueYesterday();
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getTotalRevenueYesterday - " + e.getMessage());
+            return 0.0;
+        }
+    }
+
     // ──────────────────────────────────────────────
     // KPI: CA CẤP CỨU (Emergency)
     // ──────────────────────────────────────────────
@@ -458,6 +471,19 @@ public class DashboardService {
             return dashboardDAO.getRevenueChart(endDate);
         } catch (Exception e) {
             System.err.println("DashboardService: Lỗi getRevenueChartData(date) - " + e.getMessage());
+            return Collections.emptyMap();
+        }
+    }
+
+    /**
+     * Doanh thu theo từng ngày trong khoảng [start, end] từ invoices.total_amount
+     * (bao gồm cả dịch vụ và thuốc). Dùng cho biểu đồ doanh thu 7/30 ngày.
+     */
+    public Map<String, Double> getDailyRevenue(LocalDate start, LocalDate end) {
+        try {
+            return dashboardDAO.getDailyRevenue(start, end);
+        } catch (Exception e) {
+            System.err.println("DashboardService: Lỗi getDailyRevenue - " + e.getMessage());
             return Collections.emptyMap();
         }
     }

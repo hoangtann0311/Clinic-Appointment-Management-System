@@ -123,9 +123,15 @@ public class GoogleServerLoginServlet extends HttpServlet {
             response.sendRedirect(request.getContextPath() + dashboardPath);
 
         } catch (GoogleAuthException e) {
-            System.err.println(">>> Google server-side login failed: " + e.getMessage());
-            request.getSession().setAttribute("errorMessage",
-                    "Đăng nhập Google thất bại: " + e.getMessage());
+            System.err.println(">>> Google server-side login: " + e.getMessage());
+            // Nếu là pending verification → hiển thị dạng thông báo thông thường (successMessage)
+            // Nếu là lỗi thật → hiển thị errorMessage
+            String msg = e.getMessage();
+            if (msg != null && msg.contains("xác nhận email")) {
+                request.getSession().setAttribute("successMessage", msg);
+            } else {
+                request.getSession().setAttribute("errorMessage", msg);
+            }
             response.sendRedirect(request.getContextPath() + "/login");
         } catch (Exception e) {
             System.err.println(">>> Google server-side login unexpected error: " + e.getMessage());

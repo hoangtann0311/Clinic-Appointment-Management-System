@@ -584,9 +584,23 @@
                 <div class="card-body">
                     <div class="kpi-icon"><i class="bi bi-cash-coin"></i></div>
                     <div class="kpi-content">
-                        <div class="kpi-value" style="font-size:1.05rem;">${not empty revenueToday ? revenueToday : '0 VNĐ'}</div>
+                        <div class="kpi-value" style="font-size:0.92rem;">
+                            <c:choose>
+                                <c:when test="${not empty revenueTodayRaw and revenueTodayRaw > 0}">
+                                    <fmt:formatNumber value="${revenueTodayRaw}" pattern="#,###"/> VNĐ
+                                </c:when>
+                                <c:otherwise>0 VNĐ</c:otherwise>
+                            </c:choose>
+                        </div>
                         <div class="kpi-label">${not empty revenueKpiLabel ? revenueKpiLabel : 'Doanh Thu Hôm Nay'}</div>
-                        <div class="kpi-sub"><i class="bi bi-graph-up"></i> Tổng: ${not empty revenue ? revenue : '0 VNĐ'}</div>
+                        <div class="kpi-sub"><i class="bi bi-graph-up"></i> Tổng:
+                            <c:choose>
+                                <c:when test="${not empty revenueTotalRaw and revenueTotalRaw > 0}">
+                                    <fmt:formatNumber value="${revenueTotalRaw}" pattern="#,###"/> VNĐ
+                                </c:when>
+                                <c:otherwise>0 VNĐ</c:otherwise>
+                            </c:choose>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -769,7 +783,7 @@
     <%-- DỊCH VỤ — Tổng Quan Nhanh --%>
     <%-- ════════════════════════════════════════════ --%>
     <div class="row g-3 mb-4">
-        <div class="col-xl-6">
+        <div class="col-xl-12">
             <div class="admin-card h-100">
                 <div class="card-header">
                     <h5><i class="bi bi-bar-chart-steps"></i> Dịch Vụ — Lượt Sử Dụng <span style="font-size:0.68rem;font-weight:400;color:var(--c-muted);">
@@ -802,52 +816,6 @@
                             <div class="admin-empty-state" style="padding:1.5rem;">
                                 <i class="bi bi-inbox"></i>
                                 <p class="mt-1 mb-0">Chưa có dữ liệu dịch vụ.</p>
-                            </div>
-                        </c:otherwise>
-                    </c:choose>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-6">
-            <div class="admin-card h-100">
-                <div class="card-header">
-                    <h5><i class="bi bi-cash-stack"></i> Doanh Thu Dịch Vụ <span style="font-size:0.68rem;font-weight:400;color:var(--c-muted);">
-                        <c:choose>
-                            <c:when test="${isCustomRange}">(${dateRangeLabel})</c:when>
-                            <c:otherwise>(Tất cả thời gian)</c:otherwise>
-                        </c:choose>
-                    </span></h5>
-                </div>
-                <div class="card-body p-0">
-                    <c:choose>
-                        <c:when test="${not empty topServicesByRevenue}">
-                            <div class="admin-table-wrapper">
-                                <table class="admin-table compact">
-                                    <thead><tr><th>#</th><th>Tên Dịch Vụ</th><th style="text-align:right;">Doanh Thu</th><th style="text-align:right;">Lượt SD</th></tr></thead>
-                                    <tbody>
-                                        <c:forEach var="svc" items="${topServicesByRevenue}" varStatus="row">
-                                            <tr>
-                                                <td><span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:.68rem;font-weight:800;color:#fff;background:${row.index == 0 ? '#10B981' : (row.index == 1 ? '#94A3B8' : '#9CA3AF')};">${row.count}</span></td>
-                                                <td><div style="font-weight:600;"><c:out value="${svc.serviceName}"/></div></td>
-                                                <td style="font-family:var(--font-display);font-weight:700;color:#059669;text-align:right;">
-                                                    <c:choose>
-                                                        <c:when test="${svc.totalRevenue >= 1000000000}"><fmt:formatNumber value="${svc.totalRevenue / 1000000000}" maxFractionDigits="2"/> Tỷ</c:when>
-                                                        <c:when test="${svc.totalRevenue >= 1000000}"><fmt:formatNumber value="${svc.totalRevenue / 1000000}" maxFractionDigits="1"/> Triệu</c:when>
-                                                        <c:when test="${svc.totalRevenue > 0}"><fmt:formatNumber value="${svc.totalRevenue}" pattern="#,###"/> đ</c:when>
-                                                        <c:otherwise>—</c:otherwise>
-                                                    </c:choose>
-                                                </td>
-                                                <td style="font-family:var(--font-display);font-weight:600;text-align:right;">${svc.totalUsage > 0 ? svc.totalUsage : '—'}</td>
-                                            </tr>
-                                        </c:forEach>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </c:when>
-                        <c:otherwise>
-                            <div class="admin-empty-state" style="padding:1.5rem;">
-                                <i class="bi bi-cash"></i>
-                                <p class="mt-1 mb-0">Chưa có dữ liệu doanh thu. Hóa đơn cần được xác nhận thanh toán bởi Lễ Tân.</p>
                             </div>
                         </c:otherwise>
                     </c:choose>
