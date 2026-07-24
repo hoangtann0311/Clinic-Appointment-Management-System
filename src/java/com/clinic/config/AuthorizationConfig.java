@@ -68,7 +68,7 @@ public final class AuthorizationConfig {
             return roleId == ROLE_DOCTOR || roleId == ROLE_PATIENT || roleId == ROLE_SONOGRAPHER;
         }
         if ("/medical/ai-image".equals(path)) {
-            return roleId == ROLE_DOCTOR || roleId == ROLE_SONOGRAPHER;
+            return roleId == ROLE_DOCTOR || roleId == ROLE_SONOGRAPHER || roleId == ROLE_PATIENT;
         }
 
         if (roleId == ROLE_STAFF && path.startsWith("/admin/reception")) {

@@ -84,26 +84,17 @@ public class UltrasoundImageStreamServlet extends HttpServlet {
         }
 
         // Xử lý và kiểm tra đường dẫn file vật lý trên đĩa
-        String relativeUploadDir = AppConfig.getUploadDirectory();
+        String relativeUploadDir = AppConfig.getUploadDirectory(); // "uploads/ultrasound"
         String realPath = getServletContext().getRealPath("");
         if (realPath == null) {
             response.sendError(HttpServletResponse.SC_NOT_FOUND, "Không xác định được vùng lưu trữ ảnh y tế.");
             return;
         }
-        String uploadPath = realPath + File.separator + relativeUploadDir;
 
-        File targetFile = new File(uploadPath, img.getStoredFilename());
-        File allowedUploadRoot = new File(uploadPath);
-        if (!targetFile.exists()) {
-            // Thử tìm trong thư mục source nếu đang chạy trong môi trường Tomcat/IDE dev
-            if (realPath != null && (realPath.contains("build\\web") || realPath.contains("build/web"))) {
-                String sourceUploadPath = realPath.replace("build\\web", "web").replace("build/web", "web") + File.separator + relativeUploadDir;
-                targetFile = new File(sourceUploadPath, img.getStoredFilename());
-                allowedUploadRoot = new File(sourceUploadPath);
-            }
-        }
+        File targetFile = resolveFile(realPath, relativeUploadDir, img.getStoredFilename());
+        File allowedUploadRoot = targetFile != null ? targetFile.getParentFile() : null;
 
-        if (!targetFile.exists()) {
+        if (targetFile == null || !targetFile.exists()) {
             response.sendError(HttpServletResponse.SC_NOT_FOUND, "Tệp ảnh y tế không tồn tại trên hệ thống lưu trữ.");
             return;
         }
@@ -139,5 +130,64 @@ public class UltrasoundImageStreamServlet extends HttpServlet {
             Files.copy(targetFile.toPath(), os);
             os.flush();
         }
+    }
+
+    /**
+     * Tìm file ảnh — thử deployed path trước, sau đó fallback về source web dir.
+     * Hỗ trợ cả IntelliJ (out/artifacts), NetBeans (build/web), và production.
+     */
+    private File resolveFile(String realPath, String relativeDir, String filename) {
+        // 1. Deployed path
+        File deployed = new File(new File(realPath, relativeDir), filename);
+        if (deployed.isFile()) return deployed;
+
+        // 2. Source web directory fallback — thử nhiều pattern cho các IDE
+        String normalized = realPath.replace('\\', '/');
+        String projectWebDir = null;
+
+        // IntelliJ: out/artifacts/..._war_exploded → web/
+        int idx = normalized.indexOf("/out/artifacts/");
+        if (idx >= 0) {
+            projectWebDir = normalized.substring(0, idx) + "/web";
+        }
+        // NetBeans: build/web → web/
+        if (projectWebDir == null) {
+            idx = normalized.indexOf("/build/web");
+            if (idx >= 0) {
+                projectWebDir = normalized.substring(0, idx) + "/web";
+            }
+        }
+        // Generic: tìm thư mục web/ trong project
+        if (projectWebDir == null) {
+            // Fallback: dùng user.dir nếu trùng với project
+            String userDir = System.getProperty("user.dir");
+            if (userDir != null) {
+                File webCandidate = new File(userDir, "web");
+                if (webCandidate.isDirectory()) {
+                    projectWebDir = webCandidate.getAbsolutePath();
+                }
+            }
+        }
+        // Dùng web.source.dir từ config nếu được cấu hình
+        if (projectWebDir == null) {
+            String configured = AppConfig.get("web.source.dir", null);
+            if (configured != null && !configured.isBlank()) {
+                projectWebDir = configured.trim();
+            }
+        }
+
+        if (projectWebDir != null) {
+            File source = new File(new File(projectWebDir, relativeDir), filename);
+            if (source.isFile()) return source;
+        }
+
+        // 3. Thử trực tiếp từ config nếu là absolute path
+        String absDir = AppConfig.get("ultrasound.absoluteUploadDir", null);
+        if (absDir != null && !absDir.isBlank()) {
+            File abs = new File(new File(absDir.trim()), filename);
+            if (abs.isFile()) return abs;
+        }
+
+        return deployed; // Trả về deployed để có thông báo lỗi rõ ràng
     }
 }

@@ -83,7 +83,13 @@
                 <div class="card-body text-center py-5">
                     <i class="bi bi-check-circle-fill text-success" style="font-size:4rem;"></i>
                     <h3 class="fw-bold mt-3 text-success">Hóa Đơn Đã Được Thanh Toán</h3>
-                    <p class="text-muted mb-4">Bạn đã thanh toán hóa đơn này thành công.</p>
+                    <p class="text-muted mb-3">Bạn đã thanh toán hóa đơn này thành công.</p>
+                    <c:if test="${invoiceType == 'PRE_EXAM'}">
+                    <div class="alert alert-light border py-2 px-3 small text-start mb-4 d-inline-block" style="border-radius:10px;max-width:460px;background:#fefce8;">
+                        <i class="bi bi-lock-fill me-1 text-warning"></i>
+                        Lịch hẹn đã được xác nhận. Nếu cần <strong>huỷ hoặc đổi lịch</strong>, vui lòng liên hệ <strong>lễ tân</strong> để được hỗ trợ hoàn tiền và sắp xếp lại.
+                    </div>
+                    </c:if>
                     <div class="invoice-hero d-inline-block text-start mb-4" style="min-width:320px;">
                         <div class="row g-3">
                             <div class="col-6"><span class="text-muted small">Bác sĩ lâm sàng</span><div class="fw-bold">BS. ${appointment.doctorName}</div></div>
@@ -179,15 +185,20 @@
                     <h3 class="fw-bold mt-3">
                         ${invoice.paymentMethod == 'Cash' ? 'Chờ Thanh Toán Tại Quầy' : 'Chờ Lễ Tân Xác Nhận Chuyển Khoản'}
                     </h3>
-                    <p class="text-muted mb-4">
+                    <p class="text-muted mb-3">
                         ${invoice.paymentMethod == 'Cash' ? 'Bạn đã đăng ký thanh toán tiền mặt. Vui lòng đến quầy lễ tân để nộp tiền; nhân viên sẽ xác nhận sau khi thu tiền.' : 'Yêu cầu chuyển khoản đã được ghi nhận. Nhân viên sẽ kiểm tra giao dịch và xác nhận sớm.'}
                     </p>
+                    <div class="alert alert-info py-2 px-3 small text-start mb-4 d-inline-block" style="border-radius:10px;max-width:480px;">
+                        <i class="bi bi-info-circle-fill me-1"></i>
+                        <strong>Bạn vẫn có thể huỷ hoặc đổi lịch</strong> ở giai đoạn này (chưa bị thu tiền).
+                        Sau khi lễ tân <strong>xác nhận đã thanh toán</strong>, bạn sẽ không thể tự huỷ/đổi được nữa mà cần liên hệ trực tiếp lễ tân.
+                    </div>
                         <div class="invoice-hero d-inline-block text-start mb-4" style="min-width:320px;">
                             <div class="row g-3">
                                 <div class="col-6"><span class="text-muted small">Bác sĩ lâm sàng</span><div class="fw-bold">BS. ${appointment.doctorName}</div></div>
                                 <div class="col-6"><span class="text-muted small">Ngày khám</span><div class="fw-bold">${appointment.appointmentDate}</div></div>
                                 <div class="col-6"><span class="text-muted small">Giờ khám</span><div class="fw-bold">${appointment.timeSlot}</div></div>
-                                <div class="col-6"><span class="text-muted small">Dịch vụ</span><div class="fw-bold"><c:choose><c:when test="${not empty appointment.serviceName}">${appointment.serviceName}</c:when><c:otherwise>Khám lâm sàng (${appointment.doctor.specialization})</c:otherwise></c:choose></div></div>
+                                <div class="col-6"><span class="text-muted small">Dịch vụ</span><div class="fw-bold"><c:choose><c:when test="${not empty appointment.serviceName}">${appointment.serviceName}</c:when><c:otherwise>Khám lâm sàng<c:if test="${not empty appointment.doctor}"> (${appointment.doctor.specialization})</c:if></c:otherwise></c:choose></div></div>
                                 <c:if test="${not empty invoice.transactionCode}">
                                     <div class="col-12"><span class="text-muted small">Mã giao dịch</span><div><code>${invoice.transactionCode}</code></div></div>
                                 </c:if>
@@ -275,7 +286,7 @@
                                 <div class="col-md-6"><span class="text-muted small">Bác sĩ lâm sàng</span><div class="fw-bold">BS. ${appointment.doctorName}</div></div>
                                 <div class="col-md-6"><span class="text-muted small">Ngày khám</span><div class="fw-bold">${appointment.appointmentDate}</div></div>
                                 <div class="col-md-6"><span class="text-muted small">Giờ khám</span><div class="fw-bold">${appointment.timeSlot}</div></div>
-                                <div class="col-md-6"><span class="text-muted small">Dịch vụ</span><div class="fw-bold"><c:choose><c:when test="${not empty appointment.serviceName}">${appointment.serviceName}</c:when><c:otherwise>Khám lâm sàng (${appointment.doctor.specialization})</c:otherwise></c:choose></div></div>
+                                <div class="col-md-6"><span class="text-muted small">Dịch vụ</span><div class="fw-bold"><c:choose><c:when test="${not empty appointment.serviceName}">${appointment.serviceName}</c:when><c:otherwise>Khám lâm sàng<c:if test="${not empty appointment.doctor}"> (${appointment.doctor.specialization})</c:if></c:otherwise></c:choose></div></div>
                             </div>
                             <c:if test="${invoiceType == 'PRESCRIPTION' && not empty prescriptionItems}">
                                 <hr class="my-3">
@@ -430,12 +441,6 @@
                 <i class="bi bi-info-circle me-2"></i>Hóa đơn này thuộc dữ liệu trạng thái cũ. Vui lòng liên hệ lễ tân để được hỗ trợ.
             </div>
         </c:if>
-
-        <div class="mt-3">
-            <a href="${pageContext.request.contextPath}/patient/invoices" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left me-1"></i>Quay lại danh sách hóa đơn
-            </a>
-        </div>
 
     </div>
 </div>

@@ -76,6 +76,23 @@ public class MedicalRecord {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime v) { this.createdAt = v; }
 
+    /** Định dạng hiển thị ngày tạo cho bệnh nhân: "25/07/2026 14:30" */
+    public String getCreatedAtText() {
+        if (createdAt == null) return "";
+        return createdAt.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+    }
+
+    /** Định dạng ngày khám: "25/07/2026" */
+    public String getAppointmentDateText() {
+        if (appointmentDate == null || appointmentDate.isEmpty()) return "";
+        try {
+            java.time.LocalDate d = java.time.LocalDate.parse(appointmentDate);
+            return d.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+        } catch (Exception e) {
+            return appointmentDate;
+        }
+    }
+
     public String getClinicalNotes() { return clinicalNotes; }
     public void setClinicalNotes(String v) { this.clinicalNotes = v; }
 

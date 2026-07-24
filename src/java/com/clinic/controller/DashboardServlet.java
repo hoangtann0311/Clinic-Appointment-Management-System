@@ -103,6 +103,19 @@ public class DashboardServlet extends HttpServlet {
                 break;
             case 5:
             default:
+                // Flash message từ session (vd: cập nhật profile thành công)
+                Object flashMsg = session.getAttribute("successMessage");
+                if (flashMsg != null) {
+                    request.setAttribute("successMessage", flashMsg);
+                    session.removeAttribute("successMessage");
+                }
+                // Bệnh nhân mới hoặc chưa đủ thông tin → bắt buộc cập nhật hồ sơ
+                if (isPatientProfileIncomplete(user.getId())) {
+                    request.getSession().setAttribute("profileRequired",
+                            "Vui lòng cập nhật đầy đủ thông tin cá nhân trước khi sử dụng hệ thống.");
+                    response.sendRedirect(request.getContextPath() + "/patient/profile");
+                    return;
+                }
                 loadPatientDashboardData(request, user.getId());
                 request.getRequestDispatcher("/views/home/dashboard.jsp").forward(request, response);
                 break;
@@ -462,12 +475,49 @@ public class DashboardServlet extends HttpServlet {
                     })
                     .collect(Collectors.toList());
 
+            // Quick stats for patient dashboard cards
+            long completedCount = appointments.stream()
+                    .filter(a -> "SUCCESS".equalsIgnoreCase(a.getStatus())
+                            || "Completed".equalsIgnoreCase(a.getStatus()))
+                    .count();
+            long cancelledCount = appointments.stream()
+                    .filter(a -> "Cancelled".equalsIgnoreCase(a.getStatus()))
+                    .count();
+
             request.setAttribute("upcomingAppts", upcoming);
             request.setAttribute("upcomingAppointment", upcoming.isEmpty() ? null : upcoming.get(0));
+            request.setAttribute("totalMyAppointments", appointments.size());
+            request.setAttribute("totalMyUpcoming", upcoming.size());
+            request.setAttribute("totalMyCompleted", (int) completedCount);
         } catch (Exception e) {
             request.setAttribute("upcomingAppts", List.of());
             request.setAttribute("upcomingAppointment", null);
+            request.setAttribute("totalMyAppointments", 0);
+            request.setAttribute("totalMyUpcoming", 0);
+            request.setAttribute("totalMyCompleted", 0);
         }
+    }
+
+    /** Kiểm tra bệnh nhân đã có đủ thông tin cá nhân chưa */
+    private boolean isPatientProfileIncomplete(int userId) {
+        com.clinic.dao.PatientDAO patientDAO = new com.clinic.dao.PatientDAO();
+        int patientId = patientDAO.getPatientIdByUserId(userId);
+        if (patientId <= 0) return true; // chưa có hồ sơ bệnh nhân
+
+        com.clinic.model.Patient patient = patientDAO.findById(patientId);
+        if (patient == null) return true;
+
+        // Họ tên, SĐT, ngày sinh, địa chỉ — tất cả phải có
+        String name = patient.getFullName();
+        String phone = patient.getPhone();
+        String address = patient.getAddress();
+        if ((name == null || name.isBlank() || name.equals("Người dùng"))
+                || (phone == null || phone.isBlank())
+                || patient.getDateOfBirth() == null
+                || (address == null || address.isBlank())) {
+            return true;
+        }
+        return false;
     }
 
 }

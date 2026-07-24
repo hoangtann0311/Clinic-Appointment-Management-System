@@ -35,7 +35,7 @@ public class AppointmentDAO {
         String sql = "SELECT a.id, a.patient_id, a.doctor_id, a.pregnancy_id, a.appointment_date, a.booking_source, a.slot_id, " +
                 "a.symptoms, a.last_menstrual_period, a.is_emergency, a.priority_reason, a.prioritized_at, a.prioritized_by, " +
                 "a.status, a.service_id, a.time_slot, a.queue_number, priority_user.full_name AS prioritized_by_name, " +
-                "p.full_name AS patient_name, p.phone_number AS patient_phone, p.date_of_birth AS patient_dob, p.zalo_user_id AS patient_zalo, " +
+                "p.full_name AS patient_name, p.phone_number AS patient_phone, p.date_of_birth AS patient_dob, " +
                 "d.full_name AS doctor_name, d.specialization AS doctor_spec, " +
                 "COALESCE(s.service_name, (SELECT STRING_AGG(sa.service_name, N', ') FROM appointment_services aps JOIN services sa ON sa.id = aps.service_id WHERE aps.appointment_id = a.id), N'Khám thai định kỳ') AS service_name, s.price AS service_price, s.duration_mins AS service_dur, " +
                 "s.requires_fasting AS service_fasting, s.requires_full_bladder AS service_bladder, s.required_room_type AS service_room, " +
@@ -52,6 +52,12 @@ public class AppointmentDAO {
                 "       AND UPPER(i.invoice_type) = 'PRE_EXAM' " +
                 "       AND UPPER(i.status) = 'PENDINGCONFIRMATION' " +
                 "   ) THEN 'PendingConfirmation' " +
+                "   WHEN EXISTS ( " +
+                "       SELECT 1 FROM invoices i " +
+                "       WHERE i.appointment_id = a.id " +
+                "       AND UPPER(i.invoice_type) = 'PRE_EXAM' " +
+                "       AND UPPER(i.status) = 'CANCELLED' " +
+                "   ) THEN 'Cancelled' " +
                 "   ELSE 'Unpaid' " +
                 "END AS pre_exam_payment_status " +
                 "FROM appointments a " +
@@ -75,7 +81,7 @@ public class AppointmentDAO {
         String sql = "SELECT a.id, a.patient_id, a.doctor_id, a.pregnancy_id, a.appointment_date, a.booking_source, a.slot_id, " +
                 "a.symptoms, a.last_menstrual_period, a.is_emergency, a.priority_reason, a.prioritized_at, a.prioritized_by, " +
                 "a.status, a.service_id, a.time_slot, a.queue_number, priority_user.full_name AS prioritized_by_name, " +
-                "p.full_name AS patient_name, p.phone_number AS patient_phone, p.date_of_birth AS patient_dob, p.zalo_user_id AS patient_zalo, " +
+                "p.full_name AS patient_name, p.phone_number AS patient_phone, p.date_of_birth AS patient_dob, " +
                 "d.full_name AS doctor_name, d.specialization AS doctor_spec, " +
                 "COALESCE(s.service_name, (SELECT STRING_AGG(sa.service_name, N', ') FROM appointment_services aps JOIN services sa ON sa.id = aps.service_id WHERE aps.appointment_id = a.id), N'Khám thai định kỳ') AS service_name, s.price AS service_price, s.duration_mins AS service_dur, " +
                 "s.requires_fasting AS service_fasting, s.requires_full_bladder AS service_bladder, s.required_room_type AS service_room, " +
@@ -92,6 +98,12 @@ public class AppointmentDAO {
                 "       AND UPPER(i.invoice_type) = 'PRE_EXAM' " +
                 "       AND UPPER(i.status) = 'PENDINGCONFIRMATION' " +
                 "   ) THEN 'PendingConfirmation' " +
+                "   WHEN EXISTS ( " +
+                "       SELECT 1 FROM invoices i " +
+                "       WHERE i.appointment_id = a.id " +
+                "       AND UPPER(i.invoice_type) = 'PRE_EXAM' " +
+                "       AND UPPER(i.status) = 'CANCELLED' " +
+                "   ) THEN 'Cancelled' " +
                 "   ELSE 'Unpaid' " +
                 "END AS pre_exam_payment_status " +
                 "FROM appointments a " +
@@ -294,7 +306,7 @@ public class AppointmentDAO {
         String sql = "SELECT a.id, a.patient_id, a.doctor_id, a.pregnancy_id, a.appointment_date, a.booking_source, a.slot_id, " +
                 "a.symptoms, a.last_menstrual_period, a.is_emergency, a.priority_reason, a.prioritized_at, a.prioritized_by, " +
                 "a.status, a.service_id, a.time_slot, a.queue_number, priority_user.full_name AS prioritized_by_name, " +
-                "p.full_name AS patient_name, p.phone_number AS patient_phone, p.date_of_birth AS patient_dob, p.zalo_user_id AS patient_zalo, " +
+                "p.full_name AS patient_name, p.phone_number AS patient_phone, p.date_of_birth AS patient_dob, " +
                 "d.full_name AS doctor_name, d.specialization AS doctor_spec, " +
                 "COALESCE(s.service_name, (SELECT STRING_AGG(sa.service_name, N', ') FROM appointment_services aps JOIN services sa ON sa.id = aps.service_id WHERE aps.appointment_id = a.id), N'Khám thai định kỳ') AS service_name, s.price AS service_price, s.duration_mins AS service_dur, " +
                 "s.requires_fasting AS service_fasting, s.requires_full_bladder AS service_bladder, s.required_room_type AS service_room, " +
@@ -311,6 +323,12 @@ public class AppointmentDAO {
                 "       AND UPPER(i.invoice_type) = 'PRE_EXAM' " +
                 "       AND UPPER(i.status) = 'PENDINGCONFIRMATION' " +
                 "   ) THEN 'PendingConfirmation' " +
+                "   WHEN EXISTS ( " +
+                "       SELECT 1 FROM invoices i " +
+                "       WHERE i.appointment_id = a.id " +
+                "       AND UPPER(i.invoice_type) = 'PRE_EXAM' " +
+                "       AND UPPER(i.status) = 'CANCELLED' " +
+                "   ) THEN 'Cancelled' " +
                 "   ELSE 'Unpaid' " +
                 "END AS pre_exam_payment_status " +
                 "FROM appointments a " +
@@ -933,8 +951,7 @@ public class AppointmentDAO {
                     patientId,
                     rs.getString("patient_name"),
                     rs.getString("patient_phone"),
-                    dob,
-                    rs.getString("patient_zalo")
+                    dob
             );
         }
 

@@ -72,22 +72,46 @@ public class PatientMedicalRecordServlet extends HttpServlet {
 
             Prescription prescription = prescriptionDAO.getByMedicalRecordId(recordId);
 
-            // Chỉ công bố chỉ định đã được bác sĩ lâm sàng xác nhận. Không tải
-            // hoặc truyền dữ liệu AI nội bộ vào request của bệnh nhân.
+            // Chỉ công bố chỉ định đã được bác sĩ lâm sàng xác nhận.
+            // Kèm theo annotation source (AI / Sonographer) để JSP hiển thị
+            // đúng loại ảnh: AI nếu được chấp nhận, hoặc ảnh gốc nếu từ chối/sửa.
             List<com.clinic.model.UltrasoundWaitingPatient> allUsOrders = new com.clinic.dao.UltrasoundOrderDAO().getByMedicalRecordId(recordId);
             List<com.clinic.model.UltrasoundWaitingPatient> usOrders = new java.util.ArrayList<>();
             java.util.Map<Integer, List<com.clinic.model.UltrasoundImage>> orderImages = new java.util.HashMap<>();
             java.util.Map<Integer, com.clinic.model.UltrasoundReport> orderReports = new java.util.HashMap<>();
+            java.util.Map<Integer, String> orderAnnotationSources = new java.util.HashMap<>();
+            java.util.Map<Integer, String> orderAiResultImages = new java.util.HashMap<>();
             com.clinic.dao.UltrasoundImageDAO imgDAO = new com.clinic.dao.UltrasoundImageDAO();
             com.clinic.dao.UltrasoundReviewDAO reviewDAO = new com.clinic.dao.UltrasoundReviewDAO();
+            com.clinic.dao.AiAnalysisResultDAO aiDAO = new com.clinic.dao.AiAnalysisResultDAO();
 
             for (com.clinic.model.UltrasoundWaitingPatient order : allUsOrders) {
                 if (!"Confirmed".equalsIgnoreCase(order.getStatus())) continue;
                 com.clinic.model.UltrasoundReport report = reviewDAO.getCurrentReport(order.getOrderId());
                 if (report == null || report.getDoctorConfirmedAt() == null) continue;
                 usOrders.add(order);
+
+                // Ảnh gốc
                 List<com.clinic.model.UltrasoundImage> images = imgDAO.getByTestOrderId(order.getOrderId());
                 orderImages.put(order.getOrderId(), images);
+
+                // Annotation hiện tại → xác định nguồn (AI / Sonographer)
+                com.clinic.model.UltrasoundAnnotation annotation = reviewDAO.getCurrentAnnotation(order.getOrderId());
+                String source = (annotation != null && annotation.getAnnotationSource() != null)
+                        ? annotation.getAnnotationSource() : "None";
+                orderAnnotationSources.put(order.getOrderId(), source);
+
+                // Ảnh có đánh dấu chẩn đoán:
+                // - AI accepted → dùng ảnh result_image từ AI (có bounding box overlay)
+                // - Sonographer corrected/rejected → annotation là polygon, KHÔNG có ảnh riêng.
+                //   Hiển thị ảnh gốc + ghi chú "Bác sĩ siêu âm đánh dấu thủ công".
+                if ("AI".equalsIgnoreCase(source)) {
+                    com.clinic.model.AiAnalysisResult aiResult = aiDAO.getByTestOrderId(order.getOrderId());
+                    if (aiResult != null && aiResult.getResultImage() != null) {
+                        orderAiResultImages.put(order.getOrderId(), aiResult.getResultImage());
+                    }
+                }
+
                 orderReports.put(order.getOrderId(), report);
             }
 
@@ -96,6 +120,8 @@ public class PatientMedicalRecordServlet extends HttpServlet {
             request.setAttribute("usOrders", usOrders);
             request.setAttribute("orderImages", orderImages);
             request.setAttribute("orderReports", orderReports);
+            request.setAttribute("orderAnnotationSources", orderAnnotationSources);
+            request.setAttribute("orderAiResultImages", orderAiResultImages);
             request.setAttribute("mode",         "detail");
             request.getRequestDispatcher("/views/patient/medical_record_detail.jsp")
                    .forward(request, response);

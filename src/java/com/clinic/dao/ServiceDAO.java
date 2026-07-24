@@ -696,6 +696,53 @@ public class ServiceDAO {
     }
 
     /**
+     * Trả về ID của dịch vụ "Khám lâm sàng" mặc định — dùng khi bệnh nhân
+     * đặt lịch mà không chọn dịch vụ cụ thể (dịch vụ thực tế do bác sĩ chỉ định
+     * sau khi khám). Nếu chưa có trong DB thì tự động tạo.
+     */
+    public int getDefaultExaminationServiceId() {
+        // Tìm dịch vụ khám mặc định đã tồn tại
+        String findSql = "SELECT id FROM services WHERE service_name LIKE N'Khám lâm sàng%' AND is_active = 1";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(findSql);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                return rs.getInt("id");
+            }
+        } catch (SQLException e) {
+            System.err.println("[ServiceDAO] getDefaultExaminationServiceId find: " + e.getMessage());
+        }
+
+        // Chưa có → tạo mới
+        String insertSql = "INSERT INTO services (service_code, service_name, description, price, duration_mins, is_active) "
+                + "VALUES (N'KLS', N'Khám lâm sàng', N'Khám tổng quát với bác sĩ chuyên khoa', 0, 20, 1)";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.executeUpdate();
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                if (keys.next()) {
+                    System.out.println("[ServiceDAO] Created default examination service (id=" + keys.getInt(1) + ")");
+                    return keys.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[ServiceDAO] getDefaultExaminationServiceId create: " + e.getMessage());
+        }
+
+        // Fallback: thử lại một lần nữa
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(findSql);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                return rs.getInt("id");
+            }
+        } catch (SQLException e) {
+            System.err.println("[ServiceDAO] getDefaultExaminationServiceId fallback: " + e.getMessage());
+        }
+        return 0;
+    }
+
+    /**
      * Retrieves active ultrasound services without relying on a hard-coded
      * category id. Imported databases may use different category identities.
      */

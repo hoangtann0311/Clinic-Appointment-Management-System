@@ -41,35 +41,47 @@ public class PatientAppointmentServlet extends HttpServlet {
         List<Appointment> appointments = bookingService.getMyAppointments(user.getId());
         request.setAttribute("appointments", appointments);
 
-        // Load invoices for payment status display
+        // Batch load invoices + prescription status — 2 queries thay vì N*3 queries
+        com.clinic.dao.InvoiceDAO invoiceDAO = new com.clinic.dao.InvoiceDAO();
+        com.clinic.dao.PrescriptionDAO prescriptionDAO = new com.clinic.dao.PrescriptionDAO();
+
+        java.util.List<Integer> apptIds = new java.util.ArrayList<>();
+        for (Appointment apt : appointments) apptIds.add(apt.getId());
+
+        // 1 query: tất cả POST_EXAM + PRESCRIPTION invoices
+        java.util.Map<Integer, java.util.Map<String, Invoice>> invoiceMap =
+                invoiceDAO.getPostExamAndPrescriptionInvoices(apptIds);
+
         Map<Integer, Invoice> postExamInvoices = new HashMap<>();
         Map<Integer, Invoice> prescriptionInvoices = new HashMap<>();
-        Map<Integer, Boolean> prescriptionPurchaseResolved = new HashMap<>();
-        com.clinic.dao.PrescriptionDAO prescriptionDAO =
-                new com.clinic.dao.PrescriptionDAO();
         for (Appointment apt : appointments) {
-            Invoice postInv = new com.clinic.dao.InvoiceDAO().getByAppointmentIdAndType(apt.getId(), "POST_EXAM");
+            java.util.Map<String, Invoice> map = invoiceMap.getOrDefault(apt.getId(), java.util.Collections.emptyMap());
+            Invoice postInv = map.get("POST_EXAM");
             if (postInv != null && !"Paid".equalsIgnoreCase(postInv.getStatus()) && !"PendingConfirmation".equalsIgnoreCase(postInv.getStatus())) {
                 postExamInvoices.put(apt.getId(), postInv);
             }
-            Invoice rxInv = new com.clinic.dao.InvoiceDAO().getByAppointmentIdAndType(apt.getId(), "PRESCRIPTION");
+            Invoice rxInv = map.get("PRESCRIPTION");
             if (rxInv != null && !"Paid".equalsIgnoreCase(rxInv.getStatus()) && !"PendingConfirmation".equalsIgnoreCase(rxInv.getStatus())) {
                 prescriptionInvoices.put(apt.getId(), rxInv);
             }
-            prescriptionPurchaseResolved.put(
-                    apt.getId(),
-                    prescriptionDAO.isPurchaseResolvedForReview(apt.getId()));
         }
+
+        // 1 query: tất cả prescription purchase status
+        Map<Integer, Boolean> prescriptionPurchaseResolved = prescriptionDAO.batchIsPurchaseResolved(apptIds);
+
+        // 1 query: đã đánh giá chưa (để ẩn nút sau khi đánh giá)
+        Map<Integer, Boolean> hasReviewed = new com.clinic.dao.ReviewDAO().batchHasReviewed(apptIds);
+
         request.setAttribute("postExamInvoices", postExamInvoices);
         request.setAttribute("prescriptionInvoices", prescriptionInvoices);
-        request.setAttribute(
-                "prescriptionPurchaseResolved", prescriptionPurchaseResolved);
+        request.setAttribute("prescriptionPurchaseResolved", prescriptionPurchaseResolved);
+        request.setAttribute("hasReviewed", hasReviewed);
+
+        // Pending prescription choices (vẫn 1 query như cũ)
         Map<Integer, Prescription> pendingPrescriptionChoices = new HashMap<>();
-        for (Prescription prescription :
-                prescriptionDAO.getPatientPurchaseChoices(user.getId())) {
+        for (Prescription prescription : prescriptionDAO.getPatientPurchaseChoices(user.getId())) {
             if ("Pending".equalsIgnoreCase(prescription.getPurchaseDecision())) {
-                pendingPrescriptionChoices.put(
-                        prescription.getAppointmentId(), prescription);
+                pendingPrescriptionChoices.put(prescription.getAppointmentId(), prescription);
             }
         }
         request.setAttribute("pendingPrescriptionChoices", pendingPrescriptionChoices);

@@ -213,6 +213,40 @@ public class InvoiceDAO {
         return null;
     }
 
+    /** Batch: lấy tất cả POST_EXAM + PRESCRIPTION invoices cho nhiều appointment. */
+    public java.util.Map<Integer, java.util.Map<String, Invoice>> getPostExamAndPrescriptionInvoices(
+            java.util.List<Integer> appointmentIds) {
+        java.util.Map<Integer, java.util.Map<String, Invoice>> result = new java.util.HashMap<>();
+        if (appointmentIds == null || appointmentIds.isEmpty()) return result;
+        for (int id : appointmentIds) result.put(id, new java.util.HashMap<>());
+
+        StringBuilder placeholders = new StringBuilder();
+        for (int i = 0; i < appointmentIds.size(); i++) {
+            if (i > 0) placeholders.append(",");
+            placeholders.append("?");
+        }
+        String sql = BASE_SELECT + " WHERE i.appointment_id IN (" + placeholders
+                + ") AND UPPER(i.invoice_type) IN ('POST_EXAM','PRESCRIPTION') ORDER BY i.id";
+        try (java.sql.Connection conn = DatabaseConfig.getConnection();
+             java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            for (int i = 0; i < appointmentIds.size(); i++) {
+                ps.setInt(i + 1, appointmentIds.get(i));
+            }
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Invoice inv = mapRow(rs);
+                    java.util.Map<String, Invoice> map = result.get(inv.getAppointmentId());
+                    if (map != null && inv.getInvoiceType() != null) {
+                        map.put(inv.getInvoiceType().toUpperCase(), inv);
+                    }
+                }
+            }
+        } catch (java.sql.SQLException e) {
+            System.err.println("[InvoiceDAO] getPostExamAndPrescriptionInvoices ERROR: " + e.getMessage());
+        }
+        return result;
+    }
+
     public List<Invoice> getByAppointmentId(int appointmentId) {
         String sql = BASE_SELECT + " WHERE i.appointment_id = ? ORDER BY i.id DESC";
         List<Invoice> list = new ArrayList<>();

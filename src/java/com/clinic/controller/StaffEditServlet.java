@@ -13,6 +13,7 @@ import java.util.Arrays;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 @WebServlet("/admin/reception/edit")
 public class StaffEditServlet extends HttpServlet {
@@ -42,6 +43,7 @@ public class StaffEditServlet extends HttpServlet {
                     req.setAttribute("doctors", staffReceptionService.getAllDoctors());
                     req.setAttribute("services", staffReceptionService.getAllServices());
                     req.setAttribute("today", LocalDate.now().toString());
+                    req.setAttribute("currentDisplayDate", LocalDate.now().format(DateTimeFormatter.ofPattern("dd 'tháng' MM, yyyy")));
 
                     Invoice preInvoice = new com.clinic.dao.InvoiceDAO().getByAppointmentIdAndType(id, "PRE_EXAM");
                     req.setAttribute("preInvoice", preInvoice);

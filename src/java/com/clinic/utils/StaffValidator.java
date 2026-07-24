@@ -43,12 +43,12 @@ public class StaffValidator {
                 } else {
                     int age = java.time.Period.between(birthDate, today).getYears();
 
-                    if (age < 12) {
-                        errors.add("Tuổi sản phụ phải từ 12 tuổi trở lên để đặt lịch khám.");
+                    if (age < 10) {
+                        errors.add("Tuổi bệnh nhân phải từ 10 tuổi trở lên.");
                     }
 
-                    if (age > 55) {
-                        errors.add("Tuổi sản phụ không được vượt quá 55 tuổi khi đặt lịch khám sản/phụ khoa.");
+                    if (age > 65) {
+                        errors.add("Tuổi bệnh nhân không được vượt quá 65 tuổi. Vui lòng liên hệ bác sĩ để được tư vấn riêng.");
                     }
                 }
 

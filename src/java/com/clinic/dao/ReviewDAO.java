@@ -61,4 +61,25 @@ public class ReviewDAO {
         }
         return false;
     }
+
+    /** Batch: kiểm tra đã đánh giá cho nhiều appointment. */
+    public java.util.Map<Integer, Boolean> batchHasReviewed(java.util.List<Integer> apptIds) {
+        java.util.Map<Integer, Boolean> result = new java.util.HashMap<>();
+        if (apptIds == null || apptIds.isEmpty()) return result;
+        for (int id : apptIds) result.put(id, false);
+
+        StringBuilder ph = new StringBuilder();
+        for (int i = 0; i < apptIds.size(); i++) { if (i > 0) ph.append(","); ph.append("?"); }
+        String sql = "SELECT appointment_id FROM reviews WHERE appointment_id IN (" + ph + ")";
+        try (java.sql.Connection conn = DatabaseConfig.getConnection();
+             java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            for (int i = 0; i < apptIds.size(); i++) ps.setInt(i + 1, apptIds.get(i));
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) result.put(rs.getInt("appointment_id"), true);
+            }
+        } catch (java.sql.SQLException e) {
+            System.err.println("[ReviewDAO] batchHasReviewed ERROR: " + e.getMessage());
+        }
+        return result;
+    }
 }

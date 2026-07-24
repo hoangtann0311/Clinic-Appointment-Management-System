@@ -63,11 +63,11 @@ public class Doctor implements Serializable {
     }
 
     public String getFullName() {
-        return fullName;
+        return fullName != null ? fullName : "";
     }
 
     public void setFullName(String fullName) {
-        this.fullName = fullName;
+        this.fullName = (fullName != null) ? fullName.trim() : null;
     }
 
     // Alias for compatibility

@@ -50,7 +50,8 @@ public class AiImageStreamServlet extends HttpServlet {
         int roleId = user.getRoleId();
         boolean authorized = (roleId == 2 && orderService.checkDoctorOwnership(orderId, user.getId()))
                 || (roleId == 6 && orderService.isReadyForSonographer(orderId)
-                    && orderService.checkSonographerOwnership(orderId, user.getId()));
+                    && orderService.checkSonographerOwnership(orderId, user.getId()))
+                || (roleId == 5 && orderService.checkPatientOwnership(orderId, user.getId()));
         if (!authorized) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền xem ảnh phân tích AI của ca này.");
             return;
@@ -104,22 +105,28 @@ public class AiImageStreamServlet extends HttpServlet {
         String realPath = getServletContext().getRealPath("");
         if (realPath == null) return null;
 
+        // 1. Deployed path
         File deployedFile = new File(realPath, normalized).getCanonicalFile();
-        File deployedAiRoot = new File(realPath, aiRoot).getCanonicalFile();
-        File deployedUploadRoot = new File(realPath, uploadRoot).getCanonicalFile();
-        if ((isInside(deployedAiRoot, deployedFile) || isInside(deployedUploadRoot, deployedFile)) && deployedFile.isFile()) {
-            return deployedFile;
+        if (deployedFile.isFile()) return deployedFile;
+
+        // 2. Source web dir fallback — hỗ trợ IntelliJ, NetBeans
+        String normalizedRp = realPath.replace('\\', '/');
+        String projectWebDir = null;
+        int idx = normalizedRp.indexOf("/out/artifacts/");
+        if (idx >= 0) { projectWebDir = normalizedRp.substring(0, idx) + "/web"; }
+        if (projectWebDir == null) {
+            idx = normalizedRp.indexOf("/build/web");
+            if (idx >= 0) { projectWebDir = normalizedRp.substring(0, idx) + "/web"; }
+        }
+        if (projectWebDir == null) {
+            String configured = AppConfig.get("web.source.dir", null);
+            if (configured != null && !configured.isBlank()) projectWebDir = configured.trim();
+        }
+        if (projectWebDir != null) {
+            File sourceFile = new File(projectWebDir, normalized).getCanonicalFile();
+            if (sourceFile.isFile()) return sourceFile;
         }
 
-        if (realPath.contains("build\\web") || realPath.contains("build/web")) {
-            String sourceRootPath = realPath.replace("build\\web", "web").replace("build/web", "web");
-            File sourceFile = new File(sourceRootPath, normalized).getCanonicalFile();
-            File sourceAiRoot = new File(sourceRootPath, aiRoot).getCanonicalFile();
-            File sourceUploadRoot = new File(sourceRootPath, uploadRoot).getCanonicalFile();
-            if ((isInside(sourceAiRoot, sourceFile) || isInside(sourceUploadRoot, sourceFile)) && sourceFile.isFile()) {
-                return sourceFile;
-            }
-        }
         return null;
     }
 

@@ -38,21 +38,59 @@
 
     function dismissToast(toast) {
         if (!toast || toast.classList.contains('is-leaving')) return;
+        // Cancel any running progress animation
+        if (toast._progressRaf) { cancelAnimationFrame(toast._progressRaf); toast._progressRaf = null; }
         toast.classList.add('is-leaving');
-        window.setTimeout(function () { toast.remove(); }, 300);
+        window.setTimeout(function () { toast.remove(); }, 260);
+    }
+
+    function startProgress(toast, duration) {
+        var bar = toast.querySelector('.cams-toast__progress');
+        if (!bar) return;
+        var startedAt = performance.now();
+        var finished = false;
+        function tick(now) {
+            if (finished) return;
+            var elapsed = now - startedAt;
+            var pct = Math.max(0, 100 - (elapsed / duration) * 100);
+            bar.style.width = pct.toFixed(1) + '%';
+            if (elapsed >= duration) {
+                finished = true;
+                dismissToast(toast);
+            } else {
+                toast._progressRaf = requestAnimationFrame(tick);
+            }
+        }
+        toast._progressRaf = requestAnimationFrame(tick);
     }
 
     function notify(message, level, duration) {
         level = normalizeLevel(level);
+        var autoDuration = duration || TOAST_DURATION;
         var toast = document.createElement('div');
         toast.className = 'cams-toast cams-toast--' + level;
         toast.setAttribute('role', level === 'danger' ? 'alert' : 'status');
+        // Progress bar inside the toast \u2014 drains over duration
         toast.innerHTML = '<i class="bi ' + iconFor(level) + ' cams-toast__icon" aria-hidden="true"></i>'
             + '<div class="cams-toast__body">' + escapeText(message) + '</div>'
-            + '<button type="button" class="cams-toast__close" aria-label="\u0110\u00f3ng th\u00f4ng b\u00e1o"><i class="bi bi-x-lg"></i></button>';
+            + '<button type="button" class="cams-toast__close" aria-label="\u0110\u00f3ng th\u00f4ng b\u00e1o"><i class="bi bi-x-lg"></i></button>'
+            + '<div class="cams-toast__progress" style="width:100%"></div>';
+        var region = toastRegion();
+        // Prepend so newest appears on top
+        region.insertBefore(toast, region.firstChild);
         toast.querySelector('.cams-toast__close').addEventListener('click', function () { dismissToast(toast); });
-        toastRegion().appendChild(toast);
-        window.setTimeout(function () { dismissToast(toast); }, duration || TOAST_DURATION);
+        // Pause progress bar on hover
+        toast.addEventListener('mouseenter', function () {
+            if (toast._progressRaf) { cancelAnimationFrame(toast._progressRaf); toast._progressRaf = null; }
+        });
+        toast.addEventListener('mouseleave', function () {
+            if (!toast.classList.contains('is-leaving')) {
+                var bar = toast.querySelector('.cams-toast__progress');
+                var remaining = bar ? parseFloat(bar.style.width) : 100;
+                startProgress(toast, autoDuration * (remaining / 100));
+            }
+        });
+        startProgress(toast, autoDuration);
         return toast;
     }
 

@@ -30,12 +30,18 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         </c:if>
+        <c:if test="${not empty profileRequired}">
+            <div class="alert d-flex align-items-center gap-2 border-0 shadow-sm" role="alert"
+                 style="background: #fff9fc; color: #b86689; border-left: 4px solid #b86689; border-radius: .75rem;">
+                <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                <span>${profileRequired}</span>
+            </div>
+        </c:if>
 
         <div class="card">
             <div class="card-body p-4">
                 <form method="post" action="${pageContext.request.contextPath}/patient/profile" novalidate>
                     <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
-                    <input type="hidden" name="zaloUserId" value="${not empty patient ? patient.zaloUserId : ''}">
 
                     <div class="row g-4">
                         <%-- Thông tin cơ bản --%>
@@ -48,25 +54,33 @@
                         <div class="col-md-6">
                             <label for="fullName" class="form-label fw-semibold">Họ và tên <span class="text-danger">*</span></label>
                             <input type="text" id="fullName" name="fullName" class="form-control"
-                                   value="${not empty patient ? patient.fullName : user.fullName}"
+                                   value="${not empty formName ? formName : (not empty patient ? patient.fullName : user.fullName)}"
                                    placeholder="Nhập họ và tên đầy đủ" required>
                         </div>
 
                         <div class="col-md-6">
-                            <label for="phone" class="form-label fw-semibold">Số điện thoại</label>
+                            <label for="phone" class="form-label fw-semibold">Số điện thoại <span class="text-danger">*</span></label>
                             <div class="input-group">
                                 <span class="input-group-text bg-light"><i class="bi bi-phone"></i></span>
                                 <input type="tel" id="phone" name="phone" class="form-control"
-                                       value="${not empty patient ? patient.phone : user.phone}"
+                                       value="${not empty formPhone ? formPhone : (not empty patient ? patient.phone : user.phone)}"
                                        placeholder="0901234567">
                             </div>
                         </div>
 
                         <div class="col-md-6">
-                            <label for="dateOfBirth" class="form-label fw-semibold">Ngày sinh</label>
+                            <label for="dateOfBirth" class="form-label fw-semibold">Ngày sinh <span class="text-danger">*</span></label>
                             <input type="date" id="dateOfBirth" name="dateOfBirth" class="form-control"
-                                   value="${not empty patient.dateOfBirth ? patient.dateOfBirth : ''}"
+                                   value="${not empty formDob ? formDob : (not empty patient.dateOfBirth ? patient.dateOfBirth : '')}"
                                    max="${pageContext.request.servletContext.getAttribute('today')}">
+                        </div>
+
+                        <div class="col-12">
+                            <label for="address" class="form-label fw-semibold">Địa chỉ</label>
+                            <label for="address" class="form-label fw-semibold">Địa chỉ <span class="text-danger">*</span></label>
+                            <input type="text" id="address" name="address" class="form-control"
+                                   value="${not empty formAddress ? formAddress : (not empty patient.address ? patient.address : '')}"
+                                   placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành">
                         </div>
 
                         <%-- Thông tin tài khoản (chỉ đọc) --%>

@@ -224,6 +224,7 @@
                             <th>STT</th>
                             <th>Sản phụ</th>
                             <th>Bác sĩ lâm sàng</th>
+                            <th>Giờ khám</th>
                             <th>Tuổi thai</th>
                             <th>Dịch vụ</th>
                             <th>Triệu chứng</th>
@@ -260,16 +261,16 @@
                                 <td>
                                     <c:choose>
                                         <c:when test="${apt.doctor != null}">
-                                            BS. <c:out value="${apt.doctor.name}"/>
+                                            BS. <c:out value="${apt.doctor.fullName}"/>
                                         </c:when>
-                                        <c:otherwise>
-                                            -
-                                        </c:otherwise>
+                                        <c:otherwise>-</c:otherwise>
                                     </c:choose>
                                 </td>
 
+                                <td class="fw-medium"><c:out value="${apt.timeSlot}"/></td>
+
                                 <td class="fw-semibold text-primary">
-                                    <c:out value="${apt.gestationalAge != null ? apt.gestationalAge : 'Không xác định'}"/>
+                                    <c:out value="${apt.gestationalAge != null ? apt.gestationalAge : '—'}"/>
                                 </td>
 
                                 <td>

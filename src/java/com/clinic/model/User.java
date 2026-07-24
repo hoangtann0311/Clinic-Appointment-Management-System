@@ -52,11 +52,13 @@ public class User implements Serializable {
     }
 
     public String getFullName() {
-        return fullName;
+        // Không bao giờ trả về null để tránh JasperException trong JSP EL
+        // (fn:substring, ${sessionScope.user.fullName}, v.v.)
+        return fullName != null && !fullName.isBlank() ? fullName : "Người dùng";
     }
 
     public void setFullName(String fullName) {
-        this.fullName = fullName;
+        this.fullName = (fullName != null) ? fullName.trim() : null;
     }
 
     public String getEmail() {
