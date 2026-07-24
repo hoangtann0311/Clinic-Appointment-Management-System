@@ -80,7 +80,10 @@
             <span>${sessionScope.user.fullName}</span>
             <span class="admin-topbar-role"><i class="bi bi-briefcase-fill me-1"></i>Quản Lý</span>
         </div>
-        <a href="${pageContext.request.contextPath}/logout" class="admin-topbar-logout"><i class="bi bi-box-arrow-right"></i></a>
+        <a href="${pageContext.request.contextPath}/logout" class="admin-topbar-logout" title="Đăng xuất">
+            <i class="bi bi-box-arrow-right"></i>
+            <span class="d-none d-md-inline">Đăng xuất</span>
+        </a>
     </div>
 </nav>
 

@@ -88,7 +88,10 @@
             <span>${sessionScope.user.fullName}</span>
             <span class="admin-topbar-role"><i class="bi bi-briefcase-fill me-1"></i>Quản Lý</span>
         </div>
-        <a href="${pageContext.request.contextPath}/logout" class="admin-topbar-logout"><i class="bi bi-box-arrow-right"></i></a>
+        <a href="${pageContext.request.contextPath}/logout" class="admin-topbar-logout" title="Đăng xuất">
+            <i class="bi bi-box-arrow-right"></i>
+            <span class="d-none d-md-inline">Đăng xuất</span>
+        </a>
     </div>
 </nav>
 <%@ include file="../layout/sidebar.jsp" %>
@@ -336,24 +339,24 @@
                     <div class="form-section-title"><i class="bi bi-cash-coin me-1"></i>Giá &amp; Phân loại</div>
                     <div class="row g-3 mb-3">
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold small">Hàm lượng</label>
-                            <input type="text" name="dosage" id="addDosage" class="form-control form-control-sm" maxlength="100" placeholder="VD: 200mg" value="${fn:escapeXml(formData.dosage)}">
+                            <label class="form-label fw-semibold small">Hàm lượng <span class="text-danger">*</span></label>
+                            <input type="text" name="dosage" id="addDosage" class="form-control form-control-sm" maxlength="100" placeholder="VD: 200mg" value="${fn:escapeXml(formData.dosage)}" required>
                             <div class="invalid-feedback" id="errDosage"></div>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold small">Đơn vị tính</label>
-                            <input type="text" name="unit" id="addUnit" class="form-control form-control-sm" maxlength="50" placeholder="VD: Viên" value="${fn:escapeXml(formData.unit)}">
+                            <label class="form-label fw-semibold small">Đơn vị tính <span class="text-danger">*</span></label>
+                            <input type="text" name="unit" id="addUnit" class="form-control form-control-sm" maxlength="50" placeholder="VD: Viên" value="${fn:escapeXml(formData.unit)}" required>
                             <div class="invalid-feedback" id="errUnit"></div>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label fw-semibold small">Giá bán (VNĐ) <span class="text-danger">*</span></label>
-                            <div class="input-group input-group-sm"><span class="input-group-text fw-bold">₫</span><input type="number" name="price" id="addPrice" class="form-control" required min="1000" max="100000000" step="100" placeholder="VD: 3500" value="${fn:escapeXml(formData.price)}"></div>
+                            <div class="input-group input-group-sm"><span class="input-group-text fw-bold">₫</span><input type="text" name="price" id="addPrice" class="form-control" required maxlength="9" placeholder="VD: 3500" inputmode="numeric" pattern="[0-9]+" value="${fn:escapeXml(formData.price)}"></div>
                             <div class="invalid-feedback" id="errPrice"></div>
                             <c:if test="${not empty errors.price}"><div class="text-danger mt-1" style="font-size:0.72rem;">${errors.price}</div></c:if>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold small">Tồn kho</label>
-                            <input type="number" name="stockQuantity" id="addStock" class="form-control form-control-sm" min="0" max="999999" placeholder="VD: 200" value="${fn:escapeXml(formData.stockQuantity)}">
+                            <label class="form-label fw-semibold small">Tồn kho <span class="text-danger">*</span></label>
+                            <input type="text" name="stockQuantity" id="addStock" class="form-control form-control-sm" maxlength="7" placeholder="VD: 200" inputmode="numeric" pattern="[0-9]+" value="${fn:escapeXml(formData.stockQuantity)}" required>
                             <div class="invalid-feedback" id="errStock"></div>
                             <c:if test="${not empty errors.stockQuantity}"><div class="text-danger mt-1" style="font-size:0.72rem;">${errors.stockQuantity}</div></c:if>
                         </div>
@@ -432,44 +435,51 @@
                         <div class="col-md-8">
                             <label class="form-label fw-semibold small">Tên thuốc <span class="text-danger">*</span></label>
                             <input type="text" name="name" id="editName" class="form-control form-control-sm" required maxlength="150">
+                            <div class="invalid-feedback" id="errEditName"></div>
                             <c:if test="${not empty errors.name}"><div class="text-danger mt-1" style="font-size:0.72rem;">${errors.name}</div></c:if>
                         </div>
                         <div class="col-12">
                             <label class="form-label fw-semibold small">Mô tả / Chỉ định</label>
                             <textarea name="description" id="editDesc" class="form-control form-control-sm" rows="2" maxlength="500"></textarea>
+                            <div class="invalid-feedback" id="errEditDesc"></div>
                             <c:if test="${not empty errors.description}"><div class="text-danger mt-1" style="font-size:0.72rem;">${errors.description}</div></c:if>
                         </div>
                     </div>
                     <div class="form-section-title"><i class="bi bi-cash-coin me-1"></i>Giá &amp; Phân loại</div>
                     <div class="row g-3 mb-3">
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold small">Hàm lượng</label>
-                            <input type="text" name="dosage" id="editDosage" class="form-control form-control-sm" maxlength="100">
+                            <label class="form-label fw-semibold small">Hàm lượng <span class="text-danger">*</span></label>
+                            <input type="text" name="dosage" id="editDosage" class="form-control form-control-sm" maxlength="100" required>
+                            <div class="invalid-feedback" id="errEditDosage"></div>
                             <c:if test="${not empty errors.dosage}"><div class="text-danger mt-1" style="font-size:0.72rem;">${errors.dosage}</div></c:if>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold small">Đơn vị tính</label>
-                            <input type="text" name="unit" id="editUnit" class="form-control form-control-sm" maxlength="50">
+                            <label class="form-label fw-semibold small">Đơn vị tính <span class="text-danger">*</span></label>
+                            <input type="text" name="unit" id="editUnit" class="form-control form-control-sm" maxlength="50" required>
+                            <div class="invalid-feedback" id="errEditUnit"></div>
                             <c:if test="${not empty errors.unit}"><div class="text-danger mt-1" style="font-size:0.72rem;">${errors.unit}</div></c:if>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label fw-semibold small">Giá bán (VNĐ) <span class="text-danger">*</span></label>
-                            <div class="input-group input-group-sm"><span class="input-group-text fw-bold">₫</span><input type="number" name="price" id="editPrice" class="form-control" required min="1000" step="100"></div>
+                            <div class="input-group input-group-sm"><span class="input-group-text fw-bold">₫</span><input type="text" name="price" id="editPrice" class="form-control" required maxlength="9" placeholder="VD: 5000" inputmode="numeric" pattern="[0-9]+"></div>
+                            <div class="invalid-feedback" id="errEditPrice"></div>
                             <c:if test="${not empty errors.price}"><div class="text-danger mt-1" style="font-size:0.72rem;">${errors.price}</div></c:if>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold small">Tồn kho</label>
-                            <input type="number" name="stockQuantity" id="editStock" class="form-control form-control-sm" min="0">
+                            <label class="form-label fw-semibold small">Tồn kho <span class="text-danger">*</span></label>
+                            <input type="text" name="stockQuantity" id="editStock" class="form-control form-control-sm" maxlength="7" placeholder="VD: 200" inputmode="numeric" pattern="[0-9]+" required>
+                            <div class="invalid-feedback" id="errEditStock"></div>
                             <c:if test="${not empty errors.stockQuantity}"><div class="text-danger mt-1" style="font-size:0.72rem;">${errors.stockQuantity}</div></c:if>
                         </div>
                         <div class="col-md-5">
-                            <label class="form-label fw-semibold small">Nhóm thuốc</label>
-                            <select name="categoryId" id="editCategoryId" class="form-select form-select-sm">
+                            <label class="form-label fw-semibold small">Nhóm thuốc <span class="text-danger">*</span></label>
+                            <select name="categoryId" id="editCategoryId" class="form-select form-select-sm" required>
                                 <option value="">-- Chọn nhóm --</option>
                                 <c:forEach var="cat" items="${categories}">
                                     <option value="${cat.id}">${fn:escapeXml(cat.categoryName)}</option>
                                 </c:forEach>
                             </select>
+                            <div class="invalid-feedback" id="errEditCategoryId"></div>
                             <c:if test="${not empty errors.categoryId}"><div class="text-danger mt-1" style="font-size:0.72rem;">${errors.categoryId}</div></c:if>
                         </div>
                         <div class="col-md-3 d-flex align-items-end pb-1">
@@ -483,6 +493,7 @@
                         <div class="col-12">
                             <label class="form-label fw-semibold small">Lý do thay đổi giá <span class="text-muted">(nếu có)</span></label>
                             <input type="text" name="changeReason" id="editChangeReason" class="form-control form-control-sm" maxlength="500" placeholder="VD: Điều chỉnh theo giá nhập mới từ nhà cung cấp">
+                            <div class="invalid-feedback" id="errEditChangeReason"></div>
                         </div>
                     </div>
                 </div>
@@ -573,10 +584,11 @@ function validateAddPrice() {
     return true;
 }
 
-/** Validate Tồn kho */
+/** Validate Tồn kho — bắt buộc, số nguyên không âm */
 function validateAddStock() {
     var raw = document.getElementById('addStock').value.trim();
-    if (!raw) { clearFieldError('addStock'); return true; } // optional
+    if (!raw) { showFieldError('addStock', 'Tồn kho không được để trống.'); return false; }
+    if (!ONLY_DIGITS_REGEX.test(raw)) { showFieldError('addStock', 'Tồn kho phải là số nguyên không âm (VD: 200).'); return false; }
     var qty = parseInt(raw, 10);
     if (isNaN(qty)) { showFieldError('addStock', 'Tồn kho không hợp lệ. Vui lòng nhập số nguyên không âm (VD: 200).'); return false; }
     if (qty < 0) { showFieldError('addStock', 'Tồn kho không được là số âm.'); return false; }
@@ -595,22 +607,26 @@ function validateAddDescription() {
     return true;
 }
 
-/** Validate Hàm lượng */
+/** Validate Hàm lượng — bắt buộc, text (VD: 200mg, 500mg, 10ml) */
 function validateAddDosage() {
     var val = document.getElementById('addDosage').value.trim();
-    if (!val) { clearFieldError('addDosage'); return true; }
+    if (!val) { showFieldError('addDosage', 'Hàm lượng không được để trống.'); return false; }
     if (val.length > 100) { showFieldError('addDosage', 'Hàm lượng không được vượt quá 100 ký tự.'); return false; }
+    if (ONLY_DIGITS_REGEX.test(val)) { showFieldError('addDosage', 'Hàm lượng không được chỉ bao gồm chữ số. Vui lòng nhập kèm đơn vị (VD: 200mg).'); return false; }
+    if (ONLY_SPECIAL_REGEX.test(val)) { showFieldError('addDosage', 'Hàm lượng không được chỉ bao gồm ký tự đặc biệt.'); return false; }
+    if (val.length >= 5 && REPEATING_CHAR_REGEX.test(val)) { showFieldError('addDosage', 'Hàm lượng không hợp lệ — không được chỉ chứa ký tự lặp lại vô nghĩa.'); return false; }
     clearFieldError('addDosage');
     return true;
 }
 
-/** Validate Đơn vị tính */
+/** Validate Đơn vị tính — bắt buộc, text (VD: Viên, Chai, Vỉ, Ống) */
 function validateAddUnit() {
     var val = document.getElementById('addUnit').value.trim();
-    if (!val) { clearFieldError('addUnit'); return true; }
+    if (!val) { showFieldError('addUnit', 'Đơn vị tính không được để trống.'); return false; }
     if (val.length > 50) { showFieldError('addUnit', 'Đơn vị tính không được vượt quá 50 ký tự.'); return false; }
-    if (ONLY_DIGITS_REGEX.test(val)) { showFieldError('addUnit', 'Đơn vị tính không được chỉ bao gồm chữ số.'); return false; }
+    if (ONLY_DIGITS_REGEX.test(val)) { showFieldError('addUnit', 'Đơn vị tính không được chỉ bao gồm chữ số. Vui lòng nhập tên đơn vị (VD: Viên).'); return false; }
     if (ONLY_SPECIAL_REGEX.test(val)) { showFieldError('addUnit', 'Đơn vị tính không được chỉ bao gồm ký tự đặc biệt.'); return false; }
+    if (val.length >= 5 && REPEATING_CHAR_REGEX.test(val)) { showFieldError('addUnit', 'Đơn vị tính không hợp lệ — không được chỉ chứa ký tự lặp lại vô nghĩa.'); return false; }
     clearFieldError('addUnit');
     return true;
 }
@@ -677,6 +693,170 @@ function resetAddMedicineForm() {
 }
 
 // ═══════════════════════════════════════════════════════════
+//  Client-Side Validation — Chỉnh Sửa Thuốc
+// ═══════════════════════════════════════════════════════════
+
+/** Hiển thị lỗi cho field trong form Sửa (prefix: edit) */
+function showEditFieldError(fieldId, msg) {
+    var el = document.getElementById(fieldId);
+    var errId = 'errEdit' + fieldId.substring(4); // editXxx → errEditXxx
+    var fb = document.getElementById(errId);
+    if (el) { el.classList.add('is-invalid'); el.classList.remove('is-valid'); }
+    if (fb) { fb.textContent = msg; fb.style.display = 'block'; }
+}
+
+/** Xóa lỗi cho field trong form Sửa */
+function clearEditFieldError(fieldId) {
+    var el = document.getElementById(fieldId);
+    var errId = 'errEdit' + fieldId.substring(4);
+    var fb = document.getElementById(errId);
+    if (el) { el.classList.remove('is-invalid'); el.classList.add('is-valid'); }
+    if (fb) { fb.textContent = ''; fb.style.display = 'none'; }
+}
+
+/** Validate Tên thuốc — Sửa */
+function validateEditName() {
+    var val = document.getElementById('editName').value.trim();
+    if (!val) { showEditFieldError('editName', 'Tên thuốc không được để trống.'); return false; }
+    if (val.length < 2) { showEditFieldError('editName', 'Tên thuốc phải có ít nhất 2 ký tự.'); return false; }
+    if (val.length > 150) { showEditFieldError('editName', 'Tên thuốc không được vượt quá 150 ký tự.'); return false; }
+    if (ONLY_DIGITS_REGEX.test(val)) { showEditFieldError('editName', 'Tên thuốc không được chỉ bao gồm chữ số.'); return false; }
+    if (ONLY_SPECIAL_REGEX.test(val)) { showEditFieldError('editName', 'Tên thuốc không được chỉ bao gồm ký tự đặc biệt.'); return false; }
+    if (val.length >= 5 && REPEATING_CHAR_REGEX.test(val)) { showEditFieldError('editName', 'Tên thuốc không hợp lệ — không được chỉ chứa ký tự lặp lại vô nghĩa.'); return false; }
+    clearEditFieldError('editName');
+    return true;
+}
+
+/** Validate Mô tả — Sửa (optional) */
+function validateEditDesc() {
+    var val = document.getElementById('editDesc').value.trim();
+    if (!val) { clearEditFieldError('editDesc'); return true; }
+    if (val.length > 500) { showEditFieldError('editDesc', 'Mô tả không được vượt quá 500 ký tự.'); return false; }
+    if (val.length >= 5 && REPEATING_CHAR_REGEX.test(val)) { showEditFieldError('editDesc', 'Mô tả không hợp lệ — không được chỉ chứa ký tự lặp lại vô nghĩa.'); return false; }
+    clearEditFieldError('editDesc');
+    return true;
+}
+
+/** Validate Hàm lượng — Sửa (bắt buộc, VD: 200mg, 500mg, 10ml) */
+function validateEditDosage() {
+    var val = document.getElementById('editDosage').value.trim();
+    if (!val) { showEditFieldError('editDosage', 'Hàm lượng không được để trống.'); return false; }
+    if (val.length > 100) { showEditFieldError('editDosage', 'Hàm lượng không được vượt quá 100 ký tự.'); return false; }
+    if (ONLY_DIGITS_REGEX.test(val)) { showEditFieldError('editDosage', 'Hàm lượng không được chỉ bao gồm chữ số. Vui lòng nhập kèm đơn vị (VD: 200mg).'); return false; }
+    if (ONLY_SPECIAL_REGEX.test(val)) { showEditFieldError('editDosage', 'Hàm lượng không được chỉ bao gồm ký tự đặc biệt.'); return false; }
+    if (val.length >= 5 && REPEATING_CHAR_REGEX.test(val)) { showEditFieldError('editDosage', 'Hàm lượng không hợp lệ — không được chỉ chứa ký tự lặp lại vô nghĩa.'); return false; }
+    clearEditFieldError('editDosage');
+    return true;
+}
+
+/** Validate Đơn vị tính — Sửa (bắt buộc, VD: Viên, Chai, Vỉ, Ống) */
+function validateEditUnit() {
+    var val = document.getElementById('editUnit').value.trim();
+    if (!val) { showEditFieldError('editUnit', 'Đơn vị tính không được để trống.'); return false; }
+    if (val.length > 50) { showEditFieldError('editUnit', 'Đơn vị tính không được vượt quá 50 ký tự.'); return false; }
+    if (ONLY_DIGITS_REGEX.test(val)) { showEditFieldError('editUnit', 'Đơn vị tính không được chỉ bao gồm chữ số. Vui lòng nhập tên đơn vị (VD: Viên).'); return false; }
+    if (ONLY_SPECIAL_REGEX.test(val)) { showEditFieldError('editUnit', 'Đơn vị tính không được chỉ bao gồm ký tự đặc biệt.'); return false; }
+    if (val.length >= 5 && REPEATING_CHAR_REGEX.test(val)) { showEditFieldError('editUnit', 'Đơn vị tính không hợp lệ — không được chỉ chứa ký tự lặp lại vô nghĩa.'); return false; }
+    clearEditFieldError('editUnit');
+    return true;
+}
+
+/** Validate Giá bán — Sửa (số nguyên dương, bắt buộc, không thập phân) */
+function validateEditPrice() {
+    var raw = document.getElementById('editPrice').value.trim();
+    if (!raw) { showEditFieldError('editPrice', 'Giá bán không được để trống.'); return false; }
+    if (!ONLY_DIGITS_REGEX.test(raw)) { showEditFieldError('editPrice', 'Giá bán phải là số nguyên dương, không được chứa số thập phân hay ký tự khác.'); return false; }
+    var price = parseInt(raw, 10);
+    if (isNaN(price) || price <= 0) { showEditFieldError('editPrice', 'Giá bán không hợp lệ. Vui lòng chỉ nhập số nguyên dương (VD: 5000).'); return false; }
+    if (price < 1000) { showEditFieldError('editPrice', 'Giá bán phải lớn hơn hoặc bằng 1.000 VNĐ.'); return false; }
+    if (price > 100000000) { showEditFieldError('editPrice', 'Giá bán không được vượt quá 100.000.000 VNĐ.'); return false; }
+    if (price % 100 !== 0) { showEditFieldError('editPrice', 'Giá bán phải là bội số của 100 VNĐ (VD: 1000, 1500, 2000...).'); return false; }
+    clearEditFieldError('editPrice');
+    return true;
+}
+
+/** Validate Tồn kho — Sửa (bắt buộc, số nguyên không âm) */
+function validateEditStock() {
+    var raw = document.getElementById('editStock').value.trim();
+    if (!raw) { showEditFieldError('editStock', 'Tồn kho không được để trống.'); return false; }
+    if (!ONLY_DIGITS_REGEX.test(raw)) { showEditFieldError('editStock', 'Tồn kho phải là số nguyên không âm (VD: 200).'); return false; }
+    var qty = parseInt(raw, 10);
+    if (isNaN(qty)) { showEditFieldError('editStock', 'Tồn kho không hợp lệ. Vui lòng nhập số nguyên không âm (VD: 200).'); return false; }
+    if (qty < 0) { showEditFieldError('editStock', 'Tồn kho không được là số âm.'); return false; }
+    if (qty > 999999) { showEditFieldError('editStock', 'Tồn kho không được vượt quá 999.999.'); return false; }
+    clearEditFieldError('editStock');
+    return true;
+}
+
+/** Validate Nhóm thuốc — Sửa (bắt buộc chọn) */
+function validateEditCategoryId() {
+    var val = document.getElementById('editCategoryId').value;
+    if (!val || val === '') { showEditFieldError('editCategoryId', 'Vui lòng chọn nhóm thuốc.'); return false; }
+    clearEditFieldError('editCategoryId');
+    return true;
+}
+
+/** Validate Lý do thay đổi giá — Sửa (optional) */
+function validateEditChangeReason() {
+    var val = document.getElementById('editChangeReason').value.trim();
+    if (!val) { clearEditFieldError('editChangeReason'); return true; }
+    if (val.length > 500) { showEditFieldError('editChangeReason', 'Lý do không được vượt quá 500 ký tự.'); return false; }
+    if (val.length < 2) { showEditFieldError('editChangeReason', 'Lý do phải có ít nhất 2 ký tự nếu được điền.'); return false; }
+    if (ONLY_DIGITS_REGEX.test(val)) { showEditFieldError('editChangeReason', 'Lý do không được chỉ bao gồm chữ số.'); return false; }
+    if (ONLY_SPECIAL_REGEX.test(val)) { showEditFieldError('editChangeReason', 'Lý do không được chỉ bao gồm ký tự đặc biệt.'); return false; }
+    if (val.length >= 5 && REPEATING_CHAR_REGEX.test(val)) { showEditFieldError('editChangeReason', 'Lý do không hợp lệ — không được chỉ chứa ký tự lặp lại vô nghĩa.'); return false; }
+    clearEditFieldError('editChangeReason');
+    return true;
+}
+
+/** Validate toàn bộ form Sửa Thuốc */
+function validateEditMedicineForm() {
+    var valid = true;
+    if (!validateEditName()) valid = false;
+    if (!validateEditDesc()) valid = false;
+    if (!validateEditDosage()) valid = false;
+    if (!validateEditUnit()) valid = false;
+    if (!validateEditPrice()) valid = false;
+    if (!validateEditStock()) valid = false;
+    if (!validateEditCategoryId()) valid = false;
+    if (!validateEditChangeReason()) valid = false;
+    return valid;
+}
+
+// ── Gắn sự kiện validation cho form Sửa ──
+document.addEventListener('DOMContentLoaded', function() {
+    var editName = document.getElementById('editName');
+    var editDesc = document.getElementById('editDesc');
+    var editDosage = document.getElementById('editDosage');
+    var editUnit = document.getElementById('editUnit');
+    var editPrice = document.getElementById('editPrice');
+    var editStock = document.getElementById('editStock');
+    var editCat = document.getElementById('editCategoryId');
+    var editReason = document.getElementById('editChangeReason');
+
+    if (editName) editName.addEventListener('blur', validateEditName);
+    if (editDesc) editDesc.addEventListener('blur', validateEditDesc);
+    if (editDosage) editDosage.addEventListener('blur', validateEditDosage);
+    if (editUnit) editUnit.addEventListener('blur', validateEditUnit);
+    if (editPrice) editPrice.addEventListener('blur', validateEditPrice);
+    if (editStock) editStock.addEventListener('blur', validateEditStock);
+    if (editCat) editCat.addEventListener('change', validateEditCategoryId);
+    if (editReason) editReason.addEventListener('blur', validateEditChangeReason);
+
+    var editForm = document.getElementById('editMedicineForm');
+    if (editForm) {
+        editForm.addEventListener('submit', function(e) {
+            if (!validateEditMedicineForm()) {
+                e.preventDefault();
+                e.stopPropagation();
+                var firstError = editForm.querySelector('.is-invalid');
+                if (firstError) firstError.focus();
+            }
+        });
+    }
+});
+
+// ═══════════════════════════════════════════════════════════
 //  Xử lý click nút Sửa qua data-attributes (tránh lỗi escape)
 // ═══════════════════════════════════════════════════════════
 document.addEventListener('click', function(e) {
@@ -695,8 +875,11 @@ function openEditModal(id, code, name, desc, dosage, unit, price, stock, isActiv
     document.getElementById('editDesc').value = desc || '';
     document.getElementById('editDosage').value = dosage || '';
     document.getElementById('editUnit').value = unit || '';
-    document.getElementById('editPrice').value = price || '1000';
-    document.getElementById('editStock').value = stock || '0';
+    // Hiển thị giá dạng số nguyên, không có .00
+    var priceNum = parseInt(price, 10);
+    document.getElementById('editPrice').value = (!isNaN(priceNum) && priceNum > 0) ? priceNum : '1000';
+    var stockNum = parseInt(stock, 10);
+    document.getElementById('editStock').value = (!isNaN(stockNum) && stockNum >= 0) ? stockNum : '0';
     document.getElementById('editIsActive').checked = isActive === 'true';
     document.getElementById('editChangeReason').value = '';
     var catSelect = document.getElementById('editCategoryId');
@@ -704,6 +887,13 @@ function openEditModal(id, code, name, desc, dosage, unit, price, stock, isActiv
         for (var i = 0; i < catSelect.options.length; i++) {
             if (catSelect.options[i].value === catId) { catSelect.options[i].selected = true; break; }
         }
+    } else if (catSelect) {
+        catSelect.selectedIndex = 0;
+    }
+    // Xóa tất cả trạng thái validation cũ
+    var editFields = ['editName','editDesc','editDosage','editUnit','editPrice','editStock','editCategoryId','editChangeReason'];
+    for (var i = 0; i < editFields.length; i++) {
+        clearEditFieldError(editFields[i]);
     }
     new bootstrap.Modal(document.getElementById('editMedicineModal')).show();
 }
