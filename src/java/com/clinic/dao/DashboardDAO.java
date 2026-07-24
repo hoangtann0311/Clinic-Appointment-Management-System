@@ -137,6 +137,19 @@ public class DashboardDAO {
     public double sumRevenue(LocalDate from, LocalDate to) {
         return executeSum("SELECT ISNULL(SUM(i.total_amount), 0) AS total FROM invoices i INNER JOIN appointments a ON i.appointment_id = a.id WHERE a.appointment_date >= ? AND a.appointment_date <= ? AND UPPER(LTRIM(RTRIM(i.status))) = 'PAID'", from, to);
     }
+
+    /**
+     * Tổng doanh thu ngày hôm qua từ tất cả hóa đơn đã thanh toán
+     * (bao gồm cả dịch vụ và thuốc).
+     */
+    public double sumRevenueYesterday() {
+        String sql = "SELECT ISNULL(SUM(i.total_amount), 0) AS total FROM invoices i "
+                   + "INNER JOIN appointments a ON i.appointment_id = a.id "
+                   + "WHERE a.appointment_date = DATEADD(DAY, -1, CAST(GETDATE() AS DATE)) "
+                   + "AND UPPER(LTRIM(RTRIM(i.status))) = 'PAID'";
+        return executeSum(sql);
+    }
+
     public int countEmergencyToday() {
         return executeCount("SELECT COUNT(*) AS total FROM appointments WHERE appointment_date = CAST(GETDATE() AS DATE) AND ISNULL(is_emergency, 0) = 1");
     }
@@ -197,6 +210,43 @@ public class DashboardDAO {
             }
         } catch (SQLException e) {
             System.err.println("DashboardDAO: getAppointmentsChart failed - " + e.getMessage());
+        }
+        return result;
+    }
+
+    /**
+     * Doanh thu theo từng ngày trong khoảng [startDate, endDate] từ invoices.total_amount
+     * (bao gồm cả dịch vụ và thuốc).
+     * Trả về Map<ngày (dd/MM), doanh thu> — tất cả các ngày trong khoảng đều có entry (zero-fill).
+     */
+    public Map<String, Double> getDailyRevenue(LocalDate startDate, LocalDate endDate) {
+        Map<String, Double> result = new LinkedHashMap<>();
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM");
+        for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
+            result.put(date.format(fmt), 0.0);
+        }
+
+        String sql = "SELECT a.appointment_date, ISNULL(SUM(i.total_amount), 0) AS total "
+                   + "FROM invoices i "
+                   + "INNER JOIN appointments a ON i.appointment_id = a.id "
+                   + "WHERE UPPER(LTRIM(RTRIM(i.status))) = 'PAID' "
+                   + "AND a.appointment_date >= ? AND a.appointment_date <= ? "
+                   + "GROUP BY a.appointment_date "
+                   + "ORDER BY a.appointment_date";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setDate(1, java.sql.Date.valueOf(startDate));
+            ps.setDate(2, java.sql.Date.valueOf(endDate));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    java.sql.Date date = rs.getDate("appointment_date");
+                    if (date != null) {
+                        result.put(date.toLocalDate().format(fmt), rs.getDouble("total"));
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("DashboardDAO: getDailyRevenue failed - " + e.getMessage());
         }
         return result;
     }

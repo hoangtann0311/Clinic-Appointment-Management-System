@@ -96,14 +96,8 @@ public class EmailUtil {
      * Gửi email với nội dung HTML qua SMTP.
      */
     private static void sendEmail(String toEmail, String subject, String htmlContent) throws Exception {
-        // Sử dụng reflection để không crash nếu thiếu JAR
-        try {
-            sendEmailWithJakartaMail(toEmail, subject, htmlContent);
-        } catch (ClassNotFoundException e) {
-            throw new Exception("Thiếu thư viện Jakarta Mail. "
-                    + "Vui lòng thêm angus-mail-2.0.3.jar và angus-activation-2.0.2.jar "
-                    + "vào WEB-INF/lib/.", e);
-        }
+        System.out.println("[EmailUtil] sendEmail: gửi đến " + toEmail + ", subject: " + subject);
+        sendEmailWithJakartaMail(toEmail, subject, htmlContent);
     }
 
     /**
@@ -114,6 +108,10 @@ public class EmailUtil {
     private static void sendEmailWithJakartaMail(String toEmail, String subject, String htmlContent)
             throws Exception {
 
+        System.out.println("[EmailUtil] sendEmailWithJakartaMail: bắt đầu gửi đến " + toEmail);
+        System.out.println("[EmailUtil] SMTP: " + SMTP_HOST + ":" + SMTP_PORT
+                + " user=" + SMTP_USERNAME);
+
         // Tạo Properties cho SMTP
         Properties props = new Properties();
         props.put("mail.smtp.host", SMTP_HOST);
@@ -121,17 +119,21 @@ public class EmailUtil {
         props.put("mail.smtp.auth", "true");
         props.put("mail.smtp.starttls.enable", "true");
         props.put("mail.smtp.ssl.protocols", "TLSv1.2");
+        props.put("mail.smtp.connectiontimeout", "10000");
+        props.put("mail.smtp.timeout", "10000");
+        props.put("mail.smtp.writetimeout", "10000");
+        props.put("mail.debug", "true");  // In log SMTP ra console
 
         // Cache các class để dùng nhiều lần
         Class<?> sessionClass = Class.forName("jakarta.mail.Session");
-        Class<?> messageClass = Class.forName("jakarta.mail.Message");        // Interface cha của MimeMessage
+        Class<?> messageClass = Class.forName("jakarta.mail.Message");
         Class<?> mimeMessageClass = Class.forName("jakarta.mail.internet.MimeMessage");
         Class<?> internetAddressClass = Class.forName("jakarta.mail.internet.InternetAddress");
         Class<?> addressClass = Class.forName("jakarta.mail.Address");
         Class<?> messageRecipientsType = Class.forName("jakarta.mail.Message$RecipientType");
         Class<?> transportClass = Class.forName("jakarta.mail.Transport");
 
-        // Tạo Session (không cần Authenticator vì sẽ dùng Transport.connect)
+        // Tạo Session
         Object session = sessionClass
                 .getMethod("getInstance", Properties.class)
                 .invoke(null, props);
@@ -139,14 +141,12 @@ public class EmailUtil {
         // Tạo MimeMessage
         Object message = mimeMessageClass.getConstructor(sessionClass).newInstance(session);
 
-        // Set From: message.setFrom(new InternetAddress(FROM_EMAIL, FROM_NAME, "UTF-8"))
+        // Set From
         Object fromAddress = internetAddressClass.getConstructor(String.class, String.class, String.class)
                 .newInstance(FROM_EMAIL, FROM_NAME, "UTF-8");
-        mimeMessageClass.getMethod("setFrom", addressClass)
-                .invoke(message, fromAddress);
+        mimeMessageClass.getMethod("setFrom", addressClass).invoke(message, fromAddress);
 
-        // Set To: message.setRecipient(RecipientType.TO, new InternetAddress(toEmail))
-        // Dùng setRecipient (số ít, tham số Address đơn) — KHÔNG phải setRecipients (số nhiều, tham số Address[])
+        // Set To
         Object toAddress = internetAddressClass.getConstructor(String.class).newInstance(toEmail);
         Object toType = messageRecipientsType.getField("TO").get(null);
         mimeMessageClass.getMethod("setRecipient", messageRecipientsType, addressClass)
@@ -160,28 +160,25 @@ public class EmailUtil {
         mimeMessageClass.getMethod("setContent", Object.class, String.class)
                 .invoke(message, htmlContent, "text/html; charset=UTF-8");
 
-        // Gửi email với xác thực SMTP:
-        // Transport transport = session.getTransport("smtp");
-        // transport.connect(host, port, user, password);
-        // transport.sendMessage(message, message.getAllRecipients());
-        // transport.close();
+        // Gửi email với xác thực SMTP
+        System.out.println("[EmailUtil] Đang kết nối SMTP...");
         Object transport = sessionClass.getMethod("getTransport", String.class)
                 .invoke(session, "smtp");
 
         transportClass.getMethod("connect", String.class, int.class, String.class, String.class)
                 .invoke(transport, SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD);
+        System.out.println("[EmailUtil] Đã kết nối SMTP, đang gửi...");
 
         // Lấy danh sách người nhận
         Object allRecipients = mimeMessageClass.getMethod("getAllRecipients").invoke(message);
 
-        // sendMessage(Message, Address[]) - tham số đầu là jakarta.mail.Message (interface)
+        // sendMessage(Message, Address[])
         Class<?> addressArrayClass = java.lang.reflect.Array.newInstance(addressClass, 0).getClass();
         transportClass.getMethod("sendMessage", messageClass, addressArrayClass)
                 .invoke(transport, message, allRecipients);
 
         transportClass.getMethod("close").invoke(transport);
-
-        LOGGER.info("Email đã được gửi thành công đến " + toEmail);
+        System.out.println("[EmailUtil] Email đã gửi thành công đến " + toEmail);
     }
 
     /**
@@ -393,6 +390,290 @@ public class EmailUtil {
         System.out.println("  " + resetLink);
         System.out.println("================================================\n");
         LOGGER.info("Link đặt lại mật khẩu đã được in ra console cho: " + toEmail);
+    }
+
+    /**
+     * Gửi email thông báo tài khoản mới được tạo bởi Admin.
+     * Email chứa thông tin đăng nhập và mật khẩu.
+     *
+     * @param toEmail  email người nhận
+     * @param toName   tên người nhận
+     * @param password mật khẩu (plain text) được admin tạo
+     */
+    public static void sendNewAccountEmail(String toEmail, String toName, String password) {
+        String loginUrl = APP_BASE_URL + "/login?prompt=1";
+        String subject = "Tài Khoản Đã Được Tạo - Phòng Khám Sản";
+
+        String htmlContent = buildNewAccountEmailHtml(toName, toEmail, password, loginUrl);
+
+        new Thread(() -> {
+            try {
+                sendEmail(toEmail, subject, htmlContent);
+                LOGGER.info("Đã gửi email thông tin tài khoản mới đến: " + toEmail);
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Lỗi khi gửi email tài khoản mới đến " + toEmail, e);
+                fallbackToConsoleNewAccount(toEmail, toName, password);
+            }
+        }, "EmailSender-NewAccount-Thread").start();
+    }
+
+    /**
+     * Tạo nội dung HTML cho email thông báo tài khoản mới.
+     */
+    private static String buildNewAccountEmailHtml(String toName, String email, String password, String loginUrl) {
+        String template = """
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px;">
+    <table align="center" width="100%" cellpadding="0" cellspacing="0"
+           style="max-width: 600px; background: #ffffff; border-radius: 12px;
+                  box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden;">
+        <!-- Header -->
+        <tr>
+            <td style="background: linear-gradient(135deg, #d27b9f, #b86689);
+                       padding: 30px 20px; text-align: center;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 24px;">
+                    🏥 Phòng Khám Sản
+                </h1>
+                <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0; font-size: 14px;">
+                    Hệ Thống Quản Lý Lịch Hẹn Khám - CAMS
+                </p>
+            </td>
+        </tr>
+        <!-- Body -->
+        <tr>
+            <td style="padding: 30px 25px;">
+                <h2 style="color: #333; margin-top: 0;">Chào {{toName}},</h2>
+                <p style="color: #555; font-size: 15px; line-height: 1.6;">
+                    Quản trị viên đã tạo một tài khoản cho bạn trên hệ thống
+                    <strong>Phòng Khám Sản (CAMS)</strong>.
+                    Dưới đây là thông tin đăng nhập của bạn:
+                </p>
+
+                <!-- Bảng thông tin tài khoản -->
+                <table align="center" width="100%" cellpadding="10" cellspacing="0"
+                       style="background: #f8f9fa; border-radius: 8px; border: 1px solid #e0e0e0;
+                              margin: 20px 0;">
+                    <tr>
+                        <td style="color: #888; font-size: 13px; width: 100px; font-weight: bold;">
+                            📧 Email:
+                        </td>
+                        <td style="color: #333; font-size: 14px;">
+                            <strong>{{email}}</strong>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="color: #888; font-size: 13px; width: 100px; font-weight: bold;">
+                            🔑 Mật khẩu:
+                        </td>
+                        <td style="color: #333; font-size: 14px; font-family: 'Courier New', monospace;
+                                   letter-spacing: 1px;">
+                            <strong>{{password}}</strong>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- Nút đăng nhập -->
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{{loginUrl}}"
+                       style="display: inline-block; background: #b86689; color: #ffffff;
+                              text-decoration: none; padding: 14px 40px; border-radius: 6px;
+                              font-size: 16px; font-weight: bold;">
+                        🔗 Đăng Nhập Ngay
+                    </a>
+                </div>
+
+                <div style="background: #fff3cd; border-left: 4px solid #ffc107;
+                            padding: 12px 16px; border-radius: 4px; margin: 20px 0;">
+                    <p style="color: #856404; font-size: 13px; margin: 0; line-height: 1.6;">
+                        <strong>⚠️ Lưu ý quan trọng:</strong><br>
+                        • Vui lòng <strong>đổi mật khẩu</strong> ngay sau khi đăng nhập lần đầu.<br>
+                        • Không chia sẻ thông tin đăng nhập này với bất kỳ ai.<br>
+                        • Nếu bạn không mong đợi tài khoản này, vui lòng liên hệ quản trị viên.
+                    </p>
+                </div>
+
+                <hr style="border: none; border-top: 1px solid #eee; margin: 25px 0;">
+
+                <p style="color: #aaa; font-size: 12px; text-align: center;">
+                    © 2026 Phòng Khám Sản. Mọi quyền được bảo lưu.<br>
+                    Email này được gửi tự động, vui lòng không trả lời.
+                </p>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>""";
+
+        return template
+                .replace("{{toName}}", toName)
+                .replace("{{email}}", email)
+                .replace("{{password}}", password)
+                .replace("{{loginUrl}}", loginUrl);
+    }
+
+    /**
+     * Fallback: in thông tin tài khoản ra console khi không gửi được email.
+     */
+    private static void fallbackToConsoleNewAccount(String toEmail, String toName, String password) {
+        System.out.println("\n================================================");
+        System.out.println("  KHÔNG GỬI ĐƯỢC EMAIL - TÀI KHOẢN MỚI (DEV MODE)");
+        System.out.println("================================================");
+        System.out.println("  Người nhận: " + toName + " <" + toEmail + ">");
+        System.out.println("  Email: " + toEmail);
+        System.out.println("  Mật khẩu: " + password);
+        System.out.println("================================================\n");
+        LOGGER.info("Thông tin tài khoản mới đã được in ra console cho: " + toEmail);
+    }
+
+    /**
+     * Gửi email xác nhận đăng ký cho người dùng đăng nhập Google lần đầu.
+     * Họ cần click link trong email để xác nhận và kích hoạt tài khoản.
+     *
+     * @param toEmail email người nhận (Google email)
+     * @param toName  tên người nhận
+     * @param token   verification token
+     */
+    /**
+     * Gửi email xác nhận đăng ký Google một cách ĐỒNG BỘ (không thread).
+     * Ném exception ngay nếu gửi thất bại để caller xử lý.
+     *
+     * @param toEmail email người nhận
+     * @param toName  tên người nhận
+     * @param token   verification token
+     * @throws Exception nếu không gửi được email
+     */
+    public static void sendGoogleConfirmationSync(String toEmail, String toName, String token)
+            throws Exception {
+        String verificationLink = APP_BASE_URL + "/verify-email?token=" + token;
+        String subject = "Xác Nhận Đăng Ký Google - Phòng Khám Sản";
+        String htmlContent = buildGoogleRegistrationEmailHtml(toName, verificationLink);
+
+        System.out.println("[EmailUtil] Gửi đồng bộ email xác nhận Google đến: " + toEmail);
+        System.out.println("[EmailUtil] Verification link: " + verificationLink);
+        sendEmail(toEmail, subject, htmlContent);
+        System.out.println("[EmailUtil] ĐÃ GỬI THÀNH CÔNG email xác nhận Google đến: " + toEmail);
+    }
+
+    public static void sendGoogleRegistrationConfirmationEmail(String toEmail, String toName, String token) {
+        String verificationLink = APP_BASE_URL + "/verify-email?token=" + token;
+        String subject = "Xác Nhận Đăng Ký Google - Phòng Khám Sản";
+
+        String htmlContent = buildGoogleRegistrationEmailHtml(toName, verificationLink);
+
+        System.out.println("[EmailUtil] Bắt đầu gửi email xác nhận Google đến: " + toEmail);
+        System.out.println("[EmailUtil] Verification link: " + verificationLink);
+
+        new Thread(() -> {
+            try {
+                sendEmail(toEmail, subject, htmlContent);
+                System.out.println("[EmailUtil] ĐÃ GỬI THÀNH CÔNG email xác nhận Google đến: " + toEmail);
+                LOGGER.info("Đã gửi email xác nhận đăng ký Google đến: " + toEmail);
+            } catch (Exception e) {
+                System.err.println("[EmailUtil] LỖI khi gửi email xác nhận Google đến " + toEmail + ": " + e.getMessage());
+                e.printStackTrace(System.err);
+                LOGGER.log(Level.SEVERE, "Lỗi khi gửi email xác nhận Google đến " + toEmail, e);
+                fallbackToConsoleGoogleRegistration(toEmail, toName, verificationLink);
+            }
+        }, "EmailSender-GoogleRegistration-Thread").start();
+    }
+
+    /**
+     * Tạo nội dung HTML cho email xác nhận đăng ký Google.
+     */
+    private static String buildGoogleRegistrationEmailHtml(String toName, String verificationLink) {
+        String template = """
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px;">
+    <table align="center" width="100%" cellpadding="0" cellspacing="0"
+           style="max-width: 600px; background: #ffffff; border-radius: 12px;
+                  box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden;">
+        <!-- Header -->
+        <tr>
+            <td style="background: linear-gradient(135deg, #4285f4, #34a853);
+                       padding: 30px 20px; text-align: center;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 24px;">
+                    <span style="font-size:28px;">G</span> Google Sign-In
+                </h1>
+                <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0; font-size: 14px;">
+                    Phòng Khám Sản - Hệ Thống Quản Lý Lịch Hẹn Khám
+                </p>
+            </td>
+        </tr>
+        <!-- Body -->
+        <tr>
+            <td style="padding: 30px 25px;">
+                <h2 style="color: #333; margin-top: 0;">Chào {{toName}},</h2>
+                <p style="color: #555; font-size: 15px; line-height: 1.6;">
+                    Bạn vừa đăng nhập lần đầu bằng tài khoản <strong>Google</strong> tại
+                    <strong>Phòng Khám Sản (CAMS)</strong>.
+                    Vui lòng nhấn vào nút bên dưới để <strong>xác nhận và kích hoạt</strong> tài khoản:
+                </p>
+
+                <!-- Nút xác nhận -->
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{{verificationLink}}"
+                       style="display: inline-block; background: #4285f4; color: #ffffff;
+                              text-decoration: none; padding: 14px 40px; border-radius: 6px;
+                              font-size: 16px; font-weight: bold;">
+                        ✅ Xác Nhận Đăng Ký
+                    </a>
+                </div>
+
+                <p style="color: #888; font-size: 13px; line-height: 1.6;">
+                    Hoặc copy và dán link sau vào trình duyệt:<br>
+                    <a href="{{verificationLink}}"
+                       style="color: #4285f4; word-break: break-all; font-size: 12px;">
+                        {{verificationLink}}
+                    </a>
+                </p>
+
+                <div style="background: #e8f0fe; border-left: 4px solid #4285f4;
+                            padding: 12px 16px; border-radius: 4px; margin: 20px 0;">
+                    <p style="color: #174ea6; font-size: 13px; margin: 0; line-height: 1.6;">
+                        <strong>ℹ️ Lưu ý:</strong><br>
+                        • Sau khi xác nhận, bạn có thể đăng nhập bằng Google ngay lập tức.<br>
+                        • Link xác nhận này sẽ hết hạn sau <strong>24 giờ</strong>.<br>
+                        • Nếu bạn <strong>không</strong> thực hiện đăng nhập này, vui lòng bỏ qua email.
+                    </p>
+                </div>
+
+                <hr style="border: none; border-top: 1px solid #eee; margin: 25px 0;">
+
+                <p style="color: #aaa; font-size: 12px; text-align: center;">
+                    © 2026 Phòng Khám Sản. Mọi quyền được bảo lưu.<br>
+                    Email này được gửi tự động, vui lòng không trả lời.
+                </p>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>""";
+
+        return template
+                .replace("{{toName}}", toName)
+                .replace("{{verificationLink}}", verificationLink);
+    }
+
+    /**
+     * Fallback: in link xác nhận Google ra console khi không gửi được email.
+     */
+    private static void fallbackToConsoleGoogleRegistration(String toEmail, String toName, String verificationLink) {
+        System.out.println("\n================================================");
+        System.out.println("  KHÔNG GỬI ĐƯỢC EMAIL - XÁC NHẬN GOOGLE (DEV MODE)");
+        System.out.println("================================================");
+        System.out.println("  Người nhận: " + toName + " <" + toEmail + ">");
+        System.out.println("  Link xác nhận:");
+        System.out.println("  " + verificationLink);
+        System.out.println("================================================\n");
+        LOGGER.info("Link xác nhận Google đã được in ra console cho: " + toEmail);
     }
 
     /**

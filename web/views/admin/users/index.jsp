@@ -543,7 +543,7 @@
                                             <div class="btn-action-group">
                                                 <%-- Edit --%>
                                                 <button class="btn btn-sm btn-outline-secondary btn-action"
-                                                        onclick="openEditModal('${u.id}','${fn:escapeXml(u.fullName)}','${fn:escapeXml(u.email)}','${fn:escapeXml(u.phone)}','${u.roleId}','${fn:escapeXml(u.status)}')"
+                                                        onclick="openEditModal('${u.id}','${fn:escapeXml(u.fullName)}','${fn:escapeXml(u.email)}','${fn:escapeXml(u.phone)}','${u.roleId}','${fn:escapeXml(u.status)}','${not empty u.roleNameDisplay ? fn:escapeXml(u.roleNameDisplay) : fn:escapeXml(roleMap[u.roleId])}')"
                                                         title="Chỉnh sửa" data-bs-toggle="tooltip">
                                                     <i class="bi bi-pencil-square"></i>
                                                 </button>
@@ -700,7 +700,6 @@
                             <select name="status" class="form-select">
                                 <option value="Active" ${formStatus eq 'Active' ? 'selected' : ''}>Hoạt động</option>
                                 <option value="Inactive" ${formStatus eq 'Inactive' ? 'selected' : ''}>Ngừng hoạt động</option>
-                                <option value="Locked" ${formStatus eq 'Locked' ? 'selected' : ''}>Đã khoá</option>
                             </select>
                         </div>
                         <div class="col-12 doctor-fields" id="addDoctorFields" style="display: none;">
@@ -804,19 +803,15 @@
                                 <div class="invalid-feedback">${editErrors['phone']}</div>
                             </c:if>
                         </div>
-                        <%-- Phân quyền: cho phép chỉnh sửa --%>
+                        <%-- Vai trò: khoá, chỉ xem --%>
                         <div class="col-md-3">
                             <label class="form-label fw-semibold">
-                                <i class="bi bi-unlock-fill me-1" style="font-size:0.65rem;color:var(--pink-500);"></i>Vai trò
+                                <i class="bi bi-lock-fill me-1" style="font-size:0.65rem;color:var(--c-muted);"></i>Vai trò
                             </label>
                             <input type="hidden" name="roleId" id="editRoleId" value="${formEditRoleId}">
-                            <select id="editRoleIdDisplay" class="form-select" disabled
-                                    aria-describedby="editRoleHelp">
-                                <c:forEach var="entry" items="${roleMap}">
-                                    <option value="${entry.key}" ${not empty formEditRoleId ? (entry.key == formEditRoleId ? 'selected' : '') : ''}>${entry.value}</option>
-                                </c:forEach>
-                            </select>
-                            <div id="editRoleHelp" class="form-text">Không đổi vai trò của tài khoản đã có để bảo toàn hồ sơ nghiệp vụ.</div>
+                            <input type="text" id="editRoleIdDisplay" class="form-control"
+                                   readonly tabindex="-1"
+                                   style="background:#f5f5f5;color:#666;cursor:not-allowed;">
                             <c:if test="${not empty editErrors['roleId']}">
                                 <div class="invalid-feedback">${editErrors['roleId']}</div>
                             </c:if>
@@ -828,7 +823,6 @@
                             <select name="status" id="editStatus" class="form-select ${not empty editErrors['status'] ? 'is-invalid' : ''}">
                                 <option value="Active" ${formEditStatus eq 'Active' ? 'selected' : ''}>Hoạt động</option>
                                 <option value="Inactive" ${formEditStatus eq 'Inactive' ? 'selected' : ''}>Ngừng hoạt động</option>
-                                <option value="Locked" ${formEditStatus eq 'Locked' ? 'selected' : ''}>Đã khoá</option>
                             </select>
                             <c:if test="${not empty editErrors['status']}">
                                 <div class="invalid-feedback">${editErrors['status']}</div>
@@ -1021,13 +1015,13 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ── Edit modal helper ──
-function openEditModal(id, fullName, email, phone, roleId, status) {
+function openEditModal(id, fullName, email, phone, roleId, status, roleName) {
     document.getElementById('editUserId').value = id;
     document.getElementById('editFullName').value = fullName || '';
     document.getElementById('editEmail').value = email || '';
     document.getElementById('editPhone').value = phone || '';
     document.getElementById('editRoleId').value = roleId;
-    document.getElementById('editRoleIdDisplay').value = roleId;
+    document.getElementById('editRoleIdDisplay').value = roleName || '';
     document.getElementById('editStatus').value = status;
 
     toggleDoctorFields();

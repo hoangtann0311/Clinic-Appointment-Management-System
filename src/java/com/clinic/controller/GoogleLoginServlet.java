@@ -97,10 +97,13 @@ public class GoogleLoginServlet extends HttpServlet {
             response.getWriter().write("{\"success\":true,\"redirectUrl\":\"" + redirectUrl + "\"}");
 
         } catch (GoogleAuthException e) {
-            // Token không hợp lệ hoặc tài khoản bị khóa/vô hiệu hóa
-            System.err.println(">>> Google login failed: " + e.getMessage());
-            response.getWriter().write("{\"success\":false,\"error\":\""
-                    + escapeJson(e.getMessage()) + "\"}");
+            System.err.println(">>> Google login: " + e.getMessage());
+            // Nếu là pending verification → thông báo dạng info (không phải lỗi)
+            String msg = e.getMessage();
+            boolean isPending = (msg != null && msg.contains("xác nhận email"));
+            response.getWriter().write("{\"success\":false"
+                    + (isPending ? ",\"pendingVerification\":true" : "")
+                    + ",\"error\":\"" + escapeJson(msg) + "\"}");
         } catch (Exception e) {
             // Lỗi không mong đợi
             System.err.println(">>> Google login unexpected error: " + e.getMessage());
