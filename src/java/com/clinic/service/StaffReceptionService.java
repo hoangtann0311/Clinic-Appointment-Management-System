@@ -40,7 +40,7 @@ public class StaffReceptionService {
         return patientDAO.findPatientByPhone(phone);
     }
 
-    public Patient createPatient(String name, String phone, String dob, String zaloId) {
+    public Patient createPatient(String name, String phone, String dob) {
         LocalDate birthDate = dob == null || dob.isEmpty()
                 ? LocalDate.of(1995, 1, 1)
                 : LocalDate.parse(dob);
@@ -51,12 +51,7 @@ public class StaffReceptionService {
             throw new IllegalArgumentException("Ngày sinh sản phụ không được lớn hơn ngày hiện tại.");
         }
 
-        Patient newPatient = patientDAO.createPatient(
-                name,
-                phone,
-                birthDate,
-                zaloId != null && !zaloId.isEmpty() ? zaloId : "zalo_" + phone
-        );
+        Patient newPatient = patientDAO.createPatient(name, phone, birthDate);
 
         if (newPatient != null) {
             auditLogDAO.logAction(
@@ -162,7 +157,7 @@ public class StaffReceptionService {
         Patient patient = findPatientByPhone(phone);
 
         if (patient == null) {
-            patient = createPatient(name, phone, dob, "zalo_" + phone);
+            patient = createPatient(name, phone, dob);
         }
 
         if (patient == null) {
@@ -258,7 +253,7 @@ public class StaffReceptionService {
                     String.valueOf(appointment.getId())
             );
 
-            sendMockZaloMessage(
+            sendNotification(
                     patient,
                     "Lịch hẹn khám của bạn đã được tạo vào ngày " + appDateStr + ", khung giờ " + slot + "."
             );
@@ -283,11 +278,12 @@ public class StaffReceptionService {
                         String slot = appointment.getTimeSlot();
                         if (slot != null && !slot.trim().isEmpty()) {
                             try {
-                                String startTimeStr = slot.split(" - ")[0].trim();
-                                java.time.LocalTime startTime = java.time.LocalTime.parse(startTimeStr);
-                                java.time.LocalTime cutoffTime = startTime.plusMinutes(30);
-                                if (nowTime.isAfter(cutoffTime)) {
-                                    markNoShow = true;
+                                String startTimeStr = extractSlotStart(slot);
+                                if (startTimeStr != null) {
+                                    java.time.LocalTime startTime = java.time.LocalTime.parse(startTimeStr);
+                                    if (nowTime.isAfter(startTime.plusMinutes(30))) {
+                                        markNoShow = true;
+                                    }
                                 }
                             } catch (Exception e) {
                                 // Bỏ qua nếu lỗi định dạng time slot
@@ -475,10 +471,9 @@ public class StaffReceptionService {
         }
     }
 
-    // --- Simulated Zalo Server Webhook persisted to database ---
-    private void sendMockZaloMessage(Patient patient, String content) {
+    private void sendNotification(Patient patient, String content) {
         if (patient == null) return;
-        String sql = "INSERT INTO notifications (user_id, title, content, channel, is_read, created_at) VALUES (?, ?, ?, 'Zalo', 0, GETDATE())";
+        String sql = "INSERT INTO notifications (user_id, title, content, channel, is_read, created_at) VALUES (?, ?, ?, 'System', 0, GETDATE())";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             int userId = getUserIdForPatient(patient.getId());
@@ -512,9 +507,9 @@ public class StaffReceptionService {
         return 0;
     }
 
-    public List<Map<String, String>> getZaloNotifications() {
+    public List<Map<String, String>> getSystemNotifications() {
         List<Map<String, String>> list = new ArrayList<>();
-        String sql = "SELECT title, content, created_at FROM notifications WHERE channel = 'Zalo' ORDER BY id DESC";
+        String sql = "SELECT title, content, created_at FROM notifications WHERE channel = 'System' ORDER BY id DESC";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
@@ -524,7 +519,6 @@ public class StaffReceptionService {
                 map.put("time", ts != null ? ts.toString() : java.time.LocalDateTime.now().toString());
                 map.put("name", rs.getString("title"));
                 map.put("content", rs.getString("content"));
-                map.put("zaloId", "zalo_" + rs.getString("title"));
                 map.put("phone", "");
                 list.add(map);
             }
@@ -806,8 +800,41 @@ public class StaffReceptionService {
 
     public List<Appointment> getSmartQueueByDate(LocalDate date) {
         List<Appointment> result = new ArrayList<>();
+        java.time.LocalTime nowTime = java.time.LocalTime.now();
+        LocalDate today = LocalDate.now();
 
         for (Appointment appointment : appointmentDAO.getAllAppointments()) {
+            // Tự động chuyển NoShow cho lịch Confirmed quá hạn 30 phút
+            if ("Confirmed".equalsIgnoreCase(appointment.getStatus())
+                    && appointment.getAppointmentDate() != null
+                    && !appointment.getAppointmentDate().isAfter(today)) {
+                boolean markNoShow = false;
+                if (appointment.getAppointmentDate().isBefore(today)) {
+                    markNoShow = true;
+                } else if (appointment.getAppointmentDate().equals(today)) {
+                    String slot = appointment.getTimeSlot();
+                    if (slot != null && !slot.trim().isEmpty()) {
+                        try {
+                            String startTimeStr = extractSlotStart(slot);
+                            if (startTimeStr != null) {
+                                java.time.LocalTime startTime = java.time.LocalTime.parse(startTimeStr);
+                                if (nowTime.isAfter(startTime.plusMinutes(30))) {
+                                    markNoShow = true;
+                                }
+                            }
+                        } catch (Exception ignored) { }
+                    }
+                }
+                if (markNoShow) {
+                    appointment.setStatus("NoShow");
+                    appointmentDAO.updateStatus(appointment.getId(), "NoShow");
+                    auditLogDAO.logAction("Tự động chuyển NoShow (quá giờ khám 30 phút)",
+                            "System", "appointments", "Confirmed -> NoShow",
+                            String.valueOf(appointment.getId()));
+                    continue;
+                }
+            }
+
             if (!"Cancelled".equalsIgnoreCase(appointment.getStatus())
                     && !"NoShow".equalsIgnoreCase(appointment.getStatus())
                     && appointment.getAppointmentDate() != null
@@ -819,24 +846,23 @@ public class StaffReceptionService {
         result.sort((a1, a2) -> {
             int score1 = getStatusPriorityScore(a1.getStatus());
             int score2 = getStatusPriorityScore(a2.getStatus());
-
-            if (score1 != score2) {
-                return Integer.compare(score1, score2);
-            }
-
-            if (a1.isEmergency() != a2.isEmergency()) {
-                return a1.isEmergency() ? -1 : 1;
-            }
-
+            if (score1 != score2) return Integer.compare(score1, score2);
+            if (a1.isEmergency() != a2.isEmergency()) return a1.isEmergency() ? -1 : 1;
             return Integer.compare(a1.getId(), a2.getId());
         });
-
         return result;
+    }
+
+    /** Tách giờ bắt đầu từ time_slot, hỗ trợ cả "08:00-08:20" và "08:00 - 08:20" */
+    private String extractSlotStart(String slot) {
+        if (slot == null || slot.isBlank()) return null;
+        // Thử tách bằng " - " (có spaces) trước, rồi "-" (không spaces)
+        String[] parts = slot.contains(" - ") ? slot.split(" - ") : slot.split("-");
+        return parts.length > 0 ? parts[0].trim() : null;
     }
 
     public int getWidgetAppointmentsByDate(LocalDate date) {
         int count = 0;
-
         for (Appointment appointment : appointmentDAO.getAllAppointments()) {
             if (appointment.getAppointmentDate() != null
                     && appointment.getAppointmentDate().equals(date)
@@ -845,13 +871,11 @@ public class StaffReceptionService {
                 count++;
             }
         }
-
         return count;
     }
 
     public int getWidgetWaitingQueueByDate(LocalDate date) {
         int count = 0;
-
         for (Appointment appointment : appointmentDAO.getAllAppointments()) {
             if (appointment.getAppointmentDate() != null
                     && appointment.getAppointmentDate().equals(date)
@@ -859,8 +883,24 @@ public class StaffReceptionService {
                 count++;
             }
         }
-
         return count;
+    }
+
+    /** Đếm số bệnh nhân đang chờ/có lịch của mỗi bác sĩ trong hôm nay */
+    public Map<Integer, Integer> getDoctorWorkloadToday() {
+        Map<Integer, Integer> workload = new HashMap<>();
+        for (Appointment apt : appointmentDAO.getAllAppointments()) {
+            if (apt.getAppointmentDate() != null
+                    && apt.getAppointmentDate().equals(LocalDate.now())
+                    && apt.getDoctorId() > 0
+                    && !"Cancelled".equalsIgnoreCase(apt.getStatus())
+                    && !"NoShow".equalsIgnoreCase(apt.getStatus())
+                    && !"SUCCESS".equalsIgnoreCase(apt.getStatus())
+                    && !"Completed".equalsIgnoreCase(apt.getStatus())) {
+                workload.merge(apt.getDoctorId(), 1, Integer::sum);
+            }
+        }
+        return workload;
     }
 
     // --- Invoice & Payment Confirmation (UC16) ---
@@ -1004,7 +1044,7 @@ public class StaffReceptionService {
             content += "Lịch hẹn của bạn đã được xác nhận thành công.";
         }
 
-        sendMockZaloMessage(apt.getPatient(), content);
+        sendNotification(apt.getPatient(), content);
 
         int patientUserId = getUserIdForPatient(apt.getPatient().getId());
         if (patientUserId > 0) {

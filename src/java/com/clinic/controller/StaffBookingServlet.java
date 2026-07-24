@@ -40,6 +40,7 @@ public class StaffBookingServlet extends HttpServlet {
         req.setAttribute("doctors", staffReceptionService.getAllDoctors());
         req.setAttribute("services", staffReceptionService.getAllServices());
         req.setAttribute("today", currentDate.toString());
+        req.setAttribute("doctorWorkload", staffReceptionService.getDoctorWorkloadToday());
 
         req.getRequestDispatcher("/views/staff/reception-booking.jsp").forward(req, resp);
     }

@@ -39,7 +39,7 @@
     <div class="admin-topbar-right">
         <div class="topbar-date d-none d-lg-flex">
             <i class="bi bi-calendar3"></i>
-            <span>06 tháng 06, 2026</span>
+            <span>${not empty currentDisplayDate ? currentDisplayDate : 'Hôm nay'}</span>
         </div>
         <div class="admin-topbar-user d-none d-md-flex">
             <div class="admin-avatar-sm">

@@ -57,8 +57,14 @@ public class GoogleConfigListener implements ServletContextListener {
         System.out.println("==================================================");
 
         if (!GoogleConfig.isConfigured()) {
-            System.err.println(">>> CANH BAO: Google Sign-In chua duoc cau hinh.");
-            System.err.println(">>> Dat GOOGLE_CLIENT_ID hoac -Dgoogle.client.id trong cau hinh runtime.");
+            System.out.println(">>> CANH BAO: Google Sign-In chua duoc cau hinh.");
+            System.out.println(">>> Cach cau hinh (chon 1 trong cac cach sau):");
+            System.out.println(">>>   1. File cau hinh ngoai source (KHUYEN NGHI - an toan khi merge code):");
+            System.out.println(">>>      Them vao " + System.getProperty("user.home") + "\\.ocss\\config.properties:");
+            System.out.println(">>>        google.client.id=YOUR_CLIENT_ID.apps.googleusercontent.com");
+            System.out.println(">>>        google.client.secret=GOCSPX-YOUR_CLIENT_SECRET");
+            System.out.println(">>>   2. Bien moi truong: GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET");
+            System.out.println(">>>   3. JVM property: -Dgoogle.client.id=... -Dgoogle.client.secret=...");
         }
     }
 

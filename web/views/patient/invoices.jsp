@@ -23,13 +23,15 @@
 </div>
 
 <c:if test="${not empty purchaseSuccess}">
-    <div class="alert alert-success border-0 shadow-sm">
+    <div class="alert alert-success alert-dismissible fade show" data-cams-toast role="alert">
         <i class="bi bi-check-circle-fill me-2"></i><c:out value="${purchaseSuccess}"/>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 </c:if>
 <c:if test="${not empty purchaseError}">
-    <div class="alert alert-danger border-0 shadow-sm">
+    <div class="alert alert-danger alert-dismissible fade show" data-cams-toast role="alert">
         <i class="bi bi-exclamation-triangle-fill me-2"></i><c:out value="${purchaseError}"/>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 </c:if>
 

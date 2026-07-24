@@ -62,12 +62,12 @@
 </div>
 
 <c:if test="${not empty errors.general}">
-    <div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill me-2"></i>${errors.general}</div>
+    <div class="alert alert-danger alert-dismissible fade show" data-cams-toast role="alert"><i class="bi bi-exclamation-triangle-fill me-2"></i>${errors.general}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 </c:if>
-<c:if test="${not empty errors.slotId || not empty errors.serviceId}">
+<c:if test="${not empty errors.slotId}">
     <div class="alert alert-danger" data-cams-toast>
         <i class="bi bi-exclamation-triangle-fill me-2"></i>
-        <c:out value="${not empty errors.slotId ? errors.slotId : errors.serviceId}"/>
+        <c:out value="${errors.slotId}"/>
     </div>
 </c:if>
 
@@ -186,31 +186,10 @@
                     <c:if test="${empty rescheduleId}">
                         <ul class="list-unstyled small mb-3">
                             <li class="d-flex justify-content-between py-1 border-bottom">
-                                <span class="text-muted">Phí khám Bác sĩ lâm sàng</span>
-                                <strong id="summaryBasePrice">—</strong>
+                                <span class="text-muted">Phí khám lâm sàng</span>
+                                <strong id="summaryBasePrice" style="color:#d6336c;">—</strong>
                             </li>
                         </ul>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold small d-block">Dịch vụ khám <span class="text-danger">*</span></label>
-                            <c:forEach var="s" items="${services}">
-                                <div class="form-check">
-                                    <input class="form-check-input main-service-radio" type="radio"
-                                           name="serviceId" value="${s.id}" data-price="${s.price}" id="svc_${s.id}" required>
-                                    <label class="form-check-label small" for="svc_${s.id}">
-                                        ${s.serviceName} (<fmt:formatNumber value="${s.price}" pattern="#,###"/>đ)
-                                    </label>
-                                </div>
-                            </c:forEach>
-                            <div id="serviceSelectionError" class="text-danger small mt-1" ${empty errors.serviceId ? 'hidden' : ''}>
-                                <c:out value="${errors.serviceId}"/>
-                            </div>
-                        </div>
-
-                        <div class="d-flex justify-content-between align-items-center py-2 px-2 mb-3 rounded-3" style="background:#fff0f5;">
-                            <span class="fw-semibold small">Tổng tiền</span>
-                            <strong id="summaryTotalPrice" class="fs-5" style="color:#d6336c;">0đ</strong>
-                        </div>
 
                         <div class="mb-3">
                             <label class="form-label fw-semibold small">Triệu chứng <span class="text-danger">*</span></label>
@@ -242,6 +221,16 @@
                             </button>
                         </c:otherwise>
                     </c:choose>
+
+                    <div class="mt-3 p-3 rounded-3 small" style="background:#f8fafc;border:1px dashed #cbd5e1;line-height:1.6;">
+                        <i class="bi bi-info-circle me-1 text-primary"></i>
+                        <strong>Chính sách huỷ / đổi lịch:</strong>
+                        <ul class="mb-0 mt-1 ps-3">
+                            <li><strong>15 phút đầu</strong> sau khi đặt → có thể huỷ hoặc đổi ngay (nếu còn ≥&nbsp;2 tiếng trước giờ khám).</li>
+                            <li><strong>Sau 15 phút</strong> → vẫn huỷ/đổi được miễn là còn ≥&nbsp;2 tiếng trước giờ khám.</li>
+                            <li><strong>Còn dưới 2 tiếng</strong> trước giờ khám → không thể tự huỷ/đổi, vui lòng liên hệ lễ tân.</li>
+                        </ul>
+                    </div>
                 </form>
             </div>
         </div>
@@ -442,8 +431,6 @@
     }
 
     // ── Cập nhật tóm tắt bên phải khi chọn 1 khung giờ ──
-    let currentBasePrice = 0;
-
     function selectSlot(slotId, label, doctorName, date, basePrice) {
         document.getElementById('summaryEmpty').style.display = 'none';
         document.getElementById('bookingForm').style.display = 'block';
@@ -452,51 +439,14 @@
         document.getElementById('summaryDate').textContent = date;
         document.getElementById('summaryTime').textContent = label;
 
-        currentBasePrice = Number.isFinite(Number(basePrice)) ? Number(basePrice) : 0;
+        const fee = Number.isFinite(Number(basePrice)) ? Number(basePrice) : 0;
         const basePriceEl = document.getElementById('summaryBasePrice');
         if (basePriceEl) {
-            basePriceEl.textContent = currentBasePrice >= 0
-                ? new Intl.NumberFormat('vi-VN').format(currentBasePrice) + 'đ'
-                : 'Liên hệ';
+            basePriceEl.textContent = fee > 0
+                ? new Intl.NumberFormat('vi-VN').format(fee) + 'đ'
+                : 'Liên hệ phòng khám';
         }
-        updateTotalPrice();
     }
-
-    // ── Tính lại tổng tiền = phí khám Bác sĩ lâm sàng + một dịch vụ chính ──
-    function updateTotalPrice() {
-        const totalEl = document.getElementById('summaryTotalPrice');
-        if (!totalEl) return;
-        const selectedService = document.querySelector('.main-service-radio:checked');
-        const servicePrice = selectedService ? parseFloat(selectedService.dataset.price || 0) : 0;
-        const total = (currentBasePrice || 0) + servicePrice;
-        totalEl.textContent = new Intl.NumberFormat('vi-VN').format(total) + 'đ';
-    }
-
-    document.querySelectorAll('.main-service-radio').forEach(function (cb) {
-        cb.addEventListener('change', function () {
-            updateTotalPrice();
-            if (document.querySelector('.main-service-radio:checked')) {
-                const error = document.getElementById('serviceSelectionError');
-                if (error) error.hidden = true;
-            }
-        });
-    });
-
-    const bookingForm = document.getElementById('bookingForm');
-    if (bookingForm) bookingForm.addEventListener('submit', function (event) {
-        if (!document.querySelector('.main-service-radio:checked')) {
-            event.preventDefault();
-            const error = document.getElementById('serviceSelectionError');
-            if (error) {
-                error.textContent = 'Vui lòng chọn một dịch vụ khám.';
-                error.hidden = false;
-                error.scrollIntoView({block: 'center', behavior: 'smooth'});
-            }
-            if (window.CAMS && window.CAMS.notify) {
-                window.CAMS.notify('Vui lòng chọn ít nhất một dịch vụ khám.', 'warning');
-            }
-        }
-    });
 
     // ── Nếu đổi ngày sau khi đã mở 1 Bác sĩ lâm sàng -> tải lại slot cho ngày mới ──
     dateInput.addEventListener('change', function () {

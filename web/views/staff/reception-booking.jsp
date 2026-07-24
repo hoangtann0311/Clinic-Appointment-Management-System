@@ -175,7 +175,7 @@
                                    oninput="this.value = this.value.replace(/[0-9]/g, '');">
                         </div>
                         <div class="col-md-4 cams-form-group">
-                            <label class="cams-form-label">Ngày sinh sản phụ <span class="text-muted fw-normal">(nếu có)</span></label>
+                            <label class="cams-form-label">Ngày sinh <span class="text-muted fw-normal">(nếu có)</span></label>
                             <input type="date"
                                    name="dob"
                                    id="dob"
@@ -185,6 +185,12 @@
                                    onchange="validateDob()"
                                    oninput="validateDob()">
                             <small id="dobError" class="cams-field-error"></small>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-12 cams-form-group">
+                            <label class="cams-form-label">Địa chỉ <span class="text-muted fw-normal">(nếu có)</span></label>
+                            <input type="text" name="address" id="address" class="cams-form-input" placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành" value="${param.address}">
                         </div>
                     </div>
 
@@ -198,8 +204,9 @@
                                 <option value="" disabled ${empty param.doctorId ? 'selected' : ''}>-- Chọn Bác sĩ lâm sàng --</option>
 
                                 <c:forEach var="doc" items="${doctors}">
+                                    <c:set var="wl" value="${not empty doctorWorkload ? doctorWorkload[doc.id] : 0}"/>
                                     <option value="${doc.id}" ${param.doctorId == doc.id ? 'selected' : ''}>
-                                        <c:out value="${doc.name}"/> - <c:out value="${doc.specialization}"/>
+                                        <c:out value="${doc.fullName}"/> — <c:out value="${doc.specialization}"/> <c:if test="${wl > 0}">(🔴 ${wl} BN hôm nay)</c:if>
                                     </option>
                                 </c:forEach>
                             </select>

@@ -195,7 +195,7 @@ public class TimeSlot implements Serializable {
     }
 
     public String getDoctorName() {
-        return doctorName;
+        return doctorName != null ? doctorName : "";
     }
 
     public void setDoctorName(String doctorName) {

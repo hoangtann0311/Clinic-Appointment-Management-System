@@ -47,7 +47,7 @@ public final class DatabaseConfig {
             getSetting("DB_USER", "sa");
 
     private static final String DB_PASSWORD =
-            getSetting("DB_PASSWORD", "123");
+            getSetting("DB_PASSWORD", "sa");
 
     /**
      * Bốn URL đầu sử dụng Windows Authentication.
@@ -305,12 +305,16 @@ public final class DatabaseConfig {
             String method,
             SQLException exception
     ) {
-        System.err.println(
-                method
-                        + " thất bại. SQLState="
+        // Expected fallback — do NOT use System.err to avoid red-text alarm.
+        // The driver tries multiple auth methods; some failures are normal.
+        System.out.println(
+                "[INFO] "
+                        + method
+                        + " unavailable (SQLState="
                         + exception.getSQLState()
                         + ", errorCode="
                         + exception.getErrorCode()
+                        + ") — trying next connection method..."
         );
     }
 

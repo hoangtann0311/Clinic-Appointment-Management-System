@@ -416,6 +416,39 @@ public class PrescriptionDAO {
         }
     }
 
+    /** Batch: kiểm tra purchase resolved cho nhiều appointment một lần. */
+    public java.util.Map<Integer, Boolean> batchIsPurchaseResolved(java.util.List<Integer> apptIds) {
+        java.util.Map<Integer, Boolean> result = new java.util.HashMap<>();
+        if (apptIds == null || apptIds.isEmpty()) return result;
+        for (int id : apptIds) result.put(id, true);
+
+        StringBuilder ph = new StringBuilder();
+        for (int i = 0; i < apptIds.size(); i++) { if (i > 0) ph.append(","); ph.append("?"); }
+        String sql = "SELECT a.id, p.purchase_decision, "
+                + "CASE WHEN EXISTS (SELECT 1 FROM prescription_items pi WHERE pi.prescription_id = p.id) THEN 1 ELSE 0 END AS has_items, "
+                + "CASE WHEN EXISTS (SELECT 1 FROM invoices i WHERE i.appointment_id = a.id AND UPPER(i.invoice_type)='PRESCRIPTION' AND i.status='Paid') THEN 1 ELSE 0 END AS is_paid "
+                + "FROM appointments a LEFT JOIN medical_records mr ON mr.appointment_id = a.id "
+                + "LEFT JOIN prescriptions p ON p.medical_record_id = mr.id "
+                + "WHERE a.id IN (" + ph + ")";
+        try (java.sql.Connection conn = DatabaseConfig.getConnection();
+             java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            for (int i = 0; i < apptIds.size(); i++) ps.setInt(i + 1, apptIds.get(i));
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    int apptId = rs.getInt("id");
+                    String dec = rs.getString("purchase_decision");
+                    if (dec == null) { result.put(apptId, true); continue; }
+                    if (!rs.getBoolean("has_items")) { result.put(apptId, true); continue; }
+                    result.put(apptId, "Declined".equalsIgnoreCase(dec)
+                            || ("Accepted".equalsIgnoreCase(dec) && rs.getBoolean("is_paid")));
+                }
+            }
+        } catch (java.sql.SQLException e) {
+            System.err.println("[PrescriptionDAO] batchIsPurchaseResolved ERROR: " + e.getMessage());
+        }
+        return result;
+    }
+
     // ── Medicines lookup ─────────────────────────────────────────────────────
 
     /**

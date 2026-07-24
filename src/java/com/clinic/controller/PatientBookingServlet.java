@@ -2,7 +2,6 @@ package com.clinic.controller;
 
 import com.clinic.model.Appointment;
 import com.clinic.model.Doctor;
-import com.clinic.model.ServiceItem;
 import com.clinic.model.User;
 import com.clinic.service.PatientBookingService;
 
@@ -45,9 +44,7 @@ public class PatientBookingServlet extends HttpServlet {
         }
 
         List<Doctor> doctors = bookingService.getAllDoctors();
-        List<ServiceItem> services = bookingService.getAllServices();
         request.setAttribute("doctors", doctors);
-        request.setAttribute("services", services);
         request.setAttribute("today", LocalDate.now().toString());
 
         request.getRequestDispatcher("/views/patient/booking.jsp").forward(request, response);
@@ -63,7 +60,6 @@ public class PatientBookingServlet extends HttpServlet {
         if (user == null) return;
 
         String slotIdParam = request.getParameter("slotId");
-        String serviceIdParam = request.getParameter("serviceId");
         String symptoms = request.getParameter("symptoms");
         String lmp = request.getParameter("lastMenstrualPeriod");
         String rescheduleIdParam = request.getParameter("rescheduleId");
@@ -71,12 +67,8 @@ public class PatientBookingServlet extends HttpServlet {
         boolean isReschedule = (rescheduleIdParam != null && !rescheduleIdParam.trim().isEmpty());
         Map<String, String> errors = new HashMap<>();
         int slotId = 0;
-        int serviceId = 0;
         try {
             slotId = Integer.parseInt(slotIdParam);
-            if (!isReschedule && serviceIdParam != null) {
-                serviceId = Integer.parseInt(serviceIdParam);
-            }
         } catch (Exception e) {
             errors.put("general", isReschedule ? "Vui lòng chọn khung giờ hợp lệ." : "Vui lòng chọn khung giờ hợp lệ.");
         }
@@ -97,8 +89,10 @@ public class PatientBookingServlet extends HttpServlet {
                     errors.put("general", "Mã lịch hẹn cần đổi không hợp lệ.");
                 }
             } else {
+                // serviceId = 0: bệnh nhân không chọn dịch vụ khi đặt lịch.
+                // Dịch vụ cụ thể (siêu âm, xét nghiệm...) do bác sĩ chỉ định sau khi khám.
                 appointment = bookingService.bookAppointment(
-                        user.getId(), slotId, serviceId, symptoms, lmp, errors
+                        user.getId(), slotId, 0, symptoms, lmp, errors
                 );
                 if (appointment != null) {
                     response.sendRedirect(request.getContextPath()
@@ -114,7 +108,6 @@ public class PatientBookingServlet extends HttpServlet {
             request.setAttribute("rescheduleId", rescheduleIdParam);
         }
         request.setAttribute("doctors", bookingService.getAllDoctors());
-        request.setAttribute("services", bookingService.getAllServices());
         request.setAttribute("today", LocalDate.now().toString());
         request.getRequestDispatcher("/views/patient/booking.jsp").forward(request, response);
     }

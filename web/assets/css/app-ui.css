@@ -37,35 +37,36 @@
     z-index: 2000;
     display: flex;
     flex-direction: column;
-    gap: .75rem;
-    width: min(24rem, calc(100vw - 2rem));
+    gap: .5rem;
+    width: min(22rem, calc(100vw - 2rem));
     pointer-events: none;
 }
 
 .cams-toast {
+    position: relative;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: start;
-    gap: .7rem;
-    padding: .9rem 1rem;
-    border: 1px solid #dbe4f0;
-    border-left: 4px solid var(--brand-primary);
-    border-radius: .75rem;
+    gap: .6rem;
+    padding: .75rem .9rem .75rem .9rem;
+    border: 1px solid #e2e8f0;
+    border-radius: .65rem;
     background: #fff;
-    box-shadow: var(--cams-toast-shadow);
+    box-shadow: 0 8px 28px rgba(15,23,42,.12), 0 2px 6px rgba(15,23,42,.06);
     color: #172033;
-    font-size: .9rem;
-    line-height: 1.45;
+    font-size: .875rem;
+    line-height: 1.4;
     pointer-events: auto;
-    animation: cams-toast-enter .2s ease-out both;
+    overflow: hidden;
+    animation: cams-toast-enter .3s cubic-bezier(.16,1,.3,1) both;
 }
 
-.cams-toast--success { border-left-color: #15803d; }
-.cams-toast--danger  { border-left-color: #dc2626; }
-.cams-toast--warning { border-left-color: #d97706; }
-.cams-toast--info    { border-left-color: var(--brand-primary); }
+.cams-toast--success { border-top: 3px solid #15803d; }
+.cams-toast--danger  { border-top: 3px solid #dc2626; }
+.cams-toast--warning { border-top: 3px solid #d97706; }
+.cams-toast--info    { border-top: 3px solid var(--brand-primary); }
 
-.cams-toast__icon { font-size: 1.05rem; line-height: 1.3; }
+.cams-toast__icon { font-size: 1rem; line-height: 1.3; }
 .cams-toast--success .cams-toast__icon { color: #15803d; }
 .cams-toast--danger .cams-toast__icon  { color: #dc2626; }
 .cams-toast--warning .cams-toast__icon { color: #d97706; }
@@ -74,11 +75,28 @@
 .cams-toast__close {
     border: 0;
     background: transparent;
-    color: #64748b;
+    color: #94a3b8;
     line-height: 1;
     padding: .1rem;
+    cursor: pointer;
+    transition: color .15s;
 }
-.cams-toast.is-leaving { animation: cams-toast-leave .28s ease-in both; }
+.cams-toast__close:hover { color: #475569; }
+
+.cams-toast__progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    border-radius: 0 0 0 .65rem;
+    transition: width .15s linear;
+}
+.cams-toast--success .cams-toast__progress { background: #15803d; }
+.cams-toast--danger  .cams-toast__progress { background: #dc2626; }
+.cams-toast--warning .cams-toast__progress { background: #d97706; }
+.cams-toast--info    .cams-toast__progress { background: var(--brand-primary); }
+
+.cams-toast.is-leaving { animation: cams-toast-leave .25s ease-in both; }
 
 .cams-form-pending {
     position: relative;
@@ -133,11 +151,11 @@
 }
 
 @keyframes cams-toast-enter {
-    from { opacity: 0; transform: translateY(-.65rem) translateX(.4rem); }
-    to   { opacity: 1; transform: translateY(0) translateX(0); }
+    from { opacity: 0; transform: translateX(2.5rem); }
+    to   { opacity: 1; transform: translateX(0); }
 }
 @keyframes cams-toast-leave {
-    to { opacity: 0; transform: translateY(-.35rem); }
+    to { opacity: 0; transform: translateX(2rem) scale(.92); }
 }
 @keyframes cams-spin { to { transform: rotate(360deg); } }
 

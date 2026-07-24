@@ -37,7 +37,7 @@ import java.util.Map;
  *       khi duyệt), nên Patient chỉ có thể chọn slot AVAILABLE — không cần
  *       kiểm tra lại điều kiện duyệt ở đây.</li>
  *   <li>Patient không được chọn thời gian trong quá khứ.</li>
- *   <li>Patient chỉ được huỷ lịch trước giờ khám tối thiểu 2 giờ.</li>
+ *   <li>Patient chỉ được huỷ lịch trước giờ khám tối thiểu 30 phút.</li>
  * </ul>
  *
  * <p><strong>Lưu ý về ID:</strong> {@code time_slots.booked_by} tham chiếu
@@ -135,7 +135,6 @@ public class PatientBookingService {
                         currentUser.getFullName(),
                         currentUser.getPhone(),
                         null,
-                        "zalo_" + currentUser.getPhone(),
                         userId
                 );
                 if (created != null) {
@@ -148,13 +147,16 @@ public class PatientBookingService {
             return null;
         }
 
-        // 2. Mỗi lịch hẹn chỉ có một dịch vụ chính.
-        if (serviceId <= 0) {
-            errors.put("serviceId", "Vui lòng chọn một dịch vụ khám.");
-            return null;
+        // 2. Dịch vụ khám (serviceId) — không bắt buộc khi đặt lịch.
+        // Bệnh nhân chỉ đặt lịch khám với bác sĩ; các dịch vụ cụ thể
+        // (siêu âm, xét nghiệm...) do bác sĩ chỉ định sau khi khám lâm sàng.
+        // serviceId = 0 → dùng dịch vụ mặc định "Khám lâm sàng".
+        int actualServiceId = serviceId;
+        if (actualServiceId <= 0) {
+            actualServiceId = serviceDAO.getDefaultExaminationServiceId();
         }
-        if (serviceDAO.findServiceById(serviceId) == null) {
-            errors.put("serviceId", "Dịch vụ khám không tồn tại, vui lòng chọn lại.");
+        if (serviceDAO.findServiceById(actualServiceId) == null) {
+            errors.put("general", "Hệ thống chưa cấu hình dịch vụ khám mặc định. Vui lòng liên hệ quản trị viên.");
             return null;
         }
 
@@ -216,17 +218,24 @@ public class PatientBookingService {
         // 8. Thực hiện đặt slot và tạo appointment trong cùng một transaction
         String gestationalAge = AppointmentDAO.calculateGestationalAge(lmp, workDate);
         boolean success = appointmentDAO.bookSlotAndCreateAppointment(
-                userId, patientId, slotId, serviceId, basePrice, symptoms.trim(), lmp, gestationalAge, errors
+                userId, patientId, slotId, actualServiceId, basePrice, symptoms.trim(), lmp, gestationalAge, errors
         );
 
         if (!success) {
             return null;
         }
 
-        // Truy vấn lịch hẹn vừa tạo để trả về đối tượng đầy đủ
+        // Truy vấn lịch hẹn vừa tạo để trả về đối tượng đầy đủ.
+        // QUAN TRỌNG: loại trừ appointment đã Cancelled — nếu bệnh nhân
+        // hủy rồi rebook cùng slot, appointment cũ (Cancelled) vẫn có
+        // cùng slot_id, gây trả nhầm ID → invoice cũ Cancelled → lỗi
+        // "Hóa đơn này thuộc dữ liệu trạng thái cũ".
         List<Appointment> appts = appointmentDAO.getByPatientId(patientId);
         for (Appointment a : appts) {
-            if (a.getSlotId() != null && a.getSlotId() == slotId) {
+            if (a.getSlotId() != null && a.getSlotId() == slotId
+                    && a.getStatus() != null
+                    && !"Cancelled".equalsIgnoreCase(a.getStatus())
+                    && !"NoShow".equalsIgnoreCase(a.getStatus())) {
                 return a;
             }
         }
@@ -244,7 +253,6 @@ public class PatientBookingService {
                         currentUser.getFullName(),
                         currentUser.getPhone(),
                         null,
-                        "zalo_" + currentUser.getPhone(),
                         userId
                 );
                 if (created != null) {
@@ -258,8 +266,14 @@ public class PatientBookingService {
 
     /**
      * Huỷ lịch hẹn của bệnh nhân đang đăng nhập.
-     * BR: chỉ huỷ được khi còn cách giờ khám tối thiểu 2 giờ, và lịch đang
-     * ở trạng thái Pending hoặc Confirmed.
+     *
+     * <p>Quy tắc thời gian (theo thực tế phòng khám):
+     * <ol>
+     *   <li><b>Grace period 15 phút:</b> trong vòng 15 phút sau khi đặt lịch,
+     *       được phép huỷ ngay (phòng trường hợp đặt nhầm).</li>
+     *   <li><b>Trước giờ khám 2 tiếng:</b> nếu ngoài grace period, phải huỷ
+     *       trước giờ khám ít nhất 2 tiếng để phòng khám kịp xếp bệnh nhân khác.</li>
+     * </ol>
      */
     public boolean cancelAppointment(int userId, int appointmentId, Map<String, String> errors) {
         int patientId = patientDAO.getPatientIdByUserId(userId);
@@ -286,26 +300,17 @@ public class PatientBookingService {
         }
 
         // A collected PRE_EXAM payment must never disappear behind a normal
-        // patient cancellation.  The current system has no refund approval
-        // workflow, therefore leave the receipt and slot untouched and direct
-        // the patient to reception for a traceable refund decision.
+        // patient cancellation.
         if (appointmentDAO.isPreExamPaid(appointmentId)) {
             errors.put("general", "Lịch hẹn đã thanh toán. Vui lòng liên hệ lễ tân để được hỗ trợ hủy và hoàn tiền theo quy trình.");
             return false;
         }
 
-        // BR: chỉ huỷ trước giờ khám tối thiểu 2 giờ
-        if (appt.getTimeSlot() != null && appt.getTimeSlot().contains("-")) {
-            try {
-                LocalTime time = LocalTime.parse(appt.getTimeSlot().split("-")[0].trim());
-                LocalDateTime apptDateTime = LocalDateTime.of(appt.getAppointmentDate(), time);
-                if (apptDateTime.isBefore(LocalDateTime.now().plusHours(2))) {
-                    errors.put("general", "Chỉ được huỷ lịch hẹn trước giờ khám tối thiểu 2 giờ.");
-                    return false;
-                }
-            } catch (Exception ignored) {
-                // Không parse được giờ (VD ca đặc biệt) — vẫn cho phép huỷ theo trạng thái
-            }
+        // ── Time-based cancel policy ──
+        String timeError = validateCancelOrRescheduleTime(appt, userId);
+        if (timeError != null) {
+            errors.put("general", timeError);
+            return false;
         }
 
         boolean success = appointmentDAO.cancelAppointmentAndReleaseSlot(appointmentId, userId, "Bệnh nhân huỷ lịch hẹn");
@@ -319,6 +324,9 @@ public class PatientBookingService {
     /**
      * Đổi lịch khám (reschedule) của bệnh nhân.
      * Giải phóng slot cũ và đặt slot mới.
+     *
+     * <p>Quy tắc thời gian: giống như huỷ lịch —
+     * xem {@link #validateCancelOrRescheduleTime(Appointment, int)}.
      */
     public boolean rescheduleAppointment(int userId, int appointmentId, int newSlotId, Map<String, String> errors) {
         int patientId = patientDAO.getPatientIdByUserId(userId);
@@ -343,17 +351,11 @@ public class PatientBookingService {
             return false;
         }
 
-        // BR: chỉ đổi trước giờ khám tối thiểu 2 giờ
-        if (appt.getTimeSlot() != null && appt.getTimeSlot().contains("-")) {
-            try {
-                LocalTime time = LocalTime.parse(appt.getTimeSlot().split("-")[0].trim());
-                LocalDateTime apptDateTime = LocalDateTime.of(appt.getAppointmentDate(), time);
-                if (apptDateTime.isBefore(LocalDateTime.now().plusHours(2))) {
-                    errors.put("general", "Chỉ được đổi lịch hẹn trước giờ khám tối thiểu 2 giờ.");
-                    return false;
-                }
-            } catch (Exception ignored) {
-            }
+        // ── Time-based reschedule policy (giống cancel) ──
+        String timeError = validateCancelOrRescheduleTime(appt, userId);
+        if (timeError != null) {
+            errors.put("general", timeError);
+            return false;
         }
 
         // Kiểm tra slot mới tồn tại và hợp lệ
@@ -400,5 +402,63 @@ public class PatientBookingService {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Kiểm tra thời gian huỷ/đổi lịch có hợp lệ không.
+     *
+     * <p>Chính sách thời gian (theo thực tế phòng khám sản phụ khoa):
+     * <ol>
+     *   <li><b>Luôn phải trước giờ khám ≥ 2 tiếng:</b> đây là nguyên tắc cứng —
+     *       phòng khám cần ít nhất 2 tiếng để xếp bệnh nhân khác vào slot trống.
+     *       Nếu còn dưới 2 tiếng là đến giờ khám → KHÔNG được huỷ/đổi (kể cả
+     *       vừa đặt xong), phải liên hệ lễ tân.</li>
+     *   <li><b>Grace period 15 phút sau khi đặt:</b> trong vòng 15 phút sau khi
+     *       đặt lịch VÀ lịch vẫn còn cách ≥ 2 tiếng → cho phép huỷ/đổi ngay
+     *       (đặt nhầm bác sĩ, nhầm giờ…).</li>
+     * </ol>
+     *
+     * @return thông báo lỗi nếu KHÔNG được phép, hoặc {@code null} nếu hợp lệ
+     */
+    private String validateCancelOrRescheduleTime(Appointment appt, int userId) {
+        // 1. Tính thời gian còn lại đến giờ khám
+        java.time.LocalDateTime apptDateTime = null;
+        if (appt.getTimeSlot() != null && appt.getTimeSlot().contains("-")) {
+            try {
+                java.time.LocalTime time = java.time.LocalTime.parse(
+                        appt.getTimeSlot().split("-")[0].trim());
+                apptDateTime = java.time.LocalDateTime.of(
+                        appt.getAppointmentDate(), time);
+            } catch (Exception ignored) {
+                // Không parse được giờ — vẫn cho phép
+                return null;
+            }
+        }
+
+        // 2. Nguyên tắc cứng: phải còn ≥ 2 tiếng trước giờ khám.
+        //    Nếu slot sắp đến giờ (dưới 2 tiếng), không ai được huỷ/đổi —
+        //    kể cả vừa đặt xong, vì phòng khám không kịp lấp slot.
+        if (apptDateTime != null
+                && apptDateTime.isBefore(java.time.LocalDateTime.now().plusHours(2))) {
+            return "Chỉ được huỷ/đổi lịch trước giờ khám tối thiểu 2 tiếng. "
+                    + "Nếu cần gấp, vui lòng liên hệ lễ tân.";
+        }
+
+        // 3. Grace period 15 phút: nếu vừa đặt trong 15 phút và lịch còn ≥ 2 tiếng
+        //    → cho phép huỷ/đổi ngay (đặt nhầm).
+        Integer slotId = appointmentDAO.getSlotIdByAppointmentId(appt.getId());
+        if (slotId != null) {
+            TimeSlot slot = timeSlotDAO.findById(slotId);
+            if (slot != null && slot.getBookedAt() != null) {
+                java.time.LocalDateTime bookedAt = slot.getBookedAt()
+                        .toLocalDateTime();
+                if (bookedAt.isAfter(java.time.LocalDateTime.now().minusMinutes(15))) {
+                    return null;
+                }
+            }
+        }
+
+        // 4. Đã quá grace period nhưng còn ≥ 2 tiếng → vẫn cho phép
+        return null;
     }
 }
