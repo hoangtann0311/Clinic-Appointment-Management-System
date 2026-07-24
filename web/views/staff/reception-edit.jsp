@@ -69,7 +69,7 @@
             </div>
             <div class="admin-sidebar-name">${sessionScope.user.fullName}</div>
             <span class="admin-sidebar-badge">
-                <i class="bi bi-shield-check"></i>LỄ TÂN / CALL CENTER
+                <i class="bi bi-shield-check"></i>LỄ TÂN
             </span>
         </div>
 

@@ -58,14 +58,13 @@ public class StaffBookingServlet extends HttpServlet {
         String phone = req.getParameter("phone");
         String dob = req.getParameter("dob");
         String doctorId = req.getParameter("doctorId");
-        String serviceId = req.getParameter("serviceId");
         String appDate = req.getParameter("appointmentDate");
         String timeSlot = req.getParameter("timeSlot");
         String symptoms = req.getParameter("symptoms");
         String lmp = req.getParameter("lastMenstrualPeriod");
         try {
             Appointment appt = staffReceptionService.createManualBooking(
-                    name, phone, dob, doctorId, serviceId, appDate, timeSlot, symptoms, lmp, false
+                    name, phone, dob, doctorId, null, appDate, timeSlot, symptoms, lmp, false
             );
 
             // Thông báo cho bác sĩ về lịch hẹn mới
@@ -81,9 +80,13 @@ public class StaffBookingServlet extends HttpServlet {
                 }
             } catch (Exception ignored) {}
 
+            req.getSession().setAttribute("queueSuccess",
+                    "Đã đặt lịch thành công cho " + (appt != null && appt.getPatientName() != null ? appt.getPatientName() : name)
+                    + " — " + timeSlot);
             resp.sendRedirect(req.getContextPath() + "/admin/reception");
 
         } catch (IllegalArgumentException e) {
+            req.getSession().setAttribute("queueError", e.getMessage());
             LocalDate currentDate = LocalDate.now();
             DateTimeFormatter displayFormatter = DateTimeFormatter.ofPattern("dd 'tháng' MM, yyyy");
 

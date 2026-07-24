@@ -70,7 +70,9 @@ public class TimeSlotDAO {
             return 0;
         }
 
-        double defaultPrice = 200000.00; // Mặc định Khám thai định kỳ
+        // ── Tính giá khám dựa trên kinh nghiệm + chuyên khoa + giờ cao điểm ──
+        double basePrice = 200000.00;
+        Integer experienceYears = null;
         boolean ownConn = (conn == null);
         PreparedStatement ps = null;
         try {
@@ -79,27 +81,41 @@ public class TimeSlotDAO {
                 conn.setAutoCommit(false);
             }
 
-            // Lấy specialization để map giá khám mặc định
-            String getSpecSql = "SELECT specialization FROM doctors WHERE id = ?";
+            // Lấy thông tin bác sĩ: specialization + experience_years
+            String getSpecSql = "SELECT specialization, experience_years FROM doctors WHERE id = ?";
             try (PreparedStatement specPs = conn.prepareStatement(getSpecSql)) {
                 specPs.setInt(1, doctorId);
                 try (ResultSet specRs = specPs.executeQuery()) {
                     if (specRs.next()) {
                         String spec = specRs.getString("specialization");
+                        experienceYears = specRs.getInt("experience_years");
+                        if (specRs.wasNull()) experienceYears = null;
+
+                        // Chuyên khoa — giá nền
                         if (spec != null) {
                             String lower = spec.toLowerCase();
                             if (lower.contains("hiếm muộn") || lower.contains("ivf")) {
-                                defaultPrice = 350000.00;
-                            } else if (lower.contains("tiền sản")) {
-                                defaultPrice = 300000.00;
-                            } else if (lower.contains("phụ khoa")) {
-                                defaultPrice = 250000.00;
+                                basePrice = 300000.00;
+                            } else if (lower.contains("thai sản") || lower.contains("bào thai")) {
+                                basePrice = 250000.00;
+                            } else if (lower.contains("siêu âm")) {
+                                basePrice = 250000.00;
+                            } else if (lower.contains("sản khoa") && !lower.contains("sản phụ")) {
+                                basePrice = 230000.00; // Sản khoa
+                            } else if (lower.contains("phụ khoa") && !lower.contains("sản phụ")) {
+                                basePrice = 200000.00; // Phụ khoa
                             }
+                            // "Sản phụ khoa" mặc định = 200,000đ
                         }
                     }
                 }
             } catch (SQLException e) {
-                System.err.println("[TimeSlotDAO] Không lấy được specialization bác sĩ: " + e.getMessage());
+                System.err.println("[TimeSlotDAO] Không lấy được thông tin bác sĩ: " + e.getMessage());
+            }
+
+            // Kinh nghiệm: mỗi năm +10k, tối đa +200k
+            if (experienceYears != null && experienceYears > 0) {
+                basePrice += Math.min(experienceYears, 20) * 10000.0;
             }
 
             String sql = "INSERT INTO time_slots (schedule_id, doctor_id, work_date, "
@@ -116,12 +132,21 @@ public class TimeSlotDAO {
                 Time slotStart = new Time(currentStartMs);
                 Time slotEnd = new Time(slotEndMs);
 
+                // Giờ cao điểm (7:00-8:59, 16:00-17:59): +30%
+                double slotPrice = basePrice;
+                java.time.LocalTime lt = slotStart.toLocalTime();
+                boolean isPeak = (lt.isAfter(java.time.LocalTime.of(6, 59)) && lt.isBefore(java.time.LocalTime.of(9, 0)))
+                        || (lt.isAfter(java.time.LocalTime.of(15, 59)) && lt.isBefore(java.time.LocalTime.of(18, 0)));
+                if (isPeak) {
+                    slotPrice = Math.round(basePrice * 1.3 / 1000.0) * 1000.0;
+                }
+
                 ps.setInt(1, scheduleId);
                 ps.setInt(2, doctorId);
                 ps.setDate(3, workDate);
                 ps.setTime(4, slotStart);
                 ps.setTime(5, slotEnd);
-                ps.setDouble(6, defaultPrice);
+                ps.setDouble(6, slotPrice);
                 ps.addBatch();
 
                 currentStartMs = slotEndMs;

@@ -137,9 +137,13 @@ public class StaffReceptionService {
             throw new IllegalArgumentException("Bác sĩ không tồn tại.");
         }
 
+        // Dịch vụ — nếu không chọn thì dùng "Khám lâm sàng" mặc định
+        if (serviceId == null || serviceId.isEmpty()) {
+            serviceId = String.valueOf(serviceDAO.getDefaultExaminationServiceId());
+        }
         ServiceItem service = findServiceById(serviceId);
         if (service == null) {
-            throw new IllegalArgumentException("Dịch vụ không tồn tại.");
+            throw new IllegalArgumentException("Dịch vụ khám mặc định chưa được cấu hình. Vui lòng liên hệ quản trị viên.");
         }
 
         // 5. Kiểm tra trùng khung giờ.
@@ -233,11 +237,18 @@ public class StaffReceptionService {
             throw new IllegalArgumentException("Khung giờ vừa được người khác chọn. Vui lòng tải lại và chọn slot khác.");
         }
 
-        // 10. Tạo hóa đơn PRE_EXAM (trả trước dùng sau)
+        // 10. Tạo hóa đơn PRE_EXAM — dùng giá slot (đã tính theo kinh nghiệm + giờ cao điểm)
         if (appointment != null) {
+            double slotPrice = 250000.00; // fallback
+            if (foundSlotId != null) {
+                TimeSlot ts = timeSlotDAO.findById(foundSlotId);
+                if (ts != null && ts.getPrice() != null && ts.getPrice() > 0) {
+                    slotPrice = ts.getPrice();
+                }
+            }
             Invoice preExamInvoice = new Invoice();
             preExamInvoice.setAppointmentId(appointment.getId());
-            preExamInvoice.setTotalAmount(java.math.BigDecimal.valueOf(service.getPrice()));
+            preExamInvoice.setTotalAmount(java.math.BigDecimal.valueOf(slotPrice));
             preExamInvoice.setStatus("Unpaid");
             preExamInvoice.setInvoiceType("PRE_EXAM");
             invoiceDAO.insert(preExamInvoice);
@@ -264,70 +275,19 @@ public class StaffReceptionService {
 
     public List<Appointment> getSmartQueue() {
         List<Appointment> result = new ArrayList<>();
-        LocalDate today = LocalDate.now();
-        java.time.LocalTime nowTime = java.time.LocalTime.now();
-
         for (Appointment appointment : appointmentDAO.getAllAppointments()) {
-            // Tự động chuyển đổi NoShow đối với các lịch hẹn Confirmed quá hạn 30 phút
-            if ("Confirmed".equalsIgnoreCase(appointment.getStatus())) {
-                boolean markNoShow = false;
-                if (appointment.getAppointmentDate() != null) {
-                    if (appointment.getAppointmentDate().isBefore(today)) {
-                        markNoShow = true;
-                    } else if (appointment.getAppointmentDate().equals(today)) {
-                        String slot = appointment.getTimeSlot();
-                        if (slot != null && !slot.trim().isEmpty()) {
-                            try {
-                                String startTimeStr = extractSlotStart(slot);
-                                if (startTimeStr != null) {
-                                    java.time.LocalTime startTime = java.time.LocalTime.parse(startTimeStr);
-                                    if (nowTime.isAfter(startTime.plusMinutes(30))) {
-                                        markNoShow = true;
-                                    }
-                                }
-                            } catch (Exception e) {
-                                // Bỏ qua nếu lỗi định dạng time slot
-                            }
-                        }
-                    }
-                }
-                
-                if (markNoShow) {
-                    appointment.setStatus("NoShow");
-                    appointmentDAO.updateStatus(appointment.getId(), "NoShow");
-                    
-                    // Ghi log hoạt động hệ thống
-                    auditLogDAO.logAction(
-                            "Tự động chuyển NoShow (quá giờ khám 30 phút)",
-                            "System",
-                            "appointments",
-                            "Confirmed -> NoShow",
-                            String.valueOf(appointment.getId())
-                    );
-                }
-            }
-
             if (!"Cancelled".equalsIgnoreCase(appointment.getStatus())
                     && !"NoShow".equalsIgnoreCase(appointment.getStatus())) {
                 result.add(appointment);
             }
         }
-
         result.sort((a1, a2) -> {
             int score1 = getStatusPriorityScore(a1.getStatus());
             int score2 = getStatusPriorityScore(a2.getStatus());
-
-            if (score1 != score2) {
-                return Integer.compare(score1, score2);
-            }
-
-            if (a1.isEmergency() != a2.isEmergency()) {
-                return a1.isEmergency() ? -1 : 1;
-            }
-
+            if (score1 != score2) return Integer.compare(score1, score2);
+            if (a1.isEmergency() != a2.isEmergency()) return a1.isEmergency() ? -1 : 1;
             return Integer.compare(a1.getId(), a2.getId());
         });
-
         return result;
     }
 
@@ -377,6 +337,26 @@ public class StaffReceptionService {
 
             if ("Waiting".equalsIgnoreCase(apt.getStatus())) {
                 throw new IllegalArgumentException("Bệnh nhân đã check-in rồi.");
+            }
+
+            // Chỉ cho check-in trong vòng 30 phút trước giờ hẹn
+            // (tránh bệnh nhân đến sớm 2-3 tiếng rồi ngồi chờ)
+            if (apt.getTimeSlot() != null && !apt.getTimeSlot().trim().isEmpty()) {
+                try {
+                    String slotStart = apt.getTimeSlot().contains(" - ")
+                            ? apt.getTimeSlot().split(" - ")[0].trim()
+                            : apt.getTimeSlot().split("-")[0].trim();
+                    java.time.LocalTime startTime = java.time.LocalTime.parse(slotStart);
+                    java.time.LocalTime earliestCheckin = startTime.minusMinutes(30);
+                    if (java.time.LocalTime.now().isBefore(earliestCheckin)) {
+                        throw new IllegalArgumentException(
+                                "Chỉ được check-in trong vòng 30 phút trước giờ hẹn ("
+                                + slotStart + "). Vui lòng quay lại sau "
+                                + earliestCheckin.toString() + ".");
+                    }
+                } catch (java.time.format.DateTimeParseException ignored) {
+                    // Không parse được giờ → bỏ qua, vẫn cho check-in
+                }
             }
 
 // Chỉ lịch thường mới bắt buộc thanh toán PRE_EXAM trước khi check-in
@@ -800,41 +780,7 @@ public class StaffReceptionService {
 
     public List<Appointment> getSmartQueueByDate(LocalDate date) {
         List<Appointment> result = new ArrayList<>();
-        java.time.LocalTime nowTime = java.time.LocalTime.now();
-        LocalDate today = LocalDate.now();
-
         for (Appointment appointment : appointmentDAO.getAllAppointments()) {
-            // Tự động chuyển NoShow cho lịch Confirmed quá hạn 30 phút
-            if ("Confirmed".equalsIgnoreCase(appointment.getStatus())
-                    && appointment.getAppointmentDate() != null
-                    && !appointment.getAppointmentDate().isAfter(today)) {
-                boolean markNoShow = false;
-                if (appointment.getAppointmentDate().isBefore(today)) {
-                    markNoShow = true;
-                } else if (appointment.getAppointmentDate().equals(today)) {
-                    String slot = appointment.getTimeSlot();
-                    if (slot != null && !slot.trim().isEmpty()) {
-                        try {
-                            String startTimeStr = extractSlotStart(slot);
-                            if (startTimeStr != null) {
-                                java.time.LocalTime startTime = java.time.LocalTime.parse(startTimeStr);
-                                if (nowTime.isAfter(startTime.plusMinutes(30))) {
-                                    markNoShow = true;
-                                }
-                            }
-                        } catch (Exception ignored) { }
-                    }
-                }
-                if (markNoShow) {
-                    appointment.setStatus("NoShow");
-                    appointmentDAO.updateStatus(appointment.getId(), "NoShow");
-                    auditLogDAO.logAction("Tự động chuyển NoShow (quá giờ khám 30 phút)",
-                            "System", "appointments", "Confirmed -> NoShow",
-                            String.valueOf(appointment.getId()));
-                    continue;
-                }
-            }
-
             if (!"Cancelled".equalsIgnoreCase(appointment.getStatus())
                     && !"NoShow".equalsIgnoreCase(appointment.getStatus())
                     && appointment.getAppointmentDate() != null
@@ -842,7 +788,6 @@ public class StaffReceptionService {
                 result.add(appointment);
             }
         }
-
         result.sort((a1, a2) -> {
             int score1 = getStatusPriorityScore(a1.getStatus());
             int score2 = getStatusPriorityScore(a2.getStatus());
@@ -851,14 +796,6 @@ public class StaffReceptionService {
             return Integer.compare(a1.getId(), a2.getId());
         });
         return result;
-    }
-
-    /** Tách giờ bắt đầu từ time_slot, hỗ trợ cả "08:00-08:20" và "08:00 - 08:20" */
-    private String extractSlotStart(String slot) {
-        if (slot == null || slot.isBlank()) return null;
-        // Thử tách bằng " - " (có spaces) trước, rồi "-" (không spaces)
-        String[] parts = slot.contains(" - ") ? slot.split(" - ") : slot.split("-");
-        return parts.length > 0 ? parts[0].trim() : null;
     }
 
     public int getWidgetAppointmentsByDate(LocalDate date) {
@@ -884,6 +821,33 @@ public class StaffReceptionService {
             }
         }
         return count;
+    }
+
+    /** Phát hiện bệnh nhân đến muộn: đã quá giờ hẹn > 60 phút mà chưa check-in */
+    public java.util.Set<Integer> getLateAppointmentIds(LocalDate date) {
+        java.util.Set<Integer> late = new java.util.HashSet<>();
+        if (!date.equals(LocalDate.now())) return late; // chỉ áp dụng hôm nay
+
+        java.time.LocalTime now = java.time.LocalTime.now();
+        for (Appointment apt : appointmentDAO.getAllAppointments()) {
+            if (apt.getAppointmentDate() == null || !apt.getAppointmentDate().equals(date)) continue;
+            String status = apt.getStatus();
+            if (status == null) continue;
+            // Chỉ check các trạng thái đang chờ khám
+            if (!"Confirmed".equalsIgnoreCase(status) && !"Pending".equalsIgnoreCase(status)) continue;
+            if (apt.getTimeSlot() == null || apt.getTimeSlot().trim().isEmpty()) continue;
+
+            try {
+                String start = apt.getTimeSlot().contains(" - ")
+                        ? apt.getTimeSlot().split(" - ")[0].trim()
+                        : apt.getTimeSlot().split("-")[0].trim();
+                java.time.LocalTime slotTime = java.time.LocalTime.parse(start);
+                if (now.isAfter(slotTime.plusMinutes(60))) {
+                    late.add(apt.getId());
+                }
+            } catch (Exception ignored) { }
+        }
+        return late;
     }
 
     /** Đếm số bệnh nhân đang chờ/có lịch của mỗi bác sĩ trong hôm nay */
@@ -929,18 +893,29 @@ public class StaffReceptionService {
             throw new IllegalArgumentException("Hóa đơn này đã được thanh toán trước đó.");
         }
 
-        // Nhân viên chỉ xác nhận yêu cầu mà bệnh nhân đã gửi.
-        // Hóa đơn Unpaid phải được bệnh nhân chọn phương thức thanh toán trước.
-        if (!"PendingConfirmation".equalsIgnoreCase(invoice.getStatus())) {
-            throw new IllegalArgumentException("Yêu cầu thanh toán chưa ở trạng thái chờ nhân viên xác nhận.");
+        // Staff có thể xác nhận cả Unpaid (đặt lịch thủ công tại quầy, bệnh nhân trả tiền mặt ngay)
+        // lẫn PendingConfirmation (bệnh nhân tự đặt + gửi yêu cầu thanh toán online)
+        if (!"PendingConfirmation".equalsIgnoreCase(invoice.getStatus())
+                && !"Unpaid".equalsIgnoreCase(invoice.getStatus())) {
+            throw new IllegalArgumentException("Hóa đơn không ở trạng thái có thể xác nhận (Unpaid hoặc PendingConfirmation).");
         }
 
-        // The chosen method is immutable after the patient sends the request.
-        // Never trust the method posted by the staff form; use the invoice.
-        if (invoice.getPaymentMethod() == null || invoice.getPaymentMethod().trim().isEmpty()) {
-            throw new IllegalArgumentException("Hóa đơn chưa có phương thức thanh toán do bệnh nhân chọn.");
+        // Nếu là Unpaid (đặt tại quầy) → mặc định paymentMethod = Cash nếu chưa có
+        if ("Unpaid".equalsIgnoreCase(invoice.getStatus())) {
+            if (paymentMethod == null || paymentMethod.trim().isEmpty()) {
+                paymentMethod = "Cash";
+            }
         }
-        paymentMethod = invoice.getPaymentMethod().trim();
+
+        // Với PendingConfirmation: paymentMethod do bệnh nhân chọn, không được sửa
+        // Với Unpaid (đặt tại quầy): staff chọn paymentMethod khi xác nhận
+        if ("PendingConfirmation".equalsIgnoreCase(invoice.getStatus())) {
+            if (invoice.getPaymentMethod() == null || invoice.getPaymentMethod().trim().isEmpty()) {
+                throw new IllegalArgumentException("Hóa đơn chưa có phương thức thanh toán do bệnh nhân chọn.");
+            }
+            paymentMethod = invoice.getPaymentMethod().trim();
+        }
+        // Unpaid: dùng paymentMethod staff chọn (đã default là Cash ở trên)
         if (!"Cash".equalsIgnoreCase(paymentMethod) && !"BankTransfer".equalsIgnoreCase(paymentMethod)) {
             throw new IllegalArgumentException("Phương thức thanh toán trên hóa đơn không hợp lệ.");
         }

@@ -86,7 +86,8 @@ public class StaffEditServlet extends HttpServlet {
             int userId = user != null ? user.getId() : 0;
 
             Invoice preInvoice = new com.clinic.dao.InvoiceDAO().getByAppointmentIdAndType(id, "PRE_EXAM");
-            if (preInvoice == null || !"PendingConfirmation".equalsIgnoreCase(preInvoice.getStatus())) {
+            if (preInvoice == null || (!"PendingConfirmation".equalsIgnoreCase(preInvoice.getStatus())
+                    && !"Unpaid".equalsIgnoreCase(preInvoice.getStatus()))) {
                 resp.sendRedirect(req.getContextPath() + "/admin/reception/edit?id=" + id + "&error=" + java.net.URLEncoder.encode("Không thể xác nhận thanh toán cho hóa đơn này.", "UTF-8"));
                 return;
             }

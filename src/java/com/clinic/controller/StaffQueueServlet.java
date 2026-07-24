@@ -143,6 +143,8 @@ public class StaffQueueServlet extends HttpServlet {
         req.setAttribute("queue", staffReceptionService.getSmartQueueByDate(selectedDate));
         req.setAttribute("todayAppointments", staffReceptionService.getWidgetAppointmentsByDate(selectedDate));
         req.setAttribute("waitingQueue", staffReceptionService.getWidgetWaitingQueueByDate(selectedDate));
+        // Đánh dấu bệnh nhân đến muộn (>60 phút sau giờ hẹn)
+        req.setAttribute("lateAppointments", staffReceptionService.getLateAppointmentIds(selectedDate));
         Object queueSuccess = req.getSession().getAttribute("queueSuccess");
         if (queueSuccess != null) {
             req.setAttribute("queueSuccess", queueSuccess);

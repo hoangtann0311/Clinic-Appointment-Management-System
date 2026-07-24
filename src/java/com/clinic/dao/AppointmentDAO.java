@@ -222,6 +222,8 @@ public class AppointmentDAO {
      * creating appointments for the same available slot.
      */
     public Appointment createStaffAppointmentWithHeldSlot(Appointment app, int slotId, Integer bookedByUserId) {
+        // Hold 15 phút — giống online. Staff cần xác nhận thanh toán ngay sau khi
+        // bệnh nhân trả tiền. Nếu bệnh nhân chưa sẵn sàng thanh toán → không giữ slot.
         String holdSlotSql = "UPDATE time_slots SET status = 'HELD', booked_by = ?, booked_at = GETDATE(), "
                 + "held_until = DATEADD(MINUTE, 15, GETDATE()), updated_at = GETDATE() "
                 + "WHERE id = ? AND status = 'AVAILABLE'";

@@ -179,10 +179,6 @@ public class ManagerTimeSlotServlet extends HttpServlet {
                 handleRegenerate(req, resp, scheduleId, redirectUrl);
             } else if ("delete".equals(action)) {
                 handleDelete(req, resp, scheduleId, redirectUrl);
-            } else if ("updatePrice".equals(action)) {
-                handleUpdateSlotPrice(req, resp, redirectUrl);
-            } else if ("updatePriceForSchedule".equals(action)) {
-                handleUpdatePriceForSchedule(req, resp, scheduleId, redirectUrl);
             } else {
                 resp.sendRedirect(redirectUrl);
             }

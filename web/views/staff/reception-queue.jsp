@@ -65,7 +65,7 @@
             </div>
             <div class="admin-sidebar-name">${sessionScope.user.fullName}</div>
             <span class="admin-sidebar-badge">
-                <i class="bi bi-shield-check"></i>LỄ TÂN / CALL CENTER
+                <i class="bi bi-shield-check"></i>LỄ TÂN
             </span>
         </div>
 
@@ -191,7 +191,7 @@
         <!-- Smart Queue List (Spans 100% width) -->
         <div class="admin-card mb-4">
             <div class="card-header">
-                <h5><i class="bi bi-card-list"></i> Danh Sách Điều Phối Hàng Đợi (Smart Queue)</h5>
+                <h5><i class="bi bi-card-list"></i> Danh Sách Điều Phối Hàng Đợi</h5>
             </div>
             <div class="card-body p-0">
                 <c:if test="${not empty errors}">
@@ -205,13 +205,14 @@
                     </div>
                 </c:if>
                 <c:if test="${not empty queueError}">
-                    <div class="alert alert-danger m-3">
+                    <div class="alert alert-danger alert-dismissible fade show m-3" data-cams-toast role="alert">
                         <i class="bi bi-exclamation-triangle-fill me-2"></i>
                         <c:out value="${queueError}"/>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                 </c:if>
                 <c:if test="${not empty queueSuccess}">
-                    <div class="alert alert-success m-3">
+                    <div class="alert alert-success alert-dismissible fade show m-3" data-cams-toast role="alert">
                         <i class="bi bi-check-circle-fill me-2"></i>
                         <c:out value="${queueSuccess}"/>
                     </div>
@@ -221,23 +222,24 @@
                     <table class="admin-table table-cams">
                         <thead>
                         <tr>
-                            <th>STT</th>
-                            <th>Sản phụ</th>
-                            <th>Bác sĩ lâm sàng</th>
-                            <th>Giờ khám</th>
-                            <th>Tuổi thai</th>
-                            <th>Dịch vụ</th>
-                            <th>Triệu chứng</th>
-                            <th>Thanh toán</th>
-                            <th>Trạng thái</th>
-                            <th>Thao tác</th>
+                            <th style="width:4%;">STT</th>
+                            <th style="width:11%;">Sản phụ</th>
+                            <th style="width:12%;">Bác sĩ</th>
+                            <th style="width:9%;">Giờ khám</th>
+                            <th style="width:8%;">Tuổi thai</th>
+                            <th style="width:9%;">Dịch vụ</th>
+                            <th style="width:14%;">Triệu chứng</th>
+                            <th style="width:8%;">Thanh toán</th>
+                            <th style="width:9%;">Trạng thái</th>
+                            <th style="width:16%;">Thao tác</th>
                         </tr>
                         </thead>
                         <tbody>
                         <c:forEach var="apt" items="${queue}">
                             <c:set var="statusLower" value="${fn:toLowerCase(apt.status)}"/>
 
-                            <tr class="${apt.emergency ? 'table-warning' : ''}">
+                            <c:set var="isLate" value="${not empty lateAppointments && lateAppointments.contains(apt.id)}"/>
+                            <tr class="${apt.emergency ? 'table-warning' : (isLate ? 'table-danger bg-opacity-10' : '')}" style="${isLate && !apt.emergency ? 'background:#fff3e0;' : ''}">
                                 <td>
                                     <strong class="${apt.emergency ? 'text-warning-emphasis' : 'text-dark'}">
                                         <c:out value="${apt.queueNumber != null ? apt.queueNumber : 'Chờ cấp'}"/>
@@ -246,6 +248,13 @@
                                         <div class="mt-1">
                                             <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
                                                 <i class="bi bi-arrow-up-circle-fill me-1"></i>Ưu tiên
+                                            </span>
+                                        </div>
+                                    </c:if>
+                                    <c:if test="${isLate}">
+                                        <div class="mt-1">
+                                            <span class="badge bg-danger bg-opacity-75 text-white" style="font-size:.65rem;">
+                                                <i class="bi bi-clock-history me-1"></i>Đến muộn
                                             </span>
                                         </div>
                                     </c:if>
@@ -345,8 +354,8 @@
                                                               style="display:inline;">
                                                             <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                                             <input type="hidden" name="id" value="${apt.id}">
-                                                            <button type="submit" class="btn-cams btn-cams-primary btn-sm">
-                                                                <i class="bi bi-check-circle"></i> CHECK-IN
+                                                            <button type="submit" class="btn-cams btn-cams-primary btn-sm" style="font-size:.72rem;padding:.2rem .45rem;">
+                                                                <i class="bi bi-check-circle"></i> Check-in
                                                             </button>
                                                         </form>
                                                     </c:when>
@@ -354,16 +363,17 @@
                                                     <c:otherwise>
                                                         <button type="button"
                                                                 class="btn-cams btn-cams-secondary btn-sm"
+                                                                style="font-size:.7rem;padding:.15rem .4rem;"
                                                                 disabled
                                                                 title="Bệnh nhân chưa thanh toán hóa đơn PRE_EXAM">
-                                                            <i class="bi bi-lock-fill"></i> CHỜ THANH TOÁN
+                                                            <i class="bi bi-lock-fill"></i> Chờ TT
                                                         </button>
                                                     </c:otherwise>
                                                 </c:choose>
 
                                                 <a href="${pageContext.request.contextPath}/admin/reception/edit?id=${apt.id}"
-                                                   class="btn-action btn-action-edit">
-                                                    <i class="bi bi-pencil-square"></i> SỬA
+                                                   class="btn-action btn-action-edit" style="font-size:.7rem;padding:.15rem .4rem;">
+                                                    <i class="bi bi-pencil-square"></i> Sửa
                                                 </a>
 
                                                 <form action="${pageContext.request.contextPath}/admin/reception/cancel"
@@ -372,8 +382,8 @@
                                                       onsubmit="return confirm('Bạn có chắc chắn muốn hủy lịch hẹn khám này?')">
                                                     <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                                     <input type="hidden" name="id" value="${apt.id}">
-                                                    <button type="submit" class="btn-action btn-action-delete">
-                                                        <i class="bi bi-x-circle"></i> HỦY
+                                                    <button type="submit" class="btn-action btn-action-delete" style="font-size:.7rem;padding:.15rem .4rem;">
+                                                        <i class="bi bi-x-circle"></i> Huỷ
                                                     </button>
                                                 </form>
                                             </div>

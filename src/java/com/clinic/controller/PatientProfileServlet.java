@@ -80,6 +80,7 @@ public class PatientProfileServlet extends HttpServlet {
         String phone = request.getParameter("phone");
         String dobStr = request.getParameter("dateOfBirth");
         String address = request.getParameter("address");
+        String cccd = request.getParameter("cccd");
 
         // ── Validate bắt buộc ──
         // ── Giữ lại dữ liệu vừa nhập khi validate lỗi ──
@@ -153,7 +154,7 @@ public class PatientProfileServlet extends HttpServlet {
 
         // Update DB
         boolean ok = patientDAO.updatePatient(patientId, fullName.trim(), phone != null ? phone.trim() : "", dob,
-                address != null ? address.trim() : "");
+                address != null ? address.trim() : "", cccd != null ? cccd.trim() : "");
         if (ok) {
             // Sync with users table
             user.setFullName(fullName.trim());

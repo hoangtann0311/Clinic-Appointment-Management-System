@@ -83,6 +83,14 @@
                                    placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành">
                         </div>
 
+                        <div class="col-md-6">
+                            <label for="cccd" class="form-label fw-semibold">CCCD/CMND <span class="text-danger">*</span></label>
+                            <input type="text" id="cccd" name="cccd" class="form-control"
+                                   value="${not empty formCccd ? formCccd : (not empty patient.cccd ? patient.cccd : '')}"
+                                   placeholder="Số CCCD/CMND 12 số" maxlength="12"
+                                   oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                        </div>
+
                         <%-- Thông tin tài khoản (chỉ đọc) --%>
                         <div class="col-12 mt-2">
                             <h6 class="fw-bold text-secondary border-bottom pb-2 mb-3">

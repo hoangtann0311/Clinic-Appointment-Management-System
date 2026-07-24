@@ -76,8 +76,10 @@ public class PatientBookingService {
         }
         List<TimeSlot> slots = timeSlotDAO.findByDoctorAndDateWithPrice(doctorId, Date.valueOf(date), SlotStatus.AVAILABLE);
 
+        // Chỉ giữ slot thực sự khả dụng: AVAILABLE + chưa qua giờ
         LinkedHashMap<LocalTime, TimeSlot> unique = new LinkedHashMap<>();
         for (TimeSlot slot : slots) {
+            if (!slot.isAvailable()) continue; // loại slot đã qua giờ
             unique.putIfAbsent(slot.getStartTime().toLocalTime(), slot);
         }
         return new ArrayList<>(unique.values());
@@ -87,10 +89,6 @@ public class PatientBookingService {
      * Danh sách TẤT CẢ time-slot (mọi trạng thái, trừ COMPLETED/CANCELLED) của 1 bác sĩ
      * trong 1 ngày — dùng để hiển thị đầy đủ lưới giờ khám cho bệnh nhân, trong đó slot
      * không phải AVAILABLE vẫn hiển thị nhưng bị khóa (disable), thay vì ẩn hoàn toàn.
-     *
-     * <p>Lý do nghiệp vụ: nếu chỉ trả AVAILABLE, bệnh nhân sẽ tưởng nhầm hệ thống bị lỗi
-     * "tự dưng mất mất 1 khung giờ" khi thực ra khung giờ đó đang được người khác giữ chỗ/
-     * chờ duyệt/đã đặt. Hiển thị rõ trạng thái giúp bệnh nhân yên tâm và hiểu đúng lý do.
      */
     public List<TimeSlot> getSlotsForDisplay(int doctorId, LocalDate date) {
         if (doctorId <= 0 || date == null || date.isBefore(LocalDate.now())) {
