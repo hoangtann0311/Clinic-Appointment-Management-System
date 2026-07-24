@@ -585,7 +585,7 @@
                     <div class="kpi-icon"><i class="bi bi-cash-coin"></i></div>
                     <div class="kpi-content">
                         <div class="kpi-value" style="font-size:1.05rem;">${not empty revenueToday ? revenueToday : '0 VNĐ'}</div>
-                        <div class="kpi-label">Doanh Thu Hôm Nay</div>
+                        <div class="kpi-label">${not empty revenueKpiLabel ? revenueKpiLabel : 'Doanh Thu Hôm Nay'}</div>
                         <div class="kpi-sub"><i class="bi bi-graph-up"></i> Tổng: ${not empty revenue ? revenue : '0 VNĐ'}</div>
                     </div>
                 </div>
@@ -772,7 +772,12 @@
         <div class="col-xl-6">
             <div class="admin-card h-100">
                 <div class="card-header">
-                    <h5><i class="bi bi-bar-chart-steps"></i> Dịch Vụ — Lượt Sử Dụng</h5>
+                    <h5><i class="bi bi-bar-chart-steps"></i> Dịch Vụ — Lượt Sử Dụng <span style="font-size:0.68rem;font-weight:400;color:var(--c-muted);">
+                        <c:choose>
+                            <c:when test="${isCustomRange}">(${dateRangeLabel})</c:when>
+                            <c:otherwise>(Hôm nay)</c:otherwise>
+                        </c:choose>
+                    </span></h5>
                 </div>
                 <div class="card-body p-0">
                     <c:choose>
@@ -806,7 +811,12 @@
         <div class="col-xl-6">
             <div class="admin-card h-100">
                 <div class="card-header">
-                    <h5><i class="bi bi-cash-stack"></i> Doanh Thu Dịch Vụ <span style="font-size:0.68rem;font-weight:400;color:var(--c-muted);">(Tất cả thời gian)</span></h5>
+                    <h5><i class="bi bi-cash-stack"></i> Doanh Thu Dịch Vụ <span style="font-size:0.68rem;font-weight:400;color:var(--c-muted);">
+                        <c:choose>
+                            <c:when test="${isCustomRange}">(${dateRangeLabel})</c:when>
+                            <c:otherwise>(Tất cả thời gian)</c:otherwise>
+                        </c:choose>
+                    </span></h5>
                 </div>
                 <div class="card-body p-0">
                     <c:choose>
@@ -895,7 +905,12 @@
                             <div class="kpi-icon" style="background:#d1fae5;color:#059669;"><i class="bi bi-cash-stack"></i></div>
                             <div class="kpi-content">
                                 <div class="kpi-value" style="font-size:1.05rem;">${not empty revenue ? revenue : '0 VNĐ'}</div>
-                                <div class="kpi-label">Tổng Doanh Thu</div>
+                                <div class="kpi-label">
+                                    <c:choose>
+                                        <c:when test="${isCustomRange}">Doanh Thu (Khoảng)</c:when>
+                                        <c:otherwise>Tổng Doanh Thu</c:otherwise>
+                                    </c:choose>
+                                </div>
                                 <div class="kpi-sub"><i class="bi bi-check-circle"></i> Đã thanh toán</div>
                             </div>
                         </div>

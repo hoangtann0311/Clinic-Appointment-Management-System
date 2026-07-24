@@ -494,16 +494,16 @@ public class ServiceDAO {
         return 0;
     }
 
-    /** Thống kê doanh thu theo nhóm dịch vụ (từ invoices + invoice_items). */
+    /** Thống kê doanh thu theo nhóm dịch vụ (từ invoices + invoice_items — chỉ tính đã thanh toán). */
     public List<Service> getRevenueByCategory() {
         String sql = "SELECT sc.id AS category_id, sc.category_name, sc.icon, "
                    + "COUNT(DISTINCT a.id) AS total_bookings, "
-                   + "COALESCE(SUM(ii.amount), 0) AS total_revenue "
+                   + "COALESCE(SUM(ii.subtotal), 0) AS total_revenue "
                    + "FROM service_categories sc "
                    + "LEFT JOIN services s ON s.category_id = sc.id "
                    + "LEFT JOIN appointments a ON a.service_id = s.id "
-                   + "LEFT JOIN invoices i ON i.appointment_id = a.id AND i.status IN ('paid', 'pending') "
-                   + "LEFT JOIN invoice_items ii ON ii.invoice_id = i.id "
+                   + "LEFT JOIN invoices i ON i.appointment_id = a.id AND i.status = 'paid' "
+                   + "LEFT JOIN invoice_items ii ON ii.invoice_id = i.id AND ii.item_type = 'service' AND ii.item_id = s.id "
                    + "WHERE sc.is_active = 1 "
                    + "GROUP BY sc.id, sc.category_name, sc.icon "
                    + "ORDER BY total_revenue DESC";

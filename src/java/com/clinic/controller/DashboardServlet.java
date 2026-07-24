@@ -224,6 +224,18 @@ public class DashboardServlet extends HttpServlet {
             request.setAttribute("dateRangeLabel",
                     dateFrom.format(dateFmt) + " → " + dateTo.format(dateFmt));
         }
+
+        // Revenue KPI label — phản ánh đúng khoảng ngày đã chọn
+        String kpiLabel;
+        if (!isCustomRange || (dateFrom.equals(today) && dateTo.equals(today))) {
+            kpiLabel = "Doanh Thu Hôm Nay";
+        } else if (dateFrom.equals(dateTo)) {
+            kpiLabel = "Doanh Thu (Ngày " + dateFrom.format(dateFmt) + ")";
+        } else {
+            kpiLabel = "Doanh Thu (" + dateFrom.format(dateFmt) + " → " + dateTo.format(dateFmt) + ")";
+        }
+        request.setAttribute("revenueKpiLabel", kpiLabel);
+
         DashboardService dashboardService = new DashboardService();
 
         int totalPatients = isCustomRange
@@ -260,8 +272,9 @@ public class DashboardServlet extends HttpServlet {
         request.setAttribute("completedCases", completedCases);
         request.setAttribute("newPatients", newPatients);
 
-        // Doanh thu hôm nay (từ DashboardService — invoice-level, chỉ tính paid)
-        request.setAttribute("revenueToday", dashboardService.getRevenueToday());
+        // Doanh thu (từ ServiceStatisticsService — đồng bộ với biểu đồ, theo khoảng ngày)
+        request.setAttribute("revenueToday",
+                com.clinic.service.ServiceStatisticsService.formatCurrency(totalRevenue));
 
         // Biểu đồ doanh thu 7 ngày
         Map<String, Double> revenueChart = isCustomRange
@@ -279,11 +292,15 @@ public class DashboardServlet extends HttpServlet {
                 ? dashboardService.getSchedules(dateTo)
                 : dashboardService.getTodaySchedules());
 
-        // ─── Thống kê dịch vụ ───
+        // ─── Thống kê dịch vụ (theo khoảng ngày) ───
         request.setAttribute("topServicesByUsage", statsService.getTopServicesByUsage(8, dateFrom, dateTo));
-        request.setAttribute("topServicesByRevenue", statsService.getTopServicesByTotalRevenue(8));
+        request.setAttribute("topServicesByRevenue", isCustomRange
+                ? statsService.getTopServicesByTotalRevenue(8, dateFrom, dateTo)
+                : statsService.getTopServicesByTotalRevenue(8));
         request.setAttribute("categoryRevenueBreakdown", statsService.getCategoryRevenueBreakdown());
-        Map<String, Integer> usageDays = statsService.getUsageLast7Days();
+        Map<String, Integer> usageDays = isCustomRange
+                ? statsService.getDailyUsage(dateFrom, dateTo)
+                : statsService.getUsageLast7Days();
         request.setAttribute("serviceUsageLast7DaysLabels", new ArrayList<>(usageDays.keySet()));
         request.setAttribute("serviceUsageLast7DaysValues", new ArrayList<>(usageDays.values()));
 
@@ -349,18 +366,21 @@ public class DashboardServlet extends HttpServlet {
         request.setAttribute("dateRangeLabel", dateRangeLabel);
         request.setAttribute("subtitleDisplay", isCustomRange ? dateRangeLabel : "Hôm nay");
 
+        // totalAccounts: tài khoản MỚI TẠO trong khoảng (có ý nghĩa time-bound)
         request.setAttribute("totalAccounts", isCustomRange
                 ? adminDashboardService.getTotalAccounts(dateFrom, dateTo)
                 : adminDashboardService.getTotalAccounts());
+
+        // activeAccounts: người dùng THỰC SỰ HOẠT ĐỘNG (có login) trong khoảng
         request.setAttribute("activeAccounts", isCustomRange
-                ? adminDashboardService.getActiveAccounts(dateFrom, dateTo)
+                ? adminDashboardService.getActiveUsersInRange(dateFrom, dateTo)
                 : adminDashboardService.getActiveAccounts());
-        request.setAttribute("lockedAccounts", isCustomRange
-                ? adminDashboardService.getLockedAccounts(dateFrom, dateTo)
-                : adminDashboardService.getLockedAccounts());
-        request.setAttribute("unverifiedAccounts", isCustomRange
-                ? adminDashboardService.getUnverifiedAccounts(dateFrom, dateTo)
-                : adminDashboardService.getUnverifiedAccounts());
+
+        // lockedAccounts & unverifiedAccounts: trạng thái HIỆN TẠI (không phụ thuộc khoảng ngày)
+        request.setAttribute("lockedAccounts", adminDashboardService.getLockedAccounts());
+        request.setAttribute("unverifiedAccounts", adminDashboardService.getUnverifiedAccounts());
+
+        // loginsToday & auditLogsToday & accessDenied: sự kiện trong khoảng
         request.setAttribute("loginsToday", isCustomRange
                 ? adminDashboardService.getLogins(dateFrom, dateTo)
                 : adminDashboardService.getLoginsToday());
@@ -375,7 +395,7 @@ public class DashboardServlet extends HttpServlet {
                 ? adminDashboardService.getLoginTrend(dateFrom, dateTo)
                 : adminDashboardService.getLoginTrend7Days();
         Map<String, Integer> accountGrowth = isCustomRange
-                ? adminDashboardService.getAccountGrowthChart(dateTo)
+                ? adminDashboardService.getAccountGrowthByDay(dateFrom, dateTo)
                 : adminDashboardService.getAccountGrowth12Months();
         Map<String, Integer> roleDistribution = isCustomRange
                 ? adminDashboardService.getRoleDistribution(dateFrom, dateTo)

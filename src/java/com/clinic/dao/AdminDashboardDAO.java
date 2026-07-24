@@ -57,12 +57,27 @@ public class AdminDashboardDAO {
         return executeCount(sql);
     }
 
-    /** Số tài khoản Active trong khoảng ngày (tạo trong khoảng và hiện Active). */
+    /** Số tài khoản Active trong khoảng ngày (tạo trong khoảng và hiện Active).
+     *  @deprecated Dùng countActiveUsersInRange để đếm người dùng thực sự hoạt động trong khoảng. */
+    @Deprecated
     public int countActiveAccounts(LocalDate from, LocalDate to) {
         String sql = "SELECT COUNT(*) AS total FROM users "
                    + "WHERE status = 'Active' AND is_deleted = 0 "
                    + "AND created_at >= ? AND created_at <= ?";
         return executeCount(sql, from, to);
+    }
+
+    /**
+     * Đếm số người dùng DUY NHẤT có hoạt động đăng nhập trong khoảng ngày.
+     * Dữ liệu lấy từ audit_logs — phản ánh người dùng thực sự hoạt động.
+     */
+    public int countActiveUsersInRange(LocalDate from, LocalDate to) {
+        String sql = "SELECT COUNT(DISTINCT user_id) AS total FROM audit_logs "
+                   + "WHERE (action LIKE N'%đăng nhập%' OR action LIKE '%LOGIN%' "
+                   + "       OR action LIKE '%login%') "
+                   + "AND created_at >= ? AND created_at < ? "
+                   + "AND user_id IS NOT NULL";
+        return executeCount(sql, from, to.plusDays(1));
     }
 
     // ──────────────────────────────────────────────
@@ -299,6 +314,49 @@ public class AdminDashboardDAO {
      */
     public Map<String, Integer> getAccountGrowth12Months() {
         return getAccountGrowthChart(LocalDate.now());
+    }
+
+    /**
+     * Biểu đồ tăng trưởng tài khoản theo ngày trong khoảng.
+     * Dùng cho custom range (7 ngày, 30 ngày, ...).
+     * Trả về Map<ngày (dd/MM), số tài khoản được tạo trong ngày đó>.
+     */
+    public Map<String, Integer> getAccountGrowthByDay(LocalDate from, LocalDate to) {
+        String sql = "SELECT CAST(created_at AS DATE) AS created_date, COUNT(*) AS cnt "
+                   + "FROM users "
+                   + "WHERE is_deleted = 0 AND created_at >= ? AND created_at <= ? "
+                   + "GROUP BY CAST(created_at AS DATE) "
+                   + "ORDER BY created_date";
+
+        Map<String, Integer> result = new LinkedHashMap<>();
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM");
+        for (LocalDate d = from; !d.isAfter(to); d = d.plusDays(1)) {
+            result.put(d.format(fmt), 0);
+        }
+
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setDate(1, java.sql.Date.valueOf(from));
+            ps.setDate(2, java.sql.Date.valueOf(to));
+            rs = ps.executeQuery();
+            while (rs.next()) {
+                java.sql.Date date = rs.getDate("created_date");
+                int count = rs.getInt("cnt");
+                if (date != null) {
+                    String key = date.toLocalDate().format(fmt);
+                    result.put(key, count);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("AdminDashboardDAO: Lỗi getAccountGrowthByDay - " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return result;
     }
 
     /**
@@ -810,18 +868,32 @@ public class AdminDashboardDAO {
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         String rangeLabel = from.format(fmt) + " → " + to.format(fmt);
 
-        int locked = countLockedAccounts(from, to);
+        // Cảnh báo trạng thái HIỆN TẠI (không lọc theo khoảng ngày)
+        int locked = countLockedAccounts();
         if (locked > 0) {
             SystemAlert a = new SystemAlert();
             a.type = "danger";
             a.icon = "bi-lock-fill";
             a.title = "Tài khoản bị khóa";
-            a.message = "Có " + locked + " tài khoản bị khóa trong khoảng (" + rangeLabel + ").";
+            a.message = "Có " + locked + " tài khoản đang bị khóa, cần được xem xét mở khóa.";
             a.count = locked;
             a.link = "/admin/users/?status=LOCKED";
             alerts.add(a);
         }
 
+        int unverified = countUnverifiedAccounts();
+        if (unverified > 0) {
+            SystemAlert a = new SystemAlert();
+            a.type = "warning";
+            a.icon = "bi-envelope-exclamation";
+            a.title = "Tài khoản chưa xác thực";
+            a.message = "Có " + unverified + " tài khoản đang chờ xác thực email.";
+            a.count = unverified;
+            a.link = "/admin/users/?status=PENDING_VERIFICATION";
+            alerts.add(a);
+        }
+
+        // Cảnh báo THEO SỰ KIỆN trong khoảng ngày
         int denied = countAccessDenied(from, to);
         if (denied > 0) {
             SystemAlert a = new SystemAlert();

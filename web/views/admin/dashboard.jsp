@@ -752,8 +752,13 @@ body.admin-body {
                     <div class="kpi-icon"><i class="bi bi-check-circle-fill"></i></div>
                     <div class="kpi-content">
                         <div class="kpi-value">${not empty activeAccounts ? activeAccounts : 0}</div>
-                        <div class="kpi-label">Tài Khoản Đang Hoạt Động</div>
-                        <div class="kpi-sub"><i class="bi bi-shield-check"></i> Trạng thái hoạt động</div>
+                        <div class="kpi-label">
+                            <c:choose>
+                                <c:when test="${isCustomRange}">Người Dùng Hoạt Động (Khoảng)</c:when>
+                                <c:otherwise>Tài Khoản Đang Hoạt Động</c:otherwise>
+                            </c:choose>
+                        </div>
+                        <div class="kpi-sub"><i class="bi bi-shield-check"></i> <c:choose><c:when test="${isCustomRange}">${dateRangeLabel}</c:when><c:otherwise>Trạng thái hoạt động</c:otherwise></c:choose></div>
                     </div>
                 </div>
             </div>
@@ -913,7 +918,7 @@ body.admin-body {
                     <h5>
                         <i class="bi bi-bar-chart-fill"></i>
                         <c:choose>
-                            <c:when test="${isCustomRange}">Tăng Trưởng Tài Khoản (${dateRangeLabel})</c:when>
+                            <c:when test="${isCustomRange}">Tài Khoản Mới Theo Ngày (${dateRangeLabel})</c:when>
                             <c:otherwise>Tăng Trưởng Tài Khoản 12 Tháng</c:otherwise>
                         </c:choose>
                     </h5>
@@ -928,7 +933,12 @@ body.admin-body {
                         <c:otherwise>
                             <div class="admin-empty-state py-4">
                                 <i class="bi bi-bar-chart" style="font-size:2rem;color:var(--pink-200);"></i>
-                                <p class="mt-2 mb-0" style="color:var(--c-muted);">Chưa có dữ liệu tài khoản trong khoảng này</p>
+                                <p class="mt-2 mb-0" style="color:var(--c-muted);">
+                                    <c:choose>
+                                        <c:when test="${isCustomRange}">Chưa có tài khoản mới trong khoảng này</c:when>
+                                        <c:otherwise>Chưa có dữ liệu tài khoản trong khoảng này</c:otherwise>
+                                    </c:choose>
+                                </p>
                             </div>
                         </c:otherwise>
                     </c:choose>
