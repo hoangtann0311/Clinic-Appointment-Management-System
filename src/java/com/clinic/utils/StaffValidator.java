@@ -61,9 +61,6 @@ public class StaffValidator {
             errors.add("Vui lòng chọn bác sĩ.");
         }
 
-        if (isEmpty(serviceId)) {
-            errors.add("Vui lòng chọn dịch vụ khám.");
-        }
 
         if (isEmpty(appointmentDate)) {
             errors.add("Vui lòng chọn ngày khám.");

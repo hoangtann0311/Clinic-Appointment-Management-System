@@ -35,8 +35,11 @@ public class DoctorProfileServlet extends HttpServlet {
 
     private static final java.util.Set<String> ALLOWED_SPECIALIZATIONS = java.util.Set.of(
             "Sản phụ khoa",
+            "Sản khoa",
+            "Phụ khoa",
             "Thai sản & Y học bào thai",
-            "Siêu âm sản phụ khoa"
+            "Siêu âm sản phụ khoa",
+            "Hiếm muộn & IVF"
     );
 
     private final DoctorDAO doctorDAO = new DoctorDAO();

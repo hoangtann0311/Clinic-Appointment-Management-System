@@ -74,6 +74,10 @@ public final class AuthorizationConfig {
         if (roleId == ROLE_STAFF && path.startsWith("/admin/reception")) {
             return true;
         }
+        // Staff cần gọi API slot của patient để load khung giờ khi đặt lịch thủ công
+        if (roleId == ROLE_STAFF && path.equals("/patient/booking/slots")) {
+            return true;
+        }
 
         String zone = ROLE_ZONES.get(roleId);
         if (zone == null) {

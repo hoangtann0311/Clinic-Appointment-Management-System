@@ -68,7 +68,7 @@
             </div>
             <div class="admin-sidebar-name">${sessionScope.user.fullName}</div>
             <span class="admin-sidebar-badge">
-                <i class="bi bi-shield-check"></i>LỄ TÂN / CALL CENTER
+                <i class="bi bi-shield-check"></i>LỄ TÂN
             </span>
         </div>
 
@@ -175,22 +175,24 @@
                                    oninput="this.value = this.value.replace(/[0-9]/g, '');">
                         </div>
                         <div class="col-md-4 cams-form-group">
-                            <label class="cams-form-label">Ngày sinh <span class="text-muted fw-normal">(nếu có)</span></label>
-                            <input type="date"
-                                   name="dob"
-                                   id="dob"
-                                   class="cams-form-input"
-                                   value="${param.dob}"
-                                   max="<%= java.time.LocalDate.now() %>"
-                                   onchange="validateDob()"
-                                   oninput="validateDob()">
+                            <label class="cams-form-label">Ngày sinh <span class="text-danger">*</span></label>
+                            <input type="date" name="dob" id="dob" class="cams-form-input" required
+                                   value="${param.dob}" max="<%= java.time.LocalDate.now() %>"
+                                   onchange="validateDob()" oninput="validateDob()">
                             <small id="dobError" class="cams-field-error"></small>
                         </div>
                     </div>
                     <div class="row mt-2">
-                        <div class="col-12 cams-form-group">
-                            <label class="cams-form-label">Địa chỉ <span class="text-muted fw-normal">(nếu có)</span></label>
-                            <input type="text" name="address" id="address" class="cams-form-input" placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành" value="${param.address}">
+                        <div class="col-md-6 cams-form-group">
+                            <label class="cams-form-label">Địa chỉ <span class="text-danger">*</span></label>
+                            <input type="text" name="address" id="address" class="cams-form-input" required
+                                   placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành" value="${param.address}">
+                        </div>
+                        <div class="col-md-6 cams-form-group">
+                            <label class="cams-form-label">CCCD/CMND <span class="text-danger">*</span></label>
+                            <input type="text" name="cccd" id="cccd" class="cams-form-input" required
+                                   placeholder="Số CCCD/CMND 12 số" maxlength="12" value="${param.cccd}"
+                                   oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                         </div>
                     </div>
 
@@ -198,33 +200,26 @@
 
                     <!-- Appointment config -->
                     <div class="row">
-                        <div class="col-md-6 cams-form-group">
+                        <div class="col-md-8 cams-form-group">
                             <label class="cams-form-label">Bác sĩ lâm sàng chỉ định <span class="text-danger">*</span></label>
                             <select name="doctorId" id="doctorId" class="cams-form-input" required onchange="onDoctorOrDateChanged()">
                                 <option value="" disabled ${empty param.doctorId ? 'selected' : ''}>-- Chọn Bác sĩ lâm sàng --</option>
-
                                 <c:forEach var="doc" items="${doctors}">
                                     <c:set var="wl" value="${not empty doctorWorkload ? doctorWorkload[doc.id] : 0}"/>
-                                    <option value="${doc.id}" ${param.doctorId == doc.id ? 'selected' : ''}>
-                                        <c:out value="${doc.fullName}"/> — <c:out value="${doc.specialization}"/> <c:if test="${wl > 0}">(🔴 ${wl} BN hôm nay)</c:if>
+                                    <option value="${doc.id}"
+                                            ${param.doctorId == doc.id ? 'selected' : ''}>
+                                        <c:out value="${doc.fullName}"/> — <c:out value="${doc.specialization}"/>
+                                        <c:if test="${doc.experienceYears > 0}"> — ${doc.experienceYears} năm KN</c:if>
+                                        <c:if test="${wl > 0}"> — 🔴 ${wl} BN hôm nay</c:if>
                                     </option>
                                 </c:forEach>
                             </select>
                         </div>
-                        <div class="col-md-6 cams-form-group">
-                            <label class="cams-form-label">Gói dịch vụ ban đầu <span class="text-danger">*</span></label>
-                            <select name="serviceId" id="serviceId" class="cams-form-input" required onchange="updatePriceDisplay()">
-                                <option value="" disabled ${empty param.serviceId ? 'selected' : ''}>-- Chọn dịch vụ --</option>
-
-                                <c:forEach var="srv" items="${services}">
-                                    <option value="${srv.id}"
-                                            data-price="${srv.price}"
-                                        ${param.serviceId == srv.id ? 'selected' : ''}>
-                                        <c:out value="${srv.serviceName}"/>
-                                        (<fmt:formatNumber value="${srv.price}" pattern="#,###"/>đ - <c:out value="${srv.durationMins}"/> phút)
-                                    </option>
-                                </c:forEach>
-                            </select>
+                        <div class="col-md-4 cams-form-group d-flex align-items-end">
+                            <div class="rounded-3 p-3 w-100 text-center" style="background:#fff0f5;border:1px dashed #d27b9f;">
+                                <div class="text-muted small">Tổng chi phí tạm tính</div>
+                                <div id="totalCostDisplay" class="fw-bold fs-5" style="color:#b86689;">—</div>
+                            </div>
                         </div>
                     </div>
 
@@ -244,17 +239,11 @@
                         <div class="col-md-4 cams-form-group">
                             <label class="cams-form-label">Khung giờ khám <span class="text-danger">*</span></label>
 
-                            <select name="timeSlot" id="timeSlot" class="cams-form-input" required>
+                            <select name="timeSlot" id="timeSlot" class="cams-form-input" required onchange="updatePriceDisplay()">
                                 <option value="" disabled ${empty param.timeSlot ? 'selected' : ''}>-- Chọn khung giờ --</option>
                             </select>
 
                             <small class="text-muted mt-1 d-block">Chọn bác sĩ và ngày khám để tải các khung giờ còn trống.</small>
-                        </div>
-                        <div class="col-md-4 cams-form-group">
-                            <label class="cams-form-label">Tổng chi phí tạm tính</label>
-                            <div class="alert alert-info py-2 px-3 m-0 fw-bold fs-5 text-pink" id="total-price-box" style="border-color: var(--c-outline-variant); color: var(--c-primary-dark); background: var(--pink-50);">
-                                0đ
-                            </div>
                         </div>
                     </div>
 
@@ -338,16 +327,19 @@
     }
 
     function updatePriceDisplay() {
-        let srvSelect = document.getElementById("serviceId");
-
-        let srvPrice = 0;
-
-        if (srvSelect.selectedIndex > 0) {
-            srvPrice = parseFloat(srvSelect.options[srvSelect.selectedIndex].getAttribute("data-price")) || 0;
+        // Giá hiển thị khi chọn slot — có thể là giá cao điểm
+        let slotSelect = document.getElementById("timeSlot");
+        let el = document.getElementById("totalCostDisplay");
+        if (!el) return;
+        if (slotSelect.selectedIndex > 0) {
+            let slotOpt = slotSelect.options[slotSelect.selectedIndex];
+            let price = slotOpt.getAttribute("data-price");
+            if (price) {
+                el.textContent = new Intl.NumberFormat('vi-VN').format(price) + 'đ';
+                return;
+            }
         }
-
-        let total = srvPrice;
-        document.getElementById("total-price-box").innerText = total.toLocaleString('vi-VN') + "đ";
+        el.textContent = '—';
     }
 
     function onDoctorOrDateChanged() {
@@ -365,25 +357,31 @@
             return;
         }
 
-        slotSelect.disabled = true;
-        slotSelect.innerHTML = '<option value="">Đang tải khung giờ trống...</option>';
+        slotSelect.innerHTML = '<option value="">Đang tải khung giờ...</option>';
         fetch(contextPath + '/patient/booking/slots?doctorId=' + encodeURIComponent(doctorId) + '&date=' + encodeURIComponent(date))
-            .then(function (res) { return res.ok ? res.json() : Promise.reject(); })
+            .then(function (res) {
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return res.json();
+            })
             .then(function (slots) {
                 let html = '<option value="" selected>-- Chọn khung giờ --</option>';
                 if (slots && slots.length) {
                     slots.forEach(function (slot) {
                         const selected = selectedSlot && selectedSlot === slot.label ? ' selected' : '';
-                        html += '<option value="' + slot.label + '"' + selected + '>' + slot.label + ' (còn trống)</option>';
+                        let price = (slot.price != null && slot.price > 0) ? slot.price : 0;
+                        html += '<option value="' + slot.label + '" data-price="' + price + '"' + selected + '>'
+                            + slot.label + ' — ' + (price > 0 ? new Intl.NumberFormat('vi-VN').format(price) + 'đ' : 'Liên hệ')
+                            + '</option>';
                     });
                 } else {
-                    html += '<option value="" disabled>Không có khung giờ trống</option>';
+                    html += '<option value="" disabled>Không có khung giờ trống cho ngày này</option>';
                 }
                 slotSelect.innerHTML = html;
+                updatePriceDisplay();
             })
-            .catch(function () {
-                slotSelect.innerHTML = '<option value="" selected>Không tải được khung giờ, vui lòng thử lại</option>';
-                slotSelect.disabled = false;
+            .catch(function (err) {
+                console.error('[Booking] Slot load error:', err);
+                slotSelect.innerHTML = '<option value="" selected>Không tải được khung giờ (lỗi: ' + (err.message || 'mạng') + ')</option>';
             });
     }
 
@@ -446,14 +444,13 @@
         let phone = document.getElementById("phone").value.trim();
         let name = document.getElementById("name").value.trim();
         let doc = document.getElementById("doctorId").value;
-        let srv = document.getElementById("serviceId").value;
-
-        if (!validateDob()) {
-            return false;
-        }
         let slot = document.getElementById("timeSlot").value;
-        if (!phone || !name || !doc || !srv || !slot) {
-            alert("Vui lòng điền đầy đủ thông tin bắt buộc!");
+        let address = document.getElementById("address").value.trim();
+        let cccd = document.getElementById("cccd").value.trim();
+
+        if (!validateDob()) return false;
+        if (!phone || !name || !doc || !slot || !address || !cccd) {
+            alert("Vui lòng điền đầy đủ thông tin bắt buộc (Họ tên, SĐT, Ngày sinh, Địa chỉ, CCCD, Bác sĩ, Khung giờ)!");
             return false;
         }
 

@@ -13,7 +13,7 @@ import java.util.List;
 
 public class PatientDAO {
 
-    private static final String SELECT_COLS = "id, full_name, phone_number, date_of_birth, address";
+    private static final String SELECT_COLS = "id, full_name, phone_number, date_of_birth, address, cccd";
 
     private Patient mapRow(ResultSet rs) throws java.sql.SQLException {
         java.sql.Date dobSql = rs.getDate("date_of_birth");
@@ -21,6 +21,7 @@ public class PatientDAO {
         Patient p = new Patient(rs.getInt("id"), rs.getString("full_name"),
                 rs.getString("phone_number"), dob);
         try { p.setAddress(rs.getString("address")); } catch (Exception ignored) {}
+        try { p.setCccd(rs.getString("cccd")); } catch (Exception ignored) {}
         return p;
     }
 
@@ -60,7 +61,9 @@ public class PatientDAO {
             try (ResultSet rs = ps.getGeneratedKeys()) {
                 if (rs.next()) return new Patient(rs.getInt(1), fullName, phone, dob);
             }
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            System.err.println("[PatientDAO] createPatient FAILED: " + e.getMessage());
+        }
         return null;
     }
 
@@ -119,23 +122,38 @@ public class PatientDAO {
         }
     }
 
-    private boolean updatePatientInternal(int id, String fullName, String phone, LocalDate dob, String address, boolean includeAddress) throws java.sql.SQLException {
-        String sql = includeAddress
-                ? "UPDATE patients SET full_name = ?, phone_number = ?, date_of_birth = ?, address = ? WHERE id = ?"
-                : "UPDATE patients SET full_name = ?, phone_number = ?, date_of_birth = ? WHERE id = ?";
+    private boolean updatePatientInternal(int id, String fullName, String phone, LocalDate dob, String address, boolean includeExtras) throws java.sql.SQLException {
+        String sql = "UPDATE patients SET full_name = ?, phone_number = ?, date_of_birth = ?" +
+                (includeExtras ? ", address = ?, cccd = ?" : "") + " WHERE id = ?";
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, fullName);
             ps.setString(2, phone);
             if (dob != null) ps.setDate(3, java.sql.Date.valueOf(dob));
             else ps.setNull(3, java.sql.Types.DATE);
-            if (includeAddress) {
+            if (includeExtras) {
                 ps.setString(4, address);
-                ps.setInt(5, id);
+                ps.setString(5, null); // cccd handled separately
+                ps.setInt(6, id);
             } else {
                 ps.setInt(4, id);
             }
             return ps.executeUpdate() > 0;
         }
+    }
+
+    public boolean updatePatient(int id, String fullName, String phone, LocalDate dob, String address, String cccd) {
+        String sql = "UPDATE patients SET full_name = ?, phone_number = ?, date_of_birth = ?, address = ?, cccd = ? WHERE id = ?";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, fullName);
+            ps.setString(2, phone);
+            if (dob != null) ps.setDate(3, java.sql.Date.valueOf(dob));
+            else ps.setNull(3, java.sql.Types.DATE);
+            ps.setString(4, address);
+            ps.setString(5, cccd);
+            ps.setInt(6, id);
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) { e.printStackTrace(); return false; }
     }
 }

@@ -8,6 +8,7 @@ public class Patient {
     private String phone;
     private LocalDate dateOfBirth;
     private String address;
+    private String cccd;
 
     public Patient() {}
 
@@ -29,4 +30,6 @@ public class Patient {
     public void setDateOfBirth(LocalDate dateOfBirth) { this.dateOfBirth = dateOfBirth; }
     public String getAddress() { return address; }
     public void setAddress(String address) { this.address = address; }
+    public String getCccd() { return cccd; }
+    public void setCccd(String cccd) { this.cccd = cccd; }
 }
