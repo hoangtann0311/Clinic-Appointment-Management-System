@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.clinic.config.DatabaseConfig;
+import com.clinic.utils.EmailUtil;
 
 /**
  * Service xử lý nghiệp vụ quản lý người dùng cho Admin.
@@ -62,8 +63,38 @@ public class UserService {
         }
     }
 
-    /** Cập nhật trạng thái user */
+    /** Cập nhật trạng thái user — có kiểm tra xung đột email/phone khi kích hoạt */
     public boolean updateStatus(int userId, String newStatus) {
+        // Nếu đang kích hoạt tài khoản (chuyển sang Active), kiểm tra xung đột email/phone
+        if ("Active".equals(newStatus)) {
+            User target = userDAO.findById(userId);
+            if (target != null) {
+                String email = target.getEmail();
+                String phone = target.getPhone();
+
+                // Kiểm tra có tài khoản Active nào khác trùng email không
+                if (email != null && !email.isEmpty()) {
+                    User conflict = userDAO.findActiveByEmailExcept(email, userId);
+                    if (conflict != null) {
+                        System.err.println("[UserService] updateStatus: không thể kích hoạt user #"
+                                + userId + " — email " + email
+                                + " đang được dùng bởi tài khoản Active #" + conflict.getId());
+                        return false;
+                    }
+                }
+
+                // Kiểm tra có tài khoản Active nào khác trùng SĐT không
+                if (phone != null && !phone.isEmpty()) {
+                    User conflict = userDAO.findActiveByPhoneExcept(phone, userId);
+                    if (conflict != null) {
+                        System.err.println("[UserService] updateStatus: không thể kích hoạt user #"
+                                + userId + " — SĐT " + phone
+                                + " đang được dùng bởi tài khoản Active #" + conflict.getId());
+                        return false;
+                    }
+                }
+            }
+        }
         return userDAO.updateStatus(userId, newStatus);
     }
 
@@ -147,16 +178,34 @@ public class UserService {
 
         String trimmedEmail = email.trim().toLowerCase();
 
-        // Kiểm tra email trùng
-        if (userDAO.findByEmail(trimmedEmail) != null) {
-            errors.put("email", "Email đã tồn tại.");
-            return false;
+        // Kiểm tra email trùng — chỉ chặn nếu tài khoản cũ đang Active/Locked/Pending
+        User existingByEmail = userDAO.findByEmail(trimmedEmail);
+        if (existingByEmail != null) {
+            String existingStatus = existingByEmail.getStatus();
+            if ("Active".equals(existingStatus) || "Locked".equals(existingStatus)
+                    || "Pending Verification".equals(existingStatus)) {
+                errors.put("email", "Email đã được sử dụng bởi một tài khoản đang hoạt động.");
+                return false;
+            }
+            // Tài khoản cũ Inactive → cho phép tạo mới với cùng email
+            System.out.println("[UserService] createUser: email " + trimmedEmail
+                    + " thuộc về tài khoản Inactive #" + existingByEmail.getId()
+                    + " — cho phép tạo mới.");
         }
 
-        // Kiểm tra số điện thoại trùng
-        if (userDAO.findByPhone(trimmedPhone) != null) {
-            errors.put("phone", "Số điện thoại này đã được sử dụng bởi người dùng khác.");
-            return false;
+        // Kiểm tra số điện thoại trùng — chỉ chặn nếu tài khoản cũ đang Active/Locked/Pending
+        User existingByPhone = userDAO.findByPhone(trimmedPhone);
+        if (existingByPhone != null) {
+            String existingStatus = existingByPhone.getStatus();
+            if ("Active".equals(existingStatus) || "Locked".equals(existingStatus)
+                    || "Pending Verification".equals(existingStatus)) {
+                errors.put("phone", "Số điện thoại này đã được sử dụng bởi một tài khoản đang hoạt động.");
+                return false;
+            }
+            // Tài khoản cũ Inactive → cho phép tạo mới với cùng SĐT
+            System.out.println("[UserService] createUser: phone " + trimmedPhone
+                    + " thuộc về tài khoản Inactive #" + existingByPhone.getId()
+                    + " — cho phép tạo mới.");
         }
 
         // ── Validate roleId: chỉ nhận 6 vai trò còn trong phạm vi hệ thống ──
@@ -213,6 +262,10 @@ public class UserService {
             }
 
             conn.commit();
+
+            // ── Gửi email thông báo tài khoản mới kèm mật khẩu ──
+            EmailUtil.sendNewAccountEmail(trimmedEmail, trimmedName, password);
+
             return true;
         } catch (Exception e) {
             if (conn != null) {
@@ -661,19 +714,49 @@ public class UserService {
             return false;
         }
 
-        // Kiểm tra email trùng (ngoại trừ chính nó)
+        // Kiểm tra email trùng (ngoại trừ chính nó) — chỉ chặn nếu tk kia Active/Locked/Pending
         User emailOwner = userDAO.findByEmail(trimmedEmail);
         if (emailOwner != null && emailOwner.getId() != userId) {
-            errors.put("email", "Email đã được sử dụng bởi người dùng khác.");
-            return false;
+            String otherStatus = emailOwner.getStatus();
+            if ("Active".equals(otherStatus) || "Locked".equals(otherStatus)
+                    || "Pending Verification".equals(otherStatus)) {
+                errors.put("email", "Email đã được sử dụng bởi một tài khoản đang hoạt động.");
+                return false;
+            }
         }
 
-        // Kiểm tra số điện thoại trùng (ngoại trừ chính nó, nếu có nhập)
+        // Kiểm tra số điện thoại trùng (ngoại trừ chính nó, nếu có nhập) — chỉ chặn nếu tk kia Active/Locked/Pending
         if (!trimmedPhone.isEmpty()) {
             User phoneOwner = userDAO.findByPhone(trimmedPhone);
             if (phoneOwner != null && phoneOwner.getId() != userId) {
-                errors.put("phone", "Số điện thoại này đã được sử dụng bởi người dùng khác.");
-                return false;
+                String otherStatus = phoneOwner.getStatus();
+                if ("Active".equals(otherStatus) || "Locked".equals(otherStatus)
+                        || "Pending Verification".equals(otherStatus)) {
+                    errors.put("phone", "Số điện thoại này đã được sử dụng bởi một tài khoản đang hoạt động.");
+                    return false;
+                }
+            }
+        }
+
+        // ── Nếu đang kích hoạt tài khoản (set status = Active), kiểm tra xung đột ──
+        if ("Active".equals(trimmedStatus)) {
+            // Kiểm tra có tài khoản Active nào khác trùng email không
+            if (!trimmedEmail.isEmpty()) {
+                User activeConflict = userDAO.findActiveByEmailExcept(trimmedEmail, userId);
+                if (activeConflict != null) {
+                    errors.put("status", "Không thể kích hoạt: email " + trimmedEmail
+                            + " đang được sử dụng bởi tài khoản Active khác (#" + activeConflict.getId() + ").");
+                    return false;
+                }
+            }
+            // Kiểm tra có tài khoản Active nào khác trùng SĐT không
+            if (!trimmedPhone.isEmpty()) {
+                User activeConflict = userDAO.findActiveByPhoneExcept(trimmedPhone, userId);
+                if (activeConflict != null) {
+                    errors.put("status", "Không thể kích hoạt: số điện thoại " + trimmedPhone
+                            + " đang được sử dụng bởi tài khoản Active khác (#" + activeConflict.getId() + ").");
+                    return false;
+                }
             }
         }
 

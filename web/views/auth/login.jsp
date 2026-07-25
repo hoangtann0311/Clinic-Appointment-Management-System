@@ -238,20 +238,31 @@ function handleGoogleCredential(response) {
     .then(function(data) {
         if (data.success) {
             window.location.href = data.redirectUrl;
+        } else if (data.pendingVerification) {
+            // Đăng ký Google mới — cần xác nhận email (không phải lỗi)
+            showGoogleLoginMessage(data.error, 'info');
         } else {
-            showGoogleLoginError(data.error || 'Đăng nhập Google thất bại.');
+            showGoogleLoginMessage(data.error || 'Đăng nhập Google thất bại.', 'error');
         }
     })
     .catch(function(err) {
         console.error('Google login error:', err);
-        showGoogleLoginError('Lỗi kết nối. Vui lòng thử lại.');
+        showGoogleLoginMessage('Lỗi kết nối. Vui lòng thử lại.', 'error');
     });
 }
 
-function showGoogleLoginError(message) {
+function showGoogleLoginMessage(message, type) {
     var errorDiv = document.getElementById('googleLoginError');
     var errorMsg = document.getElementById('googleLoginErrorMessage');
     errorMsg.textContent = message;
+    // pending verification → màu xanh info; lỗi thật → màu đỏ
+    if (type === 'info') {
+        errorDiv.classList.remove('text-danger');
+        errorDiv.classList.add('text-primary');
+    } else {
+        errorDiv.classList.remove('text-primary');
+        errorDiv.classList.add('text-danger');
+    }
     errorDiv.classList.remove('d-none');
 }
 

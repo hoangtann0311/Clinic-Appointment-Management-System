@@ -295,6 +295,17 @@ public class ServiceStatisticsService {
         }
     }
 
+    /** Top N dịch vụ theo tổng doanh thu trong khoảng ngày. */
+    public List<ServiceStatDetail> getTopServicesByTotalRevenue(int limit, LocalDate from, LocalDate to) {
+        if (from == null || to == null) return getTopServicesByTotalRevenue(limit);
+        try {
+            return statsDAO.getTopServicesByTotalRevenue(limit, from, to);
+        } catch (Exception e) {
+            System.err.println("[ServiceStatisticsService] getTopServicesByTotalRevenue(range) ERROR: " + e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
     // ═══════════════════════════════════════════════════════════
     // DỮ LIỆU BIỂU ĐỒ
     // ═══════════════════════════════════════════════════════════
@@ -335,6 +346,17 @@ public class ServiceStatisticsService {
             return statsDAO.getUsageLast7Days();
         } catch (Exception e) {
             System.err.println("[ServiceStatisticsService] getUsageLast7Days ERROR: " + e.getMessage());
+            return Collections.emptyMap();
+        }
+    }
+
+    /** Lượt sử dụng dịch vụ theo từng ngày trong khoảng [from, to]. */
+    public Map<String, Integer> getDailyUsage(LocalDate from, LocalDate to) {
+        if (from == null || to == null) return getUsageLast7Days();
+        try {
+            return statsDAO.getDailyUsage(from, to);
+        } catch (Exception e) {
+            System.err.println("[ServiceStatisticsService] getDailyUsage ERROR: " + e.getMessage());
             return Collections.emptyMap();
         }
     }

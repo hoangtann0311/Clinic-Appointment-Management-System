@@ -260,7 +260,7 @@
                 <i class="bi bi-briefcase-fill"></i>
             </div>
             <div class="stat-card-body">
-                <div class="stat-card-label">Quản Lý</div>
+                <div class="stat-card-label">Quản lý</div>
                 <div class="stat-card-value">${countManager}</div>
                 <div class="stat-card-sub">Quản lý vận hành</div>
             </div>
@@ -270,7 +270,7 @@
                 <i class="bi bi-person-workspace"></i>
             </div>
             <div class="stat-card-body">
-                <div class="stat-card-label">Nhân Viên</div>
+                <div class="stat-card-label">Nhân viên lễ tân</div>
                 <div class="stat-card-value">${countStaffOnly}</div>
                 <div class="stat-card-sub">Nhân viên lễ tân</div>
             </div>
@@ -290,7 +290,7 @@
                 <i class="bi bi-person-hearts"></i>
             </div>
             <div class="stat-card-body">
-                <div class="stat-card-label">Bệnh Nhân</div>
+                <div class="stat-card-label">Bệnh nhân</div>
                 <div class="stat-card-value">${countPatient}</div>
                 <div class="stat-card-sub">Hồ sơ bệnh nhân</div>
             </div>
@@ -385,10 +385,8 @@
                 </select>
                 <select name="status" class="form-select">
                     <option value="">Tất cả trạng thái</option>
-                    <option value="Active" ${statusFilter eq 'Active' ? 'selected' : ''}>Đang hoạt động</option>
+                    <option value="Active" ${statusFilter eq 'Active' ? 'selected' : ''}>Hoạt động</option>
                     <option value="Inactive" ${statusFilter eq 'Inactive' ? 'selected' : ''}>Ngừng hoạt động</option>
-                    <option value="Locked" ${statusFilter eq 'Locked' ? 'selected' : ''}>Đã khoá</option>
-                    <option value="Pending Verification" ${statusFilter eq 'Pending Verification' ? 'selected' : ''}>Chờ xác thực</option>
                 </select>
                 <%-- Ẩn chức năng Thùng rác --%>
                 <%--
@@ -523,8 +521,8 @@
                                                         <c:choose>
                                                             <c:when test="${u.status eq 'Active'}"><i class="bi bi-check-circle-fill me-1"></i>Hoạt động</c:when>
                                                             <c:when test="${u.status eq 'Locked'}"><i class="bi bi-lock-fill me-1"></i>Đã khoá</c:when>
-                                                            <c:when test="${u.status eq 'Inactive'}"><i class="bi bi-slash-circle me-1"></i>Ngừng</c:when>
-                                                            <c:when test="${u.status eq 'Pending Verification'}"><i class="bi bi-hourglass-split me-1"></i>Chờ Xác Thực</c:when>
+                                                            <c:when test="${u.status eq 'Inactive'}"><i class="bi bi-slash-circle me-1"></i>Ngừng hoạt động</c:when>
+                                                            <c:when test="${u.status eq 'Pending Verification'}"><i class="bi bi-hourglass-split me-1"></i>Chờ xác thực</c:when>
                                                             <c:otherwise>${u.status}</c:otherwise>
                                                         </c:choose>
                                                     </span>
@@ -543,7 +541,7 @@
                                             <div class="btn-action-group">
                                                 <%-- Edit --%>
                                                 <button class="btn btn-sm btn-outline-secondary btn-action"
-                                                        onclick="openEditModal('${u.id}','${fn:escapeXml(u.fullName)}','${fn:escapeXml(u.email)}','${fn:escapeXml(u.phone)}','${u.roleId}','${fn:escapeXml(u.status)}')"
+                                                        onclick="openEditModal('${u.id}','${fn:escapeXml(u.fullName)}','${fn:escapeXml(u.email)}','${fn:escapeXml(u.phone)}','${u.roleId}','${fn:escapeXml(u.status)}','${not empty u.roleNameDisplay ? fn:escapeXml(u.roleNameDisplay) : fn:escapeXml(roleMap[u.roleId])}')"
                                                         title="Chỉnh sửa" data-bs-toggle="tooltip">
                                                     <i class="bi bi-pencil-square"></i>
                                                 </button>
@@ -700,7 +698,6 @@
                             <select name="status" class="form-select">
                                 <option value="Active" ${formStatus eq 'Active' ? 'selected' : ''}>Hoạt động</option>
                                 <option value="Inactive" ${formStatus eq 'Inactive' ? 'selected' : ''}>Ngừng hoạt động</option>
-                                <option value="Locked" ${formStatus eq 'Locked' ? 'selected' : ''}>Đã khoá</option>
                             </select>
                         </div>
                         <div class="col-12 doctor-fields" id="addDoctorFields" style="display: none;">
@@ -804,19 +801,15 @@
                                 <div class="invalid-feedback">${editErrors['phone']}</div>
                             </c:if>
                         </div>
-                        <%-- Phân quyền: cho phép chỉnh sửa --%>
+                        <%-- Vai trò: khoá, chỉ xem --%>
                         <div class="col-md-3">
                             <label class="form-label fw-semibold">
-                                <i class="bi bi-unlock-fill me-1" style="font-size:0.65rem;color:var(--pink-500);"></i>Vai trò
+                                <i class="bi bi-lock-fill me-1" style="font-size:0.65rem;color:var(--c-muted);"></i>Vai trò
                             </label>
                             <input type="hidden" name="roleId" id="editRoleId" value="${formEditRoleId}">
-                            <select id="editRoleIdDisplay" class="form-select" disabled
-                                    aria-describedby="editRoleHelp">
-                                <c:forEach var="entry" items="${roleMap}">
-                                    <option value="${entry.key}" ${not empty formEditRoleId ? (entry.key == formEditRoleId ? 'selected' : '') : ''}>${entry.value}</option>
-                                </c:forEach>
-                            </select>
-                            <div id="editRoleHelp" class="form-text">Không đổi vai trò của tài khoản đã có để bảo toàn hồ sơ nghiệp vụ.</div>
+                            <input type="text" id="editRoleIdDisplay" class="form-control"
+                                   readonly tabindex="-1"
+                                   style="background:#f5f5f5;color:#666;cursor:not-allowed;">
                             <c:if test="${not empty editErrors['roleId']}">
                                 <div class="invalid-feedback">${editErrors['roleId']}</div>
                             </c:if>
@@ -828,7 +821,6 @@
                             <select name="status" id="editStatus" class="form-select ${not empty editErrors['status'] ? 'is-invalid' : ''}">
                                 <option value="Active" ${formEditStatus eq 'Active' ? 'selected' : ''}>Hoạt động</option>
                                 <option value="Inactive" ${formEditStatus eq 'Inactive' ? 'selected' : ''}>Ngừng hoạt động</option>
-                                <option value="Locked" ${formEditStatus eq 'Locked' ? 'selected' : ''}>Đã khoá</option>
                             </select>
                             <c:if test="${not empty editErrors['status']}">
                                 <div class="invalid-feedback">${editErrors['status']}</div>
@@ -1021,13 +1013,13 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ── Edit modal helper ──
-function openEditModal(id, fullName, email, phone, roleId, status) {
+function openEditModal(id, fullName, email, phone, roleId, status, roleName) {
     document.getElementById('editUserId').value = id;
     document.getElementById('editFullName').value = fullName || '';
     document.getElementById('editEmail').value = email || '';
     document.getElementById('editPhone').value = phone || '';
     document.getElementById('editRoleId').value = roleId;
-    document.getElementById('editRoleIdDisplay').value = roleId;
+    document.getElementById('editRoleIdDisplay').value = roleName || '';
     document.getElementById('editStatus').value = status;
 
     toggleDoctorFields();

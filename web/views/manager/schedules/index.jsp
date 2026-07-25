@@ -7,7 +7,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quản Lý Lịch Làm Việc Bác Sĩ — CAMS</title>
+    <title>Quản Lí Lịch Làm Việc — CAMS</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
           rel="stylesheet"
@@ -295,6 +295,19 @@
             color: #e65100; border-radius: 0 var(--r-sm) var(--r-sm) 0;
             font-size: 0.82rem; display: flex; align-items: flex-start; gap: 0.5rem;
         }
+
+        /* Shift row styles */
+        .shift-active { border-left: 3px solid #2e7d32; }
+        .shift-inactive { border-left: 3px solid #b0bec5; opacity: 0.7; }
+        .shift-inactive:hover { opacity: 1; }
+
+        /* Tab styling */
+        .nav-tabs .nav-link {
+            border: none; border-bottom: 2px solid transparent;
+            border-radius: var(--r-sm) var(--r-sm) 0 0;
+            padding: 0.55rem 1.2rem; transition: all var(--t-fast);
+            font-family: var(--font-body);
+        }
     </style>
 </head>
 <body class="admin-body">
@@ -340,41 +353,64 @@
     <div class="admin-page-header">
         <div>
             <h1 class="admin-page-title">
-                <i class="bi bi-calendar-check me-2" style="color:#b86689;"></i>Lịch Làm Việc Bác Sĩ
+                <i class="bi bi-calendar-check me-2" style="color:#b86689;"></i>Quản Lí Lịch Làm Việc
             </h1>
             <div class="admin-page-subtitle">
                 <i class="bi bi-people-fill"></i>
-                Xác nhận hoặc từ chối đăng ký lịch làm việc của bác sĩ lâm sàng
+                <c:choose>
+                    <c:when test="${tab eq 'shifts'}">Quản lý các ca làm việc và duyệt đăng ký lịch của bác sĩ</c:when>
+                    <c:otherwise>Xác nhận hoặc từ chối đăng ký lịch làm việc của bác sĩ lâm sàng</c:otherwise>
+                </c:choose>
             </div>
         </div>
     </div>
 
     <%-- ============================================================
+         TAB NAVIGATION
+         ============================================================ --%>
+    <ul class="nav nav-tabs mb-3" style="border-bottom: 2px solid var(--pink-200);">
+        <li class="nav-item">
+            <a class="nav-link ${tab eq 'shifts' ? 'active' : ''}"
+               href="?tab=shifts"
+               style="${tab eq 'shifts' ? 'background: var(--pink-50); border-color: var(--pink-200) var(--pink-200) var(--c-surface); color: var(--pink-700); font-weight: 700;' : 'color: var(--c-muted); font-weight: 600;'}">
+                <i class="bi bi-layers-fill me-1"></i>Quản lý ca làm việc
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link ${tab ne 'shifts' ? 'active' : ''}"
+               href="?tab=schedules"
+               style="${tab ne 'shifts' ? 'background: var(--pink-50); border-color: var(--pink-200) var(--pink-200) var(--c-surface); color: var(--pink-700); font-weight: 700;' : 'color: var(--c-muted); font-weight: 600;'}">
+                <i class="bi bi-calendar-check me-1"></i>Duyệt đăng ký lịch
+            </a>
+        </li>
+    </ul>
+
+    <%-- ============================================================
          KPI MINI CARDS
          ============================================================ --%>
     <div class="kpi-mini-row">
-        <div class="kpi-mini" onclick="window.location.href='?status=PENDING'" style="cursor:pointer;">
+        <div class="kpi-mini" onclick="window.location.href='?tab=schedules&status=PENDING'" style="cursor:pointer;">
             <div class="kpi-mini-icon kmi-pending"><i class="bi bi-hourglass-split"></i></div>
             <div class="kpi-mini-body">
                 <div class="kpi-mini-value">${pendingCount}</div>
                 <div class="kpi-mini-label">Chờ Xác Nhận</div>
             </div>
         </div>
-        <div class="kpi-mini" onclick="window.location.href='?status=APPROVED'" style="cursor:pointer;">
+        <div class="kpi-mini" onclick="window.location.href='?tab=schedules&status=APPROVED'" style="cursor:pointer;">
             <div class="kpi-mini-icon kmi-approved"><i class="bi bi-check-circle-fill"></i></div>
             <div class="kpi-mini-body">
                 <div class="kpi-mini-value">${approvedCount}</div>
                 <div class="kpi-mini-label">Đã Xác Nhận</div>
             </div>
         </div>
-        <div class="kpi-mini" onclick="window.location.href='?status=REJECTED'" style="cursor:pointer;">
+        <div class="kpi-mini" onclick="window.location.href='?tab=schedules&status=REJECTED'" style="cursor:pointer;">
             <div class="kpi-mini-icon kmi-rejected"><i class="bi bi-x-circle-fill"></i></div>
             <div class="kpi-mini-body">
                 <div class="kpi-mini-value">${rejectedCount}</div>
                 <div class="kpi-mini-label">Đã Từ Chối</div>
             </div>
         </div>
-        <div class="kpi-mini" onclick="window.location.href='?status=CANCELLED'" style="cursor:pointer;">
+        <div class="kpi-mini" onclick="window.location.href='?tab=schedules&status=CANCELLED'" style="cursor:pointer;">
             <div class="kpi-mini-icon kmi-cancelled"><i class="bi bi-slash-circle-fill"></i></div>
             <div class="kpi-mini-body">
                 <div class="kpi-mini-value">${cancelledCount}</div>
@@ -421,11 +457,203 @@
     </c:if>
 
     <%-- ============================================================
+         SHIFT MANAGEMENT SECTION (tab = shifts)
+         ============================================================ --%>
+    <c:if test="${tab eq 'shifts'}">
+
+    <%-- Shift alert messages --%>
+    <c:if test="${success eq 'shiftCreated'}">
+        <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert" style="border-radius:var(--r-md);">
+            <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+            <div><strong>Tạo thành công!</strong> Ca làm việc mới đã được thêm vào hệ thống.</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </c:if>
+    <c:if test="${success eq 'shiftUpdated'}">
+        <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert" style="border-radius:var(--r-md);">
+            <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+            <div><strong>Cập nhật thành công!</strong> Thông tin ca làm việc đã được cập nhật.</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </c:if>
+    <c:if test="${success eq 'shiftDeleted'}">
+        <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert" style="border-radius:var(--r-md);">
+            <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+            <div><strong>Xóa thành công!</strong> Ca làm việc đã được xóa khỏi hệ thống.</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </c:if>
+    <c:if test="${success eq 'shiftToggled'}">
+        <div class="alert alert-info alert-dismissible fade show d-flex align-items-center" role="alert" style="border-radius:var(--r-md);">
+            <i class="bi bi-info-circle-fill me-2 fs-5"></i>
+            <div><strong>Đã cập nhật!</strong> Trạng thái ca làm việc đã được thay đổi.</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </c:if>
+    <c:if test="${not empty shiftErrors}">
+        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert" style="border-radius:var(--r-md);">
+            <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+            <div>
+                <c:if test="${not empty shiftErrors.general}"><strong>${fn:escapeXml(shiftErrors.general)}</strong></c:if>
+                <c:if test="${not empty shiftErrors.shiftName}"><div>${fn:escapeXml(shiftErrors.shiftName)}</div></c:if>
+                <c:if test="${not empty shiftErrors.shiftTime}"><div>${fn:escapeXml(shiftErrors.shiftTime)}</div></c:if>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </c:if>
+
+    <%-- Shift KPI Cards --%>
+    <div class="kpi-mini-row">
+        <div class="kpi-mini">
+            <div class="kpi-mini-icon" style="background: linear-gradient(135deg, #6366f1, #4f46e5);">
+                <i class="bi bi-collection-fill"></i>
+            </div>
+            <div class="kpi-mini-body">
+                <div class="kpi-mini-value">${totalShiftCount}</div>
+                <div class="kpi-mini-label">Tổng Số Ca</div>
+            </div>
+        </div>
+        <div class="kpi-mini">
+            <div class="kpi-mini-icon" style="background: linear-gradient(135deg, #2e7d32, #1b5e20);">
+                <i class="bi bi-check-circle-fill"></i>
+            </div>
+            <div class="kpi-mini-body">
+                <div class="kpi-mini-value">${activeShiftCount}</div>
+                <div class="kpi-mini-label">Đang Hoạt Động</div>
+            </div>
+        </div>
+        <div class="kpi-mini">
+            <div class="kpi-mini-icon" style="background: linear-gradient(135deg, #546e7a, #37474f);">
+                <i class="bi bi-slash-circle-fill"></i>
+            </div>
+            <div class="kpi-mini-body">
+                <div class="kpi-mini-value">${inactiveShiftCount}</div>
+                <div class="kpi-mini-label">Không Hoạt Động</div>
+            </div>
+        </div>
+    </div>
+
+    <%-- Shift Table Header + Add Button --%>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 style="font-family:var(--font-display);font-weight:800;color:var(--c-primary-dark);margin:0;">
+            <i class="bi bi-layers-fill me-2" style="color:#b86689;"></i>Danh Sách Ca Làm Việc
+        </h5>
+        <button type="button" class="btn btn-primary-pink" onclick="openShiftModal('create')">
+            <i class="bi bi-plus-lg me-1"></i>Thêm Ca Làm Việc
+        </button>
+    </div>
+
+    <%-- Shift Table --%>
+    <div class="admin-card">
+        <div class="card-body p-0">
+            <div class="admin-table-wrapper">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th style="width:60px;">STT</th>
+                            <th>Tên Ca</th>
+                            <th style="width:110px;">Giờ Bắt Đầu</th>
+                            <th style="width:110px;">Giờ Kết Thúc</th>
+                            <th>Mô Tả</th>
+                            <th style="width:120px;">Trạng Thái</th>
+                            <th style="width:140px;">Thao Tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <c:choose>
+                            <c:when test="${not empty shifts}">
+                                <c:forEach var="shift" items="${shifts}" varStatus="row">
+                                    <tr class="${shift.active ? 'shift-active' : 'shift-inactive'}">
+                                        <td style="color:var(--c-muted);font-size:0.8rem;">${row.count}</td>
+                                        <td style="font-weight:600;">${fn:escapeXml(shift.name)}</td>
+                                        <td style="font-weight:600;color:var(--pink-600);">
+                                            <i class="bi bi-clock me-1"></i>${fn:substring(shift.startTime.toString(), 0, 5)}
+                                        </td>
+                                        <td style="font-weight:600;color:var(--pink-600);">
+                                            <i class="bi bi-clock-fill me-1"></i>${fn:substring(shift.endTime.toString(), 0, 5)}
+                                        </td>
+                                        <td style="font-size:0.82rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+                                            title="${fn:escapeXml(shift.description)}">
+                                            ${not empty shift.description ? fn:escapeXml(shift.description) : '<span class="text-muted">&mdash;</span>'}
+                                        </td>
+                                        <td>
+                                            <c:choose>
+                                                <c:when test="${shift.active}">
+                                                    <span class="badge-status-approved" style="font-size:0.75rem;">
+                                                        <i class="bi bi-check-circle me-1"></i>Hoạt động
+                                                    </span>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <span class="badge-status-cancelled" style="font-size:0.75rem;">
+                                                        <i class="bi bi-slash-circle me-1"></i>Không hoạt động
+                                                    </span>
+                                                </c:otherwise>
+                                            </c:choose>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex gap-1">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary"
+                                                        title="Sửa ca làm việc" style="font-size:0.78rem;"
+                                                        onclick="openShiftModal('edit', '${shift.id}', '${fn:escapeXml(shift.name)}', '${fn:substring(shift.startTime.toString(), 0, 5)}', '${fn:substring(shift.endTime.toString(), 0, 5)}', '${fn:escapeXml(shift.description)}')">
+                                                    <i class="bi bi-pencil-fill"></i>
+                                                </button>
+                                                <form method="post" action="${pageContext.request.contextPath}/manager/schedules/" style="display:inline;"
+                                                      onsubmit="return confirm('Bạn có chắc muốn ${shift.active ? 'vô hiệu hóa' : 'kích hoạt'} ca làm việc \'${fn:escapeXml(shift.name)}\'?')">
+                                                    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                                                    <input type="hidden" name="action" value="toggleShift">
+                                                    <input type="hidden" name="shiftId" value="${shift.id}">
+                                                    <input type="hidden" name="shiftActive" value="${!shift.active}">
+                                                    <button type="submit" class="btn btn-sm ${shift.active ? 'btn-outline-warning' : 'btn-outline-success'}"
+                                                            title="${shift.active ? 'Vô hiệu hóa' : 'Kích hoạt'} ca làm việc" style="font-size:0.78rem;">
+                                                        <i class="bi ${shift.active ? 'bi-toggle-on' : 'bi-toggle-off'}"></i>
+                                                    </button>
+                                                </form>
+                                                <form method="post" action="${pageContext.request.contextPath}/manager/schedules/" style="display:inline;"
+                                                      onsubmit="return confirmDeleteShift('${fn:escapeXml(shift.name)}')">
+                                                    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                                                    <input type="hidden" name="action" value="deleteShift">
+                                                    <input type="hidden" name="shiftId" value="${shift.id}">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                            title="Xóa ca làm việc" style="font-size:0.78rem;">
+                                                        <i class="bi bi-trash-fill"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </c:forEach>
+                            </c:when>
+                            <c:otherwise>
+                                <tr>
+                                    <td colspan="7">
+                                        <div class="admin-empty-state">
+                                            <i class="bi bi-layers" style="font-size:3rem;color:var(--c-muted);"></i>
+                                            <h6>Chưa có ca làm việc nào</h6>
+                                            <p>Nhấn "Thêm Ca Làm Việc" để tạo ca làm việc đầu tiên.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </c:otherwise>
+                        </c:choose>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    </c:if>
+
+    <%-- ============================================================
+         SCHEDULE APPROVAL SECTION (tab = schedules, default)
+         ============================================================ --%>
+    <c:if test="${tab ne 'shifts'}">
+
+    <%-- ============================================================
          FILTER BAR
          ============================================================ --%>
     <div class="admin-card mb-3">
         <div class="card-body">
             <form method="get" action="${pageContext.request.contextPath}/manager/schedules/" class="filter-bar">
+                <input type="hidden" name="tab" value="schedules">
                 <select name="status" class="form-select">
                     <option value="">Tất cả trạng thái</option>
                     <option value="PENDING" ${statusFilter eq 'PENDING' ? 'selected' : ''}>Chờ xác nhận</option>
@@ -451,7 +679,7 @@
                 <button type="submit" class="btn btn-primary-pink">
                     <i class="bi bi-funnel-fill me-1"></i>Lọc
                 </button>
-                <a href="${pageContext.request.contextPath}/manager/schedules/" class="btn btn-outline-secondary btn-sm">
+                <a href="${pageContext.request.contextPath}/manager/schedules/?tab=schedules" class="btn btn-outline-secondary btn-sm">
                     <i class="bi bi-arrow-counterclockwise me-1"></i>Đặt lại
                 </a>
             </form>
@@ -622,6 +850,7 @@
     <c:if test="${totalPages > 1}">
         <div class="admin-pagination">
             <c:url var="baseUrl" value="/manager/schedules/">
+                <c:param name="tab" value="schedules"/>
                 <c:param name="status" value="${statusFilter}"/>
                 <c:param name="doctorId" value="${doctorIdFilter}"/>
                 <c:param name="dateFrom" value="${dateFromFilter}"/>
@@ -641,7 +870,71 @@
             </c:if>
         </div>
     </c:if>
+    </c:if><%-- end schedules tab --%>
 </main>
+
+<%-- ============================================================
+     MODAL: THÊM / SỬA CA LÀM VIỆC
+     ============================================================ --%>
+<div class="modal fade" id="shiftModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="shiftModalTitle">
+                    <i class="bi bi-layers-fill me-2" style="color:#b86689;"></i>Thêm Ca Làm Việc
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="${pageContext.request.contextPath}/manager/schedules/" id="shiftForm"
+                  onsubmit="return validateShiftForm()">
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                <input type="hidden" name="action" id="shiftAction" value="createShift">
+                <input type="hidden" name="shiftId" id="shiftId" value="">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="shiftName" class="form-label fw-semibold">
+                            Tên ca <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="shiftName" name="shiftName"
+                               maxlength="100" placeholder="Ví dụ: Ca sáng, Ca chiều, Ca tối..."
+                               required style="border-radius:var(--r-sm);">
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label for="shiftStartTime" class="form-label fw-semibold">
+                                Giờ bắt đầu <span class="text-danger">*</span>
+                            </label>
+                            <input type="time" class="form-control" id="shiftStartTime" name="shiftStartTime"
+                                   required style="border-radius:var(--r-sm);">
+                        </div>
+                        <div class="col-6">
+                            <label for="shiftEndTime" class="form-label fw-semibold">
+                                Giờ kết thúc <span class="text-danger">*</span>
+                            </label>
+                            <input type="time" class="form-control" id="shiftEndTime" name="shiftEndTime"
+                                   required style="border-radius:var(--r-sm);">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="shiftDescription" class="form-label fw-semibold">Mô tả</label>
+                        <textarea class="form-control" id="shiftDescription" name="shiftDescription"
+                                  rows="3" maxlength="500" placeholder="Mô tả ngắn về ca làm việc..."
+                                  style="border-radius:var(--r-sm);"></textarea>
+                    </div>
+                    <div id="shiftError" class="text-danger mt-2" style="font-size:0.82rem;display:none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Hủy
+                    </button>
+                    <button type="submit" class="btn btn-primary-pink" id="shiftSubmitBtn">
+                        <i class="bi bi-plus-lg me-1"></i>Thêm Ca Làm Việc
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <%-- ============================================================
      MODAL: XÁC NHẬN TỪ CHỐI (REJECT)
@@ -1076,6 +1369,87 @@ function openCancelModal(id, doctorName, shiftLabel) {
         new bootstrap.Modal(document.getElementById('detailModal')).show();
     });
 </c:if>
+
+<%-- Hiển thị shift modal nếu có lỗi validate --%>
+<c:if test="${showShiftModal}">
+    document.addEventListener('DOMContentLoaded', function() {
+        openShiftModal('<%= request.getAttribute("shiftAction") != null ? request.getAttribute("shiftAction") : "create" %>');
+        // Điền lại giá trị đã nhập nếu có
+        var shiftName = '${fn:escapeXml(param.shiftName)}';
+        var shiftStart = '${fn:escapeXml(param.shiftStartTime)}';
+        var shiftEnd = '${fn:escapeXml(param.shiftEndTime)}';
+        var shiftDesc = '${fn:escapeXml(param.shiftDescription)}';
+        if (shiftName) document.getElementById('shiftName').value = shiftName;
+        if (shiftStart) document.getElementById('shiftStartTime').value = shiftStart;
+        if (shiftEnd) document.getElementById('shiftEndTime').value = shiftEnd;
+        if (shiftDesc) document.getElementById('shiftDescription').value = shiftDesc;
+    });
+</c:if>
+
+// ── Shift modal functions ──
+
+function openShiftModal(mode, id, name, startTime, endTime, description) {
+    var modal = new bootstrap.Modal(document.getElementById('shiftModal'));
+    var title = document.getElementById('shiftModalTitle');
+    var form = document.getElementById('shiftForm');
+    var actionInput = document.getElementById('shiftAction');
+    var shiftIdInput = document.getElementById('shiftId');
+    var submitBtn = document.getElementById('shiftSubmitBtn');
+    var errorEl = document.getElementById('shiftError');
+    errorEl.style.display = 'none';
+
+    if (mode === 'create') {
+        title.innerHTML = '<i class="bi bi-layers-fill me-2" style="color:#b86689;"></i>Thêm Ca Làm Việc';
+        actionInput.value = 'createShift';
+        shiftIdInput.value = '';
+        submitBtn.innerHTML = '<i class="bi bi-plus-lg me-1"></i>Thêm Ca Làm Việc';
+        document.getElementById('shiftName').value = '';
+        document.getElementById('shiftStartTime').value = '';
+        document.getElementById('shiftEndTime').value = '';
+        document.getElementById('shiftDescription').value = '';
+    } else {
+        title.innerHTML = '<i class="bi bi-pencil-fill me-2" style="color:#b86689;"></i>Sửa Ca Làm Việc';
+        actionInput.value = 'updateShift';
+        shiftIdInput.value = id || '';
+        submitBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Cập Nhật';
+        document.getElementById('shiftName').value = name || '';
+        document.getElementById('shiftStartTime').value = startTime || '';
+        document.getElementById('shiftEndTime').value = endTime || '';
+        document.getElementById('shiftDescription').value = description || '';
+    }
+    modal.show();
+}
+
+function validateShiftForm() {
+    var name = document.getElementById('shiftName').value.trim();
+    var startTime = document.getElementById('shiftStartTime').value;
+    var endTime = document.getElementById('shiftEndTime').value;
+    var errorEl = document.getElementById('shiftError');
+
+    if (!name) {
+        errorEl.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>Vui lòng nhập tên ca làm việc.';
+        errorEl.style.display = 'block';
+        return false;
+    }
+    if (!startTime || !endTime) {
+        errorEl.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>Vui lòng nhập cả giờ bắt đầu và giờ kết thúc.';
+        errorEl.style.display = 'block';
+        return false;
+    }
+    if (startTime >= endTime) {
+        errorEl.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>Giờ kết thúc phải sau giờ bắt đầu.';
+        errorEl.style.display = 'block';
+        return false;
+    }
+    errorEl.style.display = 'none';
+    return true;
+}
+
+function confirmDeleteShift(name) {
+    return confirm('Bạn có chắc muốn xóa ca làm việc "' + name + '"?\n\n'
+        + 'Lưu ý: Nếu ca đã có lịch đăng ký, xóa sẽ bị chặn. '
+        + 'Bạn có thể vô hiệu hóa ca thay vì xóa.');
+}
 </script>
 
 <%@ include file="../../common/standalone-footer.jsp" %>

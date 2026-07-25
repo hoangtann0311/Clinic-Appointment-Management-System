@@ -187,9 +187,9 @@
                        <c:if test="${not empty terms}">checked</c:if>>
                 <label for="terms">
                     Tôi đồng ý với
-                    <a href="#" tabindex="-1">Điều khoản sử dụng</a>
-                    và
-                    <a href="#" tabindex="-1">Chính sách bảo mật</a>
+                    <a href="${pageContext.request.contextPath}/views/auth/terms-and-privacy.jsp"
+                       target="_blank" tabindex="-1">Điều khoản sử dụng & Chính sách bảo mật</a>
+                    của CAMS
                 </label>
             </div>
             <c:if test="${not empty errors.terms}">
@@ -302,7 +302,7 @@ function validateRegisterForm() {
 
     // ----- Terms & Conditions -----
     if (terms && !terms.checked) {
-        showTermsError('Bạn phải đồng ý với Điều khoản sử dụng và Chính sách bảo mật.');
+        showTermsError('Bạn phải đồng ý với Điều khoản sử dụng & Chính sách bảo mật.');
         isValid = false;
     }
 

@@ -34,12 +34,17 @@ public class LoginServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        // Nếu đã đăng nhập, chuyển thẳng về dashboard
-        HttpSession session = request.getSession(false);
-        if (session != null && session.getAttribute("user") != null) {
-            User user = (User) session.getAttribute("user");
-            response.sendRedirect(request.getContextPath() + getDashboardPath(user.getRoleId()));
-            return;
+        // Nếu đã đăng nhập và không có tham số prompt, chuyển thẳng về dashboard.
+        // Khi có ?prompt=1 (VD: từ email "Đăng Nhập Ngay"), luôn hiển thị trang login
+        // để người dùng nhập thủ công — ngay cả khi đã có session.
+        String prompt = request.getParameter("prompt");
+        if (!"1".equals(prompt)) {
+            HttpSession session = request.getSession(false);
+            if (session != null && session.getAttribute("user") != null) {
+                User user = (User) session.getAttribute("user");
+                response.sendRedirect(request.getContextPath() + getDashboardPath(user.getRoleId()));
+                return;
+            }
         }
 
         request.getRequestDispatcher("/views/auth/login.jsp").forward(request, response);
@@ -93,7 +98,11 @@ public class LoginServlet extends HttpServlet {
             return;
         }
 
-        // Đăng nhập thành công: tạo session và lưu user
+        // Đăng nhập thành công: hủy session cũ (chống session fixation) rồi tạo mới
+        HttpSession oldSession = request.getSession(false);
+        if (oldSession != null) {
+            oldSession.invalidate();
+        }
         HttpSession session = request.getSession(true);
 
         // Nạp ảnh đại diện từ bảng vai trò cụ thể (hiện chỉ có doctors.avatar_url)

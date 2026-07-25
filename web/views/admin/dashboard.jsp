@@ -720,7 +720,7 @@ body.admin-body {
     </div>
 
     <%-- ════════════════════════════════════════════ --%>
-    <%-- 6 KPI CARDS — thông tin vận hành cần thiết --%>
+    <%-- 4 KPI CARDS — thông tin vận hành cần thiết --%>
     <%-- ════════════════════════════════════════════ --%>
     <div class="row g-3 mb-4">
         <%-- 1. Tổng số tài khoản --%>
@@ -752,47 +752,20 @@ body.admin-body {
                     <div class="kpi-icon"><i class="bi bi-check-circle-fill"></i></div>
                     <div class="kpi-content">
                         <div class="kpi-value">${not empty activeAccounts ? activeAccounts : 0}</div>
-                        <div class="kpi-label">Tài Khoản Đang Hoạt Động</div>
-                        <div class="kpi-sub"><i class="bi bi-shield-check"></i> Trạng thái hoạt động</div>
+                        <div class="kpi-label">
+                            <c:choose>
+                                <c:when test="${isCustomRange}">Người Dùng Hoạt Động (Khoảng)</c:when>
+                                <c:otherwise>Tài Khoản Đang Hoạt Động</c:otherwise>
+                            </c:choose>
+                        </div>
+                        <div class="kpi-sub"><i class="bi bi-shield-check"></i> <c:choose><c:when test="${isCustomRange}">${dateRangeLabel}</c:when><c:otherwise>Trạng thái hoạt động</c:otherwise></c:choose></div>
                     </div>
                 </div>
             </div>
             </a>
         </div>
 
-        <%-- 3. Tài khoản bị khóa --%>
-        <div class="col-xl-4 col-lg-6">
-            <a href="${pageContext.request.contextPath}/admin/users/?status=LOCKED" style="text-decoration:none;color:inherit;">
-            <div class="card kpi-card kpi-locked fade-in-up">
-                <div class="card-body">
-                    <div class="kpi-icon"><i class="bi bi-lock-fill"></i></div>
-                    <div class="kpi-content">
-                        <div class="kpi-value">${not empty lockedAccounts ? lockedAccounts : 0}</div>
-                        <div class="kpi-label">Tài Khoản Bị Khóa</div>
-                        <div class="kpi-sub"><i class="bi bi-exclamation-triangle"></i> Cần xem xét</div>
-                    </div>
-                </div>
-            </div>
-            </a>
-        </div>
-
-        <%-- 4. Tài khoản chưa xác thực --%>
-        <div class="col-xl-4 col-lg-6">
-            <a href="${pageContext.request.contextPath}/admin/users/?status=PENDING_VERIFICATION" style="text-decoration:none;color:inherit;">
-            <div class="card kpi-card kpi-unverified fade-in-up">
-                <div class="card-body">
-                    <div class="kpi-icon"><i class="bi bi-envelope-exclamation"></i></div>
-                    <div class="kpi-content">
-                        <div class="kpi-value">${not empty unverifiedAccounts ? unverifiedAccounts : 0}</div>
-                        <div class="kpi-label">Chưa Xác Thực Email</div>
-                        <div class="kpi-sub"><i class="bi bi-hourglass-split"></i> Đang chờ xác nhận</div>
-                    </div>
-                </div>
-            </div>
-            </a>
-        </div>
-
-        <%-- 5. Đăng nhập hôm nay --%>
+        <%-- 3. Đăng nhập hôm nay --%>
         <div class="col-xl-4 col-lg-6">
             <a href="${pageContext.request.contextPath}/admin/audit-logs/" style="text-decoration:none;color:inherit;">
             <div class="card kpi-card kpi-logins fade-in-up">
@@ -813,7 +786,7 @@ body.admin-body {
             </a>
         </div>
 
-        <%-- 6. Nhật ký hệ thống hôm nay --%>
+        <%-- 4. Nhật ký hệ thống hôm nay --%>
         <div class="col-xl-4 col-lg-6">
             <a href="${pageContext.request.contextPath}/admin/audit-logs/" style="text-decoration:none;color:inherit;">
             <div class="card kpi-card kpi-audit fade-in-up">
@@ -834,43 +807,6 @@ body.admin-body {
             </a>
         </div>
     </div>
-
-    <%-- ════════════════════════════════════════════ --%>
-    <%-- CẢNH BÁO HỆ THỐNG (System Alerts) --%>
-    <%-- ════════════════════════════════════════════ --%>
-    <c:if test="${not empty systemAlerts}">
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="admin-card">
-                <div class="card-header">
-                    <h5>
-                        <i class="bi bi-exclamation-diamond-fill"></i>
-                        <c:choose>
-                            <c:when test="${isCustomRange}">Cảnh Báo Hệ Thống (${dateRangeLabel})</c:when>
-                            <c:otherwise>Cảnh Báo &amp; An Ninh Hệ Thống</c:otherwise>
-                        </c:choose>
-                    </h5>
-                </div>
-                <div class="card-body p-3">
-                    <div class="row g-2">
-                        <c:forEach var="alert" items="${systemAlerts}">
-                        <div class="col-lg-3 col-md-6">
-                            <div class="alert-item ${alert.type}">
-                                <div class="alert-icon"><i class="bi ${alert.icon}"></i></div>
-                                <div class="alert-body">
-                                    <div class="alert-title">${alert.title}</div>
-                                    <div class="alert-msg">${alert.message}</div>
-                                </div>
-                                <span class="alert-count">${alert.count}</span>
-                            </div>
-                        </div>
-                        </c:forEach>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    </c:if>
 
     <%-- ════════════════════════════════════════════ --%>
     <%-- BIỂU ĐỒ HÀNG 1: Xu hướng đăng nhập + Tăng trưởng tài khoản --%>
@@ -913,7 +849,7 @@ body.admin-body {
                     <h5>
                         <i class="bi bi-bar-chart-fill"></i>
                         <c:choose>
-                            <c:when test="${isCustomRange}">Tăng Trưởng Tài Khoản (${dateRangeLabel})</c:when>
+                            <c:when test="${isCustomRange}">Tài Khoản Mới Theo Ngày (${dateRangeLabel})</c:when>
                             <c:otherwise>Tăng Trưởng Tài Khoản 12 Tháng</c:otherwise>
                         </c:choose>
                     </h5>
@@ -928,7 +864,12 @@ body.admin-body {
                         <c:otherwise>
                             <div class="admin-empty-state py-4">
                                 <i class="bi bi-bar-chart" style="font-size:2rem;color:var(--pink-200);"></i>
-                                <p class="mt-2 mb-0" style="color:var(--c-muted);">Chưa có dữ liệu tài khoản trong khoảng này</p>
+                                <p class="mt-2 mb-0" style="color:var(--c-muted);">
+                                    <c:choose>
+                                        <c:when test="${isCustomRange}">Chưa có tài khoản mới trong khoảng này</c:when>
+                                        <c:otherwise>Chưa có dữ liệu tài khoản trong khoảng này</c:otherwise>
+                                    </c:choose>
+                                </p>
                             </div>
                         </c:otherwise>
                     </c:choose>
@@ -985,10 +926,10 @@ body.admin-body {
                                                     <span class="badge-role-tag badge-role-${recentRole}">
                                                         <c:choose>
                                                             <c:when test="${recentRole == 'admin'}">Quản trị viên</c:when>
-                                                            <c:when test="${recentRole == 'manager'}">Quản Lý</c:when>
-                                                            <c:when test="${recentRole == 'doctor'}">Bác Sĩ Lâm Sàng</c:when>
-                                                            <c:when test="${recentRole == 'staff'}">Lễ Tân</c:when>
-                                                            <c:when test="${recentRole == 'patient'}">Bệnh Nhân</c:when>
+                                                            <c:when test="${recentRole == 'manager'}">Quản lý</c:when>
+                                                            <c:when test="${recentRole == 'doctor'}">Bác sĩ lâm sàng</c:when>
+                                                            <c:when test="${recentRole == 'staff'}">Nhân viên lễ tân</c:when>
+                                                            <c:when test="${recentRole == 'patient'}">Bệnh nhân</c:when>
                                                             <c:when test="${recentRole == 'sonographer'}">Bác sĩ siêu âm</c:when>
                                                             <c:otherwise>${ru.roleName}</c:otherwise>
                                                         </c:choose>
@@ -997,9 +938,8 @@ body.admin-body {
                                                 <td>
                                                     <c:choose>
                                                         <c:when test="${ru.status == 'Active'}"><span class="badge-status badge-active">Hoạt động</span></c:when>
-                                                        <c:when test="${ru.status == 'LOCKED'}"><span class="badge-status badge-locked">Khóa</span></c:when>
-                                                        <c:when test="${ru.status == 'PENDING_VERIFICATION'}"><span class="badge-status badge-pending">Chờ XT</span></c:when>
-                                                        <c:otherwise><span class="badge-status badge-inactive">${ru.status}</span></c:otherwise>
+                                                        <c:when test="${ru.status == 'Inactive'}"><span class="badge-status badge-inactive">Ngừng hoạt động</span></c:when>
+                                                        <c:otherwise><span class="badge-status badge-inactive">—</span></c:otherwise>
                                                     </c:choose>
                                                 </td>
                                                 <td style="color:var(--c-muted);font-size:0.78rem;white-space:nowrap;">${ru.createdAt}</td>

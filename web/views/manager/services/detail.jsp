@@ -196,43 +196,25 @@
                                 <div class="info-value">${detailUsageCount} lượt</div>
                             </div>
                         </div>
-                        <div class="info-item">
-                            <div class="info-icon" style="background: linear-gradient(135deg, #e65100, #bf360c);">
-                                <i class="bi bi-door-open"></i>
-                            </div>
-                            <div>
-                                <div class="info-label">Phòng yêu cầu</div>
-                                <div class="info-value">${not empty detailService.requiredRoomType ? fn:escapeXml(detailService.requiredRoomType) : 'Không yêu cầu'}</div>
-                            </div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-icon" style="background: linear-gradient(135deg, #d99ab4, #d27b9f);">
-                                <i class="bi bi-heart-pulse"></i>
-                            </div>
-                            <div>
-                                <div class="info-label">Chuyên khoa</div>
-                                <div class="info-value">${not empty detailService.allowedSpecialties ? fn:escapeXml(detailService.allowedSpecialties) : 'Tất cả'}</div>
-                            </div>
-                        </div>
                     </div>
 
-                    <%-- Requirements --%>
-                    <div class="d-flex gap-2 mt-3 flex-wrap">
-                        <c:if test="${detailService.requiresFasting}">
-                            <span style="background:#fff3e0;color:#e65100;padding:4px 12px;border-radius:var(--r-pill);font-size:0.78rem;font-weight:700;">
-                                <i class="bi bi-cup-hot me-1"></i>Yêu cầu nhịn ăn
-                            </span>
-                        </c:if>
-                        <c:if test="${detailService.requiresFullBladder}">
-                            <span style="background:#e3f2fd;color:#0d47a1;padding:4px 12px;border-radius:var(--r-pill);font-size:0.78rem;font-weight:700;">
-                                <i class="bi bi-droplet-fill me-1"></i>Yêu cầu đầy bàng quang
-                            </span>
-                        </c:if>
-                        <c:if test="${!detailService.requiresFasting && !detailService.requiresFullBladder}">
-                            <span style="background:#f5f5f5;color:#757575;padding:4px 12px;border-radius:var(--r-pill);font-size:0.78rem;">
-                                Không có yêu cầu đặc biệt
-                            </span>
-                        </c:if>
+                    <%-- Yêu cầu đặc biệt --%>
+                    <c:set var="specReq" value=""/>
+                    <c:if test="${not empty detailService.description and fn:contains(detailService.description, 'Yêu cầu đặc biệt:')}">
+                        <c:set var="specReq" value="${fn:substringAfter(detailService.description, 'Yêu cầu đặc biệt:')}"/>
+                    </c:if>
+                    <div class="mt-3">
+                        <div class="info-label mb-1">Yêu cầu đặc biệt trước khi thực hiện</div>
+                        <div style="color:var(--c-on-surface-var);font-size:0.85rem;line-height:1.6;background:var(--c-surface-variant);padding:0.75rem 1rem;border-radius:var(--r-sm);">
+                            <c:choose>
+                                <c:when test="${not empty specReq}">
+                                    ${fn:escapeXml(specReq)}
+                                </c:when>
+                                <c:otherwise>
+                                    <span style="color:#757575;">Không có yêu cầu đặc biệt</span>
+                                </c:otherwise>
+                            </c:choose>
+                        </div>
                     </div>
 
                     <%-- Description --%>

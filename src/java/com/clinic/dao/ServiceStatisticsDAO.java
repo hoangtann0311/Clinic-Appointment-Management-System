@@ -568,6 +568,51 @@ public class ServiceStatisticsDAO {
     }
 
     /**
+     * Tổng lượt sử dụng dịch vụ theo từng ngày trong khoảng [from, to].
+     * Trả về Map<ngày (dd/MM), số lượt>.
+     */
+    public Map<String, Integer> getDailyUsage(LocalDate from, LocalDate to) {
+        String sql =
+            "SELECT appointment_date, COUNT(*) AS cnt "
+            + "FROM appointments "
+            + "WHERE service_id IS NOT NULL "
+            + "AND appointment_date >= ? "
+            + "AND appointment_date <= ? "
+            + "GROUP BY appointment_date "
+            + "ORDER BY appointment_date";
+
+        Map<String, Integer> result = new LinkedHashMap<>();
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM");
+        for (LocalDate d = from; !d.isAfter(to); d = d.plusDays(1)) {
+            result.put(d.format(fmt), 0);
+        }
+
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setDate(1, java.sql.Date.valueOf(from));
+            ps.setDate(2, java.sql.Date.valueOf(to));
+            rs = ps.executeQuery();
+            while (rs.next()) {
+                java.sql.Date date = rs.getDate("appointment_date");
+                int count = rs.getInt("cnt");
+                if (date != null) {
+                    String key = date.toLocalDate().format(fmt);
+                    result.put(key, count);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[ServiceStatisticsDAO] getDailyUsage ERROR: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return result;
+    }
+
+    /**
      * Doanh thu dịch vụ 12 tháng gần nhất (theo tháng).
      * Trả về Map<tháng (MM/yyyy), doanh thu>.
      */
@@ -819,6 +864,71 @@ public class ServiceStatisticsDAO {
             }
         } catch (SQLException e) {
             System.err.println("[ServiceStatisticsDAO] getTopServicesByTotalRevenue ERROR: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return list;
+    }
+
+    /**
+     * Top N dịch vụ theo tổng doanh thu trong khoảng ngày.
+     * Dùng cho bảng "Doanh Thu Dịch Vụ" trên Manager Dashboard.
+     * Chỉ trả về các dịch vụ có doanh thu > 0 trong khoảng.
+     */
+    public List<ServiceStatDetail> getTopServicesByTotalRevenue(int limit, LocalDate from, LocalDate to) {
+        String sql =
+            "SELECT * FROM ("
+            + "SELECT TOP (?) "
+            + "  s.id AS service_id, "
+            + "  s.service_code, "
+            + "  s.service_name, "
+            + "  ISNULL(s.price, 0) AS price, "
+            + "  ISNULL(sc.category_name, N'Chưa phân nhóm') AS category_name, "
+            + "  sc.icon AS category_icon, "
+            + "  ISNULL(rev.total_bookings, 0) AS total_usage, "
+            + "  ISNULL(rev.total_revenue, 0) AS total_revenue "
+            + "FROM services s "
+            + "LEFT JOIN service_categories sc ON sc.id = s.category_id "
+            + "LEFT JOIN ("
+            + "  SELECT a.service_id, "
+            + "    COUNT(DISTINCT a.id) AS total_bookings, "
+            + "    ISNULL(SUM(ii.subtotal), 0) AS total_revenue "
+            + "  FROM appointments a "
+            + "  INNER JOIN invoices i ON i.appointment_id = a.id AND i.status = 'paid' "
+            + "  INNER JOIN invoice_items ii ON ii.invoice_id = i.id AND ii.item_type = 'service' AND ii.item_id = a.service_id "
+            + "  WHERE a.appointment_date >= ? AND a.appointment_date <= ? "
+            + "  GROUP BY a.service_id "
+            + ") rev ON rev.service_id = s.id "
+            + "WHERE s.is_active = 1 "
+            + "ORDER BY total_revenue DESC"
+            + ") filtered WHERE total_revenue > 0";
+
+        List<ServiceStatDetail> list = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setInt(1, limit);
+            ps.setDate(2, java.sql.Date.valueOf(from));
+            ps.setDate(3, java.sql.Date.valueOf(to));
+            rs = ps.executeQuery();
+            while (rs.next()) {
+                ServiceStatDetail d = new ServiceStatDetail();
+                d.serviceId = rs.getInt("service_id");
+                d.serviceCode = rs.getString("service_code");
+                d.serviceName = rs.getString("service_name");
+                d.price = rs.getDouble("price");
+                d.categoryName = rs.getString("category_name");
+                try { d.categoryIcon = rs.getString("category_icon"); } catch (SQLException e) { d.categoryIcon = null; }
+                d.totalUsage = rs.getInt("total_usage");
+                d.totalRevenue = rs.getDouble("total_revenue");
+                d.usageToday = rs.getInt("total_usage");
+                list.add(d);
+            }
+        } catch (SQLException e) {
+            System.err.println("[ServiceStatisticsDAO] getTopServicesByTotalRevenue(range) ERROR: " + e.getMessage());
         } finally {
             closeResources(conn, ps, rs);
         }

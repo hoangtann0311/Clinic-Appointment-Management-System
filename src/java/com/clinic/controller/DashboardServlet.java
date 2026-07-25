@@ -38,14 +38,14 @@ import java.util.stream.Collectors;
 })
 public class DashboardServlet extends HttpServlet {
 
-    /** Tên hiển thị tương ứng với roleId */
+    /** Tên hiển thị tương ứng với roleId — đồng bộ với AuthorizationConfig, User, Role, AdminUserServlet */
     private static final Map<Integer, String> ROLE_NAMES = new LinkedHashMap<>();
     static {
-        ROLE_NAMES.put(1, "Quản Trị Viên");
-        ROLE_NAMES.put(2, "Bác Sĩ");
-        ROLE_NAMES.put(3, "Quản Lý");
-        ROLE_NAMES.put(4, "Nhân Viên");
-        ROLE_NAMES.put(5, "Bệnh Nhân");
+        ROLE_NAMES.put(1, "Quản trị viên");
+        ROLE_NAMES.put(2, "Bác sĩ lâm sàng");
+        ROLE_NAMES.put(3, "Quản lý");
+        ROLE_NAMES.put(4, "Nhân viên lễ tân");
+        ROLE_NAMES.put(5, "Bệnh nhân");
         ROLE_NAMES.put(6, "Bác sĩ siêu âm");
     }
 
@@ -183,39 +183,62 @@ public class DashboardServlet extends HttpServlet {
         request.setAttribute("isCustomRange", isCustomRange);
         request.setAttribute("today", today);
 
-        // Tổng số dịch vụ và thuốc — lọc theo ngày tạo nếu có date filter
+        // Tổng số dịch vụ — lọc theo ngày tạo nếu có date filter
         LocalDate countMaxDate = isCustomRange ? dateTo : null;
         request.setAttribute("totalServices", serviceService.getTotalServices(null, null, countMaxDate));
-        request.setAttribute("totalMedicines", medicineService.getTotalMedicines(null, null, countMaxDate));
+        // totalMedicines: đã ẩn — manager không cần quản lý thuốc
+        // request.setAttribute("totalMedicines", medicineService.getTotalMedicines(null, null, countMaxDate));
 
-        // ─── Widget "Cảnh Báo Tồn Kho" — thuốc sắp hết (stock ≤ 10) ───
-        request.setAttribute("lowStockMedicines", medicineService.getLowStockMedicines(10, 5));
+        // lowStockMedicines: đã ẩn — manager không cần cảnh báo tồn kho
+        // if (!isCustomRange) {
+        //     request.setAttribute("lowStockMedicines", medicineService.getLowStockMedicines(10, 5));
+        // } else {
+        //     request.setAttribute("lowStockMedicines", null);
+        // }
+
+        // ─── DashboardService (dùng cho doanh thu tổng hợp: dịch vụ + thuốc) ───
+        DashboardService dashboardService = new DashboardService();
 
         // ─── Doanh thu khoảng trước cho KPI card so sánh ───
+        // Sử dụng invoices.total_amount — bao gồm cả dịch vụ và thuốc
         double revenuePrevious;
         double revenueGrowthRate;
         if (isCustomRange) {
-            revenuePrevious = statsService.getTotalRevenue(
+            revenuePrevious = dashboardService.getRevenueRaw(
                     statsDAO_prevFrom(dateFrom, dateTo),
                     statsDAO_prevTo(dateFrom, dateTo));
-            revenueGrowthRate = statsService.getRevenueGrowthRate(dateFrom, dateTo);
+            double currentRevenue = dashboardService.getRevenueRaw(dateFrom, dateTo);
+            if (revenuePrevious == 0 && currentRevenue == 0) {
+                revenueGrowthRate = 0;
+            } else if (revenuePrevious == 0) {
+                revenueGrowthRate = 100.0;
+            } else {
+                revenueGrowthRate = ((currentRevenue - revenuePrevious) / revenuePrevious) * 100.0;
+            }
         } else {
-            revenuePrevious = statsService.getTotalRevenueYesterday();
-            revenueGrowthRate = statsService.getRevenueGrowthRate();
+            revenuePrevious = dashboardService.getTotalRevenueYesterday();
+            double todayRevenue = dashboardService.getRevenueRaw(dateFrom, dateTo);
+            if (revenuePrevious == 0 && todayRevenue == 0) {
+                revenueGrowthRate = 0;
+            } else if (revenuePrevious == 0) {
+                revenueGrowthRate = 100.0;
+            } else {
+                revenueGrowthRate = ((todayRevenue - revenuePrevious) / revenuePrevious) * 100.0;
+            }
         }
         request.setAttribute("revenueYesterdayFormatted",
-                com.clinic.service.ServiceStatisticsService.formatCurrency(revenuePrevious));
+                DashboardService.formatCurrency(revenuePrevious));
         request.setAttribute("revenueGrowthRate", revenueGrowthRate);
         request.setAttribute("revenueGrowthFormatted",
                 com.clinic.service.ServiceStatisticsService.formatGrowthPercent(revenueGrowthRate));
 
         // ─── KPI dịch vụ cốt lõi — theo khoảng ngày ───
         int totalUsage = statsService.getTotalUsage(dateFrom, dateTo);
-        double totalRevenue = statsService.getTotalRevenue(dateFrom, dateTo);
+        double totalRevenue = dashboardService.getRevenueRaw(dateFrom, dateTo);
 
         request.setAttribute("totalUsageToday", totalUsage);
         request.setAttribute("totalRevenueTodayFormatted",
-                com.clinic.service.ServiceStatisticsService.formatCurrency(totalRevenue));
+                DashboardService.formatCurrency(totalRevenue));
 
         // ─── Dữ liệu cho hiển thị khoảng ngày ───
         DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -231,14 +254,24 @@ public class DashboardServlet extends HttpServlet {
             request.setAttribute("dateRangeLabel",
                     dateFrom.format(dateFmt) + " → " + dateTo.format(dateFmt));
         }
-        DashboardService dashboardService = new DashboardService();
+
+        // Revenue KPI label — phản ánh đúng khoảng ngày đã chọn
+        String kpiLabel;
+        if (!isCustomRange || (dateFrom.equals(today) && dateTo.equals(today))) {
+            kpiLabel = "Doanh Thu Hôm Nay";
+        } else if (dateFrom.equals(dateTo)) {
+            kpiLabel = "Doanh Thu (Ngày " + dateFrom.format(dateFmt) + ")";
+        } else {
+            kpiLabel = "Doanh Thu (" + dateFrom.format(dateFmt) + " → " + dateTo.format(dateFmt) + ")";
+        }
+        request.setAttribute("revenueKpiLabel", kpiLabel);
 
         int totalPatients = isCustomRange
                 ? dashboardService.getTotalPatients(dateFrom, dateTo)
                 : dashboardService.getTotalPatients();
         int totalAppointments = isCustomRange
                 ? dashboardService.getTotalAppointments(dateFrom, dateTo)
-                : dashboardService.getTotalAppointments();
+                : dashboardService.getTotalAppointments(today, today);
         int waitingPatients = isCustomRange
                 ? dashboardService.getWaitingPatients(dateFrom, dateTo)
                 : dashboardService.getWaitingPatients();
@@ -264,21 +297,24 @@ public class DashboardServlet extends HttpServlet {
         request.setAttribute("doctorsWorking", doctorsWorking);
         request.setAttribute("ultrasoundCases", ultrasoundCases);
         request.setAttribute("revenue", DashboardService.formatCurrency(revenueRaw));
+        request.setAttribute("revenueTotalRaw", revenueRaw);
         request.setAttribute("completedCases", completedCases);
         request.setAttribute("newPatients", newPatients);
 
-        // Doanh thu hôm nay (từ DashboardService — invoice-level, chỉ tính paid)
-        request.setAttribute("revenueToday", dashboardService.getRevenueToday());
+        // Doanh thu hiển thị trên KPI card — từ invoices.total_amount (dịch vụ + thuốc)
+        request.setAttribute("revenueToday",
+                DashboardService.formatCurrency(totalRevenue));
+        request.setAttribute("revenueTodayRaw", totalRevenue);
 
-        // Biểu đồ doanh thu 7 ngày
+        // Biểu đồ doanh thu 7 ngày — từ invoices.total_amount (dịch vụ + thuốc)
         Map<String, Double> revenueChart = isCustomRange
-                ? statsService.getDailyRevenue(dateFrom, dateTo)
-                : statsService.getRevenueLast7Days();
+                ? dashboardService.getDailyRevenue(dateFrom, dateTo)
+                : dashboardService.getDailyRevenue(today.minusDays(6), today);
         request.setAttribute("mgrRevenueChartLabels", revenueChart.keySet());
         request.setAttribute("mgrRevenueChartValues", revenueChart.values());
 
-        // Biểu đồ doanh thu 30 ngày
-        Map<String, Double> revenue30 = statsService.getDailyRevenue(today.minusDays(29), today);
+        // Biểu đồ doanh thu 30 ngày — từ invoices.total_amount (dịch vụ + thuốc)
+        Map<String, Double> revenue30 = dashboardService.getDailyRevenue(today.minusDays(29), today);
         request.setAttribute("mgrRevenue30Labels", new ArrayList<>(revenue30.keySet()));
         request.setAttribute("mgrRevenue30Values", new ArrayList<>(revenue30.values()));
 
@@ -286,11 +322,15 @@ public class DashboardServlet extends HttpServlet {
                 ? dashboardService.getSchedules(dateTo)
                 : dashboardService.getTodaySchedules());
 
-        // ─── Thống kê dịch vụ ───
+        // ─── Thống kê dịch vụ (theo khoảng ngày) ───
         request.setAttribute("topServicesByUsage", statsService.getTopServicesByUsage(8, dateFrom, dateTo));
-        request.setAttribute("topServicesByRevenue", statsService.getTopServicesByTotalRevenue(8));
+        request.setAttribute("topServicesByRevenue", isCustomRange
+                ? statsService.getTopServicesByTotalRevenue(8, dateFrom, dateTo)
+                : statsService.getTopServicesByTotalRevenue(8));
         request.setAttribute("categoryRevenueBreakdown", statsService.getCategoryRevenueBreakdown());
-        Map<String, Integer> usageDays = statsService.getUsageLast7Days();
+        Map<String, Integer> usageDays = isCustomRange
+                ? statsService.getDailyUsage(dateFrom, dateTo)
+                : statsService.getUsageLast7Days();
         request.setAttribute("serviceUsageLast7DaysLabels", new ArrayList<>(usageDays.keySet()));
         request.setAttribute("serviceUsageLast7DaysValues", new ArrayList<>(usageDays.values()));
 
@@ -356,18 +396,21 @@ public class DashboardServlet extends HttpServlet {
         request.setAttribute("dateRangeLabel", dateRangeLabel);
         request.setAttribute("subtitleDisplay", isCustomRange ? dateRangeLabel : "Hôm nay");
 
+        // totalAccounts: tài khoản MỚI TẠO trong khoảng (có ý nghĩa time-bound)
         request.setAttribute("totalAccounts", isCustomRange
                 ? adminDashboardService.getTotalAccounts(dateFrom, dateTo)
                 : adminDashboardService.getTotalAccounts());
+
+        // activeAccounts: người dùng THỰC SỰ HOẠT ĐỘNG (có login) trong khoảng
         request.setAttribute("activeAccounts", isCustomRange
-                ? adminDashboardService.getActiveAccounts(dateFrom, dateTo)
+                ? adminDashboardService.getActiveUsersInRange(dateFrom, dateTo)
                 : adminDashboardService.getActiveAccounts());
-        request.setAttribute("lockedAccounts", isCustomRange
-                ? adminDashboardService.getLockedAccounts(dateFrom, dateTo)
-                : adminDashboardService.getLockedAccounts());
-        request.setAttribute("unverifiedAccounts", isCustomRange
-                ? adminDashboardService.getUnverifiedAccounts(dateFrom, dateTo)
-                : adminDashboardService.getUnverifiedAccounts());
+
+        // lockedAccounts & unverifiedAccounts: trạng thái HIỆN TẠI (không phụ thuộc khoảng ngày)
+        request.setAttribute("lockedAccounts", adminDashboardService.getLockedAccounts());
+        request.setAttribute("unverifiedAccounts", adminDashboardService.getUnverifiedAccounts());
+
+        // loginsToday & auditLogsToday & accessDenied: sự kiện trong khoảng
         request.setAttribute("loginsToday", isCustomRange
                 ? adminDashboardService.getLogins(dateFrom, dateTo)
                 : adminDashboardService.getLoginsToday());
@@ -382,7 +425,7 @@ public class DashboardServlet extends HttpServlet {
                 ? adminDashboardService.getLoginTrend(dateFrom, dateTo)
                 : adminDashboardService.getLoginTrend7Days();
         Map<String, Integer> accountGrowth = isCustomRange
-                ? adminDashboardService.getAccountGrowthChart(dateTo)
+                ? adminDashboardService.getAccountGrowthByDay(dateFrom, dateTo)
                 : adminDashboardService.getAccountGrowth12Months();
         Map<String, Integer> roleDistribution = isCustomRange
                 ? adminDashboardService.getRoleDistribution(dateFrom, dateTo)

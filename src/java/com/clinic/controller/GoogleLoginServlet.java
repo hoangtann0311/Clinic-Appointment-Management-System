@@ -62,7 +62,11 @@ public class GoogleLoginServlet extends HttpServlet {
             // Bước 2: Đăng nhập hoặc tạo user mới
             User user = googleAuthService.loginWithGoogle(googleInfo);
 
-            // Bước 3: Tạo session
+            // Bước 3: Hủy session cũ (chống session fixation) rồi tạo mới
+            HttpSession oldSession = request.getSession(false);
+            if (oldSession != null) {
+                oldSession.invalidate();
+            }
             HttpSession session = request.getSession(true);
 
             // Nạp ảnh đại diện từ bảng vai trò cụ thể (hiện chỉ có doctors.avatar_url)
@@ -97,10 +101,13 @@ public class GoogleLoginServlet extends HttpServlet {
             response.getWriter().write("{\"success\":true,\"redirectUrl\":\"" + redirectUrl + "\"}");
 
         } catch (GoogleAuthException e) {
-            // Token không hợp lệ hoặc tài khoản bị khóa/vô hiệu hóa
-            System.err.println(">>> Google login failed: " + e.getMessage());
-            response.getWriter().write("{\"success\":false,\"error\":\""
-                    + escapeJson(e.getMessage()) + "\"}");
+            System.err.println(">>> Google login: " + e.getMessage());
+            // Nếu là pending verification → thông báo dạng info (không phải lỗi)
+            String msg = e.getMessage();
+            boolean isPending = (msg != null && msg.contains("xác nhận email"));
+            response.getWriter().write("{\"success\":false"
+                    + (isPending ? ",\"pendingVerification\":true" : "")
+                    + ",\"error\":\"" + escapeJson(msg) + "\"}");
         } catch (Exception e) {
             // Lỗi không mong đợi
             System.err.println(">>> Google login unexpected error: " + e.getMessage());

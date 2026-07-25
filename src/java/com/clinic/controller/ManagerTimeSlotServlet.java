@@ -294,7 +294,7 @@ public class ManagerTimeSlotServlet extends HttpServlet {
 
         int scheduleId = parseInt(req.getParameter("scheduleId"), -1);
         if (scheduleId <= 0) {
-            resp.sendRedirect(redirectUrl + "&error=Schedule+khong+hop+le");
+            resp.sendRedirect(redirectUrl + "&error=Lịch+làm+việc+không+hợp+lệ");
             return;
         }
 

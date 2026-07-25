@@ -57,7 +57,22 @@ public class AdminDashboardService {
         }
     }
 
-    /** Số tài khoản Active trong khoảng ngày. */
+    /**
+     * Số người dùng duy nhất có hoạt động đăng nhập trong khoảng ngày.
+     * Dùng cho custom range thay vì đếm theo created_at.
+     */
+    public int getActiveUsersInRange(LocalDate from, LocalDate to) {
+        try {
+            return Math.max(adminDAO.countActiveUsersInRange(from, to), 0);
+        } catch (Exception e) {
+            System.err.println("AdminDashboardService: Lỗi getActiveUsersInRange - " + e.getMessage());
+            return 0;
+        }
+    }
+
+    /** Số tài khoản Active trong khoảng ngày (tạo trong khoảng và hiện Active).
+     *  @deprecated Dùng getActiveUsersInRange để có số liệu phản ánh hoạt động thực tế. */
+    @Deprecated
     public int getActiveAccounts(LocalDate from, LocalDate to) {
         try {
             return Math.max(adminDAO.countActiveAccounts(from, to), 0);
@@ -245,6 +260,16 @@ public class AdminDashboardService {
             return adminDAO.getAccountGrowth12Months();
         } catch (Exception e) {
             System.err.println("AdminDashboardService: Lỗi getAccountGrowth12Months - " + e.getMessage());
+            return Collections.emptyMap();
+        }
+    }
+
+    /** Biểu đồ tăng trưởng tài khoản theo ngày trong khoảng (7, 30 ngày...). */
+    public Map<String, Integer> getAccountGrowthByDay(LocalDate from, LocalDate to) {
+        try {
+            return adminDAO.getAccountGrowthByDay(from, to);
+        } catch (Exception e) {
+            System.err.println("AdminDashboardService: Lỗi getAccountGrowthByDay - " + e.getMessage());
             return Collections.emptyMap();
         }
     }
