@@ -94,23 +94,10 @@
                 <a href="${pageContext.request.contextPath}/admin/reception/doctor-schedules"
                    class="${fn:contains(requestURI, 'doctor-schedules') ? 'active' : ''}">
                     <i class="bi bi-calendar-week"></i>
-                    <span>Lịch Làm Việc Bác Sĩ</span>
+                    <span>Lịch Làm Việc</span>
                 </a>
             </li>
-            <li>
-                <a href="${pageContext.request.contextPath}/admin/reception/slots"
-                   class="${fn:contains(requestURI, '/slots') ? 'active' : ''}">
-                    <i class="bi bi-grid-3x3-gap"></i>
-                    <span>Khung Giờ Khám</span>
-                </a>
-            </li>
-            <li>
-                <a href="${pageContext.request.contextPath}/admin/reception/payments" 
-                   class="${fn:contains(requestURI, 'payments') ? 'active' : ''}">
-                    <i class="bi bi-credit-card-2-front"></i>
-                    <span>Xác Nhận Thanh Toán</span>
-                </a>
-            </li>
+
         </ul>
     </aside>
 
@@ -128,10 +115,9 @@
 
         <div class="admin-card">
             <div class="card-header">
-                <h5><i class="bi bi-calendar-plus"></i> Tiếp nhận cuộc gọi tổng đài & Tạo lịch hẹn khám (Manual Booking)</h5>
+                <h5><i class="bi bi-calendar-plus"></i> Tiếp nhận & Tạo Lịch Hẹn Thủ Công</h5>
             </div>
             <div class="card-body">
-                <p class="text-muted small mb-4"><span class="text-danger fw-bold">*</span> Thông tin bắt buộc để tạo lịch hẹn.</p>
                 <c:if test="${not empty errors}">
                     <div class="alert alert-danger">
                         <strong>Không thể tạo lịch hẹn:</strong>
@@ -142,149 +128,132 @@
                         </ul>
                     </div>
                 </c:if>
-                <form action="${pageContext.request.contextPath}/admin/reception/booking" method="post" onsubmit="return validateForm()">
+                <form action="${pageContext.request.contextPath}/admin/reception/booking" method="post" onsubmit="return validateForm()" novalidate>
                     <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
 
-                    <!-- Patient Search & Info -->
-                    <div class="row">
-                        <div class="col-md-4 cams-form-group">
-                            <label class="cams-form-label">Số điện thoại sản phụ <span class="text-danger">*</span></label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="bi bi-telephone"></i></span>
-                                <input type="text"
-                                       name="phone"
-                                       id="phone"
-                                       class="cams-form-input form-control"
-                                       placeholder="Nhập SĐT để tìm hoặc tạo mới"
-                                       required
-                                       maxlength="11"
-                                       value="${param.phone}"
-                                       oninput="this.value = this.value.replace(/[^0-9]/g, ''); lookupPhone(this.value);">
+                    <%-- ═══ SECTION 1: THÔNG TIN BỆNH NHÂN ═══ --%>
+                    <div class="border rounded-3 p-3 mb-4 bg-light bg-opacity-10">
+                        <h6 class="fw-bold mb-3 text-uppercase small" style="color:#b86689;">
+                            <i class="bi bi-person-badge me-2"></i>Thông tin bệnh nhân
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold small">Số điện thoại <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white"><i class="bi bi-telephone"></i></span>
+                                    <input type="text" name="phone" id="phone" class="form-control"
+                                           placeholder="Nhập SĐT để tra cứu hoặc tạo mới" required maxlength="11"
+                                           value="${param.phone}"
+                                           oninput="this.value = this.value.replace(/[^0-9]/g, ''); lookupPhone(this.value);">
+                                </div>
+                                <small id="patient-match-label" class="text-success fw-semibold mt-1 d-block" style="display:none;"></small>
                             </div>
-                            <small id="patient-match-label" class="text-success fw-semibold mt-1 d-block" style="display:none;"></small>
-                        </div>
-                        <div class="col-md-4 cams-form-group">
-                            <label class="cams-form-label">Họ và tên sản phụ <span class="text-danger">*</span></label>
-                            <input type="text"
-                                   name="name"
-                                   id="name"
-                                   class="cams-form-input"
-                                   placeholder="Họ và tên sản phụ"
-                                   required
-                                   value="${param.name}"
-                                   oninput="this.value = this.value.replace(/[0-9]/g, '');">
-                        </div>
-                        <div class="col-md-4 cams-form-group">
-                            <label class="cams-form-label">Ngày sinh <span class="text-danger">*</span></label>
-                            <input type="date" name="dob" id="dob" class="cams-form-input" required
-                                   value="${param.dob}" max="<%= java.time.LocalDate.now() %>"
-                                   onchange="validateDob()" oninput="validateDob()">
-                            <small id="dobError" class="cams-field-error"></small>
-                        </div>
-                    </div>
-                    <div class="row mt-2">
-                        <div class="col-md-6 cams-form-group">
-                            <label class="cams-form-label">Địa chỉ <span class="text-danger">*</span></label>
-                            <input type="text" name="address" id="address" class="cams-form-input" required
-                                   placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành" value="${param.address}">
-                        </div>
-                        <div class="col-md-6 cams-form-group">
-                            <label class="cams-form-label">CCCD/CMND <span class="text-danger">*</span></label>
-                            <input type="text" name="cccd" id="cccd" class="cams-form-input" required
-                                   placeholder="Số CCCD/CMND 12 số" maxlength="12" value="${param.cccd}"
-                                   oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-                        </div>
-                    </div>
-
-                    <hr class="my-3 text-muted">
-
-                    <!-- Appointment config -->
-                    <div class="row">
-                        <div class="col-md-8 cams-form-group">
-                            <label class="cams-form-label">Bác sĩ lâm sàng chỉ định <span class="text-danger">*</span></label>
-                            <select name="doctorId" id="doctorId" class="cams-form-input" required onchange="onDoctorOrDateChanged()">
-                                <option value="" disabled ${empty param.doctorId ? 'selected' : ''}>-- Chọn Bác sĩ lâm sàng --</option>
-                                <c:forEach var="doc" items="${doctors}">
-                                    <c:set var="wl" value="${not empty doctorWorkload ? doctorWorkload[doc.id] : 0}"/>
-                                    <option value="${doc.id}"
-                                            ${param.doctorId == doc.id ? 'selected' : ''}>
-                                        <c:out value="${doc.fullName}"/> — <c:out value="${doc.specialization}"/>
-                                        <c:if test="${doc.experienceYears > 0}"> — ${doc.experienceYears} năm KN</c:if>
-                                        <c:if test="${wl > 0}"> — 🔴 ${wl} BN hôm nay</c:if>
-                                    </option>
-                                </c:forEach>
-                            </select>
-                        </div>
-                        <div class="col-md-4 cams-form-group d-flex align-items-end">
-                            <div class="rounded-3 p-3 w-100 text-center" style="background:#fff0f5;border:1px dashed #d27b9f;">
-                                <div class="text-muted small">Tổng chi phí tạm tính</div>
-                                <div id="totalCostDisplay" class="fw-bold fs-5" style="color:#b86689;">—</div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold small">Họ và tên <span class="text-danger">*</span></label>
+                                <input type="text" name="name" id="name" class="form-control"
+                                       placeholder="Họ và tên sản phụ" required value="${param.name}"
+                                       oninput="this.value = this.value.replace(/[0-9]/g, '');">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold small">Ngày sinh <span class="text-danger">*</span></label>
+                                <input type="date" name="dob" id="dob" class="form-control" required
+                                       value="${param.dob}" max="<%= java.time.LocalDate.now() %>"
+                                       onchange="validateDob()" oninput="validateDob()">
+                                <small id="dobError" class="text-danger d-block mt-1" style="display:none;"></small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small">Địa chỉ <span class="text-danger">*</span></label>
+                                <input type="text" name="address" id="address" class="form-control" required
+                                       placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành" value="${param.address}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small">CCCD/CMND <span class="text-danger">*</span></label>
+                                <input type="text" name="cccd" id="cccd" class="form-control" required
+                                       placeholder="Số CCCD/CMND 12 số" maxlength="12" value="${param.cccd}"
+                                       oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                             </div>
                         </div>
                     </div>
 
-                    <div class="row">
-                        <div class="col-md-4 cams-form-group">
-                            <label class="cams-form-label">Ngày hẹn khám <span class="text-danger">*</span></label>
-                            <input type="date"
-                                   name="appointmentDate"
-                                   id="appointmentDate"
-                                   class="cams-form-input"
-                                   min="${today}"
-                                   value="${empty param.appointmentDate ? today : param.appointmentDate}"
-                                   required
-                                   onchange="onDoctorOrDateChanged(); calculateLMPAge()"
-                                   oninput="calculateLMPAge()">
-                        </div>
-                        <div class="col-md-4 cams-form-group">
-                            <label class="cams-form-label">Khung giờ khám <span class="text-danger">*</span></label>
-
-                            <select name="timeSlot" id="timeSlot" class="cams-form-input" required onchange="updatePriceDisplay()">
-                                <option value="" disabled ${empty param.timeSlot ? 'selected' : ''}>-- Chọn khung giờ --</option>
-                            </select>
-
-                            <small class="text-muted mt-1 d-block">Chọn bác sĩ và ngày khám để tải các khung giờ còn trống.</small>
-                        </div>
-                    </div>
-
-                    <hr class="my-3 text-muted">
-
-                    <!-- Gestational Age & Medical Declarations -->
-                    <div class="row">
-                        <div class="col-md-6 cams-form-group">
-                            <label class="cams-form-label">Ngày kinh cuối cùng (LMP) <span class="text-muted fw-normal">(nếu nhớ)</span></label>
-                            <input type="date"
-                                   name="lastMenstrualPeriod"
-                                   id="lastMenstrualPeriod"
-                                   class="cams-form-input"
-                                   value="${param.lastMenstrualPeriod}"
-                                   onchange="calculateLMPAge()"
-                                   oninput="calculateLMPAge()">
-                            <div class="alert alert-warning py-2 px-3 mt-2 fw-semibold" id="lmp-age-result" style="display:none;">
-                                <strong>Tuổi thai ước tính:</strong>
-                                <span class="text-danger" id="lmp-age-val">Chưa khai báo</span>
+                    <%-- ═══ SECTION 2: THÔNG TIN LỊCH HẸN ═══ --%>
+                    <div class="border rounded-3 p-3 mb-4 bg-light bg-opacity-10">
+                        <h6 class="fw-bold mb-3 text-uppercase small" style="color:#b86689;">
+                            <i class="bi bi-calendar-check me-2"></i>Thông tin lịch hẹn
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small">Bác sĩ <span class="text-danger">*</span></label>
+                                <select name="doctorId" id="doctorId" class="form-select" required onchange="onDoctorOrDateChanged()">
+                                    <option value="" disabled ${empty param.doctorId ? 'selected' : ''}>-- Chọn Bác sĩ --</option>
+                                    <c:forEach var="doc" items="${doctors}">
+                                        <c:set var="wl" value="${not empty doctorWorkload ? doctorWorkload[doc.id] : 0}"/>
+                                        <option value="${doc.id}" ${param.doctorId == doc.id ? 'selected' : ''}>
+                                            BS. <c:out value="${doc.fullName}"/> — <c:out value="${doc.specialization}"/>
+                                            <c:if test="${doc.experienceYears > 0}"> (${doc.experienceYears} năm)</c:if>
+                                            <c:if test="${wl > 0}"> — Đang có ${wl} BN hôm nay</c:if>
+                                        </option>
+                                    </c:forEach>
+                                </select>
                             </div>
-                            <small class="text-muted d-block mt-1">Hệ thống sẽ tự động quy đổi tuần tuổi thai nhi dựa trên LMP.</small>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold small">Ngày khám <span class="text-danger">*</span></label>
+                                <input type="date" name="appointmentDate" id="appointmentDate" class="form-control"
+                                       min="${today}" value="${empty param.appointmentDate ? today : param.appointmentDate}"
+                                       required onchange="onDoctorOrDateChanged(); calculateLMPAge()" oninput="calculateLMPAge()">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold small">Khung giờ <span class="text-danger">*</span></label>
+                                <select name="timeSlot" id="timeSlot" class="form-select" required onchange="updatePriceDisplay()">
+                                    <option value="" disabled ${empty param.timeSlot ? 'selected' : ''}>-- Chọn giờ --</option>
+                                </select>
+                                <small class="text-muted mt-1 d-block">Chọn bác sĩ + ngày để tải giờ trống</small>
+                            </div>
                         </div>
-                        <div class="col-md-6 cams-form-group">
-                            <label class="cams-form-label">Triệu chứng lâm sàng / Lý do khám <span class="text-danger">*</span></label>
-                            <textarea name="symptoms"
-                                      id="symptoms"
-                                      rows="3"
-                                      class="cams-form-input"
-                                      placeholder="Ví dụ: Đau bụng âm ỉ, trễ kinh, khám thai định kỳ..."
-                                      required
-                                      minlength="10"
-                                      maxlength="500"><c:out value="${param.symptoms}"/></textarea>
-                            <small class="text-muted">
-                                Vui lòng nhập triệu chứng/lý do khám rõ ràng, tối thiểu 10 ký tự.
-                            </small>
+                        <div class="row g-3 mt-1">
+                            <div class="col-md-9"></div>
+                            <div class="col-md-3">
+                                <div class="rounded-3 p-3 text-center border" style="background:#fdf2f8;border-color:#f0c6dc!important;">
+                                    <div class="text-muted small fw-semibold">TỔNG CHI PHÍ</div>
+                                    <div id="totalCostDisplay" class="fw-bold fs-5" style="color:#b86689;">—</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="d-flex justify-content-end gap-3 mt-4">
-                        <a href="${pageContext.request.contextPath}/admin/reception" class="btn-cams btn-cams-secondary"><i class="bi bi-x-circle"></i> Hủy Bỏ</a>
-                        <button type="submit" class="btn-cams btn-cams-primary"><i class="bi bi-calendar-check"></i> Hoàn Tất Đặt Lịch</button>
+                    <%-- ═══ SECTION 3: THÔNG TIN Y TẾ ═══ --%>
+                    <div class="border rounded-3 p-3 mb-4 bg-light bg-opacity-10">
+                        <h6 class="fw-bold mb-3 text-uppercase small" style="color:#b86689;">
+                            <i class="bi bi-clipboard2-pulse me-2"></i>Thông tin y tế
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small">Ngày kinh cuối (LMP) <span class="text-muted fw-normal">(nếu có)</span></label>
+                                <input type="date" name="lastMenstrualPeriod" id="lastMenstrualPeriod" class="form-control"
+                                       value="${param.lastMenstrualPeriod}"
+                                       onchange="calculateLMPAge()" oninput="calculateLMPAge()">
+                                <div class="alert alert-warning py-2 px-3 mt-2 fw-semibold small" id="lmp-age-result" style="display:none;">
+                                    <strong>Tuổi thai ước tính:</strong>
+                                    <span class="text-danger" id="lmp-age-val">Chưa khai báo</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small">Triệu chứng / Lý do khám <span class="text-danger">*</span></label>
+                                <textarea name="symptoms" id="symptoms" rows="3" class="form-control"
+                                          placeholder="Ví dụ: Đau bụng âm ỉ, trễ kinh, khám thai định kỳ..."
+                                          required minlength="10" maxlength="500"
+                                          style="resize:vertical;text-align:left;"><c:out value="${param.symptoms}"/></textarea>
+                                <small class="text-muted mt-1 d-block">Nhập rõ ràng, tối thiểu 10 ký tự</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-3">
+                        <a href="${pageContext.request.contextPath}/admin/reception" class="btn btn-outline-secondary rounded-3 px-4">
+                            <i class="bi bi-x-circle me-1"></i>Hủy Bỏ
+                        </a>
+                        <button type="submit" class="btn btn-primary rounded-3 px-4 fw-semibold" style="background:#b86689;border-color:#b86689;">
+                            <i class="bi bi-calendar-check me-1"></i>Hoàn Tất Đặt Lịch
+                        </button>
                     </div>
 
                 </form>
@@ -571,15 +540,15 @@
             age--;
         }
 
-        if (age < 12) {
-            dobError.innerText = "Tuổi sản phụ phải từ 12 tuổi trở lên để đặt lịch khám.";
+        if (age < 10) {
+            dobError.innerText = "Tuổi bệnh nhân phải từ 10 tuổi trở lên.";
             dobError.style.display = "block";
             dobInput.classList.add("is-invalid");
             return false;
         }
 
-        if (age > 55) {
-            dobError.innerText = "Tuổi sản phụ không được vượt quá 55 tuổi khi đặt lịch khám sản/phụ khoa.";
+        if (age > 65) {
+            dobError.innerText = "Tuổi bệnh nhân không được vượt quá 65 tuổi. Vui lòng liên hệ bác sĩ để được tư vấn riêng.";
             dobError.style.display = "block";
             dobInput.classList.add("is-invalid");
             return false;

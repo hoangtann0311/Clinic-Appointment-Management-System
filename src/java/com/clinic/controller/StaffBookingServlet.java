@@ -32,17 +32,24 @@ public class StaffBookingServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         if (!requireReceptionAccess(req, resp)) return;
-        LocalDate currentDate = LocalDate.now();
-        DateTimeFormatter displayFormatter = DateTimeFormatter.ofPattern("dd 'tháng' MM, yyyy");
+        try {
+            LocalDate currentDate = LocalDate.now();
+            DateTimeFormatter displayFormatter = DateTimeFormatter.ofPattern("dd 'tháng' MM, yyyy");
 
-        req.setAttribute("currentDisplayDate", currentDate.format(displayFormatter));
+            req.setAttribute("currentDisplayDate", currentDate.format(displayFormatter));
 
-        req.setAttribute("doctors", staffReceptionService.getAllDoctors());
-        req.setAttribute("services", staffReceptionService.getAllServices());
-        req.setAttribute("today", currentDate.toString());
-        req.setAttribute("doctorWorkload", staffReceptionService.getDoctorWorkloadToday());
+            req.setAttribute("doctors", staffReceptionService.getAllDoctors());
+            req.setAttribute("services", staffReceptionService.getAllServices());
+            req.setAttribute("today", currentDate.toString());
+            req.setAttribute("doctorWorkload", staffReceptionService.getDoctorWorkloadToday());
 
-        req.getRequestDispatcher("/views/staff/reception-booking.jsp").forward(req, resp);
+            req.getRequestDispatcher("/views/staff/reception-booking.jsp").forward(req, resp);
+        } catch (Exception ex) {
+            System.err.println("[StaffBookingServlet] doGet ERROR: " + ex.getMessage());
+            ex.printStackTrace();
+            req.setAttribute("errorMessage", "Không thể tải trang. Vui lòng thử lại sau.");
+            req.getRequestDispatcher("/views/staff/reception-booking.jsp").forward(req, resp);
+        }
     }
 
     @Override
@@ -62,9 +69,13 @@ public class StaffBookingServlet extends HttpServlet {
         String timeSlot = req.getParameter("timeSlot");
         String symptoms = req.getParameter("symptoms");
         String lmp = req.getParameter("lastMenstrualPeriod");
+        String address = req.getParameter("address");
+        String cccd = req.getParameter("cccd");
+        String overrideReason = req.getParameter("overrideReason");
         try {
-            Appointment appt = staffReceptionService.createManualBooking(
-                    name, phone, dob, doctorId, null, appDate, timeSlot, symptoms, lmp, false
+            Appointment appt = staffReceptionService.createManualBookingWithOverride(
+                    name, phone, dob, doctorId, null, appDate, timeSlot, symptoms, lmp,
+                    address, cccd, overrideReason
             );
 
             // Thông báo cho bác sĩ về lịch hẹn mới

@@ -299,7 +299,7 @@
 
     <%-- ── ALERT MESSAGES ── --%>
     <c:if test="${not empty success}">
-        <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert">
+        <div class="alert alert-success alert-dismissible fade show" data-cams-toast role="alert">
             <i class="bi bi-check-circle-fill me-2 fs-5"></i>
             <div>
                 <c:choose>
@@ -314,8 +314,8 @@
         </div>
     </c:if>
     <c:if test="${not empty error}">
-        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+        <div class="alert alert-danger alert-dismissible fade show" data-cams-toast role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
             <div>${error}</div>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>

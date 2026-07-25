@@ -176,15 +176,6 @@
                                     </div>
                                 </c:if>
 
-                                <%-- Tái khám --%>
-                                <c:if test="${not empty rec.nextAppointmentDate}">
-                                    <div class="col-12">
-                                        <span class="badge bg-primary rounded-pill">
-                                            <i class="bi bi-calendar-check me-1"></i>
-                                            Tái khám: ${rec.nextAppointmentDate}
-                                        </span>
-                                    </div>
-                                </c:if>
                             </div>
 
                             <%-- Một lối vào duy nhất để xem hồ sơ đã hoàn tất. --%>

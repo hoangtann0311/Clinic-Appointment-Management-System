@@ -29,29 +29,35 @@ public class PatientProfileServlet extends HttpServlet {
         }
 
         User user = (User) session.getAttribute("user");
-        int patientId = patientDAO.getPatientIdByUserId(user.getId());
-        Patient patient = null;
+        try {
+            int patientId = patientDAO.getPatientIdByUserId(user.getId());
+            Patient patient = null;
 
-        if (patientId > 0) {
-            patient = patientDAO.findById(patientId);
-        } else {
-            // Automatically initialize a patient record if missing
-            patient = patientDAO.createPatientWithUserId(
-                    user.getFullName(),
-                    user.getPhone(),
-                    null,
-                    user.getId()
-            );
-        }
+            if (patientId > 0) {
+                patient = patientDAO.findById(patientId);
+            } else {
+                // Automatically initialize a patient record if missing
+                patient = patientDAO.createPatientWithUserId(
+                        user.getFullName(),
+                        user.getPhone(),
+                        null,
+                        user.getId()
+                );
+            }
 
-        request.setAttribute("patient", patient);
-        request.setAttribute("user", user);
-        request.setAttribute("saved", request.getParameter("saved"));
-        // Hiển thị thông báo bắt buộc cập nhật nếu có
-        Object profileRequired = session.getAttribute("profileRequired");
-        if (profileRequired != null) {
-            request.setAttribute("profileRequired", profileRequired);
-            session.removeAttribute("profileRequired");
+            request.setAttribute("patient", patient);
+            request.setAttribute("user", user);
+            request.setAttribute("saved", request.getParameter("saved"));
+            // Hiển thị thông báo bắt buộc cập nhật nếu có
+            Object profileRequired = session.getAttribute("profileRequired");
+            if (profileRequired != null) {
+                request.setAttribute("profileRequired", profileRequired);
+                session.removeAttribute("profileRequired");
+            }
+        } catch (Exception e) {
+            System.err.println("[PatientProfileServlet] doGet ERROR: " + e.getMessage());
+            e.printStackTrace();
+            request.setAttribute("error", "Không thể tải hồ sơ. Vui lòng thử lại sau.");
         }
         request.getRequestDispatcher("/views/patient/patient_profile.jsp").forward(request, response);
     }
@@ -88,6 +94,7 @@ public class PatientProfileServlet extends HttpServlet {
         request.setAttribute("formPhone", phone);
         request.setAttribute("formDob", dobStr);
         request.setAttribute("formAddress", address);
+        request.setAttribute("formCccd", cccd);
 
         if (fullName == null || fullName.trim().isEmpty()) {
             request.setAttribute("error", "Vui lòng nhập họ và tên.");
@@ -152,9 +159,21 @@ public class PatientProfileServlet extends HttpServlet {
             return;
         }
 
+        if (cccd == null || cccd.trim().isEmpty()) {
+            request.setAttribute("error", "Vui lòng nhập số CCCD/CMND.");
+            renderProfileWithError(request, response, user);
+            return;
+        }
+        String cccdClean = cccd.trim().replaceAll("[^0-9]", "");
+        if (cccdClean.length() != 9 && cccdClean.length() != 12) {
+            request.setAttribute("error", "Số CCCD/CMND không hợp lệ (phải có 9 hoặc 12 chữ số).");
+            renderProfileWithError(request, response, user);
+            return;
+        }
+
         // Update DB
         boolean ok = patientDAO.updatePatient(patientId, fullName.trim(), phone != null ? phone.trim() : "", dob,
-                address != null ? address.trim() : "", cccd != null ? cccd.trim() : "");
+                address != null ? address.trim() : "", cccdClean);
         if (ok) {
             // Sync with users table
             user.setFullName(fullName.trim());

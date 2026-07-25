@@ -136,11 +136,6 @@
                         <a href="${pageContext.request.contextPath}/patient/appointments" class="btn btn-sm rounded-pill fw-medium" style="background: var(--pt-pink-600, #b86689); color: #fff;">
                             <i class="bi bi-list-ul me-1"></i>Xem tất cả
                         </a>
-                        <c:if test="${fn:toLowerCase(upcomingAppointment.status) == 'pending' && upcomingAppointment.preExamPaymentStatus != 'Paid'}">
-                        <a href="${pageContext.request.contextPath}/patient/payment?appointmentId=${upcomingAppointment.id}" class="btn btn-sm btn-light rounded-pill fw-medium">
-                            <i class="bi bi-credit-card me-1"></i>Thanh toán
-                        </a>
-                        </c:if>
                     </div>
                 </div>
                 <%-- Hiển thị thêm các lịch tiếp theo nếu có nhiều hơn 1 --%>
@@ -288,11 +283,11 @@
                             </a>
                         </div>
                         <div class="col-sm-4">
-                            <a href="${pageContext.request.contextPath}/patient/invoices" class="text-decoration-none">
+                            <a href="${pageContext.request.contextPath}/patient/appointments" class="text-decoration-none">
                                 <div class="quick-link-card p-3 rounded-3 border">
-                                    <i class="bi bi-receipt fs-4 text-warning"></i>
-                                    <h6 class="mt-2 mb-1">Hóa Đơn</h6>
-                                    <small class="text-muted">Xem & thanh toán hóa đơn</small>
+                                    <i class="bi bi-calendar-check fs-4 text-warning"></i>
+                                    <h6 class="mt-2 mb-1">Lịch Hẹn Của Tôi</h6>
+                                    <small class="text-muted">Xem & quản lý lịch hẹn</small>
                                 </div>
                             </a>
                         </div>
@@ -340,15 +335,7 @@
                                 </div>
                             </a>
                         </div>
-                        <div class="col-sm-6">
-                            <a href="${pageContext.request.contextPath}/admin/reception/payments" class="text-decoration-none">
-                                <div class="quick-link-card p-3 rounded-3 border">
-                                    <i class="bi bi-receipt fs-4 text-warning"></i>
-                                    <h6 class="mt-2 mb-1">Hóa Đơn</h6>
-                                    <small class="text-muted">Quản lý thanh toán</small>
-                                </div>
-                            </a>
-                        </div>
+
                     </c:if>
 
                     <%-- ── Sonographer (roleId=6) ─────────────────────────── --%>

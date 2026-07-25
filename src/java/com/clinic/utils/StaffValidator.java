@@ -18,8 +18,22 @@ public class StaffValidator {
             String appointmentDate,
             String timeSlot,
             String symptoms,
+            String lastMenstrualPeriod
+    ) {
+        return validateBooking(name, phone, dob, doctorId, serviceId, appointmentDate, timeSlot, symptoms, lastMenstrualPeriod, false);
+    }
+
+    public static List<String> validateBooking(
+            String name,
+            String phone,
+            String dob,
+            String doctorId,
+            String serviceId,
+            String appointmentDate,
+            String timeSlot,
+            String symptoms,
             String lastMenstrualPeriod,
-            boolean isEmergency
+            boolean isPriority
     ) {
         List<String> errors = new ArrayList<>();
 
@@ -75,9 +89,9 @@ public class StaffValidator {
             }
         }
 
-        if (!isEmergency && isEmpty(timeSlot)) {
+        if (isEmpty(timeSlot)) {
             errors.add("Vui lòng chọn khung giờ khám.");
-        } else if (!isEmergency && !isEmpty(timeSlot) && !isEmpty(appointmentDate)) {
+        } else if (!isEmpty(timeSlot) && !isEmpty(appointmentDate)) {
             try {
                 LocalDate appDate = LocalDate.parse(appointmentDate);
                 if (appDate.isEqual(LocalDate.now())) {

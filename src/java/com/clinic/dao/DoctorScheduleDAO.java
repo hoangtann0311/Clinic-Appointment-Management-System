@@ -96,7 +96,7 @@ public class DoctorScheduleDAO {
             }
         } catch (SQLException e) {
             System.err.println("[DoctorScheduleDAO] findAll ERROR: " + e.getMessage());
-            throw new RuntimeException("Lỗi cơ sở dữ liệu khi lấy danh sách lịch làm việc", e);
+            return list;
         } finally {
             closeResources(conn, ps, rs);
         }

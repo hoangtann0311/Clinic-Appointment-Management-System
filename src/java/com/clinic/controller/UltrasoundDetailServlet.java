@@ -29,56 +29,70 @@ public class UltrasoundDetailServlet extends HttpServlet {
             return;
         }
 
-        Integer orderId = positiveInt(request.getParameter("orderId"));
-        if (orderId == null) {
-            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "ID chỉ định siêu âm không hợp lệ.");
-            return;
-        }
-        UltrasoundWaitingPatient order = orderService.getById(orderId);
-        if (order == null) {
-            response.sendError(HttpServletResponse.SC_NOT_FOUND, "Không tìm thấy chỉ định siêu âm.");
-            return;
-        }
-        if (!orderService.isReadyForSonographer(orderId)) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ định chưa đủ điều kiện thanh toán để xử lý.");
-            return;
-        }
-
-        String state = order.getStatus() == null ? "" : order.getStatus().trim();
-        boolean unassignedState = state.equalsIgnoreCase("Pending")
-                || state.equalsIgnoreCase("Waiting") || state.equalsIgnoreCase("Ordered");
-        if (!unassignedState && !orderService.checkSonographerOwnership(orderId, user.getId())) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN,
-                    "Ca siêu âm này đang do Bác sĩ siêu âm khác phụ trách.");
-            return;
-        }
-
-        request.setAttribute("order", order);
-        List<UltrasoundImage> images = orderService.getUltrasoundImages(orderId);
-        if (orderService.isReviewSchemaSupported()) {
-            for (UltrasoundImage image : images) {
-                orderService.ensureImageDimensions(image, getServletContext().getRealPath(""));
+        try {
+            Integer orderId = positiveInt(request.getParameter("orderId"));
+            if (orderId == null) {
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "ID chỉ định siêu âm không hợp lệ.");
+                return;
             }
-        }
-        com.clinic.model.UltrasoundAnnotation currentAnnotation = orderService.getCurrentAnnotation(orderId);
-        com.clinic.model.UltrasoundReport currentReport = orderService.getCurrentReport(orderId);
-        UltrasoundImage selectedImage = images.isEmpty() ? null : images.get(0);
-        if (currentAnnotation != null) {
-            for (UltrasoundImage image : images) {
-                if (image.getId() == currentAnnotation.getUltrasoundImageId()) {
-                    selectedImage = image;
-                    break;
+            UltrasoundWaitingPatient order = orderService.getById(orderId);
+            if (order == null) {
+                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Không tìm thấy chỉ định siêu âm.");
+                return;
+            }
+            if (!orderService.isReadyForSonographer(orderId)) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ định chưa đủ điều kiện thanh toán để xử lý.");
+                return;
+            }
+
+            String state = order.getStatus() == null ? "" : order.getStatus().trim();
+            boolean unassignedState = state.equalsIgnoreCase("Pending")
+                    || state.equalsIgnoreCase("Waiting") || state.equalsIgnoreCase("Ordered");
+            boolean completedState = state.equalsIgnoreCase("Completed") || state.equalsIgnoreCase("Confirmed");
+            if (!unassignedState && !completedState && !orderService.checkSonographerOwnership(orderId, user.getId())) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN,
+                        "Ca siêu âm này đang do Bác sĩ siêu âm khác phụ trách.");
+                return;
+            }
+
+            request.setAttribute("order", order);
+            List<UltrasoundImage> images = orderService.getUltrasoundImages(orderId);
+            if (orderService.isReviewSchemaSupported()) {
+                for (UltrasoundImage image : images) {
+                    orderService.ensureImageDimensions(image, getServletContext().getRealPath(""));
                 }
             }
+            com.clinic.model.UltrasoundAnnotation currentAnnotation = orderService.getCurrentAnnotation(orderId);
+            com.clinic.model.UltrasoundReport currentReport = orderService.getCurrentReport(orderId);
+            UltrasoundImage selectedImage = images.isEmpty() ? null : images.get(0);
+            if (currentAnnotation != null) {
+                for (UltrasoundImage image : images) {
+                    if (image.getId() == currentAnnotation.getUltrasoundImageId()) {
+                        selectedImage = image;
+                        break;
+                    }
+                }
+            }
+            request.setAttribute("images", images);
+            request.setAttribute("selectedImage", selectedImage);
+            com.clinic.model.AiAnalysisResult aiRes = null;
+            if (selectedImage != null) {
+                aiRes = orderService.getAiResultForImage(orderId, selectedImage.getId());
+                if (aiRes == null) {
+                    aiRes = orderService.getAiResult(orderId);
+                }
+            }
+            request.setAttribute("aiResult", aiRes);
+            request.setAttribute("currentAnnotation", currentAnnotation);
+            request.setAttribute("currentReport", currentReport);
+            request.setAttribute("ownershipSupported", orderService.isSonographerOwnershipSupported());
+            request.setAttribute("reviewSchemaSupported", orderService.isReviewSchemaSupported());
+            request.getRequestDispatcher("/views/sonographer/detail.jsp").forward(request, response);
+        } catch (Exception ex) {
+            System.err.println("[UltrasoundDetailServlet] doGet ERROR: " + ex.getMessage());
+            ex.printStackTrace();
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Không thể tải trang chi tiết ca siêu âm.");
         }
-        request.setAttribute("images", images);
-        request.setAttribute("selectedImage", selectedImage);
-        request.setAttribute("aiResult", selectedImage == null ? null : orderService.getAiResult(orderId));
-        request.setAttribute("currentAnnotation", currentAnnotation);
-        request.setAttribute("currentReport", currentReport);
-        request.setAttribute("ownershipSupported", orderService.isSonographerOwnershipSupported());
-        request.setAttribute("reviewSchemaSupported", orderService.isReviewSchemaSupported());
-        request.getRequestDispatcher("/views/sonographer/detail.jsp").forward(request, response);
     }
 
     @Override

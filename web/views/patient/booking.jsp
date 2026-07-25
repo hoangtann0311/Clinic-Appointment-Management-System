@@ -106,10 +106,10 @@
                                 <c:when test="${not empty d.avatarUrl}">
                                     <img src="${d.avatarUrl}" alt="BS. ${d.fullName}"
                                          style="width:100%;height:100%;object-fit:cover;border-radius:50%;"
-                                         onerror="this.parentElement.style.padding='';this.parentElement.innerHTML='${fn:substring(d.fullName, 0, 1)}'">
+                                         onerror="this.parentElement.style.padding='';this.parentElement.innerHTML='${not empty d.fullName ? fn:substring(d.fullName, 0, 1) : "?"}'">
                                 </c:when>
                                 <c:otherwise>
-                                    ${fn:substring(d.fullName, 0, 1)}
+                                    ${not empty d.fullName ? fn:substring(d.fullName, 0, 1) : '?'}
                                 </c:otherwise>
                             </c:choose>
                         </div>
@@ -224,10 +224,16 @@
 
                     <div class="mt-3 p-3 rounded-3 small" style="background:#f8fafc;border:1px dashed #cbd5e1;line-height:1.6;">
                         <i class="bi bi-info-circle me-1 text-primary"></i>
+                        <strong>Chính sách đặt khám & nhận bệnh:</strong>
+                        <ul class="mb-2 mt-1 ps-3">
+                            <li>Vui lòng đặt lịch ít nhất <strong>30 phút</strong> trước giờ khám.</li>
+                            <li>Quý khách cần có mặt tại quầy Lễ tân để check-in chậm nhất <strong>15 phút</strong> trước giờ hẹn. Lịch hẹn sẽ bị từ chối nếu quý khách đến muộn hơn thời gian này.</li>
+                        </ul>
+                        <i class="bi bi-arrow-repeat me-1 text-primary"></i>
                         <strong>Chính sách huỷ / đổi lịch:</strong>
                         <ul class="mb-0 mt-1 ps-3">
-                            <li><strong>15 phút đầu</strong> sau khi đặt → có thể huỷ hoặc đổi ngay (nếu còn ≥&nbsp;2 tiếng trước giờ khám).</li>
-                            <li><strong>Sau 15 phút</strong> → vẫn huỷ/đổi được miễn là còn ≥&nbsp;2 tiếng trước giờ khám.</li>
+                            <li><strong>15 phút đầu</strong> sau khi đặt → có thể huỷ hoặc đổi ngay (nếu còn ≥ 2 tiếng trước giờ khám).</li>
+                            <li><strong>Sau 15 phút</strong> → vẫn huỷ/đổi được miễn là còn ≥ 2 tiếng trước giờ khám.</li>
                             <li><strong>Còn dưới 2 tiếng</strong> trước giờ khám → không thể tự huỷ/đổi, vui lòng liên hệ lễ tân.</li>
                         </ul>
                     </div>
@@ -407,10 +413,16 @@
 
     function slotButtonHtml(s, isToday, nowTimeStr) {
         const isPast = isToday && (s.time < nowTimeStr);
+        let titleText = 'Khung giờ này hiện không khả dụng';
+        
+        if (isPast) {
+            titleText = 'Khung giờ này đã trôi qua trong ngày';
+        } else if (s.status === 'AVAILABLE' && s.available === false) {
+            titleText = 'Đã quá hạn đặt lịch (phải đặt trước 30 phút)';
+        }
 
         // available === false (mọi trạng thái khác AVAILABLE) hoặc đã trôi qua trong ngày -> làm mờ, chặn click
         if (s.available === false || isPast) {
-            const titleText = isPast ? 'Khung giờ này đã trôi qua trong ngày' : 'Khung giờ này hiện không khả dụng';
             return '<button type="button" class="btn btn-outline-secondary btn-sm slot-btn slot-locked slot-disabled disabled" '
                  + 'style="opacity: 0.45; pointer-events: none; cursor: not-allowed;" '
                  + 'title="' + titleText + '" '

@@ -147,11 +147,10 @@
                 </c:if>
 
                 <%-- Kế hoạch --%>
-                <c:if test="${not empty record.treatmentPlan || not empty record.nextAppointmentDate}">
+                <c:if test="${not empty record.treatmentPlan}">
                 <div>
                     <div class="detail-label mb-1">Kế hoạch điều trị</div>
-                    <c:if test="${not empty record.treatmentPlan}"><p class="detail-value mb-1">${record.treatmentPlan}</p></c:if>
-                    <c:if test="${not empty record.nextAppointmentDate}"><span class="badge bg-info text-dark">Tái khám: ${record.nextAppointmentDate}</span></c:if>
+                    <p class="detail-value mb-1">${record.treatmentPlan}</p>
                 </div>
                 </c:if>
             </div>

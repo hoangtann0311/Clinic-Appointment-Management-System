@@ -18,14 +18,14 @@
         </div>
 
         <c:if test="${not empty saved}">
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <div class="alert alert-success alert-dismissible fade show" data-cams-toast role="alert">
                 <i class="bi bi-check-circle-fill me-2"></i>
                 Cập nhật thông tin thành công!
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         </c:if>
         <c:if test="${not empty error}">
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <div class="alert alert-danger alert-dismissible fade show" data-cams-toast role="alert">
                 <i class="bi bi-exclamation-triangle-fill me-2"></i>${error}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
@@ -72,15 +72,7 @@
                             <label for="dateOfBirth" class="form-label fw-semibold">Ngày sinh <span class="text-danger">*</span></label>
                             <input type="date" id="dateOfBirth" name="dateOfBirth" class="form-control"
                                    value="${not empty formDob ? formDob : (not empty patient.dateOfBirth ? patient.dateOfBirth : '')}"
-                                   max="${pageContext.request.servletContext.getAttribute('today')}">
-                        </div>
-
-                        <div class="col-12">
-                            <label for="address" class="form-label fw-semibold">Địa chỉ</label>
-                            <label for="address" class="form-label fw-semibold">Địa chỉ <span class="text-danger">*</span></label>
-                            <input type="text" id="address" name="address" class="form-control"
-                                   value="${not empty formAddress ? formAddress : (not empty patient.address ? patient.address : '')}"
-                                   placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành">
+                                   max="<%= java.time.LocalDate.now() %>">
                         </div>
 
                         <div class="col-md-6">
@@ -89,6 +81,13 @@
                                    value="${not empty formCccd ? formCccd : (not empty patient.cccd ? patient.cccd : '')}"
                                    placeholder="Số CCCD/CMND 12 số" maxlength="12"
                                    oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                        </div>
+
+                        <div class="col-12">
+                            <label for="address" class="form-label fw-semibold">Địa chỉ <span class="text-danger">*</span></label>
+                            <input type="text" id="address" name="address" class="form-control"
+                                   value="${not empty formAddress ? formAddress : (not empty patient.address ? patient.address : '')}"
+                                   placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành">
                         </div>
 
                         <%-- Thông tin tài khoản (chỉ đọc) --%>

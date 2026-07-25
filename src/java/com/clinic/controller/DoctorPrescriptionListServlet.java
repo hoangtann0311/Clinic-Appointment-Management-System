@@ -1,6 +1,7 @@
 package com.clinic.controller;
 
 import com.clinic.config.DatabaseConfig;
+import com.clinic.dao.DoctorDAO;
 import com.clinic.model.User;
 
 import jakarta.servlet.ServletException;
@@ -28,73 +29,70 @@ public class DoctorPrescriptionListServlet extends HttpServlet {
             resp.sendRedirect(req.getContextPath() + "/login");
             return;
         }
-        User user = (User) session.getAttribute("user");
-        Integer doctorId = getDoctorId(user.getId());
-        if (doctorId == null) {
-            resp.sendError(HttpServletResponse.SC_FORBIDDEN);
-            return;
-        }
-
-        String keyword = req.getParameter("keyword");
-        boolean hasKw = keyword != null && !keyword.isBlank();
-
-        String sql =
-            "SELECT p.id, p.prescription_code, p.status, p.created_at, " +
-            "       pt.full_name AS patient_name, pt.id AS patient_id, " +
-            "       CONVERT(varchar, a.appointment_date, 23) AS appointment_date, " +
-            "       mr.id AS record_id, a.id AS appointment_id, mr.final_diagnosis, " +
-            "       (SELECT COUNT(*) FROM prescription_items pi WHERE pi.prescription_id = p.id) AS item_count " +
-            "FROM prescriptions p " +
-            "JOIN medical_records mr ON p.medical_record_id = mr.id " +
-            "JOIN appointments a ON mr.appointment_id = a.id " +
-            "JOIN patients pt ON a.patient_id = pt.id " +
-            "WHERE a.doctor_id = ? " +
-            (hasKw ? "AND (pt.full_name LIKE ? OR p.prescription_code LIKE ?) " : "") +
-            "ORDER BY p.created_at DESC";
-
-        List<PrescriptionRow> rows = new ArrayList<>();
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, doctorId);
-            if (hasKw) {
-                String lk = "%" + keyword.trim() + "%";
-                ps.setString(2, lk);
-                ps.setString(3, lk);
+        try {
+            User user = (User) session.getAttribute("user");
+            Integer doctorId = DoctorDAO.getDoctorIdByUserId(user.getId());
+            if (doctorId == null) {
+                resp.sendError(HttpServletResponse.SC_FORBIDDEN);
+                return;
             }
-            ResultSet rs = ps.executeQuery();
-            while (rs.next()) {
-                PrescriptionRow row = new PrescriptionRow();
-                row.id              = rs.getInt("id");
-                row.code            = rs.getString("prescription_code");
-                row.status          = rs.getString("status");
-                row.createdAt       = rs.getString("created_at");
-                row.patientName     = rs.getString("patient_name");
-                row.patientId       = rs.getInt("patient_id");
-                row.appointmentDate = rs.getString("appointment_date");
-                row.recordId        = rs.getInt("record_id");
-                row.appointmentId   = rs.getInt("appointment_id");
-                row.finalDiagnosis  = rs.getString("final_diagnosis");
-                row.itemCount       = rs.getInt("item_count");
-                rows.add(row);
+
+            String keyword = req.getParameter("keyword");
+            boolean hasKw = keyword != null && !keyword.isBlank();
+
+            String sql =
+                "SELECT p.id, p.prescription_code, p.status, p.created_at, " +
+                "       pt.full_name AS patient_name, pt.id AS patient_id, " +
+                "       CONVERT(varchar, a.appointment_date, 23) AS appointment_date, " +
+                "       mr.id AS record_id, a.id AS appointment_id, mr.final_diagnosis, " +
+                "       (SELECT COUNT(*) FROM prescription_items pi WHERE pi.prescription_id = p.id) AS item_count " +
+                "FROM prescriptions p " +
+                "JOIN medical_records mr ON p.medical_record_id = mr.id " +
+                "JOIN appointments a ON mr.appointment_id = a.id " +
+                "JOIN patients pt ON a.patient_id = pt.id " +
+                "WHERE a.doctor_id = ? " +
+                (hasKw ? "AND (pt.full_name LIKE ? OR p.prescription_code LIKE ?) " : "") +
+                "ORDER BY p.created_at DESC";
+
+            List<PrescriptionRow> rows = new ArrayList<>();
+            try (Connection conn = DatabaseConfig.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setInt(1, doctorId);
+                if (hasKw) {
+                    String lk = "%" + keyword.trim() + "%";
+                    ps.setString(2, lk);
+                    ps.setString(3, lk);
+                }
+                ResultSet rs = ps.executeQuery();
+                while (rs.next()) {
+                    PrescriptionRow row = new PrescriptionRow();
+                    row.id              = rs.getInt("id");
+                    row.code            = rs.getString("prescription_code");
+                    row.status          = rs.getString("status");
+                    row.createdAt       = rs.getString("created_at");
+                    row.patientName     = rs.getString("patient_name");
+                    row.patientId       = rs.getInt("patient_id");
+                    row.appointmentDate = rs.getString("appointment_date");
+                    row.recordId        = rs.getInt("record_id");
+                    row.appointmentId   = rs.getInt("appointment_id");
+                    row.finalDiagnosis  = rs.getString("final_diagnosis");
+                    row.itemCount       = rs.getInt("item_count");
+                    rows.add(row);
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
             }
-        } catch (SQLException e) {
+
+            req.setAttribute("prescriptions", rows);
+            req.setAttribute("keyword",       keyword != null ? keyword : "");
+            req.setAttribute("doctorName",    user.getFullName());
+            req.getRequestDispatcher("/views/doctors/prescription_list.jsp").forward(req, resp);
+        } catch (Exception e) {
+            System.err.println("[DoctorPrescriptionListServlet] doGet ERROR: " + e.getMessage());
             e.printStackTrace();
+            req.setAttribute("errorMessage", "Không thể tải trang. Vui lòng thử lại sau.");
+            req.getRequestDispatcher("/views/doctors/prescription_list.jsp").forward(req, resp);
         }
-
-        req.setAttribute("prescriptions", rows);
-        req.setAttribute("keyword",       keyword != null ? keyword : "");
-        req.setAttribute("doctorName",    user.getFullName());
-        req.getRequestDispatcher("/views/doctors/prescription_list.jsp").forward(req, resp);
-    }
-
-    private Integer getDoctorId(int userId) {
-        try (Connection c = DatabaseConfig.getConnection();
-             PreparedStatement ps = c.prepareStatement("SELECT id FROM doctors WHERE user_id = ?")) {
-            ps.setInt(1, userId);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) return rs.getInt("id");
-        } catch (Exception e) { e.printStackTrace(); }
-        return null;
     }
 
     public static class PrescriptionRow {

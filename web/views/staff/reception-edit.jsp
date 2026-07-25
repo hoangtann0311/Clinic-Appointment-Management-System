@@ -45,7 +45,7 @@
             <div class="admin-avatar-sm">
                 ${fn:substring(sessionScope.user.fullName, 0, 1)}
             </div>
-            <span class="header-display-name">Hoàng Văn Tân</span>
+            <span class="header-display-name">${sessionScope.user.fullName}</span>
             <span class="admin-topbar-role">
                 <i class="bi bi-shield-check me-1"></i>Lễ Tân
             </span>
@@ -77,7 +77,7 @@
             <li class="admin-sidebar-section">Tổng quan</li>
             <li>
                 <a href="${pageContext.request.contextPath}/admin/reception" 
-                   class="${fn:contains(requestURI, '/reception') && !fn:contains(requestURI, 'booking') && !fn:contains(requestURI, 'sos') ? 'active' : ''}">
+                   class="${fn:contains(requestURI, '/reception') && !fn:contains(requestURI, 'booking') && !fn:contains(requestURI, 'priority') ? 'active' : ''}">
                     <i class="bi bi-speedometer2"></i>
                     <span>Hàng Đợi Tiếp Đón</span>
                 </a>
@@ -95,23 +95,10 @@
                 <a href="${pageContext.request.contextPath}/admin/reception/doctor-schedules"
                    class="${fn:contains(requestURI, 'doctor-schedules') ? 'active' : ''}">
                     <i class="bi bi-calendar-week"></i>
-                    <span>Lịch Làm Việc Bác Sĩ</span>
+                    <span>Lịch Làm Việc</span>
                 </a>
             </li>
-            <li>
-                <a href="${pageContext.request.contextPath}/admin/reception/slots"
-                   class="${fn:contains(requestURI, '/slots') ? 'active' : ''}">
-                    <i class="bi bi-grid-3x3-gap"></i>
-                    <span>Khung Giờ Khám</span>
-                </a>
-            </li>
-            <li>
-                <a href="${pageContext.request.contextPath}/admin/reception/payments" 
-                   class="${fn:contains(requestURI, 'payments') ? 'active' : ''}">
-                    <i class="bi bi-credit-card-2-front"></i>
-                    <span>Xác Nhận Thanh Toán</span>
-                </a>
-            </li>
+
         </ul>
     </aside>
 
@@ -227,10 +214,10 @@
                             </div>
                             <div class="card-body">
                                 <c:if test="${not empty param.success}">
-                                    <div class="alert alert-success"><i class="bi bi-check-circle-fill me-2"></i>Xác nhận thanh toán thành công!</div>
+                                    <div class="alert alert-success alert-dismissible fade show" data-cams-toast role="alert"><i class="bi bi-check-circle-fill me-2"></i>Xác nhận thanh toán thành công!<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
                                 </c:if>
                                 <c:if test="${not empty param.error}">
-                                    <div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill me-2"></i><c:out value="${param.error}"/></div>
+                                    <div class="alert alert-danger alert-dismissible fade show" data-cams-toast role="alert"><i class="bi bi-exclamation-triangle-fill me-2"></i><c:out value="${param.error}"/><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
                                 </c:if>
                                 <div class="row align-items-center">
                                     <div class="col-md-4">
@@ -264,7 +251,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <c:if test="${preInvoice.status == 'PendingConfirmation'}">
+                                <c:if test="${preInvoice.status == 'PendingConfirmation' || preInvoice.status == 'Unpaid'}">
                                     <hr class="my-3">
                                     <form method="POST" action="${pageContext.request.contextPath}/admin/reception/edit">
                                         <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
@@ -273,10 +260,11 @@
                                         <div class="row g-3">
                                             <div class="col-md-3">
                                                 <label class="form-label text-muted small fw-bold">PHƯƠNG THỨC</label>
-                                                <input type="hidden" name="paymentMethod" value="${preInvoice.paymentMethod}">
+                                                <c:set var="editPayMethod" value="${empty preInvoice.paymentMethod ? 'Cash' : preInvoice.paymentMethod}"/>
+                                                <input type="hidden" name="paymentMethod" value="${editPayMethod}">
                                                 <select class="form-select" disabled>
-                                                    <option value="Cash" ${preInvoice.paymentMethod == 'Cash' ? 'selected' : ''}>Tiền mặt</option>
-                                                    <option value="BankTransfer" ${preInvoice.paymentMethod == 'BankTransfer' ? 'selected' : ''}>Chuyển khoản</option>
+                                                    <option value="Cash" ${editPayMethod == 'Cash' ? 'selected' : ''}>Tiền mặt</option>
+                                                    <option value="BankTransfer" ${editPayMethod == 'BankTransfer' ? 'selected' : ''}>Chuyển khoản</option>
                                                 </select>
                                             </div>
                                             <div class="col-md-3" id="txCodeContainer" style="display: none;">
@@ -289,7 +277,11 @@
                                             </div>
                                             <div class="col-md-2 d-flex align-items-end">
                                                 <button type="submit" class="btn btn-success fw-bold w-100">
-                                                    <i class="bi bi-check-lg me-1"></i> Đã thanh toán
+                                                    <i class="bi bi-check-lg me-1"></i>
+                                                    <c:choose>
+                                                        <c:when test="${preInvoice.status == 'Unpaid'}">Xác nhận TT</c:when>
+                                                        <c:otherwise>Đã thanh toán</c:otherwise>
+                                                    </c:choose>
                                                 </button>
                                             </div>
                                         </div>

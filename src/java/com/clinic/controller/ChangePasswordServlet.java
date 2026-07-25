@@ -71,9 +71,17 @@ public class ChangePasswordServlet extends HttpServlet {
 
         if (!success) {
             // Đổi mật khẩu thất bại
-            request.setAttribute("errors", errors);
-            // Giữ lại các giá trị đã nhập (trừ mật khẩu)
-            request.getRequestDispatcher("/views/auth/change-password.jsp").forward(request, response);
+            String redirectTo = request.getParameter("redirectTo");
+            if (redirectTo != null && !redirectTo.isBlank()) {
+                // Nếu request đến từ modal (có redirectTo) → redirect về trang gốc với lỗi
+                String firstError = errors.values().iterator().next();
+                response.sendRedirect(redirectTo + (redirectTo.contains("?") ? "&" : "?")
+                        + "pwError=" + java.net.URLEncoder.encode(firstError, "UTF-8"));
+            } else {
+                // Fallback: forward đến trang đổi mật khẩu standalone
+                request.setAttribute("errors", errors);
+                request.getRequestDispatcher("/views/auth/change-password.jsp").forward(request, response);
+            }
             return;
         }
 

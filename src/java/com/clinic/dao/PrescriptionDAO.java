@@ -188,7 +188,7 @@ public class PrescriptionDAO {
                 }
             }
         } catch (SQLException e) {
-            throw new RuntimeException("Không thể tải chi tiết hóa đơn thuốc", e);
+            System.err.println("[PrescriptionDAO] getItemsByInvoiceIds ERROR: " + e.getMessage());
         }
         return result;
     }
@@ -380,7 +380,7 @@ public class PrescriptionDAO {
                         getItemsByPrescriptionId(prescription.getId(), conn));
             }
         } catch (SQLException e) {
-            throw new RuntimeException("Không thể tải lựa chọn mua thuốc", e);
+            System.err.println("[PrescriptionDAO] getPatientPurchaseChoices ERROR: " + e.getMessage());
         }
         return result;
     }
@@ -412,7 +412,8 @@ public class PrescriptionDAO {
                         || ("Accepted".equalsIgnoreCase(decision) && rs.getBoolean("is_paid"));
             }
         } catch (SQLException e) {
-            throw new RuntimeException("Không thể kiểm tra quyết định mua thuốc", e);
+            System.err.println("[PrescriptionDAO] isPurchaseResolvedForReview ERROR: " + e.getMessage());
+            return true;
         }
     }
 

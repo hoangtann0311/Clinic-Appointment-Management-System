@@ -86,12 +86,12 @@
                                  style="object-fit:cover;"
                                  onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
                             <div class="admin-avatar-sm" style="display:none;">
-                                ${fn:substring(sessionScope.user.fullName, 0, 1)}
+                                ${not empty sessionScope.user.fullName ? fn:substring(sessionScope.user.fullName, 0, 1) : '?'}
                             </div>
                         </c:when>
                         <c:otherwise>
                             <div class="admin-avatar-sm">
-                                ${fn:substring(sessionScope.user.fullName, 0, 1)}
+                                ${not empty sessionScope.user.fullName ? fn:substring(sessionScope.user.fullName, 0, 1) : '?'}
                             </div>
                         </c:otherwise>
                     </c:choose>
@@ -120,12 +120,12 @@
                              style="object-fit:cover;"
                              onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
                         <div class="admin-sidebar-avatar" style="display:none;">
-                            ${fn:substring(sessionScope.user.fullName, 0, 1)}
+                            ${not empty sessionScope.user.fullName ? fn:substring(sessionScope.user.fullName, 0, 1) : '?'}
                         </div>
                     </c:when>
                     <c:otherwise>
                         <div class="admin-sidebar-avatar">
-                            ${fn:substring(sessionScope.user.fullName, 0, 1)}
+                            ${not empty sessionScope.user.fullName ? fn:substring(sessionScope.user.fullName, 0, 1) : '?'}
                         </div>
                     </c:otherwise>
                 </c:choose>
@@ -219,6 +219,13 @@
                                 <span>Đã Hoàn Thành</span>
                             </a>
                         </li>
+                        <li>
+                            <a href="${pageContext.request.contextPath}/sonographer/waiting-list?status=confirmed"
+                               class="${param.status == 'confirmed' ? 'active' : ''}">
+                                <i class="bi bi-patch-check"></i>
+                                <span>Đã Xác Nhận</span>
+                            </a>
+                        </li>
                         <li class="admin-sidebar-section">Minh Chứng AI</li>
                         <li>
                             <a href="${pageContext.request.contextPath}/sonographer/ai-model"
@@ -298,9 +305,10 @@
                         </li>
                         <li class="nav-item">
                             <a class="nav-link patient-nav-link" href="${pageContext.request.contextPath}/patient/invoices">
-                                <i class="bi bi-credit-card me-1"></i>Thanh Toán Của Tôi
+                                <i class="bi bi-file-earmark-text me-1"></i>Yêu Cầu Thanh Toán
                             </a>
                         </li>
+
                         <li class="nav-item">
                             <a class="nav-link patient-nav-link" href="${pageContext.request.contextPath}/patient/medical-records">
                                 <i class="bi bi-journal-medical me-1"></i>Hồ Sơ Bệnh Án
@@ -314,7 +322,7 @@
                         <div class="dropdown">
                             <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle patient-profile-toggle" id="patientUserDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                                 <div class="patient-avatar-sm me-2">
-                                    ${fn:substring(sessionScope.user.fullName, 0, 1)}
+                                    ${not empty sessionScope.user.fullName ? fn:substring(sessionScope.user.fullName, 0, 1) : '?'}
                                 </div>
                                 <span class="d-none d-lg-inline text-dark fw-semibold small">${sessionScope.user.fullName}</span>
                             </a>
@@ -439,7 +447,7 @@
                                    id="userDropdown" role="button" data-bs-toggle="dropdown"
                                    aria-expanded="false">
                                     <span class="avatar-circle me-2">
-                                        ${fn:substring(sessionScope.user.fullName, 0, 1)}
+                                        ${not empty sessionScope.user.fullName ? fn:substring(sessionScope.user.fullName, 0, 1) : '?'}
                                     </span>
                                     ${sessionScope.user.fullName}
                                 </a>

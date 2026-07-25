@@ -1,6 +1,7 @@
 package com.clinic.controller;
 
 import com.clinic.config.DatabaseConfig;
+import com.clinic.dao.DoctorDAO;
 import com.clinic.dao.MedicalRecordDAO;
 import com.clinic.model.MedicalRecord;
 import com.clinic.model.User;
@@ -33,7 +34,7 @@ public class DoctorPatientHistoryServlet extends HttpServlet {
             return;
         }
         User user = (User) session.getAttribute("user");
-        Integer doctorId = getDoctorId(user.getId());
+        Integer doctorId = DoctorDAO.getDoctorIdByUserId(user.getId());
         if (doctorId == null) {
             resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Tài khoản chưa liên kết hồ sơ bác sĩ.");
             return;
@@ -81,7 +82,15 @@ public class DoctorPatientHistoryServlet extends HttpServlet {
         }
 
         // Lịch sử tất cả hồ sơ bệnh án của bệnh nhân này (toàn hệ thống, không giới hạn bác sĩ)
-        List<MedicalRecord> records = dao.getClinicalHistoryForDoctor(patientId, doctorId);
+        List<MedicalRecord> records;
+        try {
+            records = dao.getClinicalHistoryForDoctor(patientId, doctorId);
+        } catch (Exception e) {
+            System.err.println("[DoctorPatientHistoryServlet] doGet ERROR: " + e.getMessage());
+            e.printStackTrace();
+            records = java.util.Collections.emptyList();
+            req.setAttribute("errorMessage", "Không thể tải lịch sử bệnh án. Vui lòng thử lại sau.");
+        }
 
         req.setAttribute("patientName",  patientName);
         req.setAttribute("patientId",    patientId);
@@ -89,16 +98,6 @@ public class DoctorPatientHistoryServlet extends HttpServlet {
         req.setAttribute("doctorName",   user.getFullName());
 
         req.getRequestDispatcher("/views/doctors/patient_history.jsp").forward(req, resp);
-    }
-
-    private Integer getDoctorId(int userId) {
-        try (Connection c = DatabaseConfig.getConnection();
-             PreparedStatement ps = c.prepareStatement("SELECT id FROM doctors WHERE user_id = ?")) {
-            ps.setInt(1, userId);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) return rs.getInt("id");
-        } catch (Exception e) { e.printStackTrace(); }
-        return null;
     }
 
     private String getPatientName(int patientId) {

@@ -52,17 +52,24 @@ public class DoctorProfileServlet extends HttpServlet {
         User user = getUser(req, resp);
         if (user == null) return;
 
-        Doctor doctor = doctorDAO.findByUserId(user.getId());
-        if (doctor == null) {
-            resp.sendError(HttpServletResponse.SC_NOT_FOUND,
-                    "Tài khoản chưa liên kết hồ sơ bác sĩ.");
-            return;
-        }
+        try {
+            Doctor doctor = doctorDAO.findByUserId(user.getId());
+            if (doctor == null) {
+                resp.sendError(HttpServletResponse.SC_NOT_FOUND,
+                        "Tài khoản chưa liên kết hồ sơ bác sĩ.");
+                return;
+            }
 
-        req.setAttribute("doctor",     doctor);
-        req.setAttribute("doctorName", user.getFullName());
-        req.setAttribute("saved",      req.getParameter("saved"));
-        req.getRequestDispatcher("/views/doctors/doctor_profile.jsp").forward(req, resp);
+            req.setAttribute("doctor",     doctor);
+            req.setAttribute("doctorName", user.getFullName());
+            req.setAttribute("saved",      req.getParameter("saved"));
+            req.getRequestDispatcher("/views/doctors/doctor_profile.jsp").forward(req, resp);
+        } catch (Exception ex) {
+            System.err.println("[DoctorProfileServlet] doGet ERROR: " + ex.getMessage());
+            ex.printStackTrace();
+            req.setAttribute("errorMessage", "Không thể tải trang. Vui lòng thử lại sau.");
+            req.getRequestDispatcher("/views/doctors/doctor_profile.jsp").forward(req, resp);
+        }
     }
 
     @Override

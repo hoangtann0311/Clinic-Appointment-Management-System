@@ -137,16 +137,16 @@ public class DashboardDAO {
     public double sumRevenue(LocalDate from, LocalDate to) {
         return executeSum("SELECT ISNULL(SUM(i.total_amount), 0) AS total FROM invoices i INNER JOIN appointments a ON i.appointment_id = a.id WHERE a.appointment_date >= ? AND a.appointment_date <= ? AND UPPER(LTRIM(RTRIM(i.status))) = 'PAID'", from, to);
     }
-    public int countEmergencyToday() {
-        return executeCount("SELECT COUNT(*) AS total FROM appointments WHERE appointment_date = CAST(GETDATE() AS DATE) AND ISNULL(is_emergency, 0) = 1");
+    public int countPriorityWaitingToday() {
+        return executeCount("SELECT COUNT(*) AS total FROM appointments WHERE appointment_date = CAST(GETDATE() AS DATE) AND status = 'Waiting' AND ISNULL(is_priority, 0) = 1");
     }
 
-    public int countEmergencyAll() {
-        return executeCount("SELECT COUNT(*) AS total FROM appointments WHERE ISNULL(is_emergency, 0) = 1");
+    public int countPriorityWaitingAll() {
+        return executeCount("SELECT COUNT(*) AS total FROM appointments WHERE status = 'Waiting' AND ISNULL(is_priority, 0) = 1");
     }
 
-    public int countEmergency(LocalDate from, LocalDate to) {
-        return executeCount("SELECT COUNT(*) AS total FROM appointments WHERE appointment_date >= ? AND appointment_date <= ? AND ISNULL(is_emergency, 0) = 1", from, to);
+    public int countPriorityWaiting(LocalDate from, LocalDate to) {
+        return executeCount("SELECT COUNT(*) AS total FROM appointments WHERE appointment_date >= ? AND appointment_date <= ? AND status = 'Waiting' AND ISNULL(is_priority, 0) = 1", from, to);
     }
 
     public int countCancelledToday() {
@@ -336,7 +336,7 @@ public class DashboardDAO {
         private int appointmentsToday;
         private int completedCases;
         private int cancelledCases;
-        private int emergencyCases;
+        private int priorityCases;
         private int totalAppointments;
         private double revenueGenerated;
 
@@ -354,8 +354,8 @@ public class DashboardDAO {
         public void setCompletedCases(int completedCases) { this.completedCases = completedCases; }
         public int getCancelledCases() { return cancelledCases; }
         public void setCancelledCases(int cancelledCases) { this.cancelledCases = cancelledCases; }
-        public int getEmergencyCases() { return emergencyCases; }
-        public void setEmergencyCases(int emergencyCases) { this.emergencyCases = emergencyCases; }
+        public int getPriorityCases() { return priorityCases; }
+        public void setPriorityCases(int priorityCases) { this.priorityCases = priorityCases; }
         public int getTotalAppointments() { return totalAppointments; }
         public void setTotalAppointments(int totalAppointments) { this.totalAppointments = totalAppointments; }
         public double getCompletionRate() { return totalAppointments == 0 ? 0.0 : completedCases * 100.0 / totalAppointments; }
@@ -410,7 +410,7 @@ public class DashboardDAO {
                    + "ISNULL(d.specialization, N'Chưa cập nhật') AS specialization, "
                    + "(SELECT COUNT(*) FROM appointments a WHERE a.doctor_id = d.id AND a.appointment_date >= ? AND a.appointment_date <= ? AND LOWER(a.status) = 'completed') AS completed_cases, "
                    + "(SELECT COUNT(*) FROM appointments a WHERE a.doctor_id = d.id AND a.appointment_date >= ? AND a.appointment_date <= ? AND LOWER(a.status) = 'cancelled') AS cancelled_cases, "
-                   + "(SELECT COUNT(*) FROM appointments a WHERE a.doctor_id = d.id AND a.appointment_date >= ? AND a.appointment_date <= ? AND ISNULL(a.is_emergency, 0) = 1) AS emergency_cases, "
+                   + "(SELECT COUNT(*) FROM appointments a WHERE a.doctor_id = d.id AND a.appointment_date >= ? AND a.appointment_date <= ? AND ISNULL(a.is_priority, 0) = 1) AS priority_cases, "
                    + "(SELECT COUNT(*) FROM appointments a WHERE a.doctor_id = d.id AND a.appointment_date >= ? AND a.appointment_date <= ?) AS total_appointments, "
                    + "ISNULL((SELECT SUM(i.total_amount) FROM invoices i INNER JOIN appointments a ON i.appointment_id = a.id "
                    + "WHERE a.doctor_id = d.id AND a.appointment_date >= ? AND a.appointment_date <= ? AND LOWER(i.status) = 'paid'), 0) AS revenue "
@@ -431,7 +431,7 @@ public class DashboardDAO {
                     dp.specialization = rs.getString("specialization");
                     dp.completedCases = rs.getInt("completed_cases");
                     dp.cancelledCases = rs.getInt("cancelled_cases");
-                    dp.emergencyCases = rs.getInt("emergency_cases");
+                    dp.priorityCases = rs.getInt("priority_cases");
                     dp.totalAppointments = rs.getInt("total_appointments");
                     dp.totalPatients = dp.completedCases;
                     dp.appointmentsToday = dp.totalAppointments;
@@ -998,14 +998,14 @@ public class DashboardDAO {
             alerts.add(alert);
         }
 
-        int emergency = countEmergency(from, to);
-        if (emergency > 0) {
+        int priority = countPriorityWaiting(from, to);
+        if (priority > 0) {
             Alert alert = new Alert();
             alert.type = "warning";
             alert.icon = "bi-activity";
-            alert.title = "Ca cấp cứu";
-            alert.message = "Có " + emergency + " ca được đánh dấu ưu tiên trong khoảng đã chọn.";
-            alert.count = emergency;
+            alert.title = "Ca ưu tiên tiếp nhận";
+            alert.message = "Có " + priority + " ca được đánh dấu ưu tiên trong khoảng đã chọn.";
+            alert.count = priority;
             alerts.add(alert);
         }
         return alerts;

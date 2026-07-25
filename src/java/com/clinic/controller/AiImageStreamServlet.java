@@ -47,10 +47,14 @@ public class AiImageStreamServlet extends HttpServlet {
             return;
         }
 
+        com.clinic.model.UltrasoundWaitingPatient order = orderService.getById(orderId);
+        String state = order == null || order.getStatus() == null ? "" : order.getStatus().trim();
+        boolean completedState = state.equalsIgnoreCase("Completed") || state.equalsIgnoreCase("Confirmed");
+
         int roleId = user.getRoleId();
         boolean authorized = (roleId == 2 && orderService.checkDoctorOwnership(orderId, user.getId()))
-                || (roleId == 6 && orderService.isReadyForSonographer(orderId)
-                    && orderService.checkSonographerOwnership(orderId, user.getId()))
+                || (roleId == 6 && (completedState || (orderService.isReadyForSonographer(orderId)
+                    && orderService.checkSonographerOwnership(orderId, user.getId()))))
                 || (roleId == 5 && orderService.checkPatientOwnership(orderId, user.getId()));
         if (!authorized) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền xem ảnh phân tích AI của ca này.");
@@ -86,10 +90,48 @@ public class AiImageStreamServlet extends HttpServlet {
             return;
         }
 
+        if ("mask".equals(type) || "raw-mask".equals(type)) {
+            try {
+                java.awt.image.BufferedImage img = javax.imageio.ImageIO.read(imageFile);
+                if (img != null) {
+                    int w = img.getWidth(), h = img.getHeight();
+                    java.awt.image.BufferedImage transparentMask = new java.awt.image.BufferedImage(w, h, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+                    for (int y = 0; y < h; y++) {
+                        for (int x = 0; x < w; x++) {
+                            int pixel = img.getRGB(x, y);
+                            int red = (pixel >> 16) & 0xFF;
+                            int green = (pixel >> 8) & 0xFF;
+                            int blue = pixel & 0xFF;
+                            int alpha = img.getColorModel().hasAlpha() ? ((pixel >> 24) & 0xFF) : 255;
+                            // Nếu là pixel vùng tổn thương (nền trắng hoặc có điểm màu)
+                            if (alpha > 0 && (red > 50 || green > 50 || blue > 50)) {
+                                // Màu đỏ thẫm bán trong suốt ARGB: (alpha=140, red=220, green=38, blue=38)
+                                int argb = (140 << 24) | (220 << 16) | (38 << 8) | 38;
+                                transparentMask.setRGB(x, y, argb);
+                            } else {
+                                // Nền trong suốt hoàn toàn ARGB = 0
+                                transparentMask.setRGB(x, y, 0);
+                            }
+                        }
+                    }
+                    response.setContentType("image/png");
+                    response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+                    response.setHeader("Pragma", "no-cache");
+                    response.setDateHeader("Expires", 0);
+                    javax.imageio.ImageIO.write(transparentMask, "png", response.getOutputStream());
+                    return;
+                }
+            } catch (Exception ex) {
+                System.err.println("[AiImageStreamServlet] Render transparent mask error: " + ex.getMessage());
+            }
+        }
+
         String contentType = Files.probeContentType(imageFile.toPath());
         response.setContentType(contentType == null ? "image/png" : contentType);
         response.setContentLengthLong(imageFile.length());
-        response.setHeader("Cache-Control", "private, no-store");
+        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        response.setHeader("Pragma", "no-cache");
+        response.setDateHeader("Expires", 0);
         try (var output = response.getOutputStream()) {
             Files.copy(imageFile.toPath(), output);
         }
@@ -101,6 +143,17 @@ public class AiImageStreamServlet extends HttpServlet {
         String aiRoot = "uploads/ai-results";
         String uploadRoot = AppConfig.getUploadDirectory();
         if (!normalized.startsWith(aiRoot + "/") && !normalized.startsWith(uploadRoot + "/")) return null;
+
+        // 0. Absolute configured path (persistent storage, survives redeploy)
+        String absDir = AppConfig.getAiResultsAbsoluteDir();
+        if (absDir != null && !absDir.isBlank()) {
+            // Trích xuất phần tương đối sau "uploads/ai-results/" hoặc uploadRoot
+            String relPart = normalized;
+            if (normalized.startsWith(aiRoot + "/")) relPart = normalized.substring(aiRoot.length() + 1);
+            else if (normalized.startsWith(uploadRoot + "/")) relPart = normalized.substring(uploadRoot.length() + 1);
+            File absFile = new File(new File(absDir.trim()), relPart).getCanonicalFile();
+            if (absFile.isFile()) return absFile;
+        }
 
         String realPath = getServletContext().getRealPath("");
         if (realPath == null) return null;
@@ -121,6 +174,13 @@ public class AiImageStreamServlet extends HttpServlet {
         if (projectWebDir == null) {
             String configured = AppConfig.get("web.source.dir", null);
             if (configured != null && !configured.isBlank()) projectWebDir = configured.trim();
+        }
+        if (projectWebDir == null) {
+            String userDir = System.getProperty("user.dir");
+            if (userDir != null) {
+                File webCandidate = new File(userDir, "web");
+                if (webCandidate.isDirectory()) projectWebDir = webCandidate.getAbsolutePath();
+            }
         }
         if (projectWebDir != null) {
             File sourceFile = new File(projectWebDir, normalized).getCanonicalFile();

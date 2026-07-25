@@ -1,277 +1,147 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
-<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
+<%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
 <%@ include file="../common/header.jsp" %>
 
-<%-- ── Banner ──────────────────────────────────────────────────────────── --%>
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card border-0 bg-primary bg-gradient text-white rounded-4 clinical-page-hero">
-            <div class="card-body p-4 p-md-5">
-                <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
-                    <div>
-                        <h2 class="fw-bold mb-1">
-                            <i class="bi bi-heart-pulse me-2"></i>Xin chào, BS. ${doctorName}!
-                        </h2>
-                        <p class="mb-0 opacity-75 fs-5">
-                            Hôm nay: <strong>${today}</strong> &mdash; Chúc bạn một ngày làm việc hiệu quả.
-                        </p>
-                    </div>
-                    <span class="badge bg-light text-primary fs-6 px-3 py-2 rounded-pill">
-                        <i class="bi bi-person-badge me-1"></i>Bác sĩ lâm sàng
-                    </span>
-                </div>
+<style>
+.doc-kpi { transition: transform .15s; }
+.doc-kpi:hover { transform: translateY(-2px); }
+.pulse-border { animation: pulseBorder 2s infinite; }
+@keyframes pulseBorder { 0%,100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.4); } 50% { box-shadow: 0 0 0 8px rgba(220,38,38,0); } }
+.pulse-alert { animation: pulseBg 2s infinite; }
+@keyframes pulseBg { 0%,100% { background-color: #fef2f2; } 50% { background-color: #fee2e2; } }
+.table-danger.bg-opacity-10 { --bs-table-bg: rgba(248,215,218,0.3); }
+</style>
+
+<%-- Banner --%>
+<div class="mb-4">
+    <div class="card border-0 bg-primary bg-gradient text-white rounded-4">
+        <div class="card-body p-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+                <h2 class="fw-bold mb-1"><i class="bi bi-heart-pulse me-2"></i>Xin chào, BS. ${doctorName}</h2>
+                <p class="mb-0 opacity-75">Hôm nay: ${today} — Chúc một ngày làm việc hiệu quả.</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="${pageContext.request.contextPath}/doctor/appointments" class="btn btn-light btn-sm rounded-pill"><i class="bi bi-calendar2-week me-1"></i>Lịch hẹn</a>
+                <a href="${pageContext.request.contextPath}/doctor/medical-records" class="btn btn-light btn-sm rounded-pill"><i class="bi bi-journal-medical me-1"></i>Hồ sơ bệnh án</a>
+                <a href="${pageContext.request.contextPath}/doctor/patients" class="btn btn-light btn-sm rounded-pill"><i class="bi bi-people me-1"></i>Bệnh nhân</a>
             </div>
         </div>
     </div>
 </div>
 
-<%-- ── Thống kê nhanh hôm nay ─────────────────────────────────────────── --%>
+<%-- KPI: 4 số bác sĩ thực sự cần --%>
 <div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
-        <div class="card border-0 rounded-4 text-center p-3 h-100 clinical-kpi clinical-kpi--muted" style="background:#e8f4fd;">
-            <div class="fs-1 fw-bold text-primary">
-                <c:out value="${empty todayCounts['pending'] ? 0 : todayCounts['pending']}"/>
-            </div>
-            <div class="small text-muted mt-1"><i class="bi bi-hourglass-split me-1"></i>Chờ xác nhận</div>
+    <div class="col-md-3">
+        <div class="card border-0 rounded-4 text-center p-3 doc-kpi h-100" style="background:#e0f2fe;border-left:4px solid #0ea5e9;">
+            <div class="text-muted small text-uppercase fw-semibold mb-1">Chờ khám</div>
+            <div class="fs-2 fw-bold" style="color:#0369a1;">${empty todayCounts['waiting'] ? 0 : todayCounts['waiting']}</div>
+            <div class="small text-muted">bệnh nhân đã check-in</div>
         </div>
     </div>
-    <div class="col-6 col-md-3">
-        <div class="card border-0 rounded-4 text-center p-3 h-100 clinical-kpi clinical-kpi--success" style="background:#e8fdf0;">
-            <div class="fs-1 fw-bold text-success">
-                <c:out value="${empty todayCounts['confirmed'] ? 0 : todayCounts['confirmed']}"/>
-            </div>
-            <div class="small text-muted mt-1"><i class="bi bi-check-circle me-1"></i>Đã xác nhận</div>
+    <div class="col-md-3">
+        <div class="card border-0 rounded-4 text-center p-3 doc-kpi h-100" style="background:#fef3c7;border-left:4px solid #d97706;">
+            <div class="text-muted small text-uppercase fw-semibold mb-1">Đang khám</div>
+            <div class="fs-2 fw-bold" style="color:#92400e;">${empty todayCounts['inprogress'] ? 0 : todayCounts['inprogress']}</div>
+            <div class="small text-muted">ca đang xử lý</div>
         </div>
     </div>
-    <div class="col-6 col-md-3">
-        <div class="card border-0 rounded-4 text-center p-3 h-100 clinical-kpi" style="background:#f0eaff;">
-            <div class="fs-1 fw-bold" style="color:#7c3aed;">
-                <c:out value="${empty todayCounts['success'] ? 0 : todayCounts['success']}"/>
-            </div>
-            <div class="small text-muted mt-1"><i class="bi bi-clipboard2-check me-1"></i>Hoàn thành</div>
+    <div class="col-md-3">
+        <div class="card border-0 rounded-4 text-center p-3 doc-kpi h-100" style="background:#dcfce7;border-left:4px solid #15803d;">
+            <div class="text-muted small text-uppercase fw-semibold mb-1">Hoàn thành</div>
+            <div class="fs-2 fw-bold" style="color:#15803d;">${empty todayCounts['success'] ? 0 : todayCounts['success']}</div>
+            <div class="small text-muted">ca đã xong hôm nay</div>
         </div>
     </div>
-    <div class="col-6 col-md-3">
-        <div class="card border-0 rounded-4 text-center p-3 h-100 clinical-kpi clinical-kpi--warning" style="background:#fff8e1;">
-            <div class="fs-1 fw-bold text-warning">${totalRecords}</div>
-            <div class="small text-muted mt-1"><i class="bi bi-journal-medical me-1"></i>Tổng hồ sơ</div>
+    <div class="col-md-3">
+        <div class="card border-0 rounded-4 text-center p-3 doc-kpi h-100" style="<c:choose><c:when test='${priorityCount > 0}'>background:#fefce8;border-left:4px solid #eab308;</c:when><c:otherwise>background:#f8fafc;border-left:4px solid #94a3b8;</c:otherwise></c:choose>">
+            <div class="text-muted small text-uppercase fw-semibold mb-1">
+                <i class="bi bi-star-fill text-warning me-1"></i>Ưu tiên đang chờ
+            </div>
+            <div class="fs-2 fw-bold" style="color:#ca8a04;">${priorityCount}</div>
+            <div class="small text-muted">ca ưu tiên tiếp nhận</div>
         </div>
     </div>
 </div>
 
-<div class="row g-4">
-    <%-- ── Truy cập nhanh ────────────────────────────────────────────────── --%>
-    <div class="col-lg-4">
-        <div class="card border-0 rounded-4 h-100">
-            <div class="card-body p-4">
-                <h5 class="fw-semibold mb-3">
-                    <i class="bi bi-grid-3x3-gap text-primary me-2"></i>Truy Cập Nhanh
-                </h5>
-                <div class="d-grid gap-2">
-                    <a href="${pageContext.request.contextPath}/doctor/appointments"
-                       class="btn btn-outline-primary rounded-3 text-start">
-                        <i class="bi bi-calendar2-week me-2"></i>Lịch Hẹn Hôm Nay
-                        <c:if test="${totalToday > 0}">
-                            <span class="badge bg-primary float-end">${totalToday}</span>
-                        </c:if>
-                    </a>
-                    <a href="${pageContext.request.contextPath}/doctor/medical-records"
-                       class="btn btn-outline-success rounded-3 text-start">
-                        <i class="bi bi-journal-medical me-2"></i>Quản Lý Hồ Sơ Bệnh Án
-                    </a>
-                    <a href="${pageContext.request.contextPath}/doctor/prescriptions-list"
-                       class="btn btn-outline-danger rounded-3 text-start">
-                        <i class="bi bi-prescription2 me-2"></i>Danh Sách Đơn Thuốc
-                    </a>
-                    <a href="${pageContext.request.contextPath}/doctor/patients"
-                       class="btn btn-outline-info rounded-3 text-start">
-                        <i class="bi bi-people me-2"></i>Danh Sách Bệnh Nhân
-                    </a>
-                </div>
-            </div>
-        </div>
+<%-- Thông báo ca ưu tiên đang chờ --%>
+<c:if test="${priorityCount > 0}">
+<div class="alert alert-warning border-0 rounded-4 d-flex align-items-center gap-3 mb-4 shadow-sm" role="alert">
+    <i class="bi bi-info-circle-fill fs-3 text-warning-emphasis"></i>
+    <div class="flex-grow-1">
+        <strong>Có ${priorityCount} ca ưu tiên đang chờ khám!</strong>
+        <div class="small mt-1">Thông tin ưu tiên được tiếp nhận từ bộ phận Lễ tân. Xem chi tiết trong danh sách bên dưới.</div>
     </div>
+    <a href="#prioritySection" class="btn btn-warning text-dark btn-sm rounded-pill px-3">Xem danh sách <i class="bi bi-arrow-down ms-1"></i></a>
+</div>
+</c:if>
 
-    <%-- ── Lịch hẹn hôm nay ──────────────────────────────────────────────── --%>
-    <div class="col-lg-8">
-        <div class="card border-0 rounded-4">
-            <div class="card-body p-4">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="fw-semibold mb-0">
-                        <i class="bi bi-calendar-day text-primary me-2"></i>Lịch Hẹn Hôm Nay
-                    </h5>
-                    <a href="${pageContext.request.contextPath}/doctor/appointments"
-                       class="btn btn-sm btn-outline-primary rounded-pill">
-                        Xem tất cả <i class="bi bi-arrow-right ms-1"></i>
-                    </a>
-                </div>
-
-                <c:choose>
-                    <c:when test="${empty todayAppointments}">
-                        <div class="text-center py-4 text-muted">
-                            <i class="bi bi-calendar-x fs-1 d-block mb-2 opacity-25"></i>
-                            Không có lịch hẹn nào hôm nay.
-                        </div>
-                    </c:when>
-                    <c:otherwise>
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Giờ</th>
-                                        <th>Bệnh Nhân</th>
-                                        <th>Triệu Chứng</th>
-                                        <th>Trạng Thái</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <c:forEach var="appt" items="${todayAppointments}" varStatus="st">
-                                        <c:if test="${st.index < 6}">
-                                        <tr>
-                                            <td><span class="badge bg-light text-dark border">
-                                                <i class="bi bi-clock me-1"></i>${appt.timeSlot}
-                                            </span></td>
-                                            <td class="fw-medium">${appt.patientName}</td>
-                                            <td class="text-muted small">
-                                                <c:choose>
-                                                    <c:when test="${not empty appt.symptoms}">
-                                                        ${fn:substring(appt.symptoms,0,40)}<c:if test="${fn:length(appt.symptoms)>40}">...</c:if>
-                                                    </c:when>
-                                                    <c:otherwise>—</c:otherwise>
-                                                </c:choose>
-                                            </td>
-                                            <td>
-                                                <c:choose>
-                                                    <c:when test="${fn:toLowerCase(appt.status) == 'confirmed'}">
-                                                        <span class="badge bg-success rounded-pill">Xác nhận</span>
-                                                    </c:when>
-                                                    <c:when test="${fn:toLowerCase(appt.status) == 'pending'}">
-                                                        <span class="badge bg-warning text-dark rounded-pill">Chờ xác nhận</span>
-                                                    </c:when>
-                                                    <c:when test="${fn:toLowerCase(appt.status) == 'waiting'}">
-                                                        <span class="badge bg-info text-dark rounded-pill">Chờ khám</span>
-                                                    </c:when>
-                                                    <c:when test="${fn:toLowerCase(appt.status) == 'inprogress'}">
-                                                        <span class="badge bg-primary rounded-pill">Đang khám</span>
-                                                    </c:when>
-                                                    <c:when test="${fn:toLowerCase(appt.status) == 'success'}">
-                                                        <span class="badge bg-secondary rounded-pill">Hoàn thành</span>
-                                                    </c:when>
-                                                    <c:when test="${fn:toLowerCase(appt.status) == 'cancelled'}">
-                                                        <span class="badge bg-danger rounded-pill">Đã huỷ</span>
-                                                    </c:when>
-                                                    <c:when test="${fn:toLowerCase(appt.status) == 'noshow'}">
-                                                        <span class="badge bg-dark rounded-pill">Vắng mặt</span>
-                                                    </c:when>
-                                                    <c:otherwise>
-                                                        <span class="badge bg-light text-dark rounded-pill border">${appt.status}</span>
-                                                    </c:otherwise>
-                                                </c:choose>
-                                                <c:if test="${appt.emergency}">
-                                                    <span class="badge bg-warning-subtle text-warning-emphasis border rounded-pill ms-1">
-                                                        <i class="bi bi-arrow-up-circle-fill me-1"></i>Ưu tiên
-                                                    </span>
-                                                </c:if>
-                                            </td>
-                                            <td>
-                                                <a href="${pageContext.request.contextPath}/doctor/medical-records?apptId=${appt.id}"
-                                                   class="btn btn-sm btn-outline-primary rounded-pill">
-                                                    <i class="bi bi-pencil-square me-1"></i>Khám
-                                                </a>
-                                            </td>
-                                        </tr>
-                                        </c:if>
-                                    </c:forEach>
-                                </tbody>
-                            </table>
-                        </div>
-                    </c:otherwise>
-                </c:choose>
-            </div>
-        </div>
+<%-- Lịch hẹn hôm nay --%>
+<div class="card rounded-4 border-0 shadow-sm">
+    <div class="card-header bg-transparent border-0 p-3 d-flex justify-content-between align-items-center">
+        <h6 class="fw-semibold mb-0"><i class="bi bi-calendar-check me-2 text-primary"></i>Lịch Hẹn Hôm Nay <span class="badge bg-primary rounded-pill ms-1">${totalToday}</span></h6>
+        <a href="${pageContext.request.contextPath}/doctor/appointments" class="btn btn-sm btn-outline-primary rounded-pill">Xem tất cả <i class="bi bi-arrow-right ms-1"></i></a>
     </div>
-
-    <%-- ── Hồ sơ bệnh án gần nhất ────────────────────────────────────────── --%>
-    <div class="col-12">
-        <div class="card border-0 rounded-4">
-            <div class="card-body p-4">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="fw-semibold mb-0">
-                        <i class="bi bi-journal-medical text-success me-2"></i>Hồ Sơ Bệnh Án Gần Nhất
-                    </h5>
-                    <a href="${pageContext.request.contextPath}/doctor/medical-records"
-                       class="btn btn-sm btn-outline-success rounded-pill">
-                        Xem tất cả <i class="bi bi-arrow-right ms-1"></i>
-                    </a>
-                </div>
-
-                <c:choose>
-                    <c:when test="${empty recentRecords}">
-                        <div class="text-center py-4 text-muted">
-                            <i class="bi bi-journal-x fs-1 d-block mb-2 opacity-25"></i>
-                            Chưa có hồ sơ bệnh án nào.
-                        </div>
-                    </c:when>
-                    <c:otherwise>
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Bệnh Nhân</th>
-                                        <th>Ngày Khám</th>
-                                        <th>Chẩn Đoán</th>
-                                        <th>Tuổi Thai</th>
-                                        <th>Rủi Ro</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <c:forEach var="rec" items="${recentRecords}">
-                                        <tr>
-                                            <td class="fw-medium">${rec.patientName}</td>
-                                            <td class="text-muted small">${rec.appointmentDate}</td>
-                                            <td>
-                                                <c:out value="${fn:substring(rec.finalDiagnosis,0,50)}"/>
-                                                <c:if test="${fn:length(rec.finalDiagnosis)>50}">...</c:if>
-                                            </td>
-                                            <td>
-                                                <c:choose>
-                                                    <c:when test="${not empty rec.gestationalAgeWeeks}">
-                                                        ${rec.gestationalAgeDisplay}
-                                                    </c:when>
-                                                    <c:otherwise><span class="text-muted">—</span></c:otherwise>
-                                                </c:choose>
-                                            </td>
-                                            <td>
-                                                <c:choose>
-                                                    <c:when test="${rec.hasRisk()}">
-                                                        <span class="badge bg-danger rounded-pill">
-                                                            <i class="bi bi-exclamation-triangle me-1"></i>Có rủi ro
-                                                        </span>
-                                                    </c:when>
-                                                    <c:otherwise>
-                                                        <span class="badge bg-success rounded-pill">Bình thường</span>
-                                                    </c:otherwise>
-                                                </c:choose>
-                                            </td>
-                                            <td>
-                                                <a href="${pageContext.request.contextPath}/doctor/medical-records?apptId=${rec.appointmentId}"
-                                                   class="btn btn-sm btn-outline-secondary rounded-pill">
-                                                    <i class="bi bi-eye me-1"></i>Xem
-                                                </a>
-                                            </td>
-                                        </tr>
-                                    </c:forEach>
-                                </tbody>
-                            </table>
-                        </div>
-                    </c:otherwise>
-                </c:choose>
-            </div>
-        </div>
+    <div class="card-body p-0">
+        <c:choose>
+            <c:when test="${empty todayAppointments}">
+                <div class="text-center py-5 text-muted"><i class="bi bi-calendar-x d-block mb-2" style="font-size:2rem;opacity:.3;"></i>Hôm nay chưa có lịch hẹn nào.</div>
+            </c:when>
+            <c:otherwise>
+                <table class="table table-hover align-middle mb-0" style="table-layout:fixed;width:100%;">
+                    <thead style="background:#fff;"><tr><th class="ps-3" style="width:5%;">#</th><th style="width:24%;">Bệnh nhân</th><th style="width:16%;">Giờ</th><th style="width:18%;">Trạng thái</th><th class="pe-3" style="width:37%;">Thao tác</th></tr></thead>
+                    <tbody>
+                    <c:forEach var="a" items="${todayAppointments}" varStatus="loop">
+                    <c:set var="st" value="${fn:toLowerCase(a.status)}"/>
+                    <tr class="${a.priority ? 'table-warning bg-opacity-10' : ''}" id="${a.priority ? 'prioritySection' : ''}">
+                        <td class="ps-3 text-muted small">${loop.index + 1}</td>
+                        <td class="fw-medium">${a.patientName}
+                            <c:if test="${a.priority}">
+                                <br><span class="badge bg-warning text-dark rounded-pill mt-1" style="font-size:.65rem;">
+                                    <i class="bi bi-star-fill me-1"></i>Ưu tiên tiếp nhận
+                                </span>
+                                <c:if test="${not empty a.priorityReason}">
+                                    <div class="small text-muted mt-1" style="font-size:.7rem;" title="${a.priorityReason}">
+                                        <c:out value="${fn:substring(a.priorityReason, 0, 40)}${fn:length(a.priorityReason) > 40 ? '…' : ''}"/>
+                                    </div>
+                                </c:if>
+                            </c:if>
+                        </td>
+                        <td>${not empty a.timeSlot ? a.timeSlot : '—'}</td>
+                        <td>
+                            <c:choose>
+                                <c:when test="${st == 'pending'}"><span class="badge bg-warning text-dark rounded-pill">Chờ xác nhận</span></c:when>
+                                <c:when test="${st == 'confirmed'}"><span class="badge bg-success rounded-pill">Đã xác nhận</span></c:when>
+                                <c:when test="${st == 'waiting'}"><span class="badge bg-primary rounded-pill">Chờ khám</span></c:when>
+                                <c:when test="${st == 'inprogress'}"><span class="badge bg-info text-dark rounded-pill">Đang khám</span></c:when>
+                                <c:when test="${st == 'success' || st == 'completed'}"><span class="badge bg-success rounded-pill">Hoàn thành</span></c:when>
+                                <c:when test="${st == 'cancelled'}"><span class="badge bg-secondary rounded-pill">Đã huỷ</span></c:when>
+                                <c:when test="${st == 'noshow'}"><span class="badge bg-dark rounded-pill">Vắng mặt</span></c:when>
+                                <c:otherwise><span class="badge bg-light text-dark rounded-pill">${a.status}</span></c:otherwise>
+                            </c:choose>
+                        </td>
+                        <td class="pe-3">
+                            <c:if test="${st == 'waiting'}">
+                                <form method="post" action="${pageContext.request.contextPath}/doctor/appointments" style="margin:0;display:inline;">
+                                    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                                    <input type="hidden" name="action" value="startConsultation">
+                                    <input type="hidden" name="appointmentId" value="${a.id}">
+                                    <button type="submit" class="btn btn-primary btn-sm rounded-pill" style="font-size:.75rem;padding:.3rem .8rem;"><i class="bi bi-play-fill me-1"></i>Bắt đầu khám</button>
+                                </form>
+                            </c:if>
+                            <c:if test="${st == 'inprogress' || st == 'success' || st == 'completed'}">
+                                <a href="${pageContext.request.contextPath}/doctor/medical-records?apptId=${a.id}" class="btn btn-sm btn-outline-success rounded-pill"><i class="bi bi-journal-plus me-1"></i>Hồ sơ bệnh án</a>
+                            </c:if>
+                            <c:if test="${st == 'confirmed'}">
+                                <span class="text-muted small"><i class="bi bi-clock me-1"></i>Chờ lễ tân check-in</span>
+                            </c:if>
+                        </td>
+                    </tr>
+                    </c:forEach>
+                    </tbody>
+                </table>
+            </c:otherwise>
+        </c:choose>
     </div>
 </div>
-
 <%@ include file="../common/footer.jsp" %>

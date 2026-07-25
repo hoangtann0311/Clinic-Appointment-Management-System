@@ -29,11 +29,12 @@ public class MedicineDAO {
                     return findAllInternal(offset, pageSize, search, activeFilter, false);
                 } catch (SQLException e2) {
                     System.err.println("[MedicineDAO] findAll fallback failed: " + e2.getMessage());
-                    throw new RuntimeException("Lỗi database khi lấy danh sách thuốc", e2);
+                    System.err.println("[MedicineDAO] findAll fallback failed: " + e2.getMessage());
+                    return new ArrayList<>();
                 }
             }
             System.err.println("[MedicineDAO] findAll error: " + e.getMessage());
-            throw new RuntimeException("Lỗi database khi lấy danh sách thuốc", e);
+            return new ArrayList<>();
         }
     }
 

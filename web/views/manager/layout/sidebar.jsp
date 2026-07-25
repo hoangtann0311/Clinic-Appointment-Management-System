@@ -46,13 +46,6 @@
                 <span>Dịch Vụ Y Tế</span>
             </a>
         </li>
-        <li>
-            <a href="${pageContext.request.contextPath}/manager/medicines/"
-               class="${fn:contains(requestURI, '/manager/medicines') ? 'active' : ''}">
-                <i class="bi bi-capsule"></i>
-                <span>Danh Mục Thuốc</span>
-            </a>
-        </li>
 
         <!-- QUẢN LÝ LỊCH LÀM VIỆC -->
         <li class="admin-sidebar-section">Quản Lý Nhân Sự</li>

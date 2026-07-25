@@ -38,16 +38,23 @@ public class PatientBookingServlet extends HttpServlet {
         User user = requireLogin(request, response);
         if (user == null) return;
 
-        String rescheduleId = request.getParameter("rescheduleId");
-        if (rescheduleId != null) {
-            request.setAttribute("rescheduleId", rescheduleId);
+        try {
+            String rescheduleId = request.getParameter("rescheduleId");
+            if (rescheduleId != null) {
+                request.setAttribute("rescheduleId", rescheduleId);
+            }
+
+            List<Doctor> doctors = bookingService.getAllDoctors();
+            request.setAttribute("doctors", doctors);
+            request.setAttribute("today", LocalDate.now().toString());
+
+            request.getRequestDispatcher("/views/patient/booking.jsp").forward(request, response);
+        } catch (Exception ex) {
+            System.err.println("[PatientBookingServlet] doGet ERROR: " + ex.getMessage());
+            ex.printStackTrace();
+            request.setAttribute("errorMessage", "Không thể tải trang. Vui lòng thử lại sau.");
+            request.getRequestDispatcher("/views/patient/booking.jsp").forward(request, response);
         }
-
-        List<Doctor> doctors = bookingService.getAllDoctors();
-        request.setAttribute("doctors", doctors);
-        request.setAttribute("today", LocalDate.now().toString());
-
-        request.getRequestDispatcher("/views/patient/booking.jsp").forward(request, response);
     }
 
     @Override
@@ -95,8 +102,9 @@ public class PatientBookingServlet extends HttpServlet {
                         user.getId(), slotId, 0, symptoms, lmp, errors
                 );
                 if (appointment != null) {
-                    response.sendRedirect(request.getContextPath()
-                            + "/patient/payment?appointmentId=" + appointment.getId());
+                    HttpSession session = request.getSession();
+                    session.setAttribute("bookingSuccess", "Đã đăng ký lịch khám thành công! Vui lòng có mặt tại quầy Lễ tân để check-in chậm nhất 15 phút trước giờ hẹn. Nếu đến muộn hơn, lịch hẹn sẽ không thể check-in.");
+                    response.sendRedirect(request.getContextPath() + "/patient/appointments");
                     return;
                 }
             }

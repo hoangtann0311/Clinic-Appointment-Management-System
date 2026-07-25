@@ -85,7 +85,7 @@
                     <dt class="col-5 text-muted mb-3">Bác sĩ lâm sàng chỉ định</dt><dd class="col-7">BS. <c:out value="${order.doctorName}" /></dd>
                     <dt class="col-5 text-muted mb-3">Triệu chứng</dt><dd class="col-7"><c:out value="${empty order.symptoms ? 'Không ghi nhận' : order.symptoms}" /></dd>
                     <dt class="col-5 text-muted">Ưu tiên</dt><dd class="col-7">
-                        <c:choose><c:when test="${order.emergency}"><span class="badge bg-warning text-dark">Ưu tiên</span></c:when>
+                        <c:choose><c:when test="${order.priority || order.emergency}"><span class="badge bg-warning text-dark">Ưu tiên</span></c:when>
                         <c:otherwise><span class="badge bg-secondary-subtle text-secondary">Thông thường</span></c:otherwise></c:choose>
                     </dd>
                 </dl>
@@ -111,13 +111,45 @@
                     <c:when test="${status == 'inprogress' || status == 'uploaded'}">
                         <p class="mb-3">Mỗi chỉ định sử dụng một ảnh siêu âm gốc để AI và Bác sĩ siêu âm cùng đối chiếu.</p>
                         <c:if test="${not empty images}">
-                            <div class="mb-3">
+                            <div class="mb-3 position-relative rounded-3 overflow-hidden border shadow-sm" style="background:#090d16">
                                 <img loading="lazy" src="${pageContext.request.contextPath}/medical/ultrasound-image?id=${selectedImage.id}" alt="Ảnh siêu âm gốc"
-                                     class="img-fluid rounded border w-100" style="height:180px;object-fit:contain;background:#0f172a">
-                                <div class="small text-truncate mt-1"><c:out value="${selectedImage.originalFilename}" /></div>
+                                     class="img-fluid w-100" style="height:200px;object-fit:contain">
+                                <div class="px-3 py-2 bg-dark bg-opacity-75 text-white small d-flex justify-content-between align-items-center">
+                                    <span class="text-truncate me-2"><i class="bi bi-file-image me-1 text-info"></i><c:out value="${selectedImage.originalFilename}" /></span>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle">Ảnh đang sử dụng</span>
+                                </div>
+                            </div>
+
+                            <div class="card border-warning-subtle bg-warning-subtle bg-opacity-10 rounded-3 mb-3">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="rounded-circle bg-warning bg-opacity-20 p-2 text-warning">
+                                                <i class="bi bi-arrow-repeat fs-5"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0 text-dark fw-bold">Tải lại ảnh siêu âm khác</h6>
+                                                <small class="text-muted">Thay thế ảnh cũ nếu nhầm lẫn và xóa dữ liệu AI cũ</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <form method="post" action="${pageContext.request.contextPath}/sonographer/upload" enctype="multipart/form-data" class="mt-3 pt-3 border-top border-warning-subtle">
+                                        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                                        <input type="hidden" name="orderId" value="${order.orderId}">
+                                        <label class="form-label small text-dark fw-semibold mb-1">Chọn ảnh mới để ghi đè (JPG / PNG):</label>
+                                        <div class="input-group input-group-sm mb-2">
+                                            <input type="file" class="form-control" name="file" accept="image/jpeg,image/png" required>
+                                            <button class="btn btn-warning fw-bold px-3"><i class="bi bi-cloud-arrow-up-fill me-1"></i>Tải lại ảnh mới</button>
+                                        </div>
+                                        <div class="text-danger small d-flex align-items-center gap-1">
+                                            <i class="bi bi-exclamation-circle-fill"></i>
+                                            <span>Lưu ý: Tải ảnh mới sẽ tự động xóa sạch dữ liệu AI &amp; đánh dấu cũ để phân tích lại từ đầu.</span>
+                                        </div>
+                                    </form>
+                                </div>
                             </div>
                         </c:if>
-                        <c:if test="${status == 'inprogress' && empty images}">
+                        <c:if test="${empty images}">
                             <form method="post" action="${pageContext.request.contextPath}/sonographer/upload" enctype="multipart/form-data">
                                 <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}"><input type="hidden" name="orderId" value="${order.orderId}">
                                 <div class="input-group"><input type="file" class="form-control" name="file" accept="image/jpeg,image/png" required>
@@ -125,10 +157,10 @@
                                 <div class="form-text">Chỉ một ảnh JPG/PNG, tối đa 10 MB. Hãy kiểm tra đúng bệnh nhân trước khi tải.</div>
                             </form>
                         </c:if>
-                        <c:if test="${status == 'uploaded' && empty aiResult}"><hr>
+                        <c:if test="${(status == 'uploaded' || status == 'inprogress') && not empty selectedImage && empty aiResult}"><hr>
                             <form method="post" action="${pageContext.request.contextPath}/sonographer/analyze" id="aiAnalyzeForm">
                                 <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}"><input type="hidden" name="orderId" value="${order.orderId}">
-                                <button class="btn btn-outline-primary" id="analyzeButton"><i class="bi bi-cpu me-1"></i>
+                                <button class="btn btn-primary fw-bold" id="analyzeButton"><i class="bi bi-cpu me-1"></i>
                                     Gửi ảnh cho AI phân tích</button>
                                 <span class="small text-muted ms-2">Mỗi chỉ định chỉ gửi AI một lần; AI không tự tạo kết luận chính thức.</span>
                             </form>
@@ -176,7 +208,9 @@
                         <div class="col-lg-8">
                             <div class="us-image-stage" id="imageStage"><div id="imageViewport">
                                 <img id="rawUltrasoundImage" src="${pageContext.request.contextPath}/medical/ultrasound-image?id=${selectedImage.id}" alt="Ảnh siêu âm gốc">
-                                <c:if test="${not empty aiResult.maskImage}"><img id="aiMaskLayer" src="${pageContext.request.contextPath}/medical/ai-image?orderId=${order.orderId}&amp;imageId=${selectedImage.id}&amp;type=mask" alt="Lớp vùng AI"></c:if>
+                                <c:if test="${aiResult.status == 'Success' && aiResult.detected && not empty aiResult.maskImage}">
+                                    <img id="aiMaskLayer" src="${pageContext.request.contextPath}/medical/ai-image?orderId=${order.orderId}&amp;imageId=${selectedImage.id}&amp;type=mask&amp;v=${not empty aiResult.analyzedAt ? aiResult.analyzedAt.time : aiResult.id}" alt="Lớp vùng AI">
+                                </c:if>
                                 <canvas id="annotationCanvas"></canvas>
                             </div></div>
                         </div>
@@ -327,9 +361,10 @@
     const widthField = document.getElementById('imageWidth');
     const heightField = document.getElementById('imageHeight');
     const mask = document.getElementById('aiMaskLayer');
+    const aiDetected = ${not empty aiResult && aiResult.status == 'Success' && aiResult.detected};
     const aiBox = {
-        x1: ${not empty aiResult.xmin ? aiResult.xmin : 'null'}, y1: ${not empty aiResult.ymin ? aiResult.ymin : 'null'},
-        x2: ${not empty aiResult.xmax ? aiResult.xmax : 'null'}, y2: ${not empty aiResult.ymax ? aiResult.ymax : 'null'}
+        x1: ${not empty aiResult.xmin && aiResult.detected ? aiResult.xmin : 'null'}, y1: ${not empty aiResult.ymin && aiResult.detected ? aiResult.ymin : 'null'},
+        x2: ${not empty aiResult.xmax && aiResult.detected ? aiResult.xmax : 'null'}, y2: ${not empty aiResult.ymax && aiResult.detected ? aiResult.ymax : 'null'}
     };
     const viewport = document.getElementById('imageViewport');
     let points = [], undoStack = [], redoStack = [], dragIndex = -1, activeView = 'raw';
@@ -350,7 +385,7 @@
     }
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const showAiLayer = activeView === 'ai' || (activeView === 'review' && selectedReview() === 'Accepted');
+        const showAiLayer = aiDetected && (activeView === 'ai' || (activeView === 'review' && selectedReview() === 'Accepted'));
         if (mask) mask.style.display = showAiLayer ? 'block' : 'none';
         if (showAiLayer && aiBox.x1 !== null && raw.naturalWidth) {
             ctx.save(); ctx.setLineDash([7,5]); ctx.strokeStyle='#38bdf8'; ctx.lineWidth=2;
@@ -458,7 +493,8 @@
         }
     });
     try { const existing=JSON.parse(document.getElementById('existingAnnotationData').value||'null'); if(existing&&Array.isArray(existing.points))points=existing.points; } catch(ignore) {}
-    raw.addEventListener('load', align); if(raw.complete) align(); window.addEventListener('resize',align); setImageView('raw'); updateReviewUi(); syncData();
+    const initialView = ${not empty aiResult && aiResult.status == 'Success' && aiResult.detected} ? 'ai' : 'raw';
+    raw.addEventListener('load', align); if(raw.complete) align(); window.addEventListener('resize',align); setImageView(initialView); updateReviewUi(); syncData();
 })();
 </script>
 

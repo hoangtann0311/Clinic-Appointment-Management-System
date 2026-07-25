@@ -851,9 +851,9 @@
     <%-- ════════════════════════════════════════════ --%>
     <div class="row g-3 mb-4">
         <%-- Dịch vụ & Thuốc KPI cards --%>
-        <div class="col-xl-6">
+        <div class="col-xl-12">
             <div class="row g-3">
-                <div class="col-6">
+                <div class="col-4">
                     <div class="card kpi-card kpi-services fade-in-up">
                         <div class="card-body">
                             <div class="kpi-icon"><i class="bi bi-activity"></i></div>
@@ -865,19 +865,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-6">
-                    <div class="card kpi-card kpi-medicines fade-in-up">
-                        <div class="card-body">
-                            <div class="kpi-icon"><i class="bi bi-capsule"></i></div>
-                            <div class="kpi-content">
-                                <div class="kpi-value">${not empty totalMedicines ? totalMedicines : 0}</div>
-                                <div class="kpi-label">Danh Mục Thuốc</div>
-                                <div class="kpi-sub">Đang quản lý</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6">
+                <div class="col-4">
                     <div class="card kpi-card fade-in-up" style="--kpi-accent:#3b82f6;">
                         <div class="card-body" style="border-top:3px solid #3b82f6 !important;">
                             <div class="kpi-icon" style="background:#dbeafe;color:#2563eb;"><i class="bi bi-people-fill"></i></div>
@@ -889,7 +877,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-6">
+                <div class="col-4">
                     <div class="card kpi-card fade-in-up" style="--kpi-accent:#10b981;">
                         <div class="card-body" style="border-top:3px solid #10b981 !important;">
                             <div class="kpi-icon" style="background:#d1fae5;color:#059669;"><i class="bi bi-cash-stack"></i></div>
@@ -904,49 +892,6 @@
             </div>
         </div>
 
-        <%-- Cảnh báo tồn kho --%>
-        <div class="col-xl-6">
-            <div class="admin-card h-100">
-                <div class="card-header d-flex align-items-center justify-content-between">
-                    <h5><i class="bi bi-exclamation-triangle-fill" style="color:#e65100;"></i> Cảnh Báo Tồn Kho</h5>
-                    <a href="${pageContext.request.contextPath}/manager/medicines/" class="btn-sm-outline-pink">Quản lý kho <i class="bi bi-arrow-right"></i></a>
-                </div>
-                <div class="card-body p-0">
-                    <c:choose>
-                        <c:when test="${not empty lowStockMedicines}">
-                            <div class="admin-table-wrapper">
-                                <table class="admin-table compact">
-                                    <thead><tr><th>Thuốc</th><th>Tồn Kho</th><th>Trạng Thái</th></tr></thead>
-                                    <tbody>
-                                        <c:forEach var="med" items="${lowStockMedicines}">
-                                            <tr>
-                                                <td><div style="font-weight:600;"><c:out value="${med.name}"/></div><small style="font-size:0.68rem;color:var(--c-muted);"><c:out value="${med.dosage}"/></small></td>
-                                                <td><span style="font-family:var(--font-display);font-weight:800;font-size:0.9rem;color:${med.stockQuantity <= 0 ? '#c62828' : (med.stockQuantity <= 3 ? '#c62828' : '#e65100')};">${med.stockQuantity}</span></td>
-                                                <td>
-                                                    <c:choose>
-                                                        <c:when test="${med.stockQuantity <= 0}"><span class="stock-out">HẾT HÀNG</span></c:when>
-                                                        <c:when test="${med.stockQuantity <= 3}"><span class="stock-low">Sắp hết</span></c:when>
-                                                        <c:otherwise><span class="stock-ok">Còn ít</span></c:otherwise>
-                                                    </c:choose>
-                                                </td>
-                                            </tr>
-                                        </c:forEach>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </c:when>
-                        <c:otherwise>
-                            <div class="admin-empty-state" style="padding:1.5rem;">
-                                <c:choose>
-                                    <c:when test="${isCustomRange}"><i class="bi bi-inbox" style="font-size:1.8rem;color:var(--c-muted);"></i><p class="text-muted mt-1 mb-0" style="font-size:0.8rem;">Tồn kho là dữ liệu hiện tại.</p></c:when>
-                                    <c:otherwise><i class="bi bi-check-circle" style="font-size:1.8rem;color:#2e7d32;"></i><p class="text-muted mt-1 mb-0" style="font-size:0.8rem;color:#2e7d32 !important;"><strong>Tất cả thuốc đều đủ tồn kho.</strong></p></c:otherwise>
-                                </c:choose>
-                            </div>
-                        </c:otherwise>
-                    </c:choose>
-                </div>
-            </div>
-        </div>
 
     </div>
 

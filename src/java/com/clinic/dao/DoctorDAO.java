@@ -139,6 +139,26 @@ public class DoctorDAO {
         return null;
     }
 
+    /**
+     * Lấy doctor_id từ user_id. Dùng chung cho tất cả servlet Doctor để tránh
+     * duplicate code (8 servlet từng copy-paste cùng một SQL query).
+     *
+     * @return doctor id hoặc null nếu user chưa liên kết hồ sơ bác sĩ
+     */
+    public static Integer getDoctorIdByUserId(int userId) {
+        String sql = "SELECT id FROM doctors WHERE user_id = ?";
+        try (Connection c = DatabaseConfig.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt("id");
+            }
+        } catch (Exception e) {
+            System.err.println("[DoctorDAO] getDoctorIdByUserId ERROR: " + e.getMessage());
+        }
+        return null;
+    }
+
     public boolean updateProfile(Doctor d) {
         String sql =
             "UPDATE doctors SET full_name=?, specialization=?, phone_number=?, " +

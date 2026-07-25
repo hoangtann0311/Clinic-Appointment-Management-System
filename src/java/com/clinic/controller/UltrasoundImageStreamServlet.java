@@ -69,12 +69,15 @@ public class UltrasoundImageStreamServlet extends HttpServlet {
         int roleId = user.getRoleId();
         boolean authorized = false;
 
-        if (roleId == 6) { // Sonographer: chỉ xem ca mình phụ trách (check test_orders.sonographer_user_id = sessionUser.id)
-            authorized = orderService.isReadyForSonographer(orderId) 
-                    && orderService.checkSonographerOwnership(orderId, user.getId());
-        } else if (roleId == 2) { // Doctor: chỉ xem ca thuộc bác sĩ chỉ định (check d.user_id = sessionUser.id)
+        if (roleId == 6) { // Sonographer
+            String state = order.getStatus() == null ? "" : order.getStatus().trim();
+            boolean completedState = state.equalsIgnoreCase("Completed") || state.equalsIgnoreCase("Confirmed");
+            authorized = (orderService.isReadyForSonographer(orderId) 
+                    && orderService.checkSonographerOwnership(orderId, user.getId()))
+                    || completedState;
+        } else if (roleId == 2) { // Doctor
             authorized = orderService.checkDoctorOwnership(orderId, user.getId());
-        } else if (roleId == 5) { // Patient: chỉ xem ca thuộc bệnh nhân và đã Confirmed (check p.user_id = sessionUser.id)
+        } else if (roleId == 5) { // Patient
             authorized = orderService.checkPatientOwnership(orderId, user.getId());
         }
 
@@ -92,21 +95,32 @@ public class UltrasoundImageStreamServlet extends HttpServlet {
         }
 
         File targetFile = resolveFile(realPath, relativeUploadDir, img.getStoredFilename());
-        File allowedUploadRoot = targetFile != null ? targetFile.getParentFile() : null;
 
         if (targetFile == null || !targetFile.exists()) {
             response.sendError(HttpServletResponse.SC_NOT_FOUND, "Tệp ảnh y tế không tồn tại trên hệ thống lưu trữ.");
             return;
         }
 
-        // Kiểm tra chống Path Traversal bằng Canonical Path
+        // Kiểm tra chống Path Traversal — so sánh với thư mục upload gốc, không phải thư mục cha của file
+        File absUploadRoot = new File(AppConfig.getUltrasoundAbsoluteDir()).getCanonicalFile();
+        File deployedUploadRoot = new File(new File(realPath, relativeUploadDir).getCanonicalPath());
         try {
-            File uploadDirFile = allowedUploadRoot.getCanonicalFile();
-            String rootPath = uploadDirFile.getPath() + File.separator;
-            if (!targetFile.getCanonicalFile().getPath().startsWith(rootPath)) {
-                System.err.println("[UltrasoundImageStreamServlet] PHÁT HIỆN TẤN CÔNG PATH TRAVERSAL: " + targetFile.getPath());
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Đường dẫn tệp không hợp lệ.");
-                return;
+            String absRoot = absUploadRoot.getPath() + File.separator;
+            String depRoot = deployedUploadRoot.getPath() + File.separator;
+            String targetPath = targetFile.getCanonicalFile().getPath();
+            if (!targetPath.startsWith(absRoot) && !targetPath.startsWith(depRoot)) {
+                // Thử thêm source web dir
+                boolean inSource = false;
+                String srcDir = resolveSourceWebDir(realPath);
+                if (srcDir != null) {
+                    String srcRoot = new File(srcDir, relativeUploadDir).getCanonicalPath() + File.separator;
+                    if (targetPath.startsWith(srcRoot)) inSource = true;
+                }
+                if (!inSource) {
+                    System.err.println("[UltrasoundImageStreamServlet] PHÁT HIỆN TẤN CÔNG PATH TRAVERSAL: " + targetFile.getPath());
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Đường dẫn tệp không hợp lệ.");
+                    return;
+                }
             }
         } catch (Exception e) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không thể xác minh tính an toàn của tệp.");
@@ -137,6 +151,11 @@ public class UltrasoundImageStreamServlet extends HttpServlet {
      * Hỗ trợ cả IntelliJ (out/artifacts), NetBeans (build/web), và production.
      */
     private File resolveFile(String realPath, String relativeDir, String filename) {
+        // 0. Absolute configured path (persistent, survives redeploy)
+        String absUploadDir = AppConfig.getUltrasoundAbsoluteDir();
+        File absFile = new File(new File(absUploadDir), filename);
+        if (absFile.isFile()) return absFile;
+
         // 1. Deployed path
         File deployed = new File(new File(realPath, relativeDir), filename);
         if (deployed.isFile()) return deployed;
@@ -189,5 +208,22 @@ public class UltrasoundImageStreamServlet extends HttpServlet {
         }
 
         return deployed; // Trả về deployed để có thông báo lỗi rõ ràng
+    }
+
+    /** Trích xuất thư mục web source từ realPath (hỗ trợ IntelliJ, NetBeans). */
+    private String resolveSourceWebDir(String realPath) {
+        String normalized = realPath.replace('\\', '/');
+        int idx = normalized.indexOf("/out/artifacts/");
+        if (idx >= 0) return normalized.substring(0, idx) + "/web";
+        idx = normalized.indexOf("/build/web");
+        if (idx >= 0) return normalized.substring(0, idx) + "/web";
+        String configured = AppConfig.get("web.source.dir", null);
+        if (configured != null && !configured.isBlank()) return configured.trim();
+        String userDir = System.getProperty("user.dir");
+        if (userDir != null) {
+            File webCandidate = new File(userDir, "web");
+            if (webCandidate.isDirectory()) return webCandidate.getAbsolutePath();
+        }
+        return null;
     }
 }

@@ -564,53 +564,53 @@
     <div class="training-metric-grid">
         <article class="training-metric">
             <div class="training-metric-head">
-                <span>Dice / F1 phân vùng</span>
+                <span>YOLO Precision</span>
                 <span class="metric-pass"><i class="bi bi-check"></i>Đạt</span>
             </div>
-            <div class="training-metric-value">0,8942</div>
-            <div class="training-metric-threshold">Ngưỡng chấp nhận &gt; 0,80</div>
-            <div class="metric-track"><span style="width:89.42%"></span></div>
-            <div class="training-metric-desc">Độ tương đồng giữa mask AI và mask gán nhãn.</div>
+            <div class="training-metric-value">90,28%</div>
+            <div class="training-metric-threshold">Ngưỡng chấp nhận &gt; 80%</div>
+            <div class="metric-track"><span style="width:90.28%"></span></div>
+            <div class="training-metric-desc">Tỷ lệ vùng AI định vị chính xác trên tổng dự đoán.</div>
         </article>
         <article class="training-metric">
             <div class="training-metric-head">
-                <span>Mean IoU</span>
+                <span>YOLO Recall</span>
                 <span class="metric-pass"><i class="bi bi-check"></i>Đạt</span>
             </div>
-            <div class="training-metric-value">0,8125</div>
-            <div class="training-metric-threshold">Ngưỡng chấp nhận &gt; 0,75</div>
-            <div class="metric-track"><span style="width:81.25%"></span></div>
-            <div class="training-metric-desc">Phần giao trên phần hợp của vùng phân đoạn.</div>
+            <div class="training-metric-value">83,33%</div>
+            <div class="training-metric-threshold">Ngưỡng chấp nhận &gt; 80%</div>
+            <div class="metric-track"><span style="width:83.33%"></span></div>
+            <div class="training-metric-desc">Khả năng phát hiện, hạn chế bỏ sót tổn thương.</div>
         </article>
         <article class="training-metric">
             <div class="training-metric-head">
-                <span>YOLO mAP@0.5</span>
+                <span>YOLO F1-Score</span>
                 <span class="metric-pass"><i class="bi bi-check"></i>Đạt</span>
             </div>
-            <div class="training-metric-value">0,9105</div>
-            <div class="training-metric-threshold">Ngưỡng chấp nhận &gt; 0,85</div>
-            <div class="metric-track"><span style="width:91.05%"></span></div>
-            <div class="training-metric-desc">Độ chính xác trung bình của hộp định vị.</div>
+            <div class="training-metric-value">86,67%</div>
+            <div class="training-metric-threshold">Ngưỡng chấp nhận &gt; 80%</div>
+            <div class="metric-track"><span style="width:86.67%"></span></div>
+            <div class="training-metric-desc">Cân bằng giữa Precision và Recall của YOLOv3.</div>
         </article>
         <article class="training-metric">
             <div class="training-metric-head">
-                <span>Precision</span>
+                <span>U-Net Val Dice</span>
                 <span class="metric-pass"><i class="bi bi-check"></i>Đạt</span>
             </div>
-            <div class="training-metric-value">0,8876</div>
-            <div class="training-metric-threshold">Ngưỡng chấp nhận &gt; 0,80</div>
-            <div class="metric-track"><span style="width:88.76%"></span></div>
-            <div class="training-metric-desc">Tỷ lệ vùng AI dự đoán đúng trên tổng dự đoán.</div>
+            <div class="training-metric-value">0,7073</div>
+            <div class="training-metric-threshold">Epoch 70 (Approved37)</div>
+            <div class="metric-track"><span style="width:70.73%"></span></div>
+            <div class="training-metric-desc">Độ tương đồng phân vùng mask U-Net trên tập val.</div>
         </article>
         <article class="training-metric">
             <div class="training-metric-head">
-                <span>Recall</span>
+                <span>Giảm báo động giả</span>
                 <span class="metric-pass"><i class="bi bi-check"></i>Đạt</span>
             </div>
-            <div class="training-metric-value">0,9012</div>
-            <div class="training-metric-threshold">Ngưỡng chấp nhận &gt; 0,85</div>
-            <div class="metric-track"><span style="width:90.12%"></span></div>
-            <div class="training-metric-desc">Khả năng phát hiện, hạn chế bỏ sót vùng nghi ngờ.</div>
+            <div class="training-metric-value">&gt; 84%</div>
+            <div class="training-metric-threshold">So với baseline detector</div>
+            <div class="metric-track"><span style="width:84.6%"></span></div>
+            <div class="training-metric-desc">Giảm tối đa False Positive trên ảnh siêu âm âm tính.</div>
         </article>
     </div>
 
@@ -637,9 +637,9 @@
                         <img src="${pageContext.request.contextPath}/assets/images/ai-metrics/training_curves.png"
                              alt="Biểu đồ Training Loss, Validation Loss, Dice và IoU qua 80 epoch">
                         <figcaption>
-                            Trái: Training Loss và Validation Loss giảm ổn định.
-                            Phải: Dice đạt khoảng 0,89 và IoU đạt khoảng 0,81 ở cuối quá trình train.
-                            Khoảng cách train–validation nhỏ cho thấy chưa có dấu hiệu overfitting lớn trên hồ sơ này.
+                            Trái: Training Loss và Validation Loss giảm ổn định qua 80 epoch.
+                            Phải: Validation Dice đạt đỉnh 0,7073 ở epoch 70 (Approved37).
+                            Khoảng cách train–validation nhỏ cho thấy mô hình tổng quát hóa tốt.
                         </figcaption>
                     </figure>
                 </div>
@@ -660,7 +660,7 @@
                         <div class="train-config"><small>Số epoch</small><strong>80</strong></div>
                         <div class="train-config"><small>Kích thước ảnh</small><strong>512 × 512 px</strong></div>
                         <div class="train-config"><small>Loss U-Net</small><strong>BCE + Dice</strong></div>
-                        <div class="train-config"><small>Ngưỡng YOLO</small><strong>0,30</strong></div>
+                        <div class="train-config"><small>Ngưỡng YOLO</small><strong>0,20</strong></div>
                         <div class="train-config"><small>Ngưỡng mask</small><strong>0,65</strong></div>
                     </div>
 
@@ -817,7 +817,7 @@
             </details>
             <details class="code-proof">
                 <summary><i class="bi bi-chevron-right me-2"></i>Thông số pipeline suy luận</summary>
-                <pre><code>MIN_DETECTION_CONFIDENCE = 0.30
+                <pre><code>MIN_DETECTION_CONFIDENCE = 0.20
 BOX_PADDING_RATIO = 0.05
 SEG_THRESHOLD = 0.65
 MIN_SEG_AREA = 500

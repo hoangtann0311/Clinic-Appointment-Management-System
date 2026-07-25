@@ -36,7 +36,7 @@
                 </label>
                 <input type="text" name="keyword" class="form-control rounded-3"
                        placeholder="Tên bệnh nhân hoặc mã đơn thuốc..."
-                       value="${keyword}">
+                       value="<c:out value='${keyword}'/>">
             </div>
             <div class="d-flex gap-2">
                 <button type="submit" class="btn btn-danger rounded-3">
@@ -60,7 +60,7 @@
                     <i class="bi bi-prescription2 fs-1 d-block mb-3 opacity-25"></i>
                     <c:choose>
                         <c:when test="${not empty keyword}">
-                            Không tìm thấy đơn thuốc nào với từ khoá "<strong>${keyword}</strong>".
+                            Không tìm thấy đơn thuốc nào với từ khoá "<strong><c:out value="${keyword}"/></strong>".
                         </c:when>
                         <c:otherwise>Chưa có đơn thuốc nào được kê.</c:otherwise>
                     </c:choose>
@@ -98,8 +98,8 @@
                                         </span>
                                     </td>
                                     <td class="small text-muted">
-                                        ${fn:substring(rx.finalDiagnosis,0,45)}
-                                        <c:if test="${fn:length(rx.finalDiagnosis)>45}">...</c:if>
+                                        ${not empty rx.finalDiagnosis ? fn:substring(rx.finalDiagnosis,0,45) : '—'}
+                                        <c:if test="${not empty rx.finalDiagnosis && fn:length(rx.finalDiagnosis)>45}">...</c:if>
                                     </td>
                                     <td class="text-center">
                                         <span class="badge bg-primary rounded-pill">${rx.itemCount} thuốc</span>

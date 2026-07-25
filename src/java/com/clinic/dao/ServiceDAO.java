@@ -30,11 +30,12 @@ public class ServiceDAO {
                     return findAllInternal(offset, pageSize, search, activeFilter, false);
                 } catch (SQLException e2) {
                     System.err.println("[ServiceDAO] findAll fallback failed: " + e2.getMessage());
-                    throw new RuntimeException("Lỗi database khi lấy danh sách dịch vụ", e2);
+                    System.err.println("[ServiceDAO] findAll fallback failed: " + e2.getMessage());
+                    return new ArrayList<>();
                 }
             }
             System.err.println("[ServiceDAO] findAll error: " + e.getMessage());
-            throw new RuntimeException("Lỗi database khi lấy danh sách dịch vụ", e);
+            return new ArrayList<>();
         }
     }
 
@@ -425,7 +426,7 @@ public class ServiceDAO {
                 return findAll(offset, pageSize, search, activeFilter);
             }
             System.err.println("[ServiceDAO] findAllWithUsage ERROR: " + e.getMessage());
-            throw new RuntimeException("Lỗi database khi lấy danh sách dịch vụ", e);
+            return list;
         } finally {
             closeResources(conn, ps, rs);
         }

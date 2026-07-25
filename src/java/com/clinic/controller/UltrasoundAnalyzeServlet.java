@@ -54,11 +54,6 @@ public class UltrasoundAnalyzeServlet extends HttpServlet {
                         "Bạn không có quyền phân tích AI cho ca siêu âm này (đã được phụ trách bởi Bác sĩ siêu âm khác).");
                 return;
             }
-            if (orderService.getAiResult(orderId) != null) {
-                response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId
-                        + "&error=aiAlreadyRun");
-                return;
-            }
             boolean success = orderService.runAiAnalysis(orderId, user.getId());
             if (success) {
                 response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId + "&success=analyzed");

@@ -1,6 +1,5 @@
 package com.clinic.model;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -48,7 +47,6 @@ public class MedicalRecord {
 
     // ── Kế hoạch điều trị ───────────────────────────────────────────────────
     private String    treatmentPlan;
-    private LocalDate nextAppointmentDate;
     private String    referredTo;
     private String    status;   // 'draft' = đang chờ XN, 'final' = hoàn tất
 
@@ -164,9 +162,6 @@ public class MedicalRecord {
 
     public String getTreatmentPlan() { return treatmentPlan; }
     public void setTreatmentPlan(String v) { this.treatmentPlan = v; }
-
-    public LocalDate getNextAppointmentDate() { return nextAppointmentDate; }
-    public void setNextAppointmentDate(LocalDate v) { this.nextAppointmentDate = v; }
 
     public String getReferredTo() { return referredTo; }
     public void setReferredTo(String v) { this.referredTo = v; }

@@ -34,8 +34,14 @@ public class AiAnalysisResultDAO {
                 latest.setInt(1, orderId);
                 try (ResultSet rs = latest.executeQuery()) {
                     if (rs.next()) {
-                        conn.rollback();
-                        return -1;
+                        int existingId = rs.getInt(1);
+                        try (PreparedStatement reset = conn.prepareStatement(
+                                "UPDATE ai_analysis_results SET status = 'Analyzing', analyzed_at = CURRENT_TIMESTAMP WHERE id = ?")) {
+                            reset.setInt(1, existingId);
+                            reset.executeUpdate();
+                        }
+                        conn.commit();
+                        return existingId;
                     }
                 }
             }

@@ -304,7 +304,7 @@
          ALERT MESSAGES
          ============================================================ --%>
     <c:if test="${not empty success}">
-        <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert" style="border-radius:var(--r-md);">
+        <div class="alert alert-success alert-dismissible fade show" data-cams-toast role="alert">
             <c:choose>
                 <c:when test="${success eq 'generated'}">
                     <i class="bi bi-check-circle-fill me-2 fs-5"></i>
@@ -323,7 +323,7 @@
         </div>
     </c:if>
     <c:if test="${not empty error}">
-        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert" style="border-radius:var(--r-md);">
+        <div class="alert alert-danger alert-dismissible fade show" data-cams-toast role="alert">
             <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
             <div>${fn:escapeXml(error)}</div>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -584,8 +584,9 @@
         </div>
     </c:if>
     <c:if test="${success eq 'priceUpdated'}">
-        <div class="alert alert-success py-2" style="font-size:0.85rem;">
-            <i class="bi bi-check-circle-fill me-1"></i>Đã cập nhật giá khung giờ thành công.
+        <div class="alert alert-success alert-dismissible fade show" data-cams-toast role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>Đã cập nhật giá khung giờ thành công.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     </c:if>
 

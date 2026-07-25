@@ -68,10 +68,12 @@ public class PatientSlotApiServlet extends HttpServlet {
             return;
         }
 
+        boolean isStaff = (user.getRoleId() == 1 || user.getRoleId() == 4);
+
         boolean showAll = "1".equals(request.getParameter("all")) || "true".equalsIgnoreCase(request.getParameter("all"));
         List<TimeSlot> slots = showAll
                 ? bookingService.getSlotsForDisplay(doctorId, date)
-                : bookingService.getAvailableSlots(doctorId, date);
+                : bookingService.getAvailableSlots(doctorId, date, isStaff);
 
         StringBuilder json = new StringBuilder("[");
         for (int i = 0; i < slots.size(); i++) {
@@ -84,7 +86,7 @@ public class PatientSlotApiServlet extends HttpServlet {
                 .append("\"price\":").append(s.getPrice() != null ? s.getPrice() : "null").append(",")
                 .append("\"status\":\"").append(s.getStatus().name()).append("\",")
                 .append("\"statusLabel\":\"").append(escapeJson(s.getStatus().getLabel())).append("\",")
-                .append("\"available\":").append(s.isSelectable()).append(",")
+                .append("\"available\":").append(s.isSelectable(isStaff)).append(",")
                 .append("\"mine\":").append(s.getBookedBy() != null && s.getBookedBy() == user.getId())
                 .append("}");
         }

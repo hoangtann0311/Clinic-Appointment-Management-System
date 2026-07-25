@@ -1,5 +1,6 @@
 package com.clinic.config;
 
+import java.io.File;
 import java.io.InputStream;
 import java.util.Properties;
 
@@ -106,8 +107,23 @@ public class AppConfig {
     }
 
     // Upload settings
+    public static String getAiResultsAbsoluteDir() {
+        // Mặc định: lưu vĩnh viễn trong thư mục .ocss ngoài project, sống sót qua mọi lần redeploy
+        String defaultDir = System.getProperty("user.home") + File.separator + ".ocss" + File.separator + "ai-results";
+        return get("ai.results.absoluteDir", defaultDir);
+    }
+
     public static String getUploadDirectory() {
         return get("ultrasound.uploadDirectory", "uploads/ultrasound");
+    }
+
+    /**
+     * Thư mục lưu trữ vĩnh viễn ảnh siêu âm gốc (không mất khi redeploy).
+     * Mặc định: ~/.ocss/ultrasound/
+     */
+    public static String getUltrasoundAbsoluteDir() {
+        String defaultDir = System.getProperty("user.home") + File.separator + ".ocss" + File.separator + "ultrasound";
+        return get("ultrasound.absoluteUploadDir", defaultDir);
     }
 
     public static long getMaxFileSize() {

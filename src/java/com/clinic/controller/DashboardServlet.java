@@ -60,65 +60,72 @@ public class DashboardServlet extends HttpServlet {
         }
 
         User user = (User) session.getAttribute("user");
-        int roleId = user.getRoleId();
-        String roleName = ROLE_NAMES.getOrDefault(roleId, "Người Dùng");
+        try {
+            int roleId = user.getRoleId();
+            String roleName = ROLE_NAMES.getOrDefault(roleId, "Người Dùng");
 
-        request.setAttribute("roleName", roleName);
-        request.setAttribute("dashboardTitle", "Tổng Quan " + roleName);
+            request.setAttribute("roleName", roleName);
+            request.setAttribute("dashboardTitle", "Tổng Quan " + roleName);
 
-        // Ngày hiện tại cho hiển thị
-        LocalDate today = LocalDate.now();
-        request.setAttribute("todayDisplay",
-                today.format(DateTimeFormatter.ofPattern("dd 'tháng' MM, yyyy")));
+            // Ngày hiện tại cho hiển thị
+            LocalDate today = LocalDate.now();
+            request.setAttribute("todayDisplay",
+                    today.format(DateTimeFormatter.ofPattern("dd 'tháng' MM, yyyy")));
 
-        // Route đến dashboard JSP tương ứng với role
-        String path = request.getRequestURI().substring(request.getContextPath().length());
+            // Route đến dashboard JSP tương ứng với role
+            String path = request.getRequestURI().substring(request.getContextPath().length());
 
-        switch (roleId) {
-            case 1:
-                if (!"/admin/dashboard".equals(path)) {
-                    response.sendRedirect(request.getContextPath() + "/admin/dashboard");
-                    return;
-                }
-                loadAdminDashboardData(request);
-                request.getRequestDispatcher("/views/admin/dashboard.jsp").forward(request, response);
-                break;
-            case 2:
-                response.sendRedirect(request.getContextPath() + "/doctor/dashboard");
-                break;
-            case 3:
-                if (!"/manager/dashboard".equals(path)) {
-                    response.sendRedirect(request.getContextPath() + "/manager/dashboard");
-                    return;
-                }
-                loadManagerDashboardData(request);
-                request.getRequestDispatcher("/views/manager/dashboard.jsp").forward(request, response);
-                break;
-            case 4:
-                response.sendRedirect(request.getContextPath() + "/admin/reception");
-                break;
-            case 6:
-                loadSonographerDashboardData(request);
-                request.getRequestDispatcher("/views/sonographer/dashboard.jsp").forward(request, response);
-                break;
-            case 5:
-            default:
-                // Flash message từ session (vd: cập nhật profile thành công)
-                Object flashMsg = session.getAttribute("successMessage");
-                if (flashMsg != null) {
-                    request.setAttribute("successMessage", flashMsg);
-                    session.removeAttribute("successMessage");
-                }
-                // Bệnh nhân mới hoặc chưa đủ thông tin → bắt buộc cập nhật hồ sơ
-                if (isPatientProfileIncomplete(user.getId())) {
-                    request.getSession().setAttribute("profileRequired",
-                            "Vui lòng cập nhật đầy đủ thông tin cá nhân trước khi sử dụng hệ thống.");
-                    response.sendRedirect(request.getContextPath() + "/patient/profile");
-                    return;
-                }
-                loadPatientDashboardData(request, user.getId());
-                request.getRequestDispatcher("/views/home/dashboard.jsp").forward(request, response);
-                break;
+            switch (roleId) {
+                case 1:
+                    if (!"/admin/dashboard".equals(path)) {
+                        response.sendRedirect(request.getContextPath() + "/admin/dashboard");
+                        return;
+                    }
+                    loadAdminDashboardData(request);
+                    request.getRequestDispatcher("/views/admin/dashboard.jsp").forward(request, response);
+                    break;
+                case 2:
+                    response.sendRedirect(request.getContextPath() + "/doctor/dashboard");
+                    break;
+                case 3:
+                    if (!"/manager/dashboard".equals(path)) {
+                        response.sendRedirect(request.getContextPath() + "/manager/dashboard");
+                        return;
+                    }
+                    loadManagerDashboardData(request);
+                    request.getRequestDispatcher("/views/manager/dashboard.jsp").forward(request, response);
+                    break;
+                case 4:
+                    response.sendRedirect(request.getContextPath() + "/admin/reception");
+                    break;
+                case 6:
+                    loadSonographerDashboardData(request);
+                    request.getRequestDispatcher("/views/sonographer/dashboard.jsp").forward(request, response);
+                    break;
+                case 5:
+                default:
+                    // Flash message từ session (vd: cập nhật profile thành công)
+                    Object flashMsg = session.getAttribute("successMessage");
+                    if (flashMsg != null) {
+                        request.setAttribute("successMessage", flashMsg);
+                        session.removeAttribute("successMessage");
+                    }
+                    // Bệnh nhân mới hoặc chưa đủ thông tin → bắt buộc cập nhật hồ sơ
+                    if (isPatientProfileIncomplete(user.getId())) {
+                        request.getSession().setAttribute("profileRequired",
+                                "Vui lòng cập nhật đầy đủ thông tin cá nhân trước khi sử dụng hệ thống.");
+                        response.sendRedirect(request.getContextPath() + "/patient/profile");
+                        return;
+                    }
+                    loadPatientDashboardData(request, user.getId());
+                    request.getRequestDispatcher("/views/home/dashboard.jsp").forward(request, response);
+                    break;
+            }
+        } catch (Exception ex) {
+            System.err.println("[DashboardServlet] doGet ERROR: " + ex.getMessage());
+            ex.printStackTrace();
+            request.setAttribute("errorMessage", "Không thể tải trang. Vui lòng thử lại sau.");
+            request.getRequestDispatcher("/views/home/dashboard.jsp").forward(request, response);
         }
     }
 
@@ -433,7 +440,7 @@ public class DashboardServlet extends HttpServlet {
         int uploaded = orderService.countOrders(null, "Uploaded", filterDate, null);
         int completed = orderService.countOrders(null, "Completed", filterDate, null)
                 + orderService.countOrders(null, "confirmed", filterDate, null);
-        int emergency = orderService.countOrders(null, null, filterDate, true);
+        int priority = orderService.countOrders(null, null, filterDate, true);
 
         List<com.clinic.model.UltrasoundWaitingPatient> recentOrders =
                 orderService.getOrders(1, 10, null, null, filterDate, null, "createdAt", "desc");
@@ -442,7 +449,7 @@ public class DashboardServlet extends HttpServlet {
         request.setAttribute("totalInProgress", inProgress);
         request.setAttribute("totalUploaded", uploaded);
         request.setAttribute("totalCompletedToday", completed);
-        request.setAttribute("totalEmergencyToday", emergency);
+        request.setAttribute("totalPriorityToday", priority);
         request.setAttribute("recentOrders", recentOrders);
         request.setAttribute("selectedDate", filterDate);
         request.setAttribute("displayDate",
@@ -507,14 +514,16 @@ public class DashboardServlet extends HttpServlet {
         com.clinic.model.Patient patient = patientDAO.findById(patientId);
         if (patient == null) return true;
 
-        // Họ tên, SĐT, ngày sinh, địa chỉ — tất cả phải có
+        // Họ tên, SĐT, ngày sinh, địa chỉ, CCCD — tất cả phải có
         String name = patient.getFullName();
         String phone = patient.getPhone();
         String address = patient.getAddress();
+        String cccd = patient.getCccd();
         if ((name == null || name.isBlank() || name.equals("Người dùng"))
                 || (phone == null || phone.isBlank())
                 || patient.getDateOfBirth() == null
-                || (address == null || address.isBlank())) {
+                || (address == null || address.isBlank())
+                || (cccd == null || cccd.isBlank())) {
             return true;
         }
         return false;

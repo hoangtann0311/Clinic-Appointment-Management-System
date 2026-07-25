@@ -395,7 +395,6 @@ body.patient-body {
 .status-confirmed, .status-success { color: #166534; background: #dcfce7; }
 .status-pending, .payment-pending { color: #8a5200; background: #fff3c4; }
 .status-waiting { color: #075985; background: #dff5ff; }
-.status-sos { color: #b42318; background: #ffe4e6; }
 .status-cancelled, .status-no-show, .status-neutral { color: #5f6470; background: #eef1f4; }
 .payment-paid { color: #166534; background: #dff7e8; }
 .payment-unpaid { color: #b42318; background: #ffe4e6; }

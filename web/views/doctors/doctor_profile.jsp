@@ -31,13 +31,13 @@
                      onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
                 <div class="rounded-circle d-none align-items-center justify-content-center"
                      style="width:80px;height:80px;font-size:2rem;background:rgba(255,255,255,0.2);color:#fff;font-weight:700;">
-                    ${fn:substring(doctor.fullName,0,1)}
+                    ${not empty doctor.fullName ? fn:substring(doctor.fullName,0,1) : '?'}
                 </div>
             </c:when>
             <c:otherwise>
                 <div class="rounded-circle d-flex align-items-center justify-content-center"
                      style="width:80px;height:80px;font-size:2rem;background:rgba(255,255,255,0.2);color:#fff;font-weight:700;flex-shrink:0;">
-                    ${fn:substring(doctor.fullName,0,1)}
+                    ${not empty doctor.fullName ? fn:substring(doctor.fullName,0,1) : '?'}
                 </div>
             </c:otherwise>
         </c:choose>
@@ -53,21 +53,22 @@
 
 <%-- Flash messages --%>
 <c:if test="${not empty param.saved}">
-    <div class="alert alert-success rounded-3 mb-4 alert-dismissible fade show">
-        <i class="bi bi-check-circle me-2"></i>Cập nhật hồ sơ thành công!
+    <div class="alert alert-success alert-dismissible fade show" data-cams-toast role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>Cập nhật hồ sơ thành công!
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 </c:if>
 <c:if test="${not empty sessionScope.successMessage}">
-    <div class="alert alert-success rounded-3 mb-4 alert-dismissible fade show">
+    <div class="alert alert-success alert-dismissible fade show" data-cams-toast role="alert">
         <i class="bi bi-check-circle-fill me-2"></i>${sessionScope.successMessage}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
     <c:remove var="successMessage" scope="session"/>
 </c:if>
 <c:if test="${not empty error}">
-    <div class="alert alert-danger rounded-3 mb-4">
-        <i class="bi bi-exclamation-triangle me-2"></i>${error}
+    <div class="alert alert-danger alert-dismissible fade show" data-cams-toast role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>${error}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 </c:if>
 
@@ -214,9 +215,14 @@
                 <div class="modal-body p-4">
 
                     <%-- Flash lỗi từ server --%>
-                    <c:if test="${not empty pwError}">
+                    <c:if test="${not empty param.pwError}">
                         <div class="alert alert-danger small py-2">
-                            <i class="bi bi-exclamation-triangle me-1"></i>${pwError}
+                            <i class="bi bi-exclamation-triangle me-1"></i><c:out value="${param.pwError}"/>
+                        </div>
+                    </c:if>
+                    <c:if test="${not empty param.pwSuccess}">
+                        <div class="alert alert-success small py-2">
+                            <i class="bi bi-check-circle me-1"></i><c:out value="${param.pwSuccess}"/>
                         </div>
                     </c:if>
 
@@ -320,6 +326,15 @@
     if (phone && !/^[0-9+\-\s]{7,15}$/.test(phone)) {
       e.preventDefault();
       alert('Số điện thoại không hợp lệ.');
+    }
+  });
+
+  // Auto-open modal nếu có lỗi/success từ đổi mật khẩu
+  document.addEventListener('DOMContentLoaded', function() {
+    var hasPwMsg = ${not empty param.pwError || not empty param.pwSuccess ? 'true' : 'false'};
+    if (hasPwMsg) {
+      var modalEl = document.getElementById('changePasswordModal');
+      if (modalEl) new bootstrap.Modal(modalEl).show();
     }
   });
 

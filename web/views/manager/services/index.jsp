@@ -393,7 +393,7 @@
 
     <%-- ===== ALERTS ===== --%>
     <c:if test="${not empty success}">
-        <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert" style="border-radius:var(--r-md); border-left: 4px solid #2e7d32;">
+        <div class="alert alert-success alert-dismissible fade show" data-cams-toast role="alert">
             <i class="bi bi-check-circle-fill me-2 fs-5"></i>
             <div>
                 <c:choose>
@@ -407,7 +407,7 @@
         </div>
     </c:if>
     <c:if test="${not empty error}">
-        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert" style="border-radius:var(--r-md); border-left: 4px solid #c62828;">
+        <div class="alert alert-danger alert-dismissible fade show" data-cams-toast role="alert">
             <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
             <div>${error}</div>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -447,8 +447,8 @@
             </div>
             <select name="active" class="form-select">
                 <option value="">Tất cả trạng thái</option>
-                <option value="1" ${activeFilter eq '1' ? 'selected' : ''}>🟢 Đang hoạt động</option>
-                <option value="0" ${activeFilter eq '0' ? 'selected' : ''}>⚫ Ngừng hoạt động</option>
+                <option value="1" ${activeFilter eq '1' ? 'selected' : ''}>Đang hoạt động</option>
+                <option value="0" ${activeFilter eq '0' ? 'selected' : ''}>Ngừng hoạt động</option>
             </select>
             <c:if test="${not empty categoryFilter}">
                 <input type="hidden" name="category" value="${categoryFilter}">
@@ -790,7 +790,7 @@
                                     <option value="${cat.id}" ${formData.categoryId eq cat.id.toString() ? 'selected' : ''}>
                                         <c:choose>
                                             <c:when test="${not empty cat.icon}">${fn:escapeXml(cat.icon)} ${fn:escapeXml(cat.categoryName)}</c:when>
-                                            <c:otherwise>📋 ${fn:escapeXml(cat.categoryName)}</c:otherwise>
+                                            <c:otherwise><i class="bi bi-journal-text me-1"></i>${fn:escapeXml(cat.categoryName)}</c:otherwise>
                                         </c:choose>
                                     </option>
                                 </c:forEach>
@@ -811,8 +811,8 @@
                                     onchange="clearFieldError('requiredRoomType')">
                                 <option value="">-- Chọn phòng (không bắt buộc) --</option>
                                 <optgroup label="Phòng Khám">
-                                    <option value="Phòng Khám số 1" ${formData.requiredRoomType eq 'Phòng Khám số 1' ? 'selected' : ''}>🏥 Phòng Khám số 1</option>
-                                    <option value="Phòng Khám số 2" ${formData.requiredRoomType eq 'Phòng Khám số 2' ? 'selected' : ''}>🏥 Phòng Khám số 2</option>
+                                    <option value="Phòng Khám số 1" ${formData.requiredRoomType eq 'Phòng Khám số 1' ? 'selected' : ''}>Phòng Khám số 1</option>
+                                    <option value="Phòng Khám số 2" ${formData.requiredRoomType eq 'Phòng Khám số 2' ? 'selected' : ''}>Phòng Khám số 2</option>
                                 </optgroup>
                                 <optgroup label="Phòng Siêu âm">
                                     <option value="Phòng Siêu âm 1" ${formData.requiredRoomType eq 'Phòng Siêu âm 1' ? 'selected' : ''}>🩻 Phòng Siêu âm 1</option>
@@ -870,14 +870,14 @@
                                     <input type="checkbox" name="requiresFasting" class="form-check-input" id="createFasting"
                                            ${formData.containsKey('requiresFasting') ? 'checked' : ''}>
                                     <label class="form-check-label small fw-semibold" for="createFasting">
-                                        🍽️ Nhịn ăn trước khi thực hiện
+                                        Nhịn ăn trước khi thực hiện
                                     </label>
                                 </div>
                                 <div class="form-check">
                                     <input type="checkbox" name="requiresFullBladder" class="form-check-input" id="createBladder"
                                            ${formData.containsKey('requiresFullBladder') ? 'checked' : ''}>
                                     <label class="form-check-label small fw-semibold" for="createBladder">
-                                        💧 Đầy bàng quang trước khi thực hiện
+                                        Đầy bàng quang trước khi thực hiện
                                     </label>
                                 </div>
                                 <div style="font-size:0.68rem;color:var(--c-muted);">
@@ -928,7 +928,7 @@
                     <div class="form-section-title"><i class="bi bi-info-circle me-1"></i>Thông tin cơ bản</div>
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">
-                            <label class="form-label fw-semibold small">Mã dịch vụ 🔒</label>
+                            <label class="form-label fw-semibold small">Mã dịch vụ <i class="bi bi-lock-fill text-muted"></i></label>
                             <input type="text" id="editServiceCode"
                                    class="form-control form-control-sm text-uppercase" readonly disabled
                                    style="font-family:'Courier New',monospace;letter-spacing:0.05em;background:#f5f5f5;color:#757575;cursor:not-allowed;">
@@ -1011,13 +1011,13 @@
                             <select name="requiredRoomType" id="editRoomType" class="form-select form-select-sm">
                                 <option value="">-- Chọn phòng --</option>
                                 <optgroup label="Phòng Khám">
-                                    <option value="Phòng Khám số 1">🏥 Phòng Khám số 1</option>
-                                    <option value="Phòng Khám số 2">🏥 Phòng Khám số 2</option>
+                                    <option value="Phòng Khám số 1">Phòng Khám số 1</option>
+                                    <option value="Phòng Khám số 2">Phòng Khám số 2</option>
                                 </optgroup>
                                 <optgroup label="Phòng Siêu âm">
-                                    <option value="Phòng Siêu âm 1">🩻 Phòng Siêu âm 1</option>
-                                    <option value="Phòng Siêu âm 2">🩻 Phòng Siêu âm 2</option>
-                                    <option value="Phòng Siêu âm 3">🩻 Phòng Siêu âm 3</option>
+                                    <option value="Phòng Siêu âm 1">Phòng Siêu âm 1</option>
+                                    <option value="Phòng Siêu âm 2">Phòng Siêu âm 2</option>
+                                    <option value="Phòng Siêu âm 3">Phòng Siêu âm 3</option>
                                 </optgroup>
                             </select>
                             <div class="invalid-feedback" id="editErr-requiredRoomType"></div>
@@ -1058,15 +1058,15 @@
                         <div class="col-md-3 d-flex flex-column gap-2">
                             <div class="form-check">
                                 <input type="checkbox" name="isActive" class="form-check-input" id="editIsActive">
-                                <label class="form-check-label small fw-semibold" for="editIsActive">🟢 Hoạt động</label>
+                                <label class="form-check-label small fw-semibold" for="editIsActive">Hoạt động</label>
                             </div>
                             <div class="form-check">
                                 <input type="checkbox" name="requiresFasting" class="form-check-input" id="editFasting">
-                                <label class="form-check-label small" for="editFasting">🍽️ Nhịn ăn</label>
+                                <label class="form-check-label small" for="editFasting"><i class="bi bi-cup-hot me-1 text-warning"></i> Nhịn ăn</label>
                             </div>
                             <div class="form-check">
                                 <input type="checkbox" name="requiresFullBladder" class="form-check-input" id="editBladder">
-                                <label class="form-check-label small" for="editBladder">💧 Đầy bàng quang</label>
+                                <label class="form-check-label small" for="editBladder"><i class="bi bi-droplet-fill me-1 text-info"></i> Đầy bàng quang</label>
                             </div>
                         </div>
                     </div>
