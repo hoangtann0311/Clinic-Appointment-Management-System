@@ -444,19 +444,6 @@
                 </select>
             </div>
 
-            <%-- User --%>
-            <div class="col-md-1 col-sm-6">
-                <label class="form-label"><i class="bi bi-person"></i> Người dùng</label>
-                <select name="userId" class="form-select">
-                    <option value="">Tất cả</option>
-                    <c:forEach var="u" items="${userOptions}">
-                        <option value="${u.userId}" ${u.userId eq filterUserId ? 'selected' : ''}>
-                            ${u.userName}
-                        </option>
-                    </c:forEach>
-                </select>
-            </div>
-
             <%-- Date From --%>
             <div class="col-md-2 col-sm-6">
                 <label class="form-label"><i class="bi bi-calendar"></i> Từ ngày</label>

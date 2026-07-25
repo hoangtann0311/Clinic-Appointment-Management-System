@@ -297,7 +297,7 @@ public class GoogleAuthService {
                 + " (id=" + newUser.getId() + ", status=PENDING_VERIFICATION)");
 
         // Gửi email xác nhận đăng ký Google (đồng bộ để bắt lỗi ngay)
-        String verificationLink = "http://localhost:8080/ClinicAppointmentManagementSystem"
+        String verificationLink = com.clinic.config.AppConfig.getBaseUrl()
                 + "/verify-email?token=" + verificationToken;
         String emailError = null;
         try {
@@ -412,7 +412,7 @@ public class GoogleAuthService {
                 user.setVerificationToken(token);
                 updateVerificationToken(user.getId(), token);
             }
-            String verifyLink = "http://localhost:8080/ClinicAppointmentManagementSystem"
+            String verifyLink = com.clinic.config.AppConfig.getBaseUrl()
                     + "/verify-email?token=" + token;
             String emailError = null;
             try {

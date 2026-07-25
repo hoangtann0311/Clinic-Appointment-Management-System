@@ -47,6 +47,7 @@
                 <span>Quản Lý Người Dùng</span>
             </a>
         </li>
+        <!-- Vai Trò & Phân Quyền: đã khóa phân quyền động, ẩn khỏi sidebar
         <li>
             <a href="${pageContext.request.contextPath}/admin/roles/"
                class="${fn:contains(requestURI, '/admin/roles') ? 'active' : ''}">
@@ -54,6 +55,7 @@
                 <span>Vai Trò &amp; Phân Quyền</span>
             </a>
         </li>
+        -->
         <!-- <li>
             <a href="${pageContext.request.contextPath}/admin/doctors/"
                class="${fn:contains(requestURI, '/admin/doctors') ? 'active' : ''}">

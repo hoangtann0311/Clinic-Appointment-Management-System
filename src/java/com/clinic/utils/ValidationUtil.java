@@ -144,7 +144,7 @@ public class ValidationUtil {
 
         // Điều khoản sử dụng: bắt buộc đồng ý
         if (terms == null || !"on".equals(terms)) {
-            errors.put("terms", "Bạn phải đồng ý với Điều khoản sử dụng và Chính sách bảo mật.");
+            errors.put("terms", "Bạn phải đồng ý với Điều khoản sử dụng & Chính sách bảo mật.");
         }
 
         return errors;

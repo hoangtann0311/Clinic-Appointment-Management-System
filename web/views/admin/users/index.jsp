@@ -385,10 +385,8 @@
                 </select>
                 <select name="status" class="form-select">
                     <option value="">Tất cả trạng thái</option>
-                    <option value="Active" ${statusFilter eq 'Active' ? 'selected' : ''}>Đang hoạt động</option>
+                    <option value="Active" ${statusFilter eq 'Active' ? 'selected' : ''}>Hoạt động</option>
                     <option value="Inactive" ${statusFilter eq 'Inactive' ? 'selected' : ''}>Ngừng hoạt động</option>
-                    <option value="Locked" ${statusFilter eq 'Locked' ? 'selected' : ''}>Đã khoá</option>
-                    <option value="Pending Verification" ${statusFilter eq 'Pending Verification' ? 'selected' : ''}>Chờ xác thực</option>
                 </select>
                 <%-- Ẩn chức năng Thùng rác --%>
                 <%--
@@ -523,8 +521,8 @@
                                                         <c:choose>
                                                             <c:when test="${u.status eq 'Active'}"><i class="bi bi-check-circle-fill me-1"></i>Hoạt động</c:when>
                                                             <c:when test="${u.status eq 'Locked'}"><i class="bi bi-lock-fill me-1"></i>Đã khoá</c:when>
-                                                            <c:when test="${u.status eq 'Inactive'}"><i class="bi bi-slash-circle me-1"></i>Ngừng</c:when>
-                                                            <c:when test="${u.status eq 'Pending Verification'}"><i class="bi bi-hourglass-split me-1"></i>Chờ Xác Thực</c:when>
+                                                            <c:when test="${u.status eq 'Inactive'}"><i class="bi bi-slash-circle me-1"></i>Ngừng hoạt động</c:when>
+                                                            <c:when test="${u.status eq 'Pending Verification'}"><i class="bi bi-hourglass-split me-1"></i>Chờ xác thực</c:when>
                                                             <c:otherwise>${u.status}</c:otherwise>
                                                         </c:choose>
                                                     </span>

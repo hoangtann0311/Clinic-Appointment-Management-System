@@ -523,7 +523,7 @@
                     <div class="kpi-content">
                         <div class="kpi-value">${not empty totalAppointments ? totalAppointments : 0}</div>
                         <div class="kpi-label"><c:choose><c:when test="${isCustomRange}">Lịch Hẹn (Khoảng)</c:when><c:otherwise>Tổng Lịch Hẹn</c:otherwise></c:choose></div>
-                        <div class="kpi-sub"><i class="bi bi-clock"></i> ${isCustomRange ? dateRangeLabel : 'Toàn thời gian'}</div>
+                        <div class="kpi-sub"><i class="bi bi-clock"></i> ${isCustomRange ? dateRangeLabel : 'Hôm nay'}</div>
                     </div>
                 </div>
             </div>
@@ -843,6 +843,7 @@
                         </div>
                     </div>
                 </div>
+                <!-- Danh Mục Thuốc: đã ẩn — manager không cần quản lý thuốc
                 <div class="col-6">
                     <div class="card kpi-card kpi-medicines fade-in-up">
                         <div class="card-body">
@@ -855,6 +856,7 @@
                         </div>
                     </div>
                 </div>
+                -->
                 <div class="col-6">
                     <div class="card kpi-card fade-in-up" style="--kpi-accent:#3b82f6;">
                         <div class="card-body" style="border-top:3px solid #3b82f6 !important;">
@@ -894,7 +896,7 @@
             </div>
         </div>
 
-        <%-- Cảnh báo tồn kho --%>
+        <!-- Cảnh Báo Tồn Kho: đã ẩn — manager không cần quản lý kho thuốc
         <div class="col-xl-6">
             <div class="admin-card h-100">
                 <div class="card-header d-flex align-items-center justify-content-between">
@@ -937,6 +939,7 @@
                 </div>
             </div>
         </div>
+        -->
 
     </div>
 

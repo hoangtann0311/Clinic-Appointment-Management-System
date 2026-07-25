@@ -114,6 +114,34 @@ public class AppConfig {
         return getLong("ultrasound.maxFileSize", 10485760L); // 10MB
     }
 
+    /**
+     * Trả về base URL của ứng dụng dùng cho link trong email.
+     * Thứ tự ưu tiên:
+     *   1. Biến môi trường APP_BASE_URL (cao nhất)
+     *   2. System property app.base.url
+     *   3. File cấu hình ngoài ~/.ocss/config.properties (key: app.base.url)
+     *   4. Fallback: http://localhost:8080/ClinicAppointmentManagementSystem
+     */
+    public static String getBaseUrl() {
+        // 1. Biến môi trường
+        String envUrl = System.getenv("APP_BASE_URL");
+        if (envUrl != null && !envUrl.isBlank()) {
+            return envUrl.trim().replaceAll("/+$", ""); // bỏ trailing slash
+        }
+        // 2. System property
+        String propUrl = System.getProperty("app.base.url");
+        if (propUrl != null && !propUrl.isBlank()) {
+            return propUrl.trim().replaceAll("/+$", "");
+        }
+        // 3. File cấu hình ngoài
+        String configUrl = get("app.base.url", null);
+        if (configUrl != null && !configUrl.isBlank()) {
+            return configUrl.trim().replaceAll("/+$", "");
+        }
+        // 4. Fallback
+        return "http://localhost:8080/ClinicAppointmentManagementSystem";
+    }
+
     // Avatar upload settings (dùng cho hồ sơ Bác sĩ, có thể tái sử dụng cho vai trò khác sau này)
     public static String getAvatarUploadDirectory() {
         return get("avatar.uploadDirectory", "uploads/avatars");

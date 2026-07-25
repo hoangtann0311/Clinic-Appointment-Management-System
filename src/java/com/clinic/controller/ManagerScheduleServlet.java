@@ -2,9 +2,11 @@ package com.clinic.controller;
 
 import com.clinic.model.Doctor;
 import com.clinic.model.DoctorSchedule;
+import com.clinic.model.Shift;
 import com.clinic.model.User;
 import com.clinic.model.enums.ScheduleStatus;
 import com.clinic.service.DoctorScheduleService;
+import com.clinic.service.ShiftService;
 import com.clinic.utils.NotificationHelper;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -14,6 +16,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 import java.sql.Date;
+import java.sql.Time;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,10 +39,12 @@ public class ManagerScheduleServlet extends HttpServlet {
     private static final int PAGE_SIZE = 10;
 
     private DoctorScheduleService scheduleService;
+    private ShiftService shiftService;
 
     @Override
     public void init() throws ServletException {
         scheduleService = new DoctorScheduleService();
+        shiftService = new ShiftService();
     }
 
     @Override
@@ -52,13 +57,25 @@ public class ManagerScheduleServlet extends HttpServlet {
         String dateFromStr = req.getParameter("dateFrom");
         String dateToStr = req.getParameter("dateTo");
         String view = req.getParameter("view"); // "detail" = xem chi tiết 1 lịch
+        String tab = req.getParameter("tab");   // "shifts" hoặc "schedules"
+        if (tab == null || tab.isEmpty()) {
+            tab = "shifts"; // mặc định hiển thị tab quản lý ca làm việc
+        }
 
         Integer doctorId = (doctorIdStr != null && !doctorIdStr.isEmpty())
                 ? parseInt(doctorIdStr, null) : null;
         Date dateFrom = parseDate(dateFromStr);
         Date dateTo = parseDate(dateToStr);
 
-        // Xem chi tiết một lịch trực
+        // ── Tab: Quản lý ca làm việc ──
+        List<Shift> shifts = shiftService.getAllShifts();
+        int[] shiftStats = shiftService.getShiftStats();
+        req.setAttribute("shifts", shifts);
+        req.setAttribute("activeShiftCount", shiftStats[0]);
+        req.setAttribute("inactiveShiftCount", shiftStats[1]);
+        req.setAttribute("totalShiftCount", shiftStats[0] + shiftStats[1]);
+
+        // ── Tab: Duyệt đăng ký lịch ──
         if ("detail".equals(view)) {
             int scheduleId = parseInt(req.getParameter("id"), -1);
             if (scheduleId > 0) {
@@ -84,8 +101,10 @@ public class ManagerScheduleServlet extends HttpServlet {
         int pendingCount = scheduleService.countByStatus(ScheduleStatus.PENDING);
         int approvedCount = scheduleService.countByStatus(ScheduleStatus.APPROVED);
         int rejectedCount = scheduleService.countByStatus(ScheduleStatus.REJECTED);
+        int cancelledCount = scheduleService.countByStatus(ScheduleStatus.CANCELLED);
 
         // Set attributes cho JSP
+        req.setAttribute("tab", tab);
         req.setAttribute("schedules", schedules);
         req.setAttribute("doctors", doctors);
         req.setAttribute("currentPage", page);
@@ -100,10 +119,14 @@ public class ManagerScheduleServlet extends HttpServlet {
         req.setAttribute("pendingCount", pendingCount);
         req.setAttribute("approvedCount", approvedCount);
         req.setAttribute("rejectedCount", rejectedCount);
+        req.setAttribute("cancelledCount", cancelledCount);
 
         // Thông báo từ POST redirect
         req.setAttribute("success", req.getParameter("success"));
         req.setAttribute("error", req.getParameter("error"));
+
+        // Shift form errors
+        req.setAttribute("shiftErrors", req.getAttribute("shiftErrors"));
 
         req.getRequestDispatcher("/views/manager/schedules/index.jsp").forward(req, resp);
     }
@@ -123,10 +146,26 @@ public class ManagerScheduleServlet extends HttpServlet {
         }
 
         try {
+            // ── Shift CRUD actions ──
+            if ("createShift".equals(action)) {
+                handleCreateShift(req, resp, redirectUrl);
+                return;
+            } else if ("updateShift".equals(action)) {
+                handleUpdateShift(req, resp, redirectUrl);
+                return;
+            } else if ("toggleShift".equals(action)) {
+                handleToggleShift(req, resp, redirectUrl);
+                return;
+            } else if ("deleteShift".equals(action)) {
+                handleDeleteShift(req, resp, redirectUrl);
+                return;
+            }
+
+            // ── Schedule approve/reject actions ──
             if ("approve".equals(action)) {
                 int scheduleId = parseInt(req.getParameter("id"), -1);
                 if (scheduleId <= 0) {
-                    resp.sendRedirect(redirectUrl + "?error=ID+lịch+trực+không+hợp+lệ");
+                    resp.sendRedirect(redirectUrl + "?tab=schedules&error=ID+lịch+trực+không+hợp+lệ");
                     return;
                 }
 
@@ -147,12 +186,12 @@ public class ManagerScheduleServlet extends HttpServlet {
                                 s.getEndTime()   != null ? s.getEndTime().toString()   : "");
                         }
                     } catch (Exception ignored) {}
-                    resp.sendRedirect(redirectUrl + "?success=approved&id=" + scheduleId);
+                    resp.sendRedirect(redirectUrl + "?tab=schedules&success=approved&id=" + scheduleId);
                 } else {
                     String errorMsg = errors.getOrDefault("general",
                             errors.getOrDefault("conflict",
                             errors.getOrDefault("full_slots", "Duyệt+thất+bại")));
-                    resp.sendRedirect(redirectUrl + "?error=" + errorMsg);
+                    resp.sendRedirect(redirectUrl + "?tab=schedules&error=" + errorMsg);
                 }
 
             } else if ("reject".equals(action)) {
@@ -160,7 +199,7 @@ public class ManagerScheduleServlet extends HttpServlet {
                 String rejectionReason = req.getParameter("rejectionReason");
 
                 if (scheduleId <= 0) {
-                    resp.sendRedirect(redirectUrl + "?error=ID+lịch+trực+không+hợp+lệ");
+                    resp.sendRedirect(redirectUrl + "?tab=schedules&error=ID+lịch+trực+không+hợp+lệ");
                     return;
                 }
 
@@ -182,17 +221,49 @@ public class ManagerScheduleServlet extends HttpServlet {
                                 rejectionReason);
                         }
                     } catch (Exception ignored) {}
-                    resp.sendRedirect(redirectUrl + "?success=rejected&id=" + scheduleId);
+                    resp.sendRedirect(redirectUrl + "?tab=schedules&success=rejected&id=" + scheduleId);
                 } else {
                     // Nếu lỗi validate (thiếu lý do), hiển thị lại trang với modal reject
                     req.setAttribute("errors", errors);
                     req.setAttribute("showRejectModal", true);
                     req.setAttribute("rejectScheduleId", scheduleId);
+                    req.setAttribute("tab", "schedules");
+                    doGet(req, resp);
+                }
+
+            } else if ("cancel".equals(action)) {
+                int scheduleId = parseInt(req.getParameter("id"), -1);
+                String cancellationReason = req.getParameter("cancellationReason");
+
+                if (scheduleId <= 0) {
+                    resp.sendRedirect(redirectUrl + "?tab=schedules&error=ID+lịch+trực+không+hợp+lệ");
+                    return;
+                }
+
+                Map<String, String> errors = new HashMap<>();
+                DoctorScheduleService.ScheduleCancelResult result = scheduleService.cancelSchedule(
+                        scheduleId, currentUser.getId(), cancellationReason, errors);
+
+                if (result.isSuccess()) {
+                    resp.sendRedirect(redirectUrl + "?tab=schedules&success=cancelled&id=" + scheduleId);
+                } else if (result.needsReassignment()) {
+                    req.setAttribute("showCancelWarning", true);
+                    req.setAttribute("hasBookedSlotsError", errors.get("hasBookedSlots"));
+                    req.setAttribute("bookedSlots", result.getBookedSlots());
+                    req.setAttribute("bookedSlotCount", result.getBookedSlotCount());
+                    req.setAttribute("cancelSchedule", scheduleService.getScheduleById(scheduleId));
+                    req.setAttribute("tab", "schedules");
+                    doGet(req, resp);
+                } else {
+                    req.setAttribute("errors", errors);
+                    req.setAttribute("showCancelModal", true);
+                    req.setAttribute("cancelScheduleId", scheduleId);
+                    req.setAttribute("tab", "schedules");
                     doGet(req, resp);
                 }
 
             } else {
-                resp.sendRedirect(redirectUrl);
+                resp.sendRedirect(redirectUrl + "?tab=schedules");
             }
 
         } catch (Exception e) {
@@ -200,6 +271,144 @@ public class ManagerScheduleServlet extends HttpServlet {
             e.printStackTrace(System.err);
             resp.sendRedirect(redirectUrl + "?error=Lỗi+hệ+thống:+"
                     + java.net.URLEncoder.encode(e.getMessage(), "UTF-8"));
+        }
+    }
+
+    // ── Shift CRUD Handlers ──
+
+    private void handleCreateShift(HttpServletRequest req, HttpServletResponse resp,
+                                   String redirectUrl) throws IOException, ServletException {
+        String name = req.getParameter("shiftName");
+        String startTimeStr = req.getParameter("shiftStartTime");
+        String endTimeStr = req.getParameter("shiftEndTime");
+        String description = req.getParameter("shiftDescription");
+
+        Map<String, String> errors = new HashMap<>();
+        if (name == null || name.trim().isEmpty()) {
+            errors.put("shiftName", "Vui lòng nhập tên ca làm việc.");
+        }
+        if (startTimeStr == null || startTimeStr.trim().isEmpty()) {
+            errors.put("shiftTime", "Vui lòng nhập giờ bắt đầu.");
+        }
+        if (endTimeStr == null || endTimeStr.trim().isEmpty()) {
+            errors.put("shiftTime", "Vui lòng nhập giờ kết thúc.");
+        }
+
+        if (!errors.isEmpty()) {
+            req.setAttribute("shiftErrors", errors);
+            req.setAttribute("showShiftModal", true);
+            req.setAttribute("tab", "shifts");
+            doGet(req, resp);
+            return;
+        }
+
+        try {
+            Shift shift = new Shift();
+            shift.setName(name.trim());
+            shift.setStartTime(java.sql.Time.valueOf(startTimeStr.trim() + ":00"));
+            shift.setEndTime(java.sql.Time.valueOf(endTimeStr.trim() + ":00"));
+            if (description != null && !description.trim().isEmpty()) {
+                shift.setDescription(description.trim());
+            }
+
+            if (shiftService.createShift(shift, errors)) {
+                resp.sendRedirect(redirectUrl + "?tab=shifts&success=shiftCreated");
+            } else {
+                req.setAttribute("shiftErrors", errors);
+                req.setAttribute("showShiftModal", true);
+                req.setAttribute("tab", "shifts");
+                doGet(req, resp);
+            }
+        } catch (IllegalArgumentException e) {
+            errors.put("shiftTime", "Định dạng giờ không hợp lệ. Sử dụng định dạng HH:mm.");
+            req.setAttribute("shiftErrors", errors);
+            req.setAttribute("showShiftModal", true);
+            req.setAttribute("tab", "shifts");
+            doGet(req, resp);
+        }
+    }
+
+    private void handleUpdateShift(HttpServletRequest req, HttpServletResponse resp,
+                                   String redirectUrl) throws IOException, ServletException {
+        int id = parseInt(req.getParameter("shiftId"), -1);
+        String name = req.getParameter("shiftName");
+        String startTimeStr = req.getParameter("shiftStartTime");
+        String endTimeStr = req.getParameter("shiftEndTime");
+        String description = req.getParameter("shiftDescription");
+
+        Map<String, String> errors = new HashMap<>();
+        if (id <= 0) {
+            errors.put("general", "ID ca làm việc không hợp lệ.");
+        }
+
+        if (!errors.isEmpty()) {
+            req.setAttribute("shiftErrors", errors);
+            req.setAttribute("showShiftModal", true);
+            req.setAttribute("tab", "shifts");
+            doGet(req, resp);
+            return;
+        }
+
+        try {
+            Shift shift = new Shift();
+            shift.setId(id);
+            shift.setName(name != null ? name.trim() : "");
+            if (startTimeStr != null && !startTimeStr.trim().isEmpty()) {
+                shift.setStartTime(java.sql.Time.valueOf(startTimeStr.trim() + ":00"));
+            }
+            if (endTimeStr != null && !endTimeStr.trim().isEmpty()) {
+                shift.setEndTime(java.sql.Time.valueOf(endTimeStr.trim() + ":00"));
+            }
+            if (description != null && !description.trim().isEmpty()) {
+                shift.setDescription(description.trim());
+            }
+
+            if (shiftService.updateShift(shift, errors)) {
+                resp.sendRedirect(redirectUrl + "?tab=shifts&success=shiftUpdated");
+            } else {
+                req.setAttribute("shiftErrors", errors);
+                req.setAttribute("showShiftModal", true);
+                req.setAttribute("tab", "shifts");
+                doGet(req, resp);
+            }
+        } catch (IllegalArgumentException e) {
+            errors.put("shiftTime", "Định dạng giờ không hợp lệ. Sử dụng định dạng HH:mm.");
+            req.setAttribute("shiftErrors", errors);
+            req.setAttribute("showShiftModal", true);
+            req.setAttribute("tab", "shifts");
+            doGet(req, resp);
+        }
+    }
+
+    private void handleToggleShift(HttpServletRequest req, HttpServletResponse resp,
+                                   String redirectUrl) throws IOException {
+        int id = parseInt(req.getParameter("shiftId"), -1);
+        boolean active = "true".equals(req.getParameter("shiftActive"));
+
+        if (id > 0) {
+            shiftService.toggleActive(id, active);
+            resp.sendRedirect(redirectUrl + "?tab=shifts&success=shiftToggled");
+        } else {
+            resp.sendRedirect(redirectUrl + "?tab=shifts&error=ID+ca+làm+việc+không+hợp+lệ");
+        }
+    }
+
+    private void handleDeleteShift(HttpServletRequest req, HttpServletResponse resp,
+                                   String redirectUrl) throws IOException, ServletException {
+        int id = parseInt(req.getParameter("shiftId"), -1);
+
+        if (id <= 0) {
+            resp.sendRedirect(redirectUrl + "?tab=shifts&error=ID+ca+làm+việc+không+hợp+lệ");
+            return;
+        }
+
+        Map<String, String> errors = new HashMap<>();
+        if (shiftService.deleteShift(id, errors)) {
+            resp.sendRedirect(redirectUrl + "?tab=shifts&success=shiftDeleted");
+        } else {
+            req.setAttribute("shiftErrors", errors);
+            req.setAttribute("tab", "shifts");
+            doGet(req, resp);
         }
     }
 
