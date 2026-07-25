@@ -174,6 +174,24 @@ public class AuthorizationFilter implements Filter {
         }
 
         // ═══════════════════════════════════════════════════════════
+        // DOCTOR PROFILE CHECK
+        // User có roleId=2 (Doctor) phải có hồ sơ bác sĩ hợp lệ.
+        // Ngăn chặn tài khoản "mồ côi" (role=Doctor nhưng không có
+        // record trong bảng doctors) truy cập vào khu vực bác sĩ.
+        // ═══════════════════════════════════════════════════════════
+        if (roleId == AuthorizationConfig.ROLE_DOCTOR) {
+            com.clinic.dao.DoctorDAO doctorDAO = new com.clinic.dao.DoctorDAO();
+            Integer doctorId = doctorDAO.getDoctorIdByUserId(user.getId());
+            if (doctorId == null) {
+                logAccess(httpReq, user, path, "Từ chối", "Tài khoản Bác sĩ không có hồ sơ chuyên môn");
+                send403(httpReq, httpRes, path,
+                    "Tài khoản Bác sĩ không hợp lệ.",
+                    "Tài khoản của bạn được gán vai trò Bác sĩ nhưng chưa có hồ sơ chuyên môn trong hệ thống. Vui lòng liên hệ quản trị viên.");
+                return;
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════
         // YÊU CẦU 2 & 3: WHITELIST + DEFAULT DENY
         // Kiểm tra URL có trong whitelist không
         // ═══════════════════════════════════════════════════════════

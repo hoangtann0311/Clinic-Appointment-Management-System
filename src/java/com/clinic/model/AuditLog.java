@@ -127,9 +127,9 @@ public class AuditLog implements Serializable {
         // Map từ tiếng Anh sang tiếng Việt
         switch (roleName) {
             case "Admin":       return "Quản trị viên";
-            case "Doctor":      return "Bác sĩ";
+            case "Doctor":      return "Bác sĩ lâm sàng";
             case "Manager":     return "Quản lý";
-            case "Staff":       return "Nhân viên";
+            case "Staff":       return "Nhân viên lễ tân";
             case "Patient":     return "Bệnh nhân";
             case "Sonographer": return "Bác sĩ siêu âm";
             default:            return roleName;

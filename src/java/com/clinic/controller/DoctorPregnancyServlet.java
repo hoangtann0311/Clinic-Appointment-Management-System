@@ -1,6 +1,7 @@
 package com.clinic.controller;
 
 import com.clinic.config.DatabaseConfig;
+import com.clinic.dao.DoctorDAO;
 import com.clinic.dao.PregnancyDAO;
 import com.clinic.model.Pregnancy;
 import com.clinic.model.User;
@@ -28,6 +29,8 @@ import java.util.List;
 @WebServlet("/doctor/pregnancy")
 public class DoctorPregnancyServlet extends HttpServlet {
 
+    private final DoctorDAO doctorDAO = new DoctorDAO();
+
     private final PregnancyDAO pregnancyDAO = new PregnancyDAO();
 
     @Override
@@ -36,7 +39,7 @@ public class DoctorPregnancyServlet extends HttpServlet {
 
         User user = currentUser(req, resp);
         if (user == null) return;
-        Integer doctorId = getDoctorId(user.getId());
+        Integer doctorId = doctorDAO.getDoctorIdByUserId(user.getId());
         if (doctorId == null) {
             resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Tài khoản chưa liên kết hồ sơ bác sĩ.");
             return;
@@ -64,7 +67,7 @@ public class DoctorPregnancyServlet extends HttpServlet {
 
         User user = currentUser(req, resp);
         if (user == null) return;
-        Integer doctorId = getDoctorId(user.getId());
+        Integer doctorId = doctorDAO.getDoctorIdByUserId(user.getId());
         if (doctorId == null) {
             resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Tài khoản chưa liên kết hồ sơ bác sĩ.");
             return;
@@ -306,16 +309,6 @@ public class DoctorPregnancyServlet extends HttpServlet {
             return null;
         }
         return (User) session.getAttribute("user");
-    }
-
-    private Integer getDoctorId(int userId) {
-        try (Connection c = DatabaseConfig.getConnection();
-             PreparedStatement ps = c.prepareStatement("SELECT id FROM doctors WHERE user_id = ?")) {
-            ps.setInt(1, userId);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) return rs.getInt("id");
-        } catch (Exception e) { e.printStackTrace(); }
-        return null;
     }
 
     private LocalDate parseDateOrNull(String s) {

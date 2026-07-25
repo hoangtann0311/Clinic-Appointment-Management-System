@@ -38,14 +38,14 @@ import java.util.stream.Collectors;
 })
 public class DashboardServlet extends HttpServlet {
 
-    /** Tên hiển thị tương ứng với roleId */
+    /** Tên hiển thị tương ứng với roleId — đồng bộ với AuthorizationConfig, User, Role, AdminUserServlet */
     private static final Map<Integer, String> ROLE_NAMES = new LinkedHashMap<>();
     static {
-        ROLE_NAMES.put(1, "Quản Trị Viên");
-        ROLE_NAMES.put(2, "Bác Sĩ");
-        ROLE_NAMES.put(3, "Quản Lý");
-        ROLE_NAMES.put(4, "Nhân Viên");
-        ROLE_NAMES.put(5, "Bệnh Nhân");
+        ROLE_NAMES.put(1, "Quản trị viên");
+        ROLE_NAMES.put(2, "Bác sĩ lâm sàng");
+        ROLE_NAMES.put(3, "Quản lý");
+        ROLE_NAMES.put(4, "Nhân viên lễ tân");
+        ROLE_NAMES.put(5, "Bệnh nhân");
         ROLE_NAMES.put(6, "Bác sĩ siêu âm");
     }
 
@@ -182,7 +182,12 @@ public class DashboardServlet extends HttpServlet {
         request.setAttribute("totalMedicines", medicineService.getTotalMedicines(null, null, countMaxDate));
 
         // ─── Widget "Cảnh Báo Tồn Kho" — thuốc sắp hết (stock ≤ 10) ───
-        request.setAttribute("lowStockMedicines", medicineService.getLowStockMedicines(10, 5));
+        // Chỉ hiển thị khi xem dữ liệu hiện tại, không áp dụng cho khoảng ngày lịch sử
+        if (!isCustomRange) {
+            request.setAttribute("lowStockMedicines", medicineService.getLowStockMedicines(10, 5));
+        } else {
+            request.setAttribute("lowStockMedicines", null);
+        }
 
         // ─── DashboardService (dùng cho doanh thu tổng hợp: dịch vụ + thuốc) ───
         DashboardService dashboardService = new DashboardService();

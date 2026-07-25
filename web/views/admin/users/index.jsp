@@ -260,7 +260,7 @@
                 <i class="bi bi-briefcase-fill"></i>
             </div>
             <div class="stat-card-body">
-                <div class="stat-card-label">Quản Lý</div>
+                <div class="stat-card-label">Quản lý</div>
                 <div class="stat-card-value">${countManager}</div>
                 <div class="stat-card-sub">Quản lý vận hành</div>
             </div>
@@ -270,7 +270,7 @@
                 <i class="bi bi-person-workspace"></i>
             </div>
             <div class="stat-card-body">
-                <div class="stat-card-label">Nhân Viên</div>
+                <div class="stat-card-label">Nhân viên lễ tân</div>
                 <div class="stat-card-value">${countStaffOnly}</div>
                 <div class="stat-card-sub">Nhân viên lễ tân</div>
             </div>
@@ -290,7 +290,7 @@
                 <i class="bi bi-person-hearts"></i>
             </div>
             <div class="stat-card-body">
-                <div class="stat-card-label">Bệnh Nhân</div>
+                <div class="stat-card-label">Bệnh nhân</div>
                 <div class="stat-card-value">${countPatient}</div>
                 <div class="stat-card-sub">Hồ sơ bệnh nhân</div>
             </div>

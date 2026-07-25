@@ -117,15 +117,16 @@ public class ManagerServiceServlet extends HttpServlet {
                     String description = req.getParameter("description");
                     String price = req.getParameter("price");
                     String durationMins = req.getParameter("durationMins");
-                    boolean requiresFasting = "on".equals(req.getParameter("requiresFasting"));
-                    boolean requiresFullBladder = "on".equals(req.getParameter("requiresFullBladder"));
+                    String specialRequirements = req.getParameter("specialRequirements");
                     String requiredRoomType = req.getParameter("requiredRoomType");
                     String allowedSpecialties = req.getParameter("allowedSpecialties");
                     String categoryId = req.getParameter("categoryId");
 
                     Map<String, String> errors = new HashMap<>();
-                    if (serviceService.createService(serviceCode, serviceName, description,
-                            price, durationMins, requiresFasting, requiresFullBladder,
+                    // Ghép yêu cầu đặc biệt vào mô tả nếu có
+                    String fullDescription = mergeSpecialRequirements(description, specialRequirements);
+                    if (serviceService.createService(serviceCode, serviceName, fullDescription,
+                            price, durationMins, false, false,
                             requiredRoomType, allowedSpecialties, categoryId, errors, changedBy)) {
                         AuditUtil.log(changedBy,
                                 "Tạo mới dịch vụ: " + serviceName + " (mã: " + serviceCode + ")",
@@ -149,8 +150,7 @@ public class ManagerServiceServlet extends HttpServlet {
                     String description = req.getParameter("description");
                     String price = req.getParameter("price");
                     String durationMins = req.getParameter("durationMins");
-                    boolean requiresFasting = "on".equals(req.getParameter("requiresFasting"));
-                    boolean requiresFullBladder = "on".equals(req.getParameter("requiresFullBladder"));
+                    String specialRequirements = req.getParameter("specialRequirements");
                     String requiredRoomType = req.getParameter("requiredRoomType");
                     String allowedSpecialties = req.getParameter("allowedSpecialties");
                     String categoryId = req.getParameter("categoryId");
@@ -158,8 +158,10 @@ public class ManagerServiceServlet extends HttpServlet {
                     String changeReason = req.getParameter("changeReason");
 
                     Map<String, String> errors = new HashMap<>();
-                    if (serviceService.updateService(id, serviceCode, serviceName, description,
-                            price, durationMins, requiresFasting, requiresFullBladder,
+                    // Ghép yêu cầu đặc biệt vào mô tả nếu có (loại bỏ phần cũ trước)
+                    String fullDescription = mergeSpecialRequirements(description, specialRequirements);
+                    if (serviceService.updateService(id, serviceCode, serviceName, fullDescription,
+                            price, durationMins, false, false,
                             requiredRoomType, allowedSpecialties, categoryId, isActive, errors,
                             changedBy, changeReason)) {
                         AuditUtil.log(changedBy,
@@ -277,6 +279,35 @@ public class ManagerServiceServlet extends HttpServlet {
         req.getRequestDispatcher("/views/manager/services/price-history.jsp").forward(req, resp);
     }
 
+    /**
+     * Gộp yêu cầu đặc biệt vào mô tả dịch vụ.
+     * Loại bỏ phần "Yêu cầu đặc biệt:" cũ (nếu có) trước khi ghép mới.
+     */
+    private String mergeSpecialRequirements(String description, String specialRequirements) {
+        // Loại bỏ phần "Yêu cầu đặc biệt:" cũ khỏi description (nếu có)
+        String cleanDesc = description;
+        if (cleanDesc != null && cleanDesc.contains("Yêu cầu đặc biệt:")) {
+            int idx = cleanDesc.indexOf("Yêu cầu đặc biệt:");
+            // Lùi lại để loại bỏ cả "\n\n" phía trước nếu có
+            if (idx >= 2 && cleanDesc.substring(idx - 2, idx).equals("\n\n")) {
+                cleanDesc = cleanDesc.substring(0, idx - 2);
+            } else {
+                cleanDesc = cleanDesc.substring(0, idx);
+            }
+            cleanDesc = cleanDesc.trim();
+        }
+
+        // Ghép yêu cầu đặc biệt mới nếu có
+        if (specialRequirements != null && !specialRequirements.trim().isEmpty()) {
+            if (cleanDesc != null && !cleanDesc.isEmpty()) {
+                return cleanDesc + "\n\nYêu cầu đặc biệt: " + specialRequirements.trim();
+            } else {
+                return "Yêu cầu đặc biệt: " + specialRequirements.trim();
+            }
+        }
+        return (cleanDesc != null && !cleanDesc.isEmpty()) ? cleanDesc : null;
+    }
+
     private Map<String, String> buildFormData(HttpServletRequest req) {
         Map<String, String> data = new HashMap<>();
         data.put("serviceCode", req.getParameter("serviceCode"));
@@ -288,6 +319,7 @@ public class ManagerServiceServlet extends HttpServlet {
         data.put("allowedSpecialties", req.getParameter("allowedSpecialties"));
         data.put("categoryId", req.getParameter("categoryId"));
         data.put("changeReason", req.getParameter("changeReason"));
+        data.put("specialRequirements", req.getParameter("specialRequirements"));
         return data;
     }
 

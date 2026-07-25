@@ -20,7 +20,7 @@
         </div>
         <div class="admin-sidebar-name">${sessionScope.user.fullName}</div>
         <span class="admin-sidebar-badge">
-            <i class="bi bi-briefcase-fill"></i>Quản Lý
+            <i class="bi bi-briefcase-fill"></i>Quản lý
         </span>
     </div>
 

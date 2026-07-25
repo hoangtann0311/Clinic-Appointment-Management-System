@@ -139,6 +139,29 @@ public class DoctorDAO {
         return null;
     }
 
+    /**
+     * Lấy doctor_id từ user_id mà không cần load toàn bộ Doctor entity.
+     * Dùng cho AuthorizationFilter và các servlet cần kiểm tra nhanh.
+     *
+     * @param userId ID của user trong bảng users
+     * @return doctor id nếu user có hồ sơ bác sĩ, null nếu không
+     */
+    public Integer getDoctorIdByUserId(int userId) {
+        String sql = "SELECT id FROM doctors WHERE user_id = ?";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("id");
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[DoctorDAO] getDoctorIdByUserId ERROR: " + e.getMessage());
+        }
+        return null;
+    }
+
     public boolean updateProfile(Doctor d) {
         String sql =
             "UPDATE doctors SET full_name=?, specialization=?, phone_number=?, " +

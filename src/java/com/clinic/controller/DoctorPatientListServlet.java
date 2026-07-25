@@ -1,6 +1,7 @@
 package com.clinic.controller;
 
 import com.clinic.config.DatabaseConfig;
+import com.clinic.dao.DoctorDAO;
 import com.clinic.model.User;
 import com.clinic.utils.EncryptionUtil;
 
@@ -20,6 +21,8 @@ import java.util.List;
 @WebServlet("/doctor/patients")
 public class DoctorPatientListServlet extends HttpServlet {
 
+    private final DoctorDAO doctorDAO = new DoctorDAO();
+
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
@@ -30,7 +33,7 @@ public class DoctorPatientListServlet extends HttpServlet {
             return;
         }
         User user = (User) session.getAttribute("user");
-        Integer doctorId = getDoctorId(user.getId());
+        Integer doctorId = doctorDAO.getDoctorIdByUserId(user.getId());
         if (doctorId == null) {
             resp.sendError(HttpServletResponse.SC_FORBIDDEN);
             return;
@@ -84,16 +87,6 @@ public class DoctorPatientListServlet extends HttpServlet {
         req.setAttribute("keyword",     keyword != null ? keyword : "");
         req.setAttribute("doctorName",  user.getFullName());
         req.getRequestDispatcher("/views/doctors/patient_list.jsp").forward(req, resp);
-    }
-
-    private Integer getDoctorId(int userId) {
-        try (Connection c = DatabaseConfig.getConnection();
-             PreparedStatement ps = c.prepareStatement("SELECT id FROM doctors WHERE user_id = ?")) {
-            ps.setInt(1, userId);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) return rs.getInt("id");
-        } catch (Exception e) { e.printStackTrace(); }
-        return null;
     }
 
     /** DTO nội bộ để truyền sang JSP */

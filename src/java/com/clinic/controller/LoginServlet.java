@@ -98,7 +98,11 @@ public class LoginServlet extends HttpServlet {
             return;
         }
 
-        // Đăng nhập thành công: tạo session và lưu user
+        // Đăng nhập thành công: hủy session cũ (chống session fixation) rồi tạo mới
+        HttpSession oldSession = request.getSession(false);
+        if (oldSession != null) {
+            oldSession.invalidate();
+        }
         HttpSession session = request.getSession(true);
 
         // Nạp ảnh đại diện từ bảng vai trò cụ thể (hiện chỉ có doctors.avatar_url)

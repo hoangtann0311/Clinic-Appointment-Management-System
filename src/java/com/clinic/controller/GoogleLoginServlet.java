@@ -62,7 +62,11 @@ public class GoogleLoginServlet extends HttpServlet {
             // Bước 2: Đăng nhập hoặc tạo user mới
             User user = googleAuthService.loginWithGoogle(googleInfo);
 
-            // Bước 3: Tạo session
+            // Bước 3: Hủy session cũ (chống session fixation) rồi tạo mới
+            HttpSession oldSession = request.getSession(false);
+            if (oldSession != null) {
+                oldSession.invalidate();
+            }
             HttpSession session = request.getSession(true);
 
             // Nạp ảnh đại diện từ bảng vai trò cụ thể (hiện chỉ có doctors.avatar_url)

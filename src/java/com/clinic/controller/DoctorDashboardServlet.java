@@ -1,8 +1,8 @@
 package com.clinic.controller;
 
 
-import com.clinic.config.DatabaseConfig;
 import com.clinic.dao.AppointmentDAO;
+import com.clinic.dao.DoctorDAO;
 import com.clinic.dao.MedicalRecordDAO;
 import com.clinic.utils.NotificationHelper;
 import com.clinic.model.Appointment;
@@ -28,6 +28,7 @@ public class DoctorDashboardServlet extends HttpServlet {
 
     private final AppointmentDAO   appointmentDAO   = new AppointmentDAO();
     private final MedicalRecordDAO medicalRecordDAO = new MedicalRecordDAO();
+    private final DoctorDAO        doctorDAO        = new DoctorDAO();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
@@ -39,7 +40,7 @@ public class DoctorDashboardServlet extends HttpServlet {
             return;
         }
         User user = (User) session.getAttribute("user");
-        Integer doctorId = getDoctorId(user.getId());
+        Integer doctorId = doctorDAO.getDoctorIdByUserId(user.getId());
         if (doctorId == null) {
             req.setAttribute("errorMessage", "Tài khoản chưa được liên kết hồ sơ bác sĩ.");
             req.getRequestDispatcher("/views/doctors/dashboard.jsp").forward(req, resp);
@@ -76,13 +77,4 @@ public class DoctorDashboardServlet extends HttpServlet {
         req.getRequestDispatcher("/views/doctors/dashboard.jsp").forward(req, resp);
     }
 
-    private Integer getDoctorId(int userId) {
-        try (Connection c = DatabaseConfig.getConnection();
-             PreparedStatement ps = c.prepareStatement("SELECT id FROM doctors WHERE user_id = ?")) {
-            ps.setInt(1, userId);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) return rs.getInt("id");
-        } catch (Exception e) { e.printStackTrace(); }
-        return null;
-    }
 }

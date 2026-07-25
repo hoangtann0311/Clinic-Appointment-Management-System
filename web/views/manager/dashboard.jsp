@@ -872,7 +872,14 @@
                         <div class="card-body" style="border-top:3px solid #10b981 !important;">
                             <div class="kpi-icon" style="background:#d1fae5;color:#059669;"><i class="bi bi-cash-stack"></i></div>
                             <div class="kpi-content">
-                                <div class="kpi-value" style="font-size:1.05rem;">${not empty revenue ? revenue : '0 VNĐ'}</div>
+                                <div class="kpi-value" style="font-size:1.05rem;">
+                                    <c:choose>
+                                        <c:when test="${not empty revenueTotalRaw and revenueTotalRaw > 0}">
+                                            <fmt:formatNumber value="${revenueTotalRaw}" pattern="#,###"/> VNĐ
+                                        </c:when>
+                                        <c:otherwise>0 VNĐ</c:otherwise>
+                                    </c:choose>
+                                </div>
                                 <div class="kpi-label">
                                     <c:choose>
                                         <c:when test="${isCustomRange}">Doanh Thu (Khoảng)</c:when>
