@@ -2,8 +2,10 @@ package com.clinic.controller;
 
 import com.clinic.dao.DoctorDAO;
 import com.clinic.dao.DoctorScheduleDAO;
+import com.clinic.dao.ShiftDAO;
 import com.clinic.model.Doctor;
 import com.clinic.model.DoctorSchedule;
+import com.clinic.model.Shift;
 import com.clinic.model.User;
 import com.clinic.model.enums.ScheduleStatus;
 import jakarta.servlet.ServletException;
@@ -42,11 +44,13 @@ public class DoctorScheduleServlet extends HttpServlet {
 
     private DoctorScheduleDAO scheduleDAO;
     private DoctorDAO doctorDAO;
+    private ShiftDAO shiftDAO;
 
     @Override
     public void init() throws ServletException {
         scheduleDAO = new DoctorScheduleDAO();
         doctorDAO   = new DoctorDAO();
+        shiftDAO    = new ShiftDAO();
     }
 
     // ── GET ──────────────────────────────────────────────────────────────────
@@ -99,6 +103,15 @@ public class DoctorScheduleServlet extends HttpServlet {
             // Ngày tối thiểu để tạo lịch (ngày mai)
             String minDate = LocalDate.now().plusDays(1).toString();
 
+            // Load danh sách ca làm việc (shifts) từ database để bác sĩ chọn
+            List<Shift> activeShifts;
+            try {
+                activeShifts = shiftDAO.findAllActive();
+            } catch (Exception e) {
+                activeShifts = new ArrayList<>();
+                System.err.println("[DoctorScheduleServlet] Lỗi load shifts: " + e.getMessage());
+            }
+
             req.setAttribute("doctor",        doctor);
             req.setAttribute("schedules",     schedules);
             req.setAttribute("allSchedules",  allSchedules);
@@ -113,6 +126,7 @@ public class DoctorScheduleServlet extends HttpServlet {
             req.setAttribute("approvedCount", approvedCount);
             req.setAttribute("cancelledCount",cancelledCount);
             req.setAttribute("minDate",       minDate);
+            req.setAttribute("activeShifts",  activeShifts);
 
             // Flash messages từ redirect
             req.setAttribute("success", req.getParameter("success"));
@@ -181,6 +195,7 @@ public class DoctorScheduleServlet extends HttpServlet {
 
         // 1. Đọc tham số
         String workDateStr  = req.getParameter("workDate");
+        String shiftIdStr   = req.getParameter("shiftId");
         String startTimeStr = req.getParameter("startTime");
         String endTimeStr   = req.getParameter("endTime");
         String maxSlotsStr  = req.getParameter("maxSlots");
@@ -190,37 +205,20 @@ public class DoctorScheduleServlet extends HttpServlet {
         if (workDateStr == null || workDateStr.trim().isEmpty()) {
             errors.put("workDate", "Vui lòng chọn ngày làm việc.");
         }
-        if (startTimeStr == null || startTimeStr.trim().isEmpty()) {
-            errors.put("startTime", "Vui lòng chọn giờ bắt đầu.");
-        }
-        if (endTimeStr == null || endTimeStr.trim().isEmpty()) {
-            errors.put("endTime", "Vui lòng chọn giờ kết thúc.");
-        }
         if (maxSlotsStr == null || maxSlotsStr.trim().isEmpty()) {
             errors.put("maxSlots", "Vui lòng nhập số bệnh nhân tối đa.");
         }
 
         // 3. Parse giá trị
         Date workDate  = null;
-        Time startTime = null;
-        Time endTime   = null;
-        int  maxSlots  = 10; // default
+        int  shiftId   = 0;
+        int  maxSlots  = 10;
 
         if (errors.isEmpty()) {
             try {
                 workDate = Date.valueOf(workDateStr.trim());
             } catch (IllegalArgumentException e) {
                 errors.put("workDate", "Định dạng ngày không hợp lệ.");
-            }
-            try {
-                startTime = Time.valueOf(startTimeStr.trim() + ":00");
-            } catch (IllegalArgumentException e) {
-                errors.put("startTime", "Định dạng giờ bắt đầu không hợp lệ.");
-            }
-            try {
-                endTime = Time.valueOf(endTimeStr.trim() + ":00");
-            } catch (IllegalArgumentException e) {
-                errors.put("endTime", "Định dạng giờ kết thúc không hợp lệ.");
             }
             try {
                 maxSlots = Integer.parseInt(maxSlotsStr.trim());
@@ -230,34 +228,46 @@ public class DoctorScheduleServlet extends HttpServlet {
             } catch (NumberFormatException e) {
                 errors.put("maxSlots", "Số bệnh nhân tối đa phải là số nguyên.");
             }
+
+            // Ưu tiên shiftId từ dropdown; fallback: tìm shift khớp startTime/endTime
+            if (shiftIdStr != null && !shiftIdStr.trim().isEmpty()) {
+                try {
+                    shiftId = Integer.parseInt(shiftIdStr.trim());
+                } catch (NumberFormatException e) {
+                    errors.put("shiftId", "Ca làm việc không hợp lệ.");
+                }
+            } else if (startTimeStr != null && !startTimeStr.trim().isEmpty()
+                    && endTimeStr != null && !endTimeStr.trim().isEmpty()) {
+                // Fallback: tìm shift theo giờ
+                try {
+                    Time st = Time.valueOf(startTimeStr.trim() + ":00");
+                    Time et = Time.valueOf(endTimeStr.trim() + ":00");
+                    shiftId = resolveShiftId(st, et);
+                    if (shiftId <= 0) {
+                        errors.put("shiftId", "Không tìm thấy ca làm việc khớp với giờ đã chọn. Vui lòng chọn ca từ danh sách.");
+                    }
+                } catch (IllegalArgumentException e) {
+                    errors.put("startTime", "Định dạng giờ không hợp lệ.");
+                }
+            } else {
+                errors.put("shiftId", "Vui lòng chọn ca làm việc.");
+            }
         }
 
-        // 4. Validate logic ngày / giờ
+        // 4. Validate logic ngày
         if (errors.isEmpty()) {
-            // Ngày phải từ ngày mai trở đi
             if (!workDate.toLocalDate().isAfter(LocalDate.now())) {
                 errors.put("workDate", "Ngày làm việc phải từ ngày mai trở đi.");
             }
-            // Giờ kết thúc > giờ bắt đầu
-            if (startTime != null && endTime != null && !endTime.after(startTime)) {
-                errors.put("endTime", "Giờ kết thúc phải sau giờ bắt đầu.");
-            }
-            // Ca tối thiểu 30 phút
-            if (startTime != null && endTime != null) {
-                long diff = endTime.getTime() - startTime.getTime();
-                if (diff < 30 * 60 * 1000L) {
-                    errors.put("endTime", "Ca làm việc phải có độ dài tối thiểu 30 phút.");
-                }
-            }
         }
 
-        // 5. Kiểm tra trùng lịch PENDING/APPROVED của cùng bác sĩ
+        // 5. Kiểm tra trùng lịch PENDING/APPROVED của cùng bác sĩ (theo shift_id)
         if (errors.isEmpty()) {
             boolean conflict = scheduleDAO.hasConflictForDoctor(
-                    doctor.getId(), workDate, startTime, endTime, null);
+                    doctor.getId(), workDate, shiftId, null);
             if (conflict) {
                 errors.put("conflict",
-                        "Bạn đã có lịch đăng ký trong cùng ngày và khung giờ này (đang chờ duyệt hoặc đã duyệt).");
+                        "Bạn đã có lịch đăng ký trong cùng ngày và ca này (đang chờ duyệt hoặc đã duyệt).");
             }
         }
 
@@ -283,8 +293,15 @@ public class DoctorScheduleServlet extends HttpServlet {
             req.setAttribute("minDate",       LocalDate.now().plusDays(1).toString());
             req.setAttribute("errors",        errors);
             req.setAttribute("showCreateModal", true);
+            // Load shifts again for re-render
+            try {
+                req.setAttribute("activeShifts", shiftDAO.findAllActive());
+            } catch (Exception e) {
+                req.setAttribute("activeShifts", new ArrayList<Shift>());
+            }
             // Giữ lại giá trị đã nhập
             req.setAttribute("formWorkDate",  workDateStr);
+            req.setAttribute("formShiftId",   shiftIdStr);
             req.setAttribute("formStartTime", startTimeStr);
             req.setAttribute("formEndTime",   endTimeStr);
             req.setAttribute("formMaxSlots",  maxSlotsStr);
@@ -297,9 +314,8 @@ public class DoctorScheduleServlet extends HttpServlet {
         // 7. INSERT
         DoctorSchedule schedule = new DoctorSchedule();
         schedule.setDoctorId(doctor.getId());
+        schedule.setShiftId(shiftId);
         schedule.setWorkDate(workDate);
-        schedule.setStartTime(startTime);
-        schedule.setEndTime(endTime);
         schedule.setMaxSlots(maxSlots);
         schedule.setNotes(notes != null ? notes.trim() : null);
         schedule.setStatus(ScheduleStatus.PENDING);
@@ -367,6 +383,25 @@ public class DoctorScheduleServlet extends HttpServlet {
     private int parseInt(String s, int defaultVal) {
         if (s == null || s.isEmpty()) return defaultVal;
         try { return Integer.parseInt(s.trim()); } catch (NumberFormatException e) { return defaultVal; }
+    }
+
+    /**
+     * Tìm shift_id từ start_time và end_time (fallback khi user nhập giờ thủ công).
+     * @return shift_id > 0 nếu tìm thấy, 0 nếu không khớp.
+     */
+    private int resolveShiftId(Time startTime, Time endTime) {
+        String sql = "SELECT id FROM shifts WHERE start_time = CAST(? AS time) AND end_time = CAST(? AS time) AND is_active = 1";
+        try (java.sql.Connection conn = com.clinic.config.DatabaseConfig.getConnection();
+             java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setTime(1, startTime);
+            ps.setTime(2, endTime);
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt("id");
+            }
+        } catch (Exception e) {
+            System.err.println("[DoctorScheduleServlet] resolveShiftId ERROR: " + e.getMessage());
+        }
+        return 0;
     }
 
     private Date parseDate(String s) {

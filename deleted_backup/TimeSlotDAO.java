@@ -837,6 +837,123 @@ public class TimeSlotDAO {
         return 0;
     }
 
+    /**
+     * Read-only reception view — paginated with search &amp; filter.
+     * Search matches doctor name, patient name, or time label.
+     * Status filter accepts SlotStatus name (AVAILABLE, BOOKED, HELD, etc.).
+     */
+    public List<TimeSlot> findByDateForReceptionPaginated(Date workDate, String search,
+                                                          String statusFilter,
+                                                          int offset, int limit) {
+        StringBuilder sql = new StringBuilder(
+            "SELECT " + BASE_COLUMNS + ", ts.price, d.full_name AS doctor_name, "
+            + "d.specialization AS doctor_specialization, "
+            + "p.full_name AS booked_by_name, p.phone AS patient_phone, "
+            + "a.id AS appointment_id, a.status AS appointment_status "
+            + "FROM time_slots ts "
+            + "INNER JOIN doctor_schedules ds ON ds.id = ts.schedule_id "
+            + "INNER JOIN doctors d ON d.id = ts.doctor_id "
+            + "LEFT JOIN appointments a ON a.slot_id = ts.id "
+            + " AND a.status NOT IN ('Cancelled', 'NoShow') "
+            + "LEFT JOIN patients p ON p.id = a.patient_id "
+            + "WHERE ts.work_date = ? AND ds.status = 'APPROVED' ");
+
+        List<Object> params = new ArrayList<>();
+        params.add(workDate);
+
+        if (statusFilter != null && !statusFilter.trim().isEmpty()) {
+            sql.append("AND ts.status = ? ");
+            params.add(statusFilter.trim().toUpperCase());
+        }
+
+        if (search != null && !search.trim().isEmpty()) {
+            String like = "%" + search.trim().toLowerCase() + "%";
+            sql.append("AND (LOWER(d.full_name) LIKE ? "
+                     + "OR LOWER(ISNULL(p.full_name, '')) LIKE ? "
+                     + "OR LOWER(CONCAT(CAST(ts.start_time AS varchar(5)), ' - ', CAST(ts.end_time AS varchar(5)))) LIKE ?) ");
+            params.add(like);
+            params.add(like);
+            params.add(like);
+        }
+
+        sql.append("ORDER BY ts.start_time ASC, d.full_name ASC ");
+        sql.append("OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
+        params.add(offset);
+        params.add(limit);
+
+        List<TimeSlot> list = new ArrayList<>();
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                Object p = params.get(i);
+                if (p instanceof String) ps.setString(i + 1, (String) p);
+                else if (p instanceof Integer) ps.setInt(i + 1, (Integer) p);
+                else if (p instanceof Date) ps.setDate(i + 1, (Date) p);
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    TimeSlot ts = mapRow(rs);
+                    double price = rs.getDouble("price");
+                    if (!rs.wasNull()) ts.setPrice(price);
+                    // transient extras for detail view
+                    try { ts.setDoctorName(rs.getString("doctor_name")); } catch (SQLException e) { }
+                    list.add(ts);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[TimeSlotDAO] findByDateForReceptionPaginated ERROR: " + e.getMessage());
+        }
+        return list;
+    }
+
+    /**
+     * Count slots for pagination — same filters as findByDateForReceptionPaginated.
+     */
+    public int countByDateForReception(Date workDate, String search, String statusFilter) {
+        StringBuilder sql = new StringBuilder(
+            "SELECT COUNT(*) AS total FROM time_slots ts "
+            + "INNER JOIN doctor_schedules ds ON ds.id = ts.schedule_id "
+            + "INNER JOIN doctors d ON d.id = ts.doctor_id "
+            + "LEFT JOIN appointments a ON a.slot_id = ts.id "
+            + " AND a.status NOT IN ('Cancelled', 'NoShow') "
+            + "LEFT JOIN patients p ON p.id = a.patient_id "
+            + "WHERE ts.work_date = ? AND ds.status = 'APPROVED' ");
+
+        List<Object> params = new ArrayList<>();
+        params.add(workDate);
+
+        if (statusFilter != null && !statusFilter.trim().isEmpty()) {
+            sql.append("AND ts.status = ? ");
+            params.add(statusFilter.trim().toUpperCase());
+        }
+
+        if (search != null && !search.trim().isEmpty()) {
+            String like = "%" + search.trim().toLowerCase() + "%";
+            sql.append("AND (LOWER(d.full_name) LIKE ? "
+                     + "OR LOWER(ISNULL(p.full_name, '')) LIKE ? "
+                     + "OR LOWER(CONCAT(CAST(ts.start_time AS varchar(5)), ' - ', CAST(ts.end_time AS varchar(5)))) LIKE ?) ");
+            params.add(like);
+            params.add(like);
+            params.add(like);
+        }
+
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                Object p = params.get(i);
+                if (p instanceof String) ps.setString(i + 1, (String) p);
+                else if (p instanceof Integer) ps.setInt(i + 1, (Integer) p);
+                else if (p instanceof Date) ps.setDate(i + 1, (Date) p);
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt("total");
+            }
+        } catch (SQLException e) {
+            System.err.println("[TimeSlotDAO] countByDateForReception ERROR: " + e.getMessage());
+        }
+        return 0;
+    }
+
     // ── Private helpers ──
 
     /**

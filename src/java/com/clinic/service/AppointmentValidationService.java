@@ -3,11 +3,10 @@ package com.clinic.service;
 import com.clinic.dao.AppointmentDAO;
 import com.clinic.dao.DoctorDAO;
 import com.clinic.dao.ServiceDAO;
-import com.clinic.dao.TimeSlotDAO;
+import com.clinic.config.DatabaseConfig;
 import com.clinic.model.Appointment;
 import com.clinic.model.Doctor;
 import com.clinic.model.ServiceItem;
-import com.clinic.model.TimeSlot;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -22,7 +21,6 @@ import java.util.List;
  */
 public class AppointmentValidationService {
 
-    private final TimeSlotDAO timeSlotDAO = new TimeSlotDAO();
     private final DoctorDAO doctorDAO = new DoctorDAO();
     private final ServiceDAO serviceDAO = new ServiceDAO();
     private final AppointmentDAO appointmentDAO = new AppointmentDAO();
@@ -143,38 +141,31 @@ public class AppointmentValidationService {
     /**
      * Kiểm tra slot khả dụng cho đặt lịch / chỉnh sửa.
      */
-    public String validateSlotAvailability(int doctorId, LocalDate date, int slotId, Integer currentSlotId) {
-        TimeSlot slot = timeSlotDAO.findById(slotId);
-        if (slot == null) {
-            return "Khung giờ khám không tồn tại.";
-        }
-
-        if (slot.getDoctorId() != doctorId) {
-            return "Khung giờ không thuộc bác sĩ đã chọn.";
-        }
-
-        if (!slot.getWorkDate().toLocalDate().equals(date)) {
-            return "Khung giờ không trùng khớp với ngày khám đã chọn.";
-        }
-
-        // Nếu slot không phải slot hiện tại đang giữ thì phải ở trạng thái AVAILABLE
-        if (currentSlotId == null || slotId != currentSlotId) {
-            if (!slot.isAvailable()) {
-                return "Khung giờ khám này đã bị người khác đặt hoặc đang tạm khóa.";
+    public String validateSlotAvailability(int doctorId, LocalDate date, int scheduleId, Integer currentScheduleId) {
+        // Kiểm tra doctor_schedule thay vì time_slots
+        String sql = "SELECT ds.doctor_id, ds.work_date, ds.status, ds.booked_count, ds.max_slots "
+                + "FROM doctor_schedules ds WHERE ds.id = ?";
+        try (java.sql.Connection conn = DatabaseConfig.getConnection();
+             java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, scheduleId);
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return "Ca khám không tồn tại.";
+                if (rs.getInt("doctor_id") != doctorId) return "Ca khám không thuộc bác sĩ đã chọn.";
+                if (!rs.getDate("work_date").toLocalDate().equals(date)) return "Ca khám không khớp ngày.";
+                if (!"APPROVED".equals(rs.getString("status"))) return "Ca khám chưa được duyệt.";
+                // Nếu không phải schedule đang giữ thì phải còn chỗ
+                if (currentScheduleId == null || scheduleId != currentScheduleId) {
+                    if (rs.getInt("booked_count") >= rs.getInt("max_slots")) {
+                        return "Ca khám này đã hết chỗ.";
+                    }
+                }
+                if (rs.getDate("work_date").toLocalDate().isBefore(LocalDate.now())) {
+                    return "Không thể chọn ca khám đã trôi qua.";
+                }
             }
+        } catch (Exception e) {
+            return "Lỗi kiểm tra ca khám: " + e.getMessage();
         }
-
-        LocalDate workDate = slot.getWorkDate().toLocalDate();
-        LocalTime startTime = slot.getStartTime().toLocalTime();
-        if (workDate.isBefore(LocalDate.now())
-                || (workDate.isEqual(LocalDate.now()) && startTime.isBefore(LocalTime.now()))) {
-            return "Không thể chọn khung giờ đã trôi qua.";
-        }
-
-        if (slot.getPrice() == null) {
-            return "Giá khám của khung giờ này chưa được công bố. Vui lòng chọn khung giờ khác.";
-        }
-
         return null;
     }
 

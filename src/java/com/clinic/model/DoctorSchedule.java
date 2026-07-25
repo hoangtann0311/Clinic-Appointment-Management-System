@@ -27,9 +27,10 @@ public class DoctorSchedule implements Serializable {
 
     private int id;
     private int doctorId;
+    private int shiftId;               // FK → shifts.id
     private Date workDate;
-    private Time startTime;
-    private Time endTime;
+    private Time startTime;            // transient — lấy từ shifts.start_time qua JOIN
+    private Time endTime;              // transient — lấy từ shifts.end_time qua JOIN
     private int maxSlots;
     private ScheduleStatus status;
     private String rejectionReason;
@@ -38,21 +39,22 @@ public class DoctorSchedule implements Serializable {
     private Integer createdBy;
     private Timestamp createdAt;
     private Timestamp updatedAt;
-    private boolean isApproved; // tương thích ngược với schema cũ (BIT)
+    private boolean isApproved;        // BIT
     private String notes;
-    private byte[] version;               // ROWVERSION — optimistic lock
-    private Integer cancelledBy;          // user_id người hủy
-    private Timestamp cancelledAt;        // thời điểm hủy
-    private String cancellationReason;    // lý do hủy
+    private byte[] version;            // ROWVERSION
+    private Integer cancelledBy;
+    private Timestamp cancelledAt;
+    private String cancellationReason;
+    private int bookedCount;           // cột thực trong DB
 
-    // ── Transient fields (join từ bảng khác, dùng để hiển thị) ──
+    // ── Transient fields (join) ──
     private String doctorName;
     private String doctorSpecialization;
     private String approvedByName;
     private String createdByName;
-    private String cancelledByName;       // tên người hủy
-    private String shiftLabel;
-    private int bookedSlotCount;          // số slot đã BOOKED (dùng kiểm tra trước khi hủy)
+    private String cancelledByName;
+    private String shiftLabel;         // "Ca sáng (07:00 - 11:00)"
+    private String shiftName;          // tên ca từ bảng shifts
 
     public DoctorSchedule() {
         this.status = ScheduleStatus.PENDING;
@@ -287,12 +289,28 @@ public class DoctorSchedule implements Serializable {
         this.cancelledByName = cancelledByName;
     }
 
-    public int getBookedSlotCount() {
-        return bookedSlotCount;
+    public int getBookedCount() {
+        return bookedCount;
     }
 
-    public void setBookedSlotCount(int bookedSlotCount) {
-        this.bookedSlotCount = bookedSlotCount;
+    public void setBookedCount(int bookedCount) {
+        this.bookedCount = bookedCount;
+    }
+
+    public int getShiftId() {
+        return shiftId;
+    }
+
+    public void setShiftId(int shiftId) {
+        this.shiftId = shiftId;
+    }
+
+    public String getShiftName() {
+        return shiftName;
+    }
+
+    public void setShiftName(String shiftName) {
+        this.shiftName = shiftName;
     }
 
     public void setShiftLabel(String shiftLabel) {

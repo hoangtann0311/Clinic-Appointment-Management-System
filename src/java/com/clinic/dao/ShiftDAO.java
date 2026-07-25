@@ -303,9 +303,11 @@ public class ShiftDAO {
      * Dùng để chặn xóa ca đã có dữ liệu.
      */
     public boolean hasDoctorSchedulesForTimeRange(Time startTime, Time endTime) {
-        String sql = "SELECT COUNT(*) AS total FROM doctor_schedules "
-                   + "WHERE start_time = CAST(? AS time) AND end_time = CAST(? AS time) "
-                   + "AND status NOT IN ('CANCELLED', 'REJECTED')";
+        // doctor_schedules không còn start_time/end_time — so sánh qua shifts join
+        String sql = "SELECT COUNT(*) AS total FROM doctor_schedules ds "
+                   + "INNER JOIN shifts s ON ds.shift_id = s.id "
+                   + "WHERE s.start_time = CAST(? AS time) AND s.end_time = CAST(? AS time) "
+                   + "AND ds.status NOT IN ('CANCELLED', 'REJECTED')";
         Connection conn = null;
         PreparedStatement ps = null;
         ResultSet rs = null;

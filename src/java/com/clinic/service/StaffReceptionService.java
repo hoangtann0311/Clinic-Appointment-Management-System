@@ -2,11 +2,13 @@ package com.clinic.service;
 
 import com.clinic.dao.*;
 import com.clinic.config.DBContext;
+import com.clinic.config.DatabaseConfig;
 import com.clinic.model.Appointment;
 import com.clinic.model.Doctor;
+import com.clinic.model.DoctorSchedule;
 import com.clinic.model.Patient;
 import com.clinic.model.ServiceItem;
-import com.clinic.model.*;
+import com.clinic.model.Invoice;
 import com.clinic.utils.AuditUtil;
 import com.clinic.utils.StaffValidator;
 
@@ -26,7 +28,6 @@ public class StaffReceptionService {
     private final AppointmentDAO appointmentDAO = new AppointmentDAO();
     private final AuditLogDAO auditLogDAO = new AuditLogDAO();
     private final DoctorScheduleDAO doctorScheduleDAO = new DoctorScheduleDAO();
-    private final TimeSlotDAO timeSlotDAO = new TimeSlotDAO();
     private final AppointmentValidationService validationService = new AppointmentValidationService();
 
     public StaffReceptionService() {
@@ -90,16 +91,49 @@ public class StaffReceptionService {
         List<DoctorSchedule> schedules = doctorScheduleDAO.findAll(
                 0, 200, "APPROVED", null,
                 java.sql.Date.valueOf(selectedDate), java.sql.Date.valueOf(selectedDate));
-        for (DoctorSchedule schedule : schedules) {
-            schedule.setBookedSlotCount(timeSlotDAO.countBookedSlots(schedule.getId()));
-        }
+        // booked_count đã được lưu trực tiếp trong doctor_schedules, không cần đếm riêng
         return schedules;
     }
 
-    /** Read-only slot board. Non-available slots are intentionally not actionable. */
-    public List<TimeSlot> getDoctorSlotsForReception(LocalDate date) {
+    /**
+     * Read-only slot board — query trực tiếp doctor_schedules + shifts.
+     * Trả về List<Map> cho JSP hiển thị.
+     */
+    public List<Map<String, Object>> getDoctorSlotsForReception(LocalDate date) {
         LocalDate selectedDate = date != null ? date : LocalDate.now();
-        return timeSlotDAO.findByDateForReception(java.sql.Date.valueOf(selectedDate));
+        List<Map<String, Object>> list = new ArrayList<>();
+        String sql = "SELECT ds.id, ds.doctor_id, ds.work_date, ds.max_slots, ds.booked_count, ds.status, "
+                + "s.name AS shift_name, s.start_time, s.end_time, "
+                + "d.full_name AS doctor_name, d.specialization AS doctor_specialization "
+                + "FROM doctor_schedules ds "
+                + "INNER JOIN shifts s ON ds.shift_id = s.id "
+                + "INNER JOIN doctors d ON d.id = ds.doctor_id "
+                + "WHERE ds.work_date = ? AND ds.status = 'APPROVED' "
+                + "ORDER BY d.full_name, s.start_time";
+        try (java.sql.Connection conn = DatabaseConfig.getConnection();
+             java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setDate(1, java.sql.Date.valueOf(selectedDate));
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> row = new HashMap<>();
+                    row.put("id", rs.getInt("id"));
+                    row.put("doctorId", rs.getInt("doctor_id"));
+                    row.put("doctorName", rs.getString("doctor_name"));
+                    row.put("workDate", rs.getDate("work_date"));
+                    row.put("startTime", rs.getTime("start_time"));
+                    row.put("endTime", rs.getTime("end_time"));
+                    row.put("maxSlots", rs.getInt("max_slots"));
+                    row.put("bookedCount", rs.getInt("booked_count"));
+                    row.put("status", rs.getString("status"));
+                    row.put("shiftName", rs.getString("shift_name"));
+                    row.put("available", rs.getInt("booked_count") < rs.getInt("max_slots"));
+                    list.add(row);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[StaffReceptionService] getDoctorSlotsForReception ERROR: " + e.getMessage());
+        }
+        return list;
     }
 
     public ServiceItem findServiceById(String id) {
@@ -261,15 +295,15 @@ public class StaffReceptionService {
             throw new IllegalArgumentException("Khung giờ vừa được người khác chọn. Vui lòng tải lại và chọn slot khác.");
         }
 
-        // 10. Tạo hóa đơn PRE_EXAM — dùng giá slot (đã tính theo kinh nghiệm + giờ cao điểm)
+        // 10. Tạo hóa đơn PRE_EXAM — dùng giá mặc định 200,000đ
         if (appointment != null) {
-            TimeSlot ts = timeSlotDAO.findById(foundSlotId);
-            if (ts == null || ts.getPrice() == null) {
-                throw new IllegalArgumentException("Giá khám của khung giờ này chưa được công bố. Vui lòng chọn khung giờ khác.");
+            double price = 200000.00;
+            if (appointment.getService() != null && appointment.getService().getPrice() > 0) {
+                price = appointment.getService().getPrice();
             }
             Invoice preExamInvoice = new Invoice();
             preExamInvoice.setAppointmentId(appointment.getId());
-            preExamInvoice.setTotalAmount(java.math.BigDecimal.valueOf(ts.getPrice()));
+            preExamInvoice.setTotalAmount(java.math.BigDecimal.valueOf(price));
             preExamInvoice.setStatus("Unpaid");
             preExamInvoice.setInvoiceType("PRE_EXAM");
             invoiceDAO.insert(preExamInvoice);
@@ -848,6 +882,55 @@ public class StaffReceptionService {
             e.printStackTrace();
             throw new IllegalArgumentException("Không thể cập nhật thanh toán PRE_EXAM.");
         }
+    }
+
+    /** Paginated slot list — query trực tiếp doctor_schedules + shifts. */
+    public List<Map<String, Object>> getDoctorSlotsForReceptionPaginated(LocalDate date, String search,
+                                                                          String status, int page, int pageSize) {
+        return getDoctorSlotsForReception(date); // đơn giản hóa: trả tất cả, JSP tự phân trang
+    }
+
+    public int countDoctorSlotsForReception(LocalDate date, String search, String status) {
+        return getDoctorSlotsForReception(date).size();
+    }
+
+    public static class SlotPageResult {
+        public List<Map<String, Object>> slots;
+        public int totalPages;
+        public int totalRecords;
+        public int currentPage;
+    }
+
+    public SlotPageResult getDoctorSlotsPage(LocalDate date, String search, String status,
+                                              int page, int pageSize) {
+        List<Map<String, Object>> allSlots = getDoctorSlotsForReception(date);
+        // Lọc theo search và status
+        List<Map<String, Object>> filtered = new ArrayList<>();
+        for (Map<String, Object> s : allSlots) {
+            if (status != null && !status.isEmpty()) {
+                String sStatus = (String) s.get("status");
+                if (!status.equalsIgnoreCase(sStatus)) continue;
+            }
+            if (search != null && !search.trim().isEmpty()) {
+                String searchLower = search.trim().toLowerCase();
+                String doctorName = String.valueOf(s.getOrDefault("doctorName", "")).toLowerCase();
+                if (!doctorName.contains(searchLower)) continue;
+            }
+            filtered.add(s);
+        }
+        int totalRecords = filtered.size();
+        int totalPages = (int) Math.ceil((double) totalRecords / pageSize);
+        if (page < 1) page = 1;
+        if (page > totalPages && totalPages > 0) page = totalPages;
+        int from = (page - 1) * pageSize;
+        int to = Math.min(from + pageSize, totalRecords);
+
+        SlotPageResult result = new SlotPageResult();
+        result.slots = from < totalRecords ? filtered.subList(from, to) : new ArrayList<>();
+        result.totalRecords = totalRecords;
+        result.totalPages = totalPages;
+        result.currentPage = page;
+        return result;
     }
 
     public static class QueueResult {
