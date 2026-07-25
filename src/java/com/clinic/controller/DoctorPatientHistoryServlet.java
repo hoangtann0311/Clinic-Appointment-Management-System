@@ -1,6 +1,7 @@
 package com.clinic.controller;
 
 import com.clinic.config.DatabaseConfig;
+import com.clinic.dao.DoctorDAO;
 import com.clinic.dao.MedicalRecordDAO;
 import com.clinic.model.MedicalRecord;
 import com.clinic.model.User;
@@ -21,7 +22,8 @@ import java.util.List;
 @WebServlet("/doctor/patient-history")
 public class DoctorPatientHistoryServlet extends HttpServlet {
 
-    private final MedicalRecordDAO dao = new MedicalRecordDAO();
+    private final MedicalRecordDAO dao       = new MedicalRecordDAO();
+    private final DoctorDAO        doctorDAO = new DoctorDAO();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
@@ -33,7 +35,7 @@ public class DoctorPatientHistoryServlet extends HttpServlet {
             return;
         }
         User user = (User) session.getAttribute("user");
-        Integer doctorId = getDoctorId(user.getId());
+        Integer doctorId = doctorDAO.getDoctorIdByUserId(user.getId());
         if (doctorId == null) {
             resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Tài khoản chưa liên kết hồ sơ bác sĩ.");
             return;
@@ -89,16 +91,6 @@ public class DoctorPatientHistoryServlet extends HttpServlet {
         req.setAttribute("doctorName",   user.getFullName());
 
         req.getRequestDispatcher("/views/doctors/patient_history.jsp").forward(req, resp);
-    }
-
-    private Integer getDoctorId(int userId) {
-        try (Connection c = DatabaseConfig.getConnection();
-             PreparedStatement ps = c.prepareStatement("SELECT id FROM doctors WHERE user_id = ?")) {
-            ps.setInt(1, userId);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) return rs.getInt("id");
-        } catch (Exception e) { e.printStackTrace(); }
-        return null;
     }
 
     private String getPatientName(int patientId) {

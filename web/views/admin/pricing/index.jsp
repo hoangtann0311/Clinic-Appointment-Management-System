@@ -810,7 +810,7 @@
                                    placeholder="VD: Sản khoa, Phụ khoa" value="${formData.allowedSpecialties}">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold">Category ID</label>
+                            <label class="form-label fw-semibold">Danh mục</label>
                             <input type="number" name="categoryId" class="form-control" min="0"
                                    placeholder="1-4" value="${formData.categoryId}">
                         </div>

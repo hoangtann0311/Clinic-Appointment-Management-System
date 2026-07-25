@@ -2,6 +2,7 @@ package com.clinic.controller;
 
 import com.clinic.config.DatabaseConfig;
 import com.clinic.dao.AppointmentDAO;
+import com.clinic.dao.DoctorDAO;
 import com.clinic.model.Appointment;
 import com.clinic.model.User;
 
@@ -22,6 +23,7 @@ import java.util.Map;
 public class DoctorAppointmentServlet extends HttpServlet {
 
     private final AppointmentDAO appointmentDAO = new AppointmentDAO();
+    private final DoctorDAO     doctorDAO      = new DoctorDAO();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -36,7 +38,7 @@ public class DoctorAppointmentServlet extends HttpServlet {
         User user = (User) session.getAttribute("user");
 
         // Lấy doctorId từ bảng doctors dựa trên user.id
-        Integer doctorId = getDoctorIdByUserId(user.getId());
+        Integer doctorId = doctorDAO.getDoctorIdByUserId(user.getId());
         if (doctorId == null) {
             request.setAttribute("errorMessage",
                 "Tài khoản này chưa được liên kết với hồ sơ bác sĩ. (userId=" + user.getId() + ")");
@@ -100,7 +102,7 @@ public class DoctorAppointmentServlet extends HttpServlet {
         }
 
         User user = (User) session.getAttribute("user");
-        Integer doctorId = getDoctorIdByUserId(user.getId());
+        Integer doctorId = doctorDAO.getDoctorIdByUserId(user.getId());
         if (doctorId == null) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không tìm thấy hồ sơ bác sĩ.");
             return;
@@ -137,24 +139,6 @@ public class DoctorAppointmentServlet extends HttpServlet {
         }
 
         response.sendError(HttpServletResponse.SC_BAD_REQUEST);
-    }
-
-    /**
-     * Query bảng doctors để lấy doctors.id từ users.id
-     */
-    private Integer getDoctorIdByUserId(int userId) {
-        String sql = "SELECT id FROM doctors WHERE user_id = ?";
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, userId);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) {
-                return rs.getInt("id");
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
     }
 
     private LocalDate parseDate(String value, LocalDate fallback) {

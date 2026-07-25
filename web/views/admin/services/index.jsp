@@ -359,7 +359,7 @@
                                    placeholder="VD: Sản khoa" value="${formData.allowedSpecialties}">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold">Category ID</label>
+                            <label class="form-label fw-semibold">Danh mục</label>
                             <input type="number" name="categoryId" class="form-control" min="0"
                                    value="${formData.categoryId}">
                         </div>
@@ -433,7 +433,7 @@
                             <input type="text" name="allowedSpecialties" id="editSpecialties" class="form-control" maxlength="255">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold">Category ID</label>
+                            <label class="form-label fw-semibold">Danh mục</label>
                             <input type="number" name="categoryId" id="editCategoryId" class="form-control" min="0">
                         </div>
                         <div class="col-md-3 d-flex align-items-end gap-3 pb-2">

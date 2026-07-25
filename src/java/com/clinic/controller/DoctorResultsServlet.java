@@ -3,6 +3,7 @@ package com.clinic.controller;
 import com.clinic.config.DatabaseConfig;
 import com.clinic.model.User;
 import com.clinic.service.UltrasoundOrderService;
+import com.clinic.dao.DoctorDAO;
 import com.clinic.dao.MedicalRecordDAO;
 import com.clinic.dao.UltrasoundOrderDAO;
 import com.clinic.model.UltrasoundWaitingPatient;
@@ -25,6 +26,8 @@ import java.util.Map;
  */
 @WebServlet("/doctor/results")
 public class DoctorResultsServlet extends HttpServlet {
+
+    private final DoctorDAO doctorDAO = new DoctorDAO();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
@@ -53,7 +56,7 @@ public class DoctorResultsServlet extends HttpServlet {
         }
 
         // IDOR Check
-        Integer doctorId = getDoctorId(user.getId());
+        Integer doctorId = doctorDAO.getDoctorIdByUserId(user.getId());
         if (doctorId == null) {
             resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Tài khoản chưa liên kết hồ sơ bác sĩ.");
             return;
@@ -125,7 +128,7 @@ public class DoctorResultsServlet extends HttpServlet {
         }
 
         // IDOR Check
-        Integer doctorId = getDoctorId(user.getId());
+        Integer doctorId = doctorDAO.getDoctorIdByUserId(user.getId());
         if (doctorId == null) {
             resp.sendRedirect(req.getContextPath() + "/doctor/results?recordId=" + recordId + "&error=noDoctorProfile");
             return;
@@ -263,18 +266,5 @@ public class DoctorResultsServlet extends HttpServlet {
             System.err.println("[DoctorResultsServlet] Không thể đọc kết quả siêu âm: " + e.getMessage());
         }
         return list;
-    }
-
-    private Integer getDoctorId(int userId) {
-        try (Connection c = DatabaseConfig.getConnection();
-             PreparedStatement ps = c.prepareStatement("SELECT id FROM doctors WHERE user_id = ?")) {
-            ps.setInt(1, userId);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return rs.getInt("id");
-            }
-        } catch (Exception e) {
-            System.err.println("[DoctorResultsServlet] Không thể xác định hồ sơ bác sĩ: " + e.getMessage());
-        }
-        return null;
     }
 }

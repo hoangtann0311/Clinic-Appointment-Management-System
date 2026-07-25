@@ -283,9 +283,12 @@ body.admin-body { font-family: var(--font-body); background: var(--c-bg); color:
                         <c:when test="${moduleKey eq 'appointments'}"><c:set var="moduleName" value="Quản Lý Lịch Hẹn"/><c:set var="moduleIcon" value="bi-calendar-check-fill"/></c:when>
                         <c:when test="${moduleKey eq 'medical_records'}"><c:set var="moduleName" value="Quản Lý Bệnh Án"/><c:set var="moduleIcon" value="bi-file-medical-fill"/></c:when>
                         <c:when test="${moduleKey eq 'prescriptions'}"><c:set var="moduleName" value="Quản Lý Đơn Thuốc"/><c:set var="moduleIcon" value="bi-capsule"/></c:when>
+                        <c:when test="${moduleKey eq 'medicines' or moduleKey eq 'medicine'}"><c:set var="moduleName" value="Quản Lý Thuốc"/><c:set var="moduleIcon" value="bi-prescription2"/></c:when>
+                        <c:when test="${moduleKey eq 'schedules' or moduleKey eq 'schedule'}"><c:set var="moduleName" value="Quản Lý Lịch Trình"/><c:set var="moduleIcon" value="bi-calendar-week-fill"/></c:when>
+                        <c:when test="${moduleKey eq 'services' or moduleKey eq 'service'}"><c:set var="moduleName" value="Quản Lý Dịch Vụ"/><c:set var="moduleIcon" value="bi-clipboard2-pulse-fill"/></c:when>
                         <c:when test="${moduleKey eq 'ultrasound'}"><c:set var="moduleName" value="Siêu Âm"/><c:set var="moduleIcon" value="bi-soundwave"/></c:when>
                         <c:when test="${moduleKey eq 'payments'}"><c:set var="moduleName" value="Thanh Toán"/><c:set var="moduleIcon" value="bi-cash-coin"/></c:when>
-                        <c:when test="${moduleKey eq 'reports'}"><c:set var="moduleName" value="Báo Cáo & Thống Kê"/><c:set var="moduleIcon" value="bi-graph-up-arrow"/></c:when>
+                        <c:when test="${moduleKey eq 'reports'}"><c:set var="moduleName" value="Báo Cáo &amp; Thống Kê"/><c:set var="moduleIcon" value="bi-graph-up-arrow"/></c:when>
                         <c:when test="${moduleKey eq 'system'}"><c:set var="moduleName" value="Hệ Thống"/><c:set var="moduleIcon" value="bi-gear-fill"/></c:when>
                     </c:choose>
 

@@ -995,10 +995,10 @@ body.admin-body {
                                                     <span class="badge-role-tag badge-role-${recentRole}">
                                                         <c:choose>
                                                             <c:when test="${recentRole == 'admin'}">Quản trị viên</c:when>
-                                                            <c:when test="${recentRole == 'manager'}">Quản Lý</c:when>
-                                                            <c:when test="${recentRole == 'doctor'}">Bác Sĩ Lâm Sàng</c:when>
-                                                            <c:when test="${recentRole == 'staff'}">Lễ Tân</c:when>
-                                                            <c:when test="${recentRole == 'patient'}">Bệnh Nhân</c:when>
+                                                            <c:when test="${recentRole == 'manager'}">Quản lý</c:when>
+                                                            <c:when test="${recentRole == 'doctor'}">Bác sĩ lâm sàng</c:when>
+                                                            <c:when test="${recentRole == 'staff'}">Nhân viên lễ tân</c:when>
+                                                            <c:when test="${recentRole == 'patient'}">Bệnh nhân</c:when>
                                                             <c:when test="${recentRole == 'sonographer'}">Bác sĩ siêu âm</c:when>
                                                             <c:otherwise>${ru.roleName}</c:otherwise>
                                                         </c:choose>

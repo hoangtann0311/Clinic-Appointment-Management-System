@@ -2,6 +2,7 @@ package com.clinic.controller;
 
 import com.clinic.config.DatabaseConfig;
 import com.clinic.dao.AppointmentDAO;
+import com.clinic.dao.DoctorDAO;
 import com.clinic.dao.InvoiceDAO;
 import com.clinic.dao.MedicalRecordDAO;
 import com.clinic.dao.PrescriptionDAO;
@@ -41,6 +42,7 @@ public class MedicalRecordServlet extends HttpServlet {
     private final PrescriptionDAO prescriptionDAO = new PrescriptionDAO();
     private final ServiceDAO serviceDAO = new ServiceDAO();
     private final InvoiceDAO invoiceDAO = new InvoiceDAO();
+    private final DoctorDAO  doctorDAO  = new DoctorDAO();
 
     // ── GET ─────────────────────────────────────────────────────────────────
 
@@ -49,7 +51,7 @@ public class MedicalRecordServlet extends HttpServlet {
             throws ServletException, IOException {
 
         User user = authenticate(req, resp); if (user == null) return;
-        Integer doctorId = getDoctorId(user.getId());
+        Integer doctorId = doctorDAO.getDoctorIdByUserId(user.getId());
         if (doctorId == null) { error(req, resp, "Tài khoản chưa liên kết hồ sơ bác sĩ."); return; }
 
         String apptIdParam = req.getParameter("apptId");
@@ -90,7 +92,7 @@ public class MedicalRecordServlet extends HttpServlet {
             throws ServletException, IOException {
 
         User user = authenticate(req, resp); if (user == null) return;
-        Integer doctorId = getDoctorId(user.getId());
+        Integer doctorId = doctorDAO.getDoctorIdByUserId(user.getId());
         if (doctorId == null) { error(req, resp, "Tài khoản chưa liên kết hồ sơ bác sĩ."); return; }
 
         String apptIdStr   = req.getParameter("appointmentId");
@@ -541,7 +543,7 @@ public class MedicalRecordServlet extends HttpServlet {
                               int apptId, MedicalRecord formRecord, List<PrescriptionItem> items, String msg)
             throws ServletException, IOException {
         User user = (User) req.getSession().getAttribute("user");
-        Integer doctorId = getDoctorId(user != null ? user.getId() : 0);
+        Integer doctorId = (user != null) ? doctorDAO.getDoctorIdByUserId(user.getId()) : null;
         boolean canEditRecord = doctorId != null && new AppointmentDAO().isConsultationInProgress(apptId, doctorId);
 
         MedicalRecord recordToRender = formRecord;
@@ -619,16 +621,6 @@ public class MedicalRecordServlet extends HttpServlet {
         if (errorMsg != null) {
             req.setAttribute("errorMessage", errorMsg);
         }
-    }
-
-    private Integer getDoctorId(int userId) {
-        try (Connection c = DatabaseConfig.getConnection();
-             PreparedStatement ps = c.prepareStatement("SELECT id FROM doctors WHERE user_id = ?")) {
-            ps.setInt(1, userId);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) return rs.getInt("id");
-        } catch (Exception e) { e.printStackTrace(); }
-        return null;
     }
 
     private MedicalRecord loadAppointmentInfo(int apptId) {

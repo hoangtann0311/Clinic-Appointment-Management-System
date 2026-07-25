@@ -329,9 +329,9 @@ public final class AuthorizationConfig {
     public static String getRoleDisplayName(int roleId) {
         return switch (roleId) {
             case ROLE_ADMIN       -> "Quản trị viên";
-            case ROLE_DOCTOR      -> "Bác sĩ";
+            case ROLE_DOCTOR      -> "Bác sĩ lâm sàng";
             case ROLE_MANAGER     -> "Quản lý";
-            case ROLE_STAFF       -> "Nhân viên";
+            case ROLE_STAFF       -> "Nhân viên lễ tân";
             case ROLE_PATIENT     -> "Bệnh nhân";
             case ROLE_SONOGRAPHER -> "Bác sĩ siêu âm";
             default               -> "Không rõ (#" + roleId + ")";
