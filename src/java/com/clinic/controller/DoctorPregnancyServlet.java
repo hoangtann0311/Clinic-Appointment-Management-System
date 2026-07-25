@@ -29,36 +29,41 @@ import java.util.List;
 @WebServlet("/doctor/pregnancy")
 public class DoctorPregnancyServlet extends HttpServlet {
 
-    private final DoctorDAO doctorDAO = new DoctorDAO();
-
     private final PregnancyDAO pregnancyDAO = new PregnancyDAO();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
 
-        User user = currentUser(req, resp);
-        if (user == null) return;
-        Integer doctorId = doctorDAO.getDoctorIdByUserId(user.getId());
-        if (doctorId == null) {
-            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Tài khoản chưa liên kết hồ sơ bác sĩ.");
-            return;
+        try {
+            User user = currentUser(req, resp);
+            if (user == null) return;
+            Integer doctorId = DoctorDAO.getDoctorIdByUserId(user.getId());
+            if (doctorId == null) {
+                resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Tài khoản chưa liên kết hồ sơ bác sĩ.");
+                return;
+            }
+
+            String idStr     = req.getParameter("id");
+            String apptIdStr = req.getParameter("apptId");
+
+            if (idStr != null && !idStr.isBlank()) {
+                showDetail(req, resp, user, doctorId, idStr);
+                return;
+            }
+
+            if (apptIdStr != null && !apptIdStr.isBlank()) {
+                showCreateForApptOrRedirect(req, resp, user, doctorId, apptIdStr);
+                return;
+            }
+
+            resp.sendRedirect(req.getContextPath() + "/doctor/dashboard");
+        } catch (Exception ex) {
+            System.err.println("[DoctorPregnancyServlet] doGet ERROR: " + ex.getMessage());
+            ex.printStackTrace();
+            req.setAttribute("errorMessage", "Không thể tải trang. Vui lòng thử lại sau.");
+            req.getRequestDispatcher("/views/doctors/pregnancy_detail.jsp").forward(req, resp);
         }
-
-        String idStr     = req.getParameter("id");
-        String apptIdStr = req.getParameter("apptId");
-
-        if (idStr != null && !idStr.isBlank()) {
-            showDetail(req, resp, user, doctorId, idStr);
-            return;
-        }
-
-        if (apptIdStr != null && !apptIdStr.isBlank()) {
-            showCreateForApptOrRedirect(req, resp, user, doctorId, apptIdStr);
-            return;
-        }
-
-        resp.sendRedirect(req.getContextPath() + "/doctor/dashboard");
     }
 
     @Override
@@ -67,7 +72,7 @@ public class DoctorPregnancyServlet extends HttpServlet {
 
         User user = currentUser(req, resp);
         if (user == null) return;
-        Integer doctorId = doctorDAO.getDoctorIdByUserId(user.getId());
+        Integer doctorId = DoctorDAO.getDoctorIdByUserId(user.getId());
         if (doctorId == null) {
             resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Tài khoản chưa liên kết hồ sơ bác sĩ.");
             return;
@@ -233,8 +238,11 @@ public class DoctorPregnancyServlet extends HttpServlet {
 
             String fetusCountStr = req.getParameter("fetusCount");
             if (fetusCountStr != null && !fetusCountStr.isBlank()) {
-                try { p.setFetusCount(Integer.parseInt(fetusCountStr)); }
-                catch (NumberFormatException ignored) { p.setFetusCount(1); }
+                try {
+                    int fc = Integer.parseInt(fetusCountStr);
+                    if (fc < 1 || fc > 5) fc = 1;
+                    p.setFetusCount(fc);
+                } catch (NumberFormatException ignored) { p.setFetusCount(1); }
             } else {
                 p.setFetusCount(1);
             }
@@ -251,7 +259,7 @@ public class DoctorPregnancyServlet extends HttpServlet {
 
         pregnancyDAO.linkAppointment(apptId, pregnancyId);
 
-        resp.sendRedirect(req.getContextPath() + "/doctor/pregnancy?id=" + pregnancyId);
+        resp.sendRedirect(req.getContextPath() + "/doctor/pregnancy?id=" + pregnancyId + "&success=created");
     }
 
     private void handleUpdate(HttpServletRequest req, HttpServletResponse resp, int doctorId)
@@ -282,6 +290,7 @@ public class DoctorPregnancyServlet extends HttpServlet {
         if (edd != null) p.setEstimatedDueDate(edd);
 
         LocalDate add = parseDateOrNull(req.getParameter("actualDeliveryDate"));
+        if (add != null && add.isAfter(LocalDate.now())) add = null; // không cho phép ngày sinh trong tương lai
         p.setActualDeliveryDate(add);
 
         String status = req.getParameter("pregnancyStatus");
@@ -289,13 +298,17 @@ public class DoctorPregnancyServlet extends HttpServlet {
 
         String fetusCountStr = req.getParameter("fetusCount");
         if (fetusCountStr != null && !fetusCountStr.isBlank()) {
-            try { p.setFetusCount(Integer.parseInt(fetusCountStr)); } catch (NumberFormatException ignored) {}
+            try {
+                int fc = Integer.parseInt(fetusCountStr);
+                if (fc < 1 || fc > 5) fc = 1;
+                p.setFetusCount(fc);
+            } catch (NumberFormatException ignored) { p.setFetusCount(1); }
         }
 
         p.setNotes(req.getParameter("notes"));
 
         pregnancyDAO.update(p);
-        resp.sendRedirect(req.getContextPath() + "/doctor/pregnancy?id=" + pregnancyId);
+        resp.sendRedirect(req.getContextPath() + "/doctor/pregnancy?id=" + pregnancyId + "&success=updated");
     }
 
     // ────────────────────────────────────────────────────────────────────────

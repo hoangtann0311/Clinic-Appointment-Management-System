@@ -39,16 +39,23 @@ public class StaffPatientLookupServlet extends HttpServlet {
             return;
         }
 
-        Patient patient = receptionService.findPatientByPhone(phone);
-        if (patient == null) {
-            response.getWriter().write("{\"exists\":false}");
-            return;
-        }
+        try {
+            Patient patient = receptionService.findPatientByPhone(phone);
+            if (patient == null) {
+                response.getWriter().write("{\"exists\":false}");
+                return;
+            }
 
-        String fullName = escapeJson(patient.getFullName());
-        String dateOfBirth = patient.getDateOfBirth() == null ? "" : patient.getDateOfBirth().toString();
-        response.getWriter().write("{\"exists\":true,\"fullName\":\"" + fullName
-                + "\",\"dateOfBirth\":\"" + dateOfBirth + "\"}");
+            String fullName = escapeJson(patient.getFullName());
+            String dateOfBirth = patient.getDateOfBirth() == null ? "" : patient.getDateOfBirth().toString();
+            response.getWriter().write("{\"exists\":true,\"fullName\":\"" + fullName
+                    + "\",\"dateOfBirth\":\"" + dateOfBirth + "\"}");
+        } catch (Exception ex) {
+            System.err.println("[StaffPatientLookupServlet] doGet ERROR: " + ex.getMessage());
+            ex.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.getWriter().write("{\"error\":\"internal_error\"}");
+        }
     }
 
     private static String escapeJson(String value) {

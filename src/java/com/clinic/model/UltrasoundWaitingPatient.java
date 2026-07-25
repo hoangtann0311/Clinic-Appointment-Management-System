@@ -35,7 +35,7 @@ public class UltrasoundWaitingPatient implements Serializable {
     private BigDecimal price;
     private String doctorName;
     private String symptoms;
-    private boolean emergency;
+    private boolean priority;
     private boolean requiresFasting;
     private boolean requiresFullBladder;
     private String status;
@@ -153,12 +153,20 @@ public class UltrasoundWaitingPatient implements Serializable {
         this.symptoms = symptoms;
     }
 
-    public boolean isEmergency() {
-        return emergency;
+    public boolean isPriority() {
+        return priority;
     }
 
-    public void setEmergency(boolean emergency) {
-        this.emergency = emergency;
+    public boolean isEmergency() {
+        return priority;
+    }
+
+    public boolean getEmergency() {
+        return priority;
+    }
+
+    public void setPriority(boolean priority) {
+        this.priority = priority;
     }
 
     public boolean isRequiresFasting() {

@@ -152,7 +152,7 @@
 
     <%-- Alert messages --%>
     <c:if test="${not empty success}">
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <div class="alert alert-success alert-dismissible fade show" data-cams-toast role="alert">
             <i class="bi bi-check-circle-fill me-1"></i>
             <c:choose>
                 <c:when test="${success eq 'created'}">Đã tạo dịch vụ thành công!</c:when>
@@ -163,7 +163,7 @@
         </div>
     </c:if>
     <c:if test="${not empty error}">
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <div class="alert alert-danger alert-dismissible fade show" data-cams-toast role="alert">
             <i class="bi bi-exclamation-triangle-fill me-1"></i>${error}
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>

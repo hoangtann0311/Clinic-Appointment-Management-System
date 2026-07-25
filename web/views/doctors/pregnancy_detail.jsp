@@ -34,6 +34,30 @@
     </div>
 </div>
 
+<c:if test="${param.success == 'created'}">
+    <div class="alert alert-success alert-dismissible fade show rounded-3 mb-4" data-cams-toast role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>Đã tạo hồ sơ thai kỳ thành công.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+</c:if>
+<c:if test="${param.success == 'updated'}">
+    <div class="alert alert-success alert-dismissible fade show rounded-3 mb-4" data-cams-toast role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>Đã cập nhật thông tin thai kỳ.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+</c:if>
+<c:if test="${param.success == 'checkupRecorded'}">
+    <div class="alert alert-success alert-dismissible fade show rounded-3 mb-4" data-cams-toast role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>Đã ghi nhận lần khám thai mới.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+</c:if>
+<c:if test="${not empty param.error}">
+    <div class="alert alert-danger alert-dismissible fade show rounded-3 mb-4" data-cams-toast role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i><c:out value="${param.error}"/>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+</c:if>
 <c:if test="${not empty errorMessage}">
     <div class="alert alert-danger rounded-3 mb-4">
         <i class="bi bi-exclamation-triangle me-2"></i>${errorMessage}

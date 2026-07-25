@@ -16,7 +16,7 @@
 
 <!-- Alerts -->
 <c:if test="${not empty success}">
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
+    <div class="alert alert-success alert-dismissible fade show" data-cams-toast role="alert">
         <i class="bi bi-check-circle-fill me-2"></i>
         <c:choose>
             <c:when test="${success == 'completed'}">Đã xác nhận hoàn thành ca siêu âm!</c:when>
@@ -26,7 +26,7 @@
     </div>
 </c:if>
 <c:if test="${not empty error}">
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <div class="alert alert-danger alert-dismissible fade show" data-cams-toast role="alert">
         <i class="bi bi-exclamation-triangle-fill me-2"></i>
         <c:out value="${error}"/>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -51,8 +51,8 @@
                     <option value="Pending" ${statusParam == 'Pending' ? 'selected' : ''}>Chờ siêu âm</option>
                     <option value="InProgress" ${statusParam == 'InProgress' ? 'selected' : ''}>Đang siêu âm</option>
                     <option value="Uploaded" ${statusParam == 'Uploaded' ? 'selected' : ''}>Đã tải ảnh</option>
-                    <option value="Completed" ${statusParam == 'Completed' ? 'selected' : ''}>Đã hoàn thành</option>
-                    <option value="confirmed" ${statusParam == 'confirmed' ? 'selected' : ''}>Đã xác nhận</option>
+                    <option value="Completed" ${statusParam == 'Completed' ? 'selected' : ''}>Đã hoàn thành / Đã xác nhận</option>
+                    <option value="confirmed" ${statusParam == 'confirmed' ? 'selected' : ''}>Đã xác nhận (Bác sĩ LS)</option>
                 </select>
             </div>
             <div class="col-md-2">
@@ -135,8 +135,8 @@
                                         <span>BS. <c:out value="${order.doctorName}"/></span>
                                     </td>
                                     <td>
-                                        <span>${fn:substring(order.createdAt, 11, 16)}</span><br>
-                                        <small class="text-muted">${fn:substring(order.createdAt, 0, 10)}</small>
+                                        <span>${not empty order.createdAt ? fn:substring(order.createdAt, 11, 16) : '—'}</span><br>
+                                        <small class="text-muted">${not empty order.createdAt ? fn:substring(order.createdAt, 0, 10) : '—'}</small>
                                     </td>
                                     <td>
                                         <c:choose>

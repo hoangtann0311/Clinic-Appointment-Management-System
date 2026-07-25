@@ -60,64 +60,71 @@ public class DoctorScheduleServlet extends HttpServlet {
             resp.sendRedirect(req.getContextPath() + "/login");
             return;
         }
-        User user = (User) session.getAttribute("user");
+        try {
+            User user = (User) session.getAttribute("user");
 
-        // Tìm doctor record của user đang đăng nhập
-        Doctor doctor = doctorDAO.findByUserId(user.getId());
-        if (doctor == null) {
-            req.setAttribute("errorMessage", "Tài khoản chưa được liên kết hồ sơ bác sĩ.");
+            // Tìm doctor record của user đang đăng nhập
+            Doctor doctor = doctorDAO.findByUserId(user.getId());
+            if (doctor == null) {
+                req.setAttribute("errorMessage", "Tài khoản chưa được liên kết hồ sơ bác sĩ.");
+                req.getRequestDispatcher("/views/doctors/schedule.jsp").forward(req, resp);
+                return;
+            }
+
+            // Tham số phân trang + filter
+            int page = parseInt(req.getParameter("page"), 1);
+            String statusFilter = req.getParameter("status");
+            String dateFromStr  = req.getParameter("dateFrom");
+            String dateToStr    = req.getParameter("dateTo");
+
+            Date dateFrom = parseDate(dateFromStr);
+            Date dateTo   = parseDate(dateToStr);
+
+            int offset = (page - 1) * PAGE_SIZE;
+
+            List<DoctorSchedule> schedules = scheduleDAO.findAll(
+                    offset, PAGE_SIZE, statusFilter, doctor.getId(), dateFrom, dateTo);
+            int total      = scheduleDAO.countAll(statusFilter, doctor.getId(), dateFrom, dateTo);
+            int totalPages = (int) Math.ceil((double) total / PAGE_SIZE);
+
+            // Toàn bộ lịch (không phân trang) để render calendar view
+            List<DoctorSchedule> allSchedules = scheduleDAO.findAll(
+                    0, Integer.MAX_VALUE, null, doctor.getId(), null, null);
+
+            // KPI counts cho bác sĩ này
+            int pendingCount  = countByDoctorAndStatus(doctor.getId(), ScheduleStatus.PENDING);
+            int approvedCount = countByDoctorAndStatus(doctor.getId(), ScheduleStatus.APPROVED);
+            int cancelledCount= countByDoctorAndStatus(doctor.getId(), ScheduleStatus.CANCELLED);
+
+            // Ngày tối thiểu để tạo lịch (ngày mai)
+            String minDate = LocalDate.now().plusDays(1).toString();
+
+            req.setAttribute("doctor",        doctor);
+            req.setAttribute("schedules",     schedules);
+            req.setAttribute("allSchedules",  allSchedules);
+            req.setAttribute("currentPage",   page);
+            req.setAttribute("totalPages",    totalPages);
+            req.setAttribute("totalSchedules",total);
+            req.setAttribute("pageSize",      PAGE_SIZE);
+            req.setAttribute("statusFilter",  statusFilter);
+            req.setAttribute("dateFromFilter",dateFromStr);
+            req.setAttribute("dateToFilter",  dateToStr);
+            req.setAttribute("pendingCount",  pendingCount);
+            req.setAttribute("approvedCount", approvedCount);
+            req.setAttribute("cancelledCount",cancelledCount);
+            req.setAttribute("minDate",       minDate);
+
+            // Flash messages từ redirect
+            req.setAttribute("success", req.getParameter("success"));
+            req.setAttribute("error",   req.getParameter("error"));
+
             req.getRequestDispatcher("/views/doctors/schedule.jsp").forward(req, resp);
-            return;
+        } catch (Exception ex) {
+            System.err.println("[DoctorScheduleServlet] doGet ERROR: " + ex.getMessage());
+            ex.printStackTrace();
+            req.setAttribute("errorMessage", "Không thể tải trang. Vui lòng thử lại sau.");
+            req.getRequestDispatcher("/views/doctors/schedule.jsp").forward(req, resp);
         }
-
-        // Tham số phân trang + filter
-        int page = parseInt(req.getParameter("page"), 1);
-        String statusFilter = req.getParameter("status");
-        String dateFromStr  = req.getParameter("dateFrom");
-        String dateToStr    = req.getParameter("dateTo");
-
-        Date dateFrom = parseDate(dateFromStr);
-        Date dateTo   = parseDate(dateToStr);
-
-        int offset = (page - 1) * PAGE_SIZE;
-
-        List<DoctorSchedule> schedules = scheduleDAO.findAll(
-                offset, PAGE_SIZE, statusFilter, doctor.getId(), dateFrom, dateTo);
-        int total      = scheduleDAO.countAll(statusFilter, doctor.getId(), dateFrom, dateTo);
-        int totalPages = (int) Math.ceil((double) total / PAGE_SIZE);
-
-        // Toàn bộ lịch (không phân trang) để render calendar view
-        List<DoctorSchedule> allSchedules = scheduleDAO.findAll(
-                0, Integer.MAX_VALUE, null, doctor.getId(), null, null);
-
-        // KPI counts cho bác sĩ này
-        int pendingCount  = countByDoctorAndStatus(doctor.getId(), ScheduleStatus.PENDING);
-        int approvedCount = countByDoctorAndStatus(doctor.getId(), ScheduleStatus.APPROVED);
-        int cancelledCount= countByDoctorAndStatus(doctor.getId(), ScheduleStatus.CANCELLED);
-
-        // Ngày tối thiểu để tạo lịch (ngày mai)
-        String minDate = LocalDate.now().plusDays(1).toString();
-
-        req.setAttribute("doctor",        doctor);
-        req.setAttribute("schedules",     schedules);
-        req.setAttribute("allSchedules",  allSchedules);
-        req.setAttribute("currentPage",   page);
-        req.setAttribute("totalPages",    totalPages);
-        req.setAttribute("totalSchedules",total);
-        req.setAttribute("pageSize",      PAGE_SIZE);
-        req.setAttribute("statusFilter",  statusFilter);
-        req.setAttribute("dateFromFilter",dateFromStr);
-        req.setAttribute("dateToFilter",  dateToStr);
-        req.setAttribute("pendingCount",  pendingCount);
-        req.setAttribute("approvedCount", approvedCount);
-        req.setAttribute("cancelledCount",cancelledCount);
-        req.setAttribute("minDate",       minDate);
-
-        // Flash messages từ redirect
-        req.setAttribute("success", req.getParameter("success"));
-        req.setAttribute("error",   req.getParameter("error"));
-
-        req.getRequestDispatcher("/views/doctors/schedule.jsp").forward(req, resp);
     }
 
     // ── POST ─────────────────────────────────────────────────────────────────

@@ -90,8 +90,18 @@ public class TimeSlot implements Serializable {
      * Mọi trạng thái khác (HELD, WAITING_VERIFICATION, BOOKED...) đều hiển thị
      * nhưng bị khóa, không cho chọn — tránh gây hiểu lầm "mất khung giờ do lỗi hệ thống".
      */
+    public boolean isSelectable(boolean isStaff) {
+        if (status != SlotStatus.AVAILABLE || isPast()) return false;
+        if (isStaff) return true;
+        java.time.LocalDate localDate = workDate.toLocalDate();
+        java.time.LocalTime localTime = startTime.toLocalTime();
+        java.time.LocalDateTime slotDateTime = java.time.LocalDateTime.of(localDate, localTime);
+        // Bệnh nhân không thể chọn slot nếu còn dưới 30 phút
+        return !java.time.LocalDateTime.now().plusMinutes(30).isAfter(slotDateTime);
+    }
+
     public boolean isSelectable() {
-        return status == SlotStatus.AVAILABLE && !isPast();
+        return isSelectable(false);
     }
 
     /**

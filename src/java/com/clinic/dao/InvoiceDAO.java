@@ -12,13 +12,17 @@ import java.util.List;
  */
 public class InvoiceDAO {
 
-    private static final String BASE_SELECT = 
+    private static final String BASE_SELECT =
         "SELECT i.*, "
         + "  COALESCE(u_pat.full_name, pt.full_name) AS patient_name, "
         + "  pt.phone_number AS patient_phone, "
         + "  doc.full_name AS doctor_name, "
         + "  CONVERT(varchar, a.appointment_date, 23) AS appointment_date, "
-        + "  COALESCE(s.service_name, (SELECT STRING_AGG(sa.service_name, N', ') FROM appointment_services aps JOIN services sa ON sa.id = aps.service_id WHERE aps.appointment_id = a.id), N'Khám thai định kỳ') AS service_name, "
+        + "  CASE WHEN i.invoice_type = 'POST_EXAM' THEN "
+        + "    (SELECT STRING_AGG(s_uo.service_name, N', ') FROM test_orders t_o JOIN services s_uo ON s_uo.id = t_o.service_id JOIN medical_records mr ON mr.id = t_o.medical_record_id WHERE mr.appointment_id = a.id) "
+        + "  WHEN i.invoice_type = 'PRESCRIPTION' THEN N'Đơn thuốc' "
+        + "  ELSE COALESCE(s.service_name, (SELECT STRING_AGG(sa.service_name, N', ') FROM appointment_services aps JOIN services sa ON sa.id = aps.service_id WHERE aps.appointment_id = a.id), N'Khám lâm sàng') "
+        + "  END AS service_name, "
         + "  u_staff.full_name AS confirmed_by_name "
         + "FROM invoices i "
         + "LEFT JOIN appointments a ON i.appointment_id = a.id "

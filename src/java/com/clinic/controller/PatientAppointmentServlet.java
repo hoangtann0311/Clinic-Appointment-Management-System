@@ -38,69 +38,76 @@ public class PatientAppointmentServlet extends HttpServlet {
         User user = requireLogin(request, response);
         if (user == null) return;
 
-        List<Appointment> appointments = bookingService.getMyAppointments(user.getId());
-        request.setAttribute("appointments", appointments);
+        try {
+            List<Appointment> appointments = bookingService.getMyAppointments(user.getId());
+            request.setAttribute("appointments", appointments);
 
-        // Batch load invoices + prescription status — 2 queries thay vì N*3 queries
-        com.clinic.dao.InvoiceDAO invoiceDAO = new com.clinic.dao.InvoiceDAO();
-        com.clinic.dao.PrescriptionDAO prescriptionDAO = new com.clinic.dao.PrescriptionDAO();
+            // Batch load invoices + prescription status — 2 queries thay vì N*3 queries
+            com.clinic.dao.InvoiceDAO invoiceDAO = new com.clinic.dao.InvoiceDAO();
+            com.clinic.dao.PrescriptionDAO prescriptionDAO = new com.clinic.dao.PrescriptionDAO();
 
-        java.util.List<Integer> apptIds = new java.util.ArrayList<>();
-        for (Appointment apt : appointments) apptIds.add(apt.getId());
+            java.util.List<Integer> apptIds = new java.util.ArrayList<>();
+            for (Appointment apt : appointments) apptIds.add(apt.getId());
 
-        // 1 query: tất cả POST_EXAM + PRESCRIPTION invoices
-        java.util.Map<Integer, java.util.Map<String, Invoice>> invoiceMap =
-                invoiceDAO.getPostExamAndPrescriptionInvoices(apptIds);
+            // 1 query: tất cả POST_EXAM + PRESCRIPTION invoices
+            java.util.Map<Integer, java.util.Map<String, Invoice>> invoiceMap =
+                    invoiceDAO.getPostExamAndPrescriptionInvoices(apptIds);
 
-        Map<Integer, Invoice> postExamInvoices = new HashMap<>();
-        Map<Integer, Invoice> prescriptionInvoices = new HashMap<>();
-        for (Appointment apt : appointments) {
-            java.util.Map<String, Invoice> map = invoiceMap.getOrDefault(apt.getId(), java.util.Collections.emptyMap());
-            Invoice postInv = map.get("POST_EXAM");
-            if (postInv != null && !"Paid".equalsIgnoreCase(postInv.getStatus()) && !"PendingConfirmation".equalsIgnoreCase(postInv.getStatus())) {
-                postExamInvoices.put(apt.getId(), postInv);
+            Map<Integer, Invoice> postExamInvoices = new HashMap<>();
+            Map<Integer, Invoice> prescriptionInvoices = new HashMap<>();
+            for (Appointment apt : appointments) {
+                java.util.Map<String, Invoice> map = invoiceMap.getOrDefault(apt.getId(), java.util.Collections.emptyMap());
+                Invoice postInv = map.get("POST_EXAM");
+                if (postInv != null && !"Paid".equalsIgnoreCase(postInv.getStatus()) && !"PendingConfirmation".equalsIgnoreCase(postInv.getStatus())) {
+                    postExamInvoices.put(apt.getId(), postInv);
+                }
+                Invoice rxInv = map.get("PRESCRIPTION");
+                if (rxInv != null && !"Paid".equalsIgnoreCase(rxInv.getStatus()) && !"PendingConfirmation".equalsIgnoreCase(rxInv.getStatus())) {
+                    prescriptionInvoices.put(apt.getId(), rxInv);
+                }
             }
-            Invoice rxInv = map.get("PRESCRIPTION");
-            if (rxInv != null && !"Paid".equalsIgnoreCase(rxInv.getStatus()) && !"PendingConfirmation".equalsIgnoreCase(rxInv.getStatus())) {
-                prescriptionInvoices.put(apt.getId(), rxInv);
+
+            // 1 query: tất cả prescription purchase status
+            Map<Integer, Boolean> prescriptionPurchaseResolved = prescriptionDAO.batchIsPurchaseResolved(apptIds);
+
+            // 1 query: đã đánh giá chưa (để ẩn nút sau khi đánh giá)
+            Map<Integer, Boolean> hasReviewed = new com.clinic.dao.ReviewDAO().batchHasReviewed(apptIds);
+
+            request.setAttribute("postExamInvoices", postExamInvoices);
+            request.setAttribute("prescriptionInvoices", prescriptionInvoices);
+            request.setAttribute("prescriptionPurchaseResolved", prescriptionPurchaseResolved);
+            request.setAttribute("hasReviewed", hasReviewed);
+
+            // Pending prescription choices (vẫn 1 query như cũ)
+            Map<Integer, Prescription> pendingPrescriptionChoices = new HashMap<>();
+            for (Prescription prescription : prescriptionDAO.getPatientPurchaseChoices(user.getId())) {
+                if ("Pending".equalsIgnoreCase(prescription.getPurchaseDecision())) {
+                    pendingPrescriptionChoices.put(prescription.getAppointmentId(), prescription);
+                }
             }
-        }
+            request.setAttribute("pendingPrescriptionChoices", pendingPrescriptionChoices);
 
-        // 1 query: tất cả prescription purchase status
-        Map<Integer, Boolean> prescriptionPurchaseResolved = prescriptionDAO.batchIsPurchaseResolved(apptIds);
-
-        // 1 query: đã đánh giá chưa (để ẩn nút sau khi đánh giá)
-        Map<Integer, Boolean> hasReviewed = new com.clinic.dao.ReviewDAO().batchHasReviewed(apptIds);
-
-        request.setAttribute("postExamInvoices", postExamInvoices);
-        request.setAttribute("prescriptionInvoices", prescriptionInvoices);
-        request.setAttribute("prescriptionPurchaseResolved", prescriptionPurchaseResolved);
-        request.setAttribute("hasReviewed", hasReviewed);
-
-        // Pending prescription choices (vẫn 1 query như cũ)
-        Map<Integer, Prescription> pendingPrescriptionChoices = new HashMap<>();
-        for (Prescription prescription : prescriptionDAO.getPatientPurchaseChoices(user.getId())) {
-            if ("Pending".equalsIgnoreCase(prescription.getPurchaseDecision())) {
-                pendingPrescriptionChoices.put(prescription.getAppointmentId(), prescription);
+            HttpSession session = request.getSession(false);
+            if (session != null && session.getAttribute("bookingSuccess") != null) {
+                request.setAttribute("bookingSuccess", session.getAttribute("bookingSuccess"));
+                session.removeAttribute("bookingSuccess");
             }
-        }
-        request.setAttribute("pendingPrescriptionChoices", pendingPrescriptionChoices);
+            if (session != null && session.getAttribute("bookingError") != null) {
+                request.setAttribute("bookingError", session.getAttribute("bookingError"));
+                session.removeAttribute("bookingError");
+            }
+            String errorCode = request.getParameter("bookingError");
+            if (request.getAttribute("bookingError") == null && errorCode != null) {
+                request.setAttribute("bookingError", mapErrorCode(errorCode));
+            }
 
-        HttpSession session = request.getSession(false);
-        if (session != null && session.getAttribute("bookingSuccess") != null) {
-            request.setAttribute("bookingSuccess", session.getAttribute("bookingSuccess"));
-            session.removeAttribute("bookingSuccess");
+            request.getRequestDispatcher("/views/patient/appointments.jsp").forward(request, response);
+        } catch (Exception ex) {
+            System.err.println("[PatientAppointmentServlet] doGet ERROR: " + ex.getMessage());
+            ex.printStackTrace();
+            request.setAttribute("errorMessage", "Không thể tải trang. Vui lòng thử lại sau.");
+            request.getRequestDispatcher("/views/patient/appointments.jsp").forward(request, response);
         }
-        if (session != null && session.getAttribute("bookingError") != null) {
-            request.setAttribute("bookingError", session.getAttribute("bookingError"));
-            session.removeAttribute("bookingError");
-        }
-        String errorCode = request.getParameter("bookingError");
-        if (request.getAttribute("bookingError") == null && errorCode != null) {
-            request.setAttribute("bookingError", mapErrorCode(errorCode));
-        }
-
-        request.getRequestDispatcher("/views/patient/appointments.jsp").forward(request, response);
     }
 
     private final com.clinic.dao.AppointmentDAO appointmentDAO = new com.clinic.dao.AppointmentDAO();

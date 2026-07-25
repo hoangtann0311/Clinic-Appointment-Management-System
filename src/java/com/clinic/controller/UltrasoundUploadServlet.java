@@ -75,15 +75,10 @@ public class UltrasoundUploadServlet extends HttpServlet {
             return;
         }
 
-        if (!orderService.getUltrasoundImages(orderId).isEmpty()) {
-            response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId
-                    + "&error=" + java.net.URLEncoder.encode("Mỗi chỉ định chỉ được lưu một ảnh siêu âm.", "UTF-8"));
-            return;
-        }
-
-        if (!"InProgress".equalsIgnoreCase(order.getStatus())) {
+        String status = order.getStatus();
+        if (!"InProgress".equalsIgnoreCase(status) && !"Uploaded".equalsIgnoreCase(status)) {
             response.sendRedirect(request.getContextPath() + "/sonographer/detail?orderId=" + orderId 
-                    + "&error=" + java.net.URLEncoder.encode("Chỉ có thể tải một ảnh khi ca đang ở bước chụp ảnh.", "UTF-8"));
+                    + "&error=" + java.net.URLEncoder.encode("Không thể tải ảnh khi ca đã hoàn tất hoặc đã ký.", "UTF-8"));
             return;
         }
 
@@ -153,10 +148,11 @@ public class UltrasoundUploadServlet extends HttpServlet {
                     int naturalHeight = validated.height;
                     String contentType = validated.contentType;
 
-                    // Kiểm tra xem file ảnh trùng lặp đã được tải lên trước đó chưa (cùng tên và cùng dung lượng)
-                    boolean isDuplicate = false;
+                    // Nếu không phải thao tác thay thế ảnh, mới kiểm tra trùng lặp tệp
                     java.util.List<com.clinic.model.UltrasoundImage> existingImages = orderService.getUltrasoundImages(orderId);
-                    if (existingImages != null) {
+                    boolean isReplaceMode = existingImages != null && !existingImages.isEmpty();
+                    boolean isDuplicate = false;
+                    if (!isReplaceMode && existingImages != null) {
                         for (com.clinic.model.UltrasoundImage existing : existingImages) {
                             if (originalFileName.equalsIgnoreCase(existing.getOriginalFilename()) && part.getSize() == existing.getFileSize()) {
                                 isDuplicate = true;
@@ -209,6 +205,21 @@ public class UltrasoundUploadServlet extends HttpServlet {
                         }
                     }
 
+                    // Đồng thời lưu vào thư mục persistent (~/.ocss/ultrasound/) để sống sót qua redeploy
+                    try {
+                        String absDir = AppConfig.getUltrasoundAbsoluteDir();
+                        File absDirFile = new File(absDir);
+                        if (!absDirFile.exists()) absDirFile.mkdirs();
+                        File absTarget = new File(absDirFile, storedFileName);
+                        java.nio.file.Files.copy(
+                            java.nio.file.Paths.get(filePath),
+                            java.nio.file.Paths.get(absTarget.getAbsolutePath()),
+                            java.nio.file.StandardCopyOption.REPLACE_EXISTING
+                        );
+                    } catch (Exception e) {
+                        System.err.println("[UltrasoundUploadServlet] Không thể copy ảnh sang persistent storage: " + e.getMessage());
+                    }
+
                     // Lưu metadata vào DB
                     UltrasoundImage img = new UltrasoundImage();
                     img.setTestOrderId(orderId);
@@ -221,7 +232,10 @@ public class UltrasoundUploadServlet extends HttpServlet {
                     img.setImageWidth(naturalWidth);
                     img.setImageHeight(naturalHeight);
 
-                    if (!orderService.uploadUltrasoundImage(img)) {
+                    boolean saveOk = !orderService.getUltrasoundImages(orderId).isEmpty()
+                            ? orderService.replaceUltrasoundImage(img)
+                            : orderService.uploadUltrasoundImage(img);
+                    if (!saveOk) {
                         targetFile.delete();
                         if (sourceFilePath != null) {
                             try { java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(sourceFilePath)); }

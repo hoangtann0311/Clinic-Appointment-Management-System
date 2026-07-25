@@ -138,7 +138,7 @@
 
     <%-- Alerts --%>
     <c:if test="${not empty success}">
-        <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert" style="border-radius:var(--r-md); border-left: 4px solid #2e7d32;">
+        <div class="alert alert-success alert-dismissible fade show" data-cams-toast role="alert">
             <i class="bi bi-check-circle-fill me-2 fs-5"></i>
             <div>
                 <c:choose>
@@ -152,7 +152,7 @@
         </div>
     </c:if>
     <c:if test="${not empty error}">
-        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert" style="border-radius:var(--r-md); border-left: 4px solid #c62828;">
+        <div class="alert alert-danger alert-dismissible fade show" data-cams-toast role="alert">
             <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i><div>${error}</div>
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
@@ -184,8 +184,8 @@
             </div>
             <select name="active" class="form-select">
                 <option value="">Tất cả trạng thái</option>
-                <option value="1" ${activeFilter eq '1' ? 'selected' : ''}>🟢 Đang sử dụng</option>
-                <option value="0" ${activeFilter eq '0' ? 'selected' : ''}>⚫ Ngừng sử dụng</option>
+                <option value="1" ${activeFilter eq '1' ? 'selected' : ''}>Đang sử dụng</option>
+                <option value="0" ${activeFilter eq '0' ? 'selected' : ''}>Ngừng sử dụng</option>
             </select>
             <c:if test="${not empty categoryFilter}"><input type="hidden" name="category" value="${categoryFilter}"></c:if>
             <button type="submit" class="btn btn-primary-pink btn-sm"><i class="bi bi-funnel-fill me-1"></i>Lọc</button>
@@ -423,7 +423,7 @@
                     <div class="form-section-title"><i class="bi bi-info-circle me-1"></i>Thông tin cơ bản</div>
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">
-                            <label class="form-label fw-semibold small">Mã thuốc 🔒</label>
+                            <label class="form-label fw-semibold small">Mã thuốc <i class="bi bi-lock-fill text-muted"></i></label>
                             <input type="text" id="editMedicineCode"
                                    class="form-control form-control-sm text-uppercase" readonly disabled
                                    style="font-family:'Courier New',monospace;letter-spacing:0.05em;background:#f5f5f5;color:#757575;cursor:not-allowed;">

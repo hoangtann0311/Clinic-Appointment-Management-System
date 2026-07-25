@@ -393,7 +393,7 @@
 
     <%-- ===== ALERTS ===== --%>
     <c:if test="${not empty success}">
-        <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert" style="border-radius:var(--r-md); border-left: 4px solid #2e7d32;">
+        <div class="alert alert-success alert-dismissible fade show" data-cams-toast role="alert">
             <i class="bi bi-check-circle-fill me-2 fs-5"></i>
             <div>
                 <c:choose>
@@ -407,7 +407,7 @@
         </div>
     </c:if>
     <c:if test="${not empty error}">
-        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert" style="border-radius:var(--r-md); border-left: 4px solid #c62828;">
+        <div class="alert alert-danger alert-dismissible fade show" data-cams-toast role="alert">
             <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
             <div>${error}</div>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -447,8 +447,8 @@
             </div>
             <select name="active" class="form-select">
                 <option value="">Tất cả trạng thái</option>
-                <option value="1" ${activeFilter eq '1' ? 'selected' : ''}>🟢 Đang hoạt động</option>
-                <option value="0" ${activeFilter eq '0' ? 'selected' : ''}>⚫ Ngừng hoạt động</option>
+                <option value="1" ${activeFilter eq '1' ? 'selected' : ''}>Đang hoạt động</option>
+                <option value="0" ${activeFilter eq '0' ? 'selected' : ''}>Ngừng hoạt động</option>
             </select>
             <c:if test="${not empty categoryFilter}">
                 <input type="hidden" name="category" value="${categoryFilter}">
@@ -565,7 +565,7 @@
                                                 <i class="bi bi-eye-fill"></i>
                                             </a>
                                             <button class="action-btn"
-                                                    onclick="openEditModal('${svc.id}','${fn:escapeXml(svc.serviceCode)}','${fn:escapeXml(svc.serviceName)}','${fn:escapeXml(svc.description)}','${svc.price}','${svc.durationMins}','','${svc.categoryId}','${svc.active}')"
+                                                    onclick="openEditModal('${svc.id}','${fn:escapeXml(svc.serviceCode)}','${fn:escapeXml(svc.serviceName)}','${fn:escapeXml(svc.description)}','${svc.price}','${svc.durationMins}','${svc.requiresFasting}','${svc.requiresFullBladder}','${fn:escapeXml(svc.requiredRoomType)}','${fn:escapeXml(svc.allowedSpecialties)}','${svc.categoryId}','${svc.active}')"
                                                     title="Chỉnh sửa">
                                                 <i class="bi bi-pencil-square"></i>
                                             </button>
@@ -733,10 +733,10 @@
                         </div>
                     </div>
 
-                    <%-- Giá & thời gian --%>
-                    <div class="form-section-title"><i class="bi bi-cash-coin me-1"></i>Giá &amp; Thời gian</div>
+                    <%-- Giá & thời gian & nhóm --%>
+                    <div class="form-section-title"><i class="bi bi-cash-coin me-1"></i>Giá &amp; Thời gian &amp; Nhóm</div>
                     <div class="row g-3 mb-3">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label class="form-label fw-semibold small">Đơn giá (VNĐ) <span class="text-danger">*</span></label>
                             <div class="input-group input-group-sm">
                                 <span class="input-group-text fw-bold">₫</span>
@@ -754,7 +754,7 @@
                                 <div class="text-danger mt-1" style="font-size:0.72rem;"><i class="bi bi-exclamation-circle me-1"></i>${errors.price}</div>
                             </c:if>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-3">
                             <label class="form-label fw-semibold small">Thời gian (phút) <span class="text-danger">*</span></label>
                             <input type="text" name="durationMins" id="addDurationMins"
                                    class="form-control form-control-sm" required
@@ -776,34 +776,114 @@
                                 <option value="120">
                             </datalist>
                             <div class="invalid-feedback" id="err-durationMins"></div>
-                            <div class="form-text" style="font-size:0.68rem;">Tối thiểu 5 phút, tối đa 480 phút (8 giờ).</div>
+                            <div class="form-text" style="font-size:0.68rem;">Tối thiểu 5 phút, tối đa 480 phút (8 giờ).<br>Gợi ý: 5, 10, 15, 20, 30, 45, 60, 90 phút.</div>
                             <c:if test="${not empty errors.durationMins}">
                                 <div class="text-danger mt-1" style="font-size:0.72rem;"><i class="bi bi-exclamation-circle me-1"></i>${errors.durationMins}</div>
                             </c:if>
                         </div>
+                        <div class="col-md-5">
+                            <label class="form-label fw-semibold small">Nhóm dịch vụ <span class="text-danger">*</span></label>
+                            <select name="categoryId" id="addCategoryId" class="form-select form-select-sm" required
+                                    onchange="clearFieldError('categoryId')">
+                                <option value="">-- Chọn nhóm dịch vụ --</option>
+                                <c:forEach var="cat" items="${categories}">
+                                    <option value="${cat.id}" ${formData.categoryId eq cat.id.toString() ? 'selected' : ''}>
+                                        <c:choose>
+                                            <c:when test="${not empty cat.icon}">${fn:escapeXml(cat.icon)} ${fn:escapeXml(cat.categoryName)}</c:when>
+                                            <c:otherwise><i class="bi bi-journal-text me-1"></i>${fn:escapeXml(cat.categoryName)}</c:otherwise>
+                                        </c:choose>
+                                    </option>
+                                </c:forEach>
+                            </select>
+                            <div class="invalid-feedback" id="err-categoryId"></div>
+                            <c:if test="${not empty errors.categoryId}">
+                                <div class="text-danger mt-1" style="font-size:0.72rem;"><i class="bi bi-exclamation-circle me-1"></i>${errors.categoryId}</div>
+                            </c:if>
+                        </div>
                     </div>
 
+                    <%-- Phòng & Chuyên khoa --%>
+                    <div class="form-section-title"><i class="bi bi-geo-alt me-1"></i>Phòng thực hiện &amp; Chuyên khoa</div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-5">
+                            <label class="form-label fw-semibold small">Phòng thực hiện</label>
+                            <select name="requiredRoomType" id="addRoomType" class="form-select form-select-sm"
+                                    onchange="clearFieldError('requiredRoomType')">
+                                <option value="">-- Chọn phòng (không bắt buộc) --</option>
+                                <optgroup label="Phòng Khám">
+                                    <option value="Phòng Khám số 1" ${formData.requiredRoomType eq 'Phòng Khám số 1' ? 'selected' : ''}>Phòng Khám số 1</option>
+                                    <option value="Phòng Khám số 2" ${formData.requiredRoomType eq 'Phòng Khám số 2' ? 'selected' : ''}>Phòng Khám số 2</option>
+                                </optgroup>
+                                <optgroup label="Phòng Siêu âm">
+                                    <option value="Phòng Siêu âm 1" ${formData.requiredRoomType eq 'Phòng Siêu âm 1' ? 'selected' : ''}>🩻 Phòng Siêu âm 1</option>
+                                    <option value="Phòng Siêu âm 2" ${formData.requiredRoomType eq 'Phòng Siêu âm 2' ? 'selected' : ''}>🩻 Phòng Siêu âm 2</option>
+                                    <option value="Phòng Siêu âm 3" ${formData.requiredRoomType eq 'Phòng Siêu âm 3' ? 'selected' : ''}>🩻 Phòng Siêu âm 3</option>
+                                </optgroup>
+                            </select>
+                            <div class="invalid-feedback" id="err-requiredRoomType"></div>
+                            <c:if test="${not empty errors.requiredRoomType}">
+                                <div class="text-danger mt-1" style="font-size:0.72rem;"><i class="bi bi-exclamation-circle me-1"></i>${errors.requiredRoomType}</div>
+                            </c:if>
+                        </div>
+                        <div class="col-md-7">
+                            <label class="form-label fw-semibold small">Chuyên khoa áp dụng <span class="text-muted">(chọn nhiều)</span></label>
+                            <div class="d-flex flex-wrap gap-2" style="padding-top:0.35rem;" id="addSpecialtiesGroup">
+                                <div class="form-check form-check-inline">
+                                    <input type="checkbox" class="form-check-input specialty-checkbox" id="addSpecSan"
+                                           value="Sản khoa" onchange="updateSpecialtiesValue('add')"
+                                           ${not empty formData.allowedSpecialties and formData.allowedSpecialties.contains('Sản khoa') ? 'checked' : ''}>
+                                    <label class="form-check-label small" for="addSpecSan">Sản khoa</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input type="checkbox" class="form-check-input specialty-checkbox" id="addSpecPhu"
+                                           value="Phụ khoa" onchange="updateSpecialtiesValue('add')"
+                                           ${not empty formData.allowedSpecialties and formData.allowedSpecialties.contains('Phụ khoa') ? 'checked' : ''}>
+                                    <label class="form-check-label small" for="addSpecPhu">Phụ khoa</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input type="checkbox" class="form-check-input specialty-checkbox" id="addSpecCDHA"
+                                           value="Chẩn đoán hình ảnh" onchange="updateSpecialtiesValue('add')"
+                                           ${not empty formData.allowedSpecialties and formData.allowedSpecialties.contains('Chẩn đoán hình ảnh') ? 'checked' : ''}>
+                                    <label class="form-check-label small" for="addSpecCDHA">Chẩn đoán hình ảnh</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input type="checkbox" class="form-check-input specialty-checkbox" id="addSpecKHHGD"
+                                           value="Kế hoạch hóa gia đình" onchange="updateSpecialtiesValue('add')"
+                                           ${not empty formData.allowedSpecialties and formData.allowedSpecialties.contains('Kế hoạch hóa gia đình') ? 'checked' : ''}>
+                                    <label class="form-check-label small" for="addSpecKHHGD">KHHGĐ</label>
+                                </div>
+                            </div>
+                            <input type="hidden" name="allowedSpecialties" id="addSpecialtiesHidden" value="${fn:escapeXml(formData.allowedSpecialties)}">
+                            <div class="invalid-feedback d-block" id="err-allowedSpecialties"></div>
+                            <c:if test="${not empty errors.allowedSpecialties}">
+                                <div class="text-danger mt-1" style="font-size:0.72rem;"><i class="bi bi-exclamation-circle me-1"></i>${errors.allowedSpecialties}</div>
+                            </c:if>
+                        </div>
+                    </div>
 
-                    <%-- Nhóm dịch vụ (ẩn, tự động chọn) --%>
-                    <input type="hidden" name="categoryId" id="addCategoryIdHidden" value="">
                     <%-- Yêu cầu đặc biệt --%>
                     <div class="form-section-title"><i class="bi bi-exclamation-diamond me-1"></i>Yêu cầu đặc biệt trước khi thực hiện</div>
                     <div class="row g-3">
                         <div class="col-12">
-                            <textarea name="specialRequirements" id="addSpecialRequirements"
-                                      class="form-control form-control-sm" rows="3" maxlength="500"
-                                      placeholder="Nhập các yêu cầu đặc biệt trước khi thực hiện dịch vụ (VD: nhịn ăn 8 tiếng, đầy bàng quang, không trang điểm vùng bụng...)"
-                                      oninput="updateCharCount('addSpecialRequirements','specReqCount',500)">${fn:escapeXml(formData.specialRequirements)}</textarea>
-                            <div class="d-flex justify-content-between">
-                                <div class="invalid-feedback d-block" id="err-specialRequirements"></div>
-                                <small class="text-muted" id="specReqCount" style="font-size:0.68rem;">0/500</small>
+                            <div class="d-flex gap-4 align-items-center">
+                                <div class="form-check">
+                                    <input type="checkbox" name="requiresFasting" class="form-check-input" id="createFasting"
+                                           ${formData.containsKey('requiresFasting') ? 'checked' : ''}>
+                                    <label class="form-check-label small fw-semibold" for="createFasting">
+                                        Nhịn ăn trước khi thực hiện
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input type="checkbox" name="requiresFullBladder" class="form-check-input" id="createBladder"
+                                           ${formData.containsKey('requiresFullBladder') ? 'checked' : ''}>
+                                    <label class="form-check-label small fw-semibold" for="createBladder">
+                                        Đầy bàng quang trước khi thực hiện
+                                    </label>
+                                </div>
+                                <div style="font-size:0.68rem;color:var(--c-muted);">
+                                    <i class="bi bi-info-circle"></i> Thông tin này sẽ hiển thị cho bệnh nhân khi đặt lịch
+                                </div>
                             </div>
-                            <div class="form-text" style="font-size:0.68rem;">
-                                <i class="bi bi-info-circle"></i> Thông tin này sẽ hiển thị cho bệnh nhân khi đặt lịch
-                            </div>
-                            <c:if test="${not empty errors.specialRequirements}">
-                                <div class="text-danger mt-1" style="font-size:0.72rem;"><i class="bi bi-exclamation-circle me-1"></i>${errors.specialRequirements}</div>
-                            </c:if>
                         </div>
                     </div>
                 </div>
@@ -848,7 +928,7 @@
                     <div class="form-section-title"><i class="bi bi-info-circle me-1"></i>Thông tin cơ bản</div>
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">
-                            <label class="form-label fw-semibold small">Mã dịch vụ 🔒</label>
+                            <label class="form-label fw-semibold small">Mã dịch vụ <i class="bi bi-lock-fill text-muted"></i></label>
                             <input type="text" id="editServiceCode"
                                    class="form-control form-control-sm text-uppercase" readonly disabled
                                    style="font-family:'Courier New',monospace;letter-spacing:0.05em;background:#f5f5f5;color:#757575;cursor:not-allowed;">
@@ -877,9 +957,9 @@
                         </div>
                     </div>
 
-                    <div class="form-section-title"><i class="bi bi-cash-coin me-1"></i>Giá &amp; Thời gian</div>
+                    <div class="form-section-title"><i class="bi bi-cash-coin me-1"></i>Giá &amp; Thời gian &amp; Nhóm</div>
                     <div class="row g-3 mb-3">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label class="form-label fw-semibold small">Đơn giá (VNĐ) <span class="text-danger">*</span></label>
                             <div class="input-group input-group-sm">
                                 <span class="input-group-text fw-bold">₫</span>
@@ -896,7 +976,7 @@
                                 <div class="text-danger mt-1" style="font-size:0.72rem;"><i class="bi bi-exclamation-circle me-1"></i>${errors.price}</div>
                             </c:if>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-3">
                             <label class="form-label fw-semibold small">Thời gian (phút) <span class="text-danger">*</span></label>
                             <input type="text" name="durationMins" id="editDurationMins"
                                    class="form-control form-control-sm" required
@@ -909,28 +989,85 @@
                                 <div class="text-danger mt-1" style="font-size:0.72rem;"><i class="bi bi-exclamation-circle me-1"></i>${errors.durationMins}</div>
                             </c:if>
                         </div>
+                        <div class="col-md-5">
+                            <label class="form-label fw-semibold small">Nhóm dịch vụ <span class="text-danger">*</span></label>
+                            <select name="categoryId" id="editCategoryId" class="form-select form-select-sm" required>
+                                <option value="">-- Chọn nhóm dịch vụ --</option>
+                                <c:forEach var="cat" items="${categories}">
+                                    <option value="${cat.id}">${fn:escapeXml(cat.categoryName)}</option>
+                                </c:forEach>
+                            </select>
+                            <div class="invalid-feedback" id="editErr-categoryId"></div>
+                            <c:if test="${not empty errors.categoryId}">
+                                <div class="text-danger mt-1" style="font-size:0.72rem;"><i class="bi bi-exclamation-circle me-1"></i>${errors.categoryId}</div>
+                            </c:if>
+                        </div>
                     </div>
-                    <%-- Nhóm dịch vụ (ẩn, giữ nguyên từ DB) --%>
-                    <input type="hidden" name="categoryId" id="editCategoryIdHidden" value="">
 
-                    <%-- Trạng thái --%>
-                    <div class="form-section-title"><i class="bi bi-toggle-on me-1"></i>Trạng thái &amp; Yêu cầu đặc biệt</div>
+                    <div class="form-section-title"><i class="bi bi-geo-alt me-1"></i>Phòng &amp; Chuyên khoa &amp; Trạng thái</div>
                     <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold small">Phòng thực hiện</label>
+                            <select name="requiredRoomType" id="editRoomType" class="form-select form-select-sm">
+                                <option value="">-- Chọn phòng --</option>
+                                <optgroup label="Phòng Khám">
+                                    <option value="Phòng Khám số 1">Phòng Khám số 1</option>
+                                    <option value="Phòng Khám số 2">Phòng Khám số 2</option>
+                                </optgroup>
+                                <optgroup label="Phòng Siêu âm">
+                                    <option value="Phòng Siêu âm 1">Phòng Siêu âm 1</option>
+                                    <option value="Phòng Siêu âm 2">Phòng Siêu âm 2</option>
+                                    <option value="Phòng Siêu âm 3">Phòng Siêu âm 3</option>
+                                </optgroup>
+                            </select>
+                            <div class="invalid-feedback" id="editErr-requiredRoomType"></div>
+                            <c:if test="${not empty errors.requiredRoomType}">
+                                <div class="text-danger mt-1" style="font-size:0.72rem;"><i class="bi bi-exclamation-circle me-1"></i>${errors.requiredRoomType}</div>
+                            </c:if>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label fw-semibold small">Chuyên khoa <span class="text-muted">(chọn nhiều)</span></label>
+                            <div class="d-flex flex-wrap gap-2" style="padding-top:0.35rem;" id="editSpecialtiesGroup">
+                                <div class="form-check form-check-inline">
+                                    <input type="checkbox" class="form-check-input specialty-checkbox" id="editSpecSan"
+                                           value="Sản khoa" onchange="updateSpecialtiesValue('edit')">
+                                    <label class="form-check-label small" for="editSpecSan">Sản khoa</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input type="checkbox" class="form-check-input specialty-checkbox" id="editSpecPhu"
+                                           value="Phụ khoa" onchange="updateSpecialtiesValue('edit')">
+                                    <label class="form-check-label small" for="editSpecPhu">Phụ khoa</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input type="checkbox" class="form-check-input specialty-checkbox" id="editSpecCDHA"
+                                           value="Chẩn đoán hình ảnh" onchange="updateSpecialtiesValue('edit')">
+                                    <label class="form-check-label small" for="editSpecCDHA">Chẩn đoán hình ảnh</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input type="checkbox" class="form-check-input specialty-checkbox" id="editSpecKHHGD"
+                                           value="Kế hoạch hóa gia đình" onchange="updateSpecialtiesValue('edit')">
+                                    <label class="form-check-label small" for="editSpecKHHGD">KHHGĐ</label>
+                                </div>
+                            </div>
+                            <input type="hidden" name="allowedSpecialties" id="editSpecialtiesHidden" value="">
+                            <div class="invalid-feedback d-block" id="editErr-allowedSpecialties"></div>
+                            <c:if test="${not empty errors.allowedSpecialties}">
+                                <div class="text-danger mt-1" style="font-size:0.72rem;"><i class="bi bi-exclamation-circle me-1"></i>${errors.allowedSpecialties}</div>
+                            </c:if>
+                        </div>
                         <div class="col-md-3 d-flex flex-column gap-2">
                             <div class="form-check">
                                 <input type="checkbox" name="isActive" class="form-check-input" id="editIsActive">
-                                <label class="form-check-label small fw-semibold" for="editIsActive">🟢 Hoạt động</label>
+                                <label class="form-check-label small fw-semibold" for="editIsActive">Hoạt động</label>
                             </div>
-                        </div>
-                        <div class="col-md-9">
-                            <label class="form-label fw-semibold small">Yêu cầu đặc biệt trước khi thực hiện</label>
-                            <textarea name="specialRequirements" id="editSpecialRequirements"
-                                      class="form-control form-control-sm" rows="2" maxlength="500"
-                                      placeholder="Nhập các yêu cầu đặc biệt trước khi thực hiện dịch vụ (VD: nhịn ăn 8 tiếng, đầy bàng quang...)"></textarea>
-                            <div class="invalid-feedback d-block" id="editErr-specialRequirements"></div>
-                            <c:if test="${not empty errors.specialRequirements}">
-                                <div class="text-danger mt-1" style="font-size:0.72rem;"><i class="bi bi-exclamation-circle me-1"></i>${errors.specialRequirements}</div>
-                            </c:if>
+                            <div class="form-check">
+                                <input type="checkbox" name="requiresFasting" class="form-check-input" id="editFasting">
+                                <label class="form-check-label small" for="editFasting"><i class="bi bi-cup-hot me-1 text-warning"></i> Nhịn ăn</label>
+                            </div>
+                            <div class="form-check">
+                                <input type="checkbox" name="requiresFullBladder" class="form-check-input" id="editBladder">
+                                <label class="form-check-label small" for="editBladder"><i class="bi bi-droplet-fill me-1 text-info"></i> Đầy bàng quang</label>
+                            </div>
                         </div>
                     </div>
 
@@ -1118,6 +1255,16 @@ function validateAddService() {
         clearOneError(nameEl, nameErr);
     }
 
+    // ── Nhóm dịch vụ (bắt buộc) ──
+    var catEl = document.getElementById('addCategoryId');
+    var catErr = document.getElementById('err-categoryId');
+    if (!catEl.value) {
+        showFieldError(catEl, catErr, 'Vui lòng chọn nhóm dịch vụ.');
+        valid = false;
+    } else {
+        clearOneError(catEl, catErr);
+    }
+
     // ── Đơn giá (bắt buộc, số nguyên, 50k-100tr) ──
     var priceEl = document.getElementById('addPrice');
     var priceErr = document.getElementById('err-price');
@@ -1171,6 +1318,17 @@ function validateAddService() {
         clearOneError(descEl, descErr);
     }
 
+    // ── Chuyên khoa (optional) ──
+    updateSpecialtiesValue('add');
+    var specHidden = document.getElementById('addSpecialtiesHidden');
+    var specErr = document.getElementById('err-allowedSpecialties');
+    if (specHidden && specHidden.value.length > 255) {
+        showFieldError(specHidden, specErr, 'Chuyên khoa áp dụng không được vượt quá 255 ký tự.');
+        valid = false;
+    } else {
+        clearOneError(specHidden, specErr);
+    }
+
     if (!valid) {
         var firstError = document.querySelector('#addServiceForm .is-invalid');
         if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1212,6 +1370,16 @@ function validateEditService() {
         valid = false;
     } else {
         clearOneError(nameEl, nameErr);
+    }
+
+    // ── Nhóm dịch vụ (bắt buộc) ──
+    var catEl = document.getElementById('editCategoryId');
+    var catErr = document.getElementById('editErr-categoryId');
+    if (!catEl.value) {
+        showFieldError(catEl, catErr, 'Vui lòng chọn nhóm dịch vụ.');
+        valid = false;
+    } else {
+        clearOneError(catEl, catErr);
     }
 
     // ── Đơn giá ──
@@ -1267,6 +1435,17 @@ function validateEditService() {
         clearOneError(descEl, descErr);
     }
 
+    // ── Chuyên khoa ──
+    updateSpecialtiesValue('edit');
+    var specHidden = document.getElementById('editSpecialtiesHidden');
+    var specErr = document.getElementById('editErr-allowedSpecialties');
+    if (specHidden && specHidden.value.length > 255) {
+        showFieldError(specHidden, specErr, 'Chuyên khoa áp dụng không được vượt quá 255 ký tự.');
+        valid = false;
+    } else {
+        clearOneError(specHidden, specErr);
+    }
+
     if (!valid) {
         var firstError = document.querySelector('#editServiceForm .is-invalid');
         if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1287,22 +1466,6 @@ function validateEditService() {
     if (addModal) {
         addModal.addEventListener('shown.bs.modal', function() {
             updateCharCount('addDescription', 'descCount', 500);
-            updateCharCount('addSpecialRequirements', 'specReqCount', 500);
-            // Auto-select first category for hidden field
-            var catHidden = document.getElementById('addCategoryIdHidden');
-            if (catHidden && !catHidden.value) {
-                var firstCat = document.querySelector('#addServiceForm select[name="categoryId"]');
-                if (!firstCat) {
-                    // Nếu không có select (đã bị ẩn), lấy category đầu tiên từ bảng
-                    var catChips = document.querySelectorAll('.cat-chip');
-                    if (catChips.length > 1) {
-                        // Lấy href của chip thứ 2 (đầu tiên sau "Tất cả") để parse category ID
-                        var href = catChips[1].getAttribute('href');
-                        var match = href && href.match(/category=(\d+)/);
-                        if (match) catHidden.value = match[1];
-                    }
-                }
-            }
             var form = document.getElementById('addServiceForm');
             if (form) {
                 var invalids = form.querySelectorAll('.is-invalid');
@@ -1326,9 +1489,9 @@ function validateEditService() {
 })();
 
 // ──────────────────────────────────────────────
-//  Open Edit Modal
+//  Open Edit Modal (updated: room dropdown + specialties checkboxes)
 // ──────────────────────────────────────────────
-function openEditModal(id, code, name, desc, price, duration, specialRequirements, catId, isActive) {
+function openEditModal(id, code, name, desc, price, duration, fasting, bladder, room, specialties, catId, isActive) {
     document.getElementById('editServiceId').value = id;
     // Mã dịch vụ: readonly, hiển thị nhưng không cho sửa
     document.getElementById('editServiceCode').value = code || '';
@@ -1340,12 +1503,33 @@ function openEditModal(id, code, name, desc, price, duration, specialRequirement
     document.getElementById('editDurationMins').value = duration || '';
     document.getElementById('editChangeReason').value = '';
 
-    // Yêu cầu đặc biệt
-    document.getElementById('editSpecialRequirements').value = specialRequirements || '';
+    // Phòng thực hiện: set dropdown
+    var roomSelect = document.getElementById('editRoomType');
+    if (roomSelect && room) {
+        for (var i = 0; i < roomSelect.options.length; i++) {
+            if (roomSelect.options[i].value === room) {
+                roomSelect.options[i].selected = true;
+                break;
+            }
+        }
+    }
 
-    // Nhóm dịch vụ (hidden)
-    document.getElementById('editCategoryIdHidden').value = catId || '';
+    // Chuyên khoa: set checkboxes
+    setSpecialtiesFromString('edit', specialties || '');
 
+    // Nhóm dịch vụ
+    var catSelect = document.getElementById('editCategoryId');
+    if (catSelect && catId) {
+        for (var k = 0; k < catSelect.options.length; k++) {
+            if (catSelect.options[k].value === catId) {
+                catSelect.options[k].selected = true;
+                break;
+            }
+        }
+    }
+
+    document.getElementById('editFasting').checked = fasting === 'true';
+    document.getElementById('editBladder').checked = bladder === 'true';
     document.getElementById('editIsActive').checked = isActive === 'true';
     new bootstrap.Modal(document.getElementById('editServiceModal')).show();
 }
@@ -1365,10 +1549,29 @@ function openEditModal(id, code, name, desc, price, duration, specialRequirement
         document.getElementById('editPrice').value = priceVal ? parseInt(priceVal, 10).toLocaleString('vi-VN') : '';
         document.getElementById('editDurationMins').value = '${formData.durationMins}';
         document.getElementById('editChangeReason').value = '${fn:escapeXml(formData.changeReason)}';
-        // Yêu cầu đặc biệt
-        document.getElementById('editSpecialRequirements').value = '${fn:escapeXml(formData.specialRequirements)}';
-        // Nhóm dịch vụ (hidden)
-        document.getElementById('editCategoryIdHidden').value = '${formData.categoryId}';
+        // Phòng: set dropdown
+        var roomVal = '${fn:escapeXml(formData.requiredRoomType)}';
+        var roomSelect = document.getElementById('editRoomType');
+        if (roomSelect && roomVal) {
+            for (var r = 0; r < roomSelect.options.length; r++) {
+                if (roomSelect.options[r].value === roomVal) {
+                    roomSelect.options[r].selected = true;
+                    break;
+                }
+            }
+        }
+        // Chuyên khoa: set checkboxes
+        setSpecialtiesFromString('edit', '${fn:escapeXml(formData.allowedSpecialties)}');
+        // Nhóm
+        var catSel = document.getElementById('editCategoryId');
+        if (catSel && '${formData.categoryId}') {
+            for (var i = 0; i < catSel.options.length; i++) {
+                if (catSel.options[i].value === '${formData.categoryId}') {
+                    catSel.options[i].selected = true;
+                    break;
+                }
+            }
+        }
         new bootstrap.Modal(document.getElementById('editServiceModal')).show();
     });
 </c:if>

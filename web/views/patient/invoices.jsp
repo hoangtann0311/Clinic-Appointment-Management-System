@@ -9,12 +9,12 @@
         <div class="card border-0 patient-hero-card rounded-4">
             <div class="card-body p-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
                 <div>
-                    <h2 class="fw-bold mb-1"><i class="bi bi-wallet2 me-2"></i>Thanh Toán Của Tôi</h2>
-                    <p class="mb-0 opacity-75">Quản lý hóa đơn lâm sàng, hóa đơn sau khám và đơn thuốc.</p>
+                    <h2 class="fw-bold mb-1"><i class="bi bi-file-earmark-text me-2"></i>Yêu Cầu Thanh Toán</h2>
+                    <p class="mb-0 opacity-75">Danh sách các phiếu yêu cầu thanh toán chi phí khám, chỉ định dịch vụ từ Lễ tân & Bác sĩ.</p>
                 </div>
                 <div>
                     <a href="${pageContext.request.contextPath}/patient/appointments" class="btn btn-light text-pink-theme fw-bold rounded-3">
-                        <i class="bi bi-calendar2-week me-1"></i>Xem Lịch Hẹn
+                        <i class="bi bi-calendar2-week me-1"></i>Xem Lịch Hẹn Của Tôi
                     </a>
                 </div>
             </div>
@@ -22,297 +22,111 @@
     </div>
 </div>
 
-<c:if test="${not empty purchaseSuccess}">
-    <div class="alert alert-success alert-dismissible fade show" data-cams-toast role="alert">
-        <i class="bi bi-check-circle-fill me-2"></i><c:out value="${purchaseSuccess}"/>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-</c:if>
-<c:if test="${not empty purchaseError}">
-    <div class="alert alert-danger alert-dismissible fade show" data-cams-toast role="alert">
-        <i class="bi bi-exclamation-triangle-fill me-2"></i><c:out value="${purchaseError}"/>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-</c:if>
-
-<c:if test="${not empty prescriptionChoices}">
-    <div class="card border-0 shadow-sm rounded-4 mb-4" id="prescription-decisions">
-        <div class="card-header bg-transparent border-0 p-4 pb-2">
-            <h5 class="fw-bold mb-1">
-                <i class="bi bi-capsule-pill me-2 text-primary"></i>Lựa Chọn Mua Thuốc
-            </h5>
-            <p class="text-muted small mb-0">
-                Đơn thuốc là chỉ định chuyên môn và luôn được lưu trong hồ sơ.
-                Hóa đơn chỉ phát sinh khi bạn chọn mua tại phòng khám.
-            </p>
-        </div>
-        <div class="card-body p-4 pt-3">
-            <div class="row g-3">
-                <c:forEach var="rx" items="${prescriptionChoices}">
-                    <div class="col-12">
-                        <div class="border rounded-4 p-3 ${rx.purchaseDecision == 'Pending' ? 'bg-primary bg-opacity-10 border-primary-subtle' : 'bg-light'}">
-                            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
-                                <div>
-                                    <div class="fw-bold">
-                                        Đơn <c:out value="${rx.prescriptionCode}"/>
-                                    </div>
-                                    <div class="text-muted small mt-1">
-                                        Ngày khám: <c:out value="${rx.appointmentDate}"/>
-                                        <span class="mx-1">•</span>
-                                        Bác sĩ: BS. <c:out value="${not empty rx.doctorName ? rx.doctorName : 'Chưa cập nhật'}"/>
-                                    </div>
-                                </div>
-                                <div class="text-end">
-                                    <div class="text-muted small">Giá trị dự kiến</div>
-                                    <div class="fw-bold text-danger">
-                                        <fmt:formatNumber value="${rx.totalAmount}" pattern="#,###"/>đ
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="table-responsive mt-3">
-                                <table class="table table-sm align-middle mb-0 bg-transparent">
-                                    <thead>
-                                        <tr>
-                                            <th>Thuốc</th>
-                                            <th class="text-center">Số lượng</th>
-                                            <th>Liều dùng</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <c:forEach var="item" items="${rx.items}">
-                                            <tr>
-                                                <td><c:out value="${item.medicineName}"/></td>
-                                                <td class="text-center"><c:out value="${item.quantity}"/> <c:out value="${item.medicineUnit}"/></td>
-                                                <td><c:out value="${item.dosage}"/></td>
-                                            </tr>
-                                        </c:forEach>
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
-                                <a href="${pageContext.request.contextPath}/patient/medical-records?recordId=${rx.medicalRecordId}"
-                                   class="btn btn-sm btn-outline-secondary rounded-pill px-3">
-                                    <i class="bi bi-file-medical me-1"></i>Xem đơn thuốc
-                                </a>
-                                <c:choose>
-                                    <c:when test="${rx.purchaseDecision == 'Pending'}">
-                                        <div class="d-flex flex-wrap gap-2">
-                                            <form method="post"
-                                                  action="${pageContext.request.contextPath}/patient/prescription-decision">
-                                                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
-                                                <input type="hidden" name="prescriptionId" value="${rx.id}">
-                                                <input type="hidden" name="decision" value="decline">
-                                                <button type="submit"
-                                                        class="btn btn-sm btn-outline-secondary rounded-pill px-3"
-                                                        onclick="return confirm('Bạn xác nhận không mua thuốc tại phòng khám? Đơn thuốc vẫn được lưu để bạn xem lại.');">
-                                                    <i class="bi bi-bag-x me-1"></i>Không mua tại phòng khám
-                                                </button>
-                                            </form>
-                                            <form method="post"
-                                                  action="${pageContext.request.contextPath}/patient/prescription-decision">
-                                                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
-                                                <input type="hidden" name="prescriptionId" value="${rx.id}">
-                                                <input type="hidden" name="decision" value="buy">
-                                                <button type="submit"
-                                                        class="btn btn-sm btn-success rounded-pill px-3">
-                                                    <i class="bi bi-bag-check me-1"></i>Mua thuốc tại phòng khám
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </c:when>
-                                    <c:otherwise>
-                                        <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-3 py-2">
-                                            <i class="bi bi-check2-circle me-1"></i>Đã chọn không mua tại phòng khám
-                                        </span>
-                                    </c:otherwise>
-                                </c:choose>
-                            </div>
-                        </div>
-                    </div>
-                </c:forEach>
-            </div>
-        </div>
-    </div>
-</c:if>
-
-<%-- Metrics Summary --%>
-<div class="row g-3 mb-4">
-    <c:set var="totalCount" value="${fn:length(invoices)}" />
-    <c:set var="unpaidCount" value="0" />
-    <c:set var="pendingCount" value="0" />
-    <c:set var="paidCount" value="0" />
-    <c:forEach var="inv" items="${invoices}">
-        <c:choose>
-            <c:when test="${inv.status == 'Unpaid'}">
-                <c:set var="unpaidCount" value="${unpaidCount + 1}" />
-            </c:when>
-            <c:when test="${inv.status == 'PendingConfirmation'}">
-                <c:set var="pendingCount" value="${pendingCount + 1}" />
-            </c:when>
-            <c:when test="${inv.status == 'Paid'}">
-                <c:set var="paidCount" value="${paidCount + 1}" />
-            </c:when>
-        </c:choose>
-    </c:forEach>
-
-    <c:set var="summaryColumn" value="${unpaidCount > 0 ? 'col-md-4' : 'col-md-6'}" />
-
-    <c:if test="${unpaidCount > 0}">
-    <div class="${summaryColumn}">
-        <div class="card border-0 shadow-sm rounded-3 bg-white p-3">
-            <div class="d-flex align-items-center gap-3">
-                <div class="rounded-circle bg-danger bg-opacity-10 text-danger d-flex align-items-center justify-content-center" style="width:48px;height:48px;">
-                    <i class="bi bi-exclamation-circle-fill fs-4"></i>
-                </div>
-                <div>
-                    <h6 class="text-muted small fw-medium mb-1">Chưa Thanh Toán</h6>
-                    <h4 class="fw-bold mb-0 text-danger">${unpaidCount} <span class="fs-6 fw-normal text-muted">hóa đơn</span></h4>
-                </div>
-            </div>
-        </div>
-    </div>
-    </c:if>
-
-    <div class="${summaryColumn}">
-        <div class="card border-0 shadow-sm rounded-3 bg-white p-3">
-            <div class="d-flex align-items-center gap-3">
-                <div class="rounded-circle bg-warning bg-opacity-10 text-warning d-flex align-items-center justify-content-center" style="width:48px;height:48px;">
-                    <i class="bi bi-hourglass-split fs-4"></i>
-                </div>
-                <div>
-                    <h6 class="text-muted small fw-medium mb-1">Đang Chờ Xác Nhận</h6>
-                    <h4 class="fw-bold mb-0 text-warning">${pendingCount} <span class="fs-6 fw-normal text-muted">yêu cầu</span></h4>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="${summaryColumn}">
-        <div class="card border-0 shadow-sm rounded-3 bg-white p-3">
-            <div class="d-flex align-items-center gap-3">
-                <div class="rounded-circle bg-success bg-opacity-10 text-success d-flex align-items-center justify-content-center" style="width:48px;height:48px;">
-                    <i class="bi bi-check-circle-fill fs-4"></i>
-                </div>
-                <div>
-                    <h6 class="text-muted small fw-medium mb-1">Đã Thanh Toán</h6>
-                    <h4 class="fw-bold mb-0 text-success">${paidCount} <span class="fs-6 fw-normal text-muted">giao dịch</span></h4>
-                </div>
-            </div>
+<div class="alert alert-info border-0 rounded-4 shadow-sm p-3 mb-4 d-flex align-items-center gap-3">
+    <div class="fs-2 text-info me-2"><i class="bi bi-info-circle-fill"></i></div>
+    <div>
+        <div class="fw-bold text-dark mb-1">Hướng dẫn thanh toán tại phòng khám</div>
+        <div class="small text-secondary">
+            Tất cả các chi phí (Phí khám, chỉ định siêu âm, xét nghiệm, đơn thuốc) được **thanh toán trực tiếp tại quầy Lễ tân / Thu ngân phòng khám**.
+            Quý khách vui lòng báo tên hoặc mã lịch hẹn với nhân viên tại quầy để làm thủ tục.
         </div>
     </div>
 </div>
 
-<%-- Invoices List Card --%>
-<div class="card border-0 shadow-sm rounded-4">
-    <div class="card-header bg-transparent border-0 p-4 pb-0">
-        <h5 class="fw-bold text-dark mb-0">
-            <i class="bi bi-list-stars me-2 text-primary"></i>Danh Sách Hóa Đơn
-        </h5>
+<div class="card border-0 shadow-sm rounded-4 mb-5">
+    <div class="card-header bg-transparent border-0 p-4 pb-2 d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div>
+            <h5 class="fw-bold mb-1">
+                <i class="bi bi-receipt-cutoff me-2 text-primary"></i>Danh Sách Phiếu Yêu Cầu Thanh Toán
+            </h5>
+            <p class="text-muted small mb-0">Theo dõi trạng thái các khoản chi phí trong quá trình khám chữa bệnh</p>
+        </div>
+        <span class="badge bg-light text-dark border px-3 py-2 rounded-pill">
+            Tổng cộng: <strong>${fn:length(invoices)}</strong> phiếu
+        </span>
     </div>
     <div class="card-body p-4 pt-3">
         <c:choose>
-            <c:when test="${empty invoices}">
-                <div class="text-center py-5 text-muted">
-                    <i class="bi bi-receipt-cutoff d-block mb-3" style="font-size: 3rem; opacity: .3;"></i>
-                    Bạn chưa có bất kỳ hóa đơn nào trong hệ thống.
-                </div>
-            </c:when>
-            <c:otherwise>
+            <c:when test="${not empty invoices}">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>Mã Hóa Đơn</th>
-                                <th>Ngày Tạo</th>
-                                <th>Phân Loại</th>
-                                <th>Nội Dung / Dịch Vụ</th>
-                                <th>Tổng Tiền</th>
-                                <th>Trạng Thái</th>
-                                <th class="text-end">Hành Động</th>
+                                <th class="ps-3">Mã phiếu</th>
+                                <th>Loại khoản chi</th>
+                                <th>Mã lịch hẹn</th>
+                                <th>Ngày tạo</th>
+                                <th>Số tiền</th>
+                                <th class="text-center">Trạng thái thanh toán</th>
+                                <th class="text-end pe-3">Ghi chú</th>
                             </tr>
                         </thead>
                         <tbody>
                             <c:forEach var="inv" items="${invoices}">
+                                <c:set var="statusLower" value="${fn:toLowerCase(inv.status)}"/>
                                 <tr>
-                                    <td><strong>HĐ-${inv.id}</strong></td>
-                                    <td>
-                                        <fmt:formatDate value="${inv.createdAt}" pattern="dd/MM/yyyy HH:mm"/>
+                                    <td class="ps-3 fw-bold text-primary">
+                                        #INV-${inv.id}
                                     </td>
                                     <td>
                                         <c:choose>
                                             <c:when test="${inv.invoiceType == 'PRE_EXAM'}">
-                                                <span class="badge bg-info-subtle text-info border border-info-subtle">Trước khám</span>
+                                                <span class="fw-semibold text-dark"><i class="bi bi-person-badge me-1 text-primary"></i>Khám & Dịch vụ ban đầu</span>
+                                                <div class="small text-muted">Do Lễ tân phát hành</div>
+                                            </c:when>
+                                            <c:when test="${inv.invoiceType == 'POST_EXAM'}">
+                                                <span class="fw-semibold text-dark"><i class="bi bi-activity me-1 text-danger"></i>Chỉ định Siêu âm / Xét nghiệm</span>
+                                                <div class="small text-muted">Do Bác sĩ chỉ định</div>
                                             </c:when>
                                             <c:when test="${inv.invoiceType == 'PRESCRIPTION'}">
-                                                <span class="badge bg-success-subtle text-success border border-success-subtle">Đơn thuốc</span>
+                                                <span class="fw-semibold text-dark"><i class="bi bi-capsule me-1 text-success"></i>Đơn thuốc điều trị</span>
+                                                <div class="small text-muted">Do Bác sĩ chỉ định</div>
                                             </c:when>
                                             <c:otherwise>
-                                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Dịch vụ sau khám</span>
+                                                <span class="fw-semibold text-dark"><i class="bi bi-receipt me-1"></i>Hóa đơn khám bệnh</span>
                                             </c:otherwise>
                                         </c:choose>
                                     </td>
                                     <td>
-                                        <c:choose>
-                                            <c:when test="${inv.invoiceType == 'PRESCRIPTION'}">
-                                                <i class="bi bi-capsule-capsule me-1"></i>Đơn thuốc tây bác sĩ kê
-                                            </c:when>
-                                            <c:otherwise>
-                                                <c:out value="${inv.serviceName != null ? inv.serviceName : 'Khám thai định kỳ'}"/>
-                                            </c:otherwise>
-                                        </c:choose>
-                                        <div class="text-muted small mt-1">
-                                            <i class="bi bi-person-fill-gear me-1"></i>Bác sĩ lâm sàng: BS. <c:out value="${inv.doctorName != null ? inv.doctorName : 'Chưa chỉ định'}"/>
-                                        </div>
+                                        <a href="${pageContext.request.contextPath}/patient/appointments" class="text-decoration-none fw-semibold">
+                                            #APT-${inv.appointmentId}
+                                        </a>
                                     </td>
-                                    <td>
-                                        <strong class="text-danger">
-                                            <fmt:formatNumber value="${inv.totalAmount}" pattern="#,###"/>đ
-                                        </strong>
+                                    <td class="small text-muted">
+                                        <fmt:formatDate value="${inv.createdAt}" pattern="dd/MM/yyyy HH:mm"/>
                                     </td>
-                                    <td>
+                                    <td class="fw-bold text-danger">
+                                        <fmt:formatNumber value="${inv.totalAmount}" pattern="#,###"/>đ
+                                    </td>
+                                    <td class="text-center">
                                         <c:choose>
-                                            <c:when test="${inv.status == 'Paid'}">
-                                                <span class="badge bg-success-subtle text-success border border-success-subtle">
-                                                    <i class="bi bi-check-circle me-1"></i>Đã thanh toán
+                                            <c:when test="${statusLower == 'paid'}">
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-2">
+                                                    <i class="bi bi-check-circle-fill me-1"></i>Đã thanh toán tại quầy
                                                 </span>
-                                                <c:if test="${not empty inv.paymentMethod}">
-                                                    <div class="text-muted small mt-1" style="font-size:10px;">
-                                                        ${inv.paymentMethod == 'Cash' ? 'Tiền mặt' : 'Chuyển khoản'}
-                                                    </div>
-                                                </c:if>
                                             </c:when>
-                                            <c:when test="${inv.status == 'PendingConfirmation'}">
-                                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
-                                                    <i class="bi bi-clock-history me-1"></i>
-                                                    ${inv.paymentMethod == 'Cash' ? 'Chờ thu tiền tại quầy' : 'Chờ lễ tân xác nhận chuyển khoản'}
+                                            <c:when test="${statusLower == 'cancelled'}">
+                                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-3 py-2">
+                                                    <i class="bi bi-x-circle-fill me-1"></i>Đã hủy phiếu
                                                 </span>
                                             </c:when>
                                             <c:otherwise>
-                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
-                                                    <i class="bi bi-x-circle-fill me-1"></i>Chưa thanh toán
+                                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-3 py-2">
+                                                    <i class="bi bi-clock-history me-1"></i>Chờ thanh toán tại quầy
                                                 </span>
                                             </c:otherwise>
                                         </c:choose>
                                     </td>
-                                    <td class="text-end">
+                                    <td class="text-end pe-3 small text-muted">
                                         <c:choose>
-                                            <c:when test="${inv.status == 'Unpaid'}">
-                                                <a href="${pageContext.request.contextPath}/patient/payment?appointmentId=${inv.appointmentId}&type=${inv.invoiceType}"
-                                                   class="btn btn-sm btn-outline-success fw-bold rounded-pill px-3">
-                                                    <i class="bi bi-credit-card me-1"></i>Thanh Toán
-                                                </a>
+                                            <c:when test="${statusLower == 'paid'}">
+                                                <span class="text-success"><i class="bi bi-shield-check me-1"></i>Đã hoàn tất tại quầy</span>
                                             </c:when>
-                                            <c:when test="${inv.status == 'PendingConfirmation' || inv.status == 'Paid'}">
-                                                <a href="${pageContext.request.contextPath}/patient/payment?appointmentId=${inv.appointmentId}&type=${inv.invoiceType}"
-                                                   class="btn btn-sm btn-outline-secondary rounded-pill px-3">
-                                                    <i class="bi bi-eye me-1"></i>Xem Chi Tiết
-                                                </a>
+                                            <c:when test="${statusLower == 'cancelled'}">
+                                                <span class="text-muted"><i class="bi bi-slash-circle me-1"></i>Lịch hẹn đã hủy</span>
                                             </c:when>
                                             <c:otherwise>
-                                                <button class="btn btn-sm btn-light border text-muted disabled rounded-pill px-3" disabled>
-                                                    <i class="bi bi-lock me-1"></i>Khóa
-                                                </button>
+                                                <span class="text-secondary"><i class="bi bi-geo-alt me-1"></i>Đóng tiền tại Lễ tân</span>
                                             </c:otherwise>
                                         </c:choose>
                                     </td>
@@ -320,6 +134,13 @@
                             </c:forEach>
                         </tbody>
                     </table>
+                </div>
+            </c:when>
+            <c:otherwise>
+                <div class="text-center py-5">
+                    <i class="bi bi-file-earmark-x fs-1 text-muted opacity-50 mb-3 d-block"></i>
+                    <h5 class="fw-bold text-secondary">Chưa có yêu cầu thanh toán nào</h5>
+                    <p class="text-muted small">Khi Lễ tân hoặc Bác sĩ phát hành chỉ định chi phí, thông tin sẽ tự động xuất hiện tại đây.</p>
                 </div>
             </c:otherwise>
         </c:choose>

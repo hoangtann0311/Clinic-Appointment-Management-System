@@ -1,6 +1,5 @@
 package com.clinic.controller;
 
-import com.clinic.config.DatabaseConfig;
 import com.clinic.dao.AppointmentDAO;
 import com.clinic.dao.DoctorDAO;
 import com.clinic.model.Appointment;
@@ -11,9 +10,6 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.List;
@@ -23,7 +19,6 @@ import java.util.Map;
 public class DoctorAppointmentServlet extends HttpServlet {
 
     private final AppointmentDAO appointmentDAO = new AppointmentDAO();
-    private final DoctorDAO     doctorDAO      = new DoctorDAO();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -35,60 +30,67 @@ public class DoctorAppointmentServlet extends HttpServlet {
             return;
         }
 
-        User user = (User) session.getAttribute("user");
+        try {
+            User user = (User) session.getAttribute("user");
 
-        // Lấy doctorId từ bảng doctors dựa trên user.id
-        Integer doctorId = doctorDAO.getDoctorIdByUserId(user.getId());
-        if (doctorId == null) {
-            request.setAttribute("errorMessage",
-                "Tài khoản này chưa được liên kết với hồ sơ bác sĩ. (userId=" + user.getId() + ")");
+            // Lấy doctorId từ bảng doctors dựa trên user.id
+            Integer doctorId = DoctorDAO.getDoctorIdByUserId(user.getId());
+            if (doctorId == null) {
+                request.setAttribute("errorMessage",
+                    "Tài khoản này chưa được liên kết với hồ sơ bác sĩ. (userId=" + user.getId() + ")");
+                request.getRequestDispatcher("/views/doctors/appointment_list.jsp")
+                       .forward(request, response);
+                return;
+            }
+
+            // Parse tham số ngày
+            String dateParam   = request.getParameter("date");
+            String fromParam   = request.getParameter("from");
+            String toParam     = request.getParameter("to");
+            String statusParam = request.getParameter("status");
+
+            List<Appointment> appointments;
+            LocalDate viewDate = null;
+            LocalDate fromDate = null;
+            LocalDate toDate   = null;
+            String mode;
+
+            if (fromParam != null && !fromParam.isBlank()
+                    && toParam != null && !toParam.isBlank()) {
+                fromDate = parseDate(fromParam, LocalDate.now().withDayOfMonth(1));
+                toDate   = parseDate(toParam, LocalDate.now());
+                if (fromDate.isAfter(toDate)) {
+                    LocalDate tmp = fromDate; fromDate = toDate; toDate = tmp;
+                }
+                appointments = appointmentDAO.getByDoctorDateRange(doctorId, fromDate, toDate, statusParam);
+                mode = "range";
+            } else {
+                viewDate     = parseDate(dateParam, LocalDate.now());
+                appointments = appointmentDAO.getByDoctorAndDate(doctorId, viewDate, statusParam);
+                mode = "single";
+            }
+
+            // Thống kê theo ngày đang xem: single → viewDate, range → fromDate, fallback → hôm nay
+            LocalDate countDate = (viewDate != null) ? viewDate : (fromDate != null ? fromDate : LocalDate.now());
+            Map<String, Integer> todayCounts = appointmentDAO.countTodayByStatus(doctorId, countDate);
+
+            request.setAttribute("appointments",  appointments);
+            request.setAttribute("todayCounts",   todayCounts);
+            request.setAttribute("viewDate",      viewDate);
+            request.setAttribute("fromDate",      fromDate);
+            request.setAttribute("toDate",        toDate);
+            request.setAttribute("mode",          mode);
+            request.setAttribute("statusFilter",  statusParam != null ? statusParam : "");
+            request.setAttribute("doctorName",    user.getFullName());
+
             request.getRequestDispatcher("/views/doctors/appointment_list.jsp")
                    .forward(request, response);
-            return;
+        } catch (Exception ex) {
+            System.err.println("[DoctorAppointmentServlet] doGet ERROR: " + ex.getMessage());
+            ex.printStackTrace();
+            request.setAttribute("errorMessage", "Không thể tải trang. Vui lòng thử lại sau.");
+            request.getRequestDispatcher("/views/doctors/appointment_list.jsp").forward(request, response);
         }
-
-        // Parse tham số ngày
-        String dateParam   = request.getParameter("date");
-        String fromParam   = request.getParameter("from");
-        String toParam     = request.getParameter("to");
-        String statusParam = request.getParameter("status");
-
-        List<Appointment> appointments;
-        LocalDate viewDate = null;
-        LocalDate fromDate = null;
-        LocalDate toDate   = null;
-        String mode;
-
-        if (fromParam != null && !fromParam.isBlank()
-                && toParam != null && !toParam.isBlank()) {
-            fromDate = parseDate(fromParam, LocalDate.now().withDayOfMonth(1));
-            toDate   = parseDate(toParam, LocalDate.now());
-            if (fromDate.isAfter(toDate)) {
-                LocalDate tmp = fromDate; fromDate = toDate; toDate = tmp;
-            }
-            appointments = appointmentDAO.getByDoctorDateRange(doctorId, fromDate, toDate, statusParam);
-            mode = "range";
-        } else {
-            viewDate     = parseDate(dateParam, LocalDate.now());
-            appointments = appointmentDAO.getByDoctorAndDate(doctorId, viewDate);
-            mode = "single";
-        }
-
-        // Thống kê theo ngày đang xem: single → viewDate, range → fromDate, fallback → hôm nay
-        LocalDate countDate = (viewDate != null) ? viewDate : (fromDate != null ? fromDate : LocalDate.now());
-        Map<String, Integer> todayCounts = appointmentDAO.countTodayByStatus(doctorId, countDate);
-
-        request.setAttribute("appointments",  appointments);
-        request.setAttribute("todayCounts",   todayCounts);
-        request.setAttribute("viewDate",      viewDate);
-        request.setAttribute("fromDate",      fromDate);
-        request.setAttribute("toDate",        toDate);
-        request.setAttribute("mode",          mode);
-        request.setAttribute("statusFilter",  statusParam != null ? statusParam : "");
-        request.setAttribute("doctorName",    user.getFullName());
-
-        request.getRequestDispatcher("/views/doctors/appointment_list.jsp")
-               .forward(request, response);
     }
 
     @Override
@@ -102,7 +104,7 @@ public class DoctorAppointmentServlet extends HttpServlet {
         }
 
         User user = (User) session.getAttribute("user");
-        Integer doctorId = doctorDAO.getDoctorIdByUserId(user.getId());
+        Integer doctorId = DoctorDAO.getDoctorIdByUserId(user.getId());
         if (doctorId == null) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không tìm thấy hồ sơ bác sĩ.");
             return;
@@ -126,15 +128,18 @@ public class DoctorAppointmentServlet extends HttpServlet {
             }
             boolean ok = appointmentDAO.startConsultation(appointmentId, doctorId);
 
-            // Redirect lại trang hiện tại (giữ nguyên bộ lọc)
-            String referer = request.getHeader("Referer");
-            if (referer != null && !referer.isBlank()) {
-                response.sendRedirect(referer + (referer.contains("?") ? "&" : "?")
-                        + (ok ? "success=consultationStarted" : "error=cannotStartConsultation"));
-            } else {
-                response.sendRedirect(request.getContextPath() + "/doctor/appointments?"
-                        + (ok ? "success=consultationStarted" : "error=cannotStartConsultation"));
-            }
+            // Redirect an toàn về trang appointments (không dùng Referer — tránh open redirect)
+            String dateParam = request.getParameter("date");
+            String fromParam = request.getParameter("from");
+            String toParam = request.getParameter("to");
+            String statusParam = request.getParameter("status");
+            StringBuilder qs = new StringBuilder("?");
+            if (dateParam != null && !dateParam.isBlank()) qs.append("date=").append(java.net.URLEncoder.encode(dateParam, "UTF-8")).append("&");
+            if (fromParam != null && !fromParam.isBlank()) qs.append("from=").append(java.net.URLEncoder.encode(fromParam, "UTF-8")).append("&");
+            if (toParam != null && !toParam.isBlank()) qs.append("to=").append(java.net.URLEncoder.encode(toParam, "UTF-8")).append("&");
+            if (statusParam != null && !statusParam.isBlank()) qs.append("status=").append(java.net.URLEncoder.encode(statusParam, "UTF-8")).append("&");
+            qs.append(ok ? "success=consultationStarted" : "error=cannotStartConsultation");
+            response.sendRedirect(request.getContextPath() + "/doctor/appointments" + qs.toString());
             return;
         }
 

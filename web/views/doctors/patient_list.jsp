@@ -36,7 +36,7 @@
                 </label>
                 <input type="text" name="keyword" class="form-control rounded-3"
                        placeholder="Tên, số điện thoại hoặc email..."
-                       value="${keyword}">
+                       value="<c:out value='${keyword}'/>">
             </div>
             <div class="d-flex gap-2">
                 <button type="submit" class="btn btn-primary rounded-3">
@@ -60,7 +60,7 @@
                     <i class="bi bi-person-x fs-1 d-block mb-3 opacity-25"></i>
                     <c:choose>
                         <c:when test="${not empty keyword}">
-                            Không tìm thấy bệnh nhân nào với từ khoá "<strong>${keyword}</strong>".
+                            Không tìm thấy bệnh nhân nào với từ khoá "<strong><c:out value="${keyword}"/></strong>".
                         </c:when>
                         <c:otherwise>Chưa có bệnh nhân nào.</c:otherwise>
                     </c:choose>
@@ -83,10 +83,10 @@
                                 <tr>
                                     <td class="ps-4">
                                         <div class="d-flex align-items-center gap-3">
-                                            <div class="avatar-sm bg-primary bg-opacity-10 text-primary rounded-circle
+                                            <div class="avatar-sm bg-success bg-opacity-10 text-success rounded-circle
                                                         d-flex align-items-center justify-content-center fw-bold"
                                                  style="width:40px;height:40px;">
-                                                ${fn:substring(p.fullName, 0, 1)}
+                                                ${not empty p.fullName ? fn:toUpperCase(fn:substring(p.fullName, 0, 1)) : '?'}
                                             </div>
                                             <div>
                                                 <div class="fw-semibold">${p.fullName}</div>

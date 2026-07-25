@@ -22,8 +22,7 @@ import java.util.List;
 @WebServlet("/doctor/patient-history")
 public class DoctorPatientHistoryServlet extends HttpServlet {
 
-    private final MedicalRecordDAO dao       = new MedicalRecordDAO();
-    private final DoctorDAO        doctorDAO = new DoctorDAO();
+    private final MedicalRecordDAO dao = new MedicalRecordDAO();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
@@ -35,7 +34,7 @@ public class DoctorPatientHistoryServlet extends HttpServlet {
             return;
         }
         User user = (User) session.getAttribute("user");
-        Integer doctorId = doctorDAO.getDoctorIdByUserId(user.getId());
+        Integer doctorId = DoctorDAO.getDoctorIdByUserId(user.getId());
         if (doctorId == null) {
             resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Tài khoản chưa liên kết hồ sơ bác sĩ.");
             return;
@@ -83,7 +82,15 @@ public class DoctorPatientHistoryServlet extends HttpServlet {
         }
 
         // Lịch sử tất cả hồ sơ bệnh án của bệnh nhân này (toàn hệ thống, không giới hạn bác sĩ)
-        List<MedicalRecord> records = dao.getClinicalHistoryForDoctor(patientId, doctorId);
+        List<MedicalRecord> records;
+        try {
+            records = dao.getClinicalHistoryForDoctor(patientId, doctorId);
+        } catch (Exception e) {
+            System.err.println("[DoctorPatientHistoryServlet] doGet ERROR: " + e.getMessage());
+            e.printStackTrace();
+            records = java.util.Collections.emptyList();
+            req.setAttribute("errorMessage", "Không thể tải lịch sử bệnh án. Vui lòng thử lại sau.");
+        }
 
         req.setAttribute("patientName",  patientName);
         req.setAttribute("patientId",    patientId);

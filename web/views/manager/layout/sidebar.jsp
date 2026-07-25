@@ -20,7 +20,7 @@
         </div>
         <div class="admin-sidebar-name">${sessionScope.user.fullName}</div>
         <span class="admin-sidebar-badge">
-            <i class="bi bi-briefcase-fill"></i>Quản lý
+            <i class="bi bi-briefcase-fill"></i>Quản Lý
         </span>
     </div>
 
@@ -46,23 +46,14 @@
                 <span>Dịch Vụ Y Tế</span>
             </a>
         </li>
-        <!-- Danh Mục Thuốc: đã ẩn — manager không cần quản lý thuốc
-        <li>
-            <a href="${pageContext.request.contextPath}/manager/medicines/"
-               class="${fn:contains(requestURI, '/manager/medicines') ? 'active' : ''}">
-                <i class="bi bi-capsule"></i>
-                <span>Danh Mục Thuốc</span>
-            </a>
-        </li>
-        -->
 
         <!-- QUẢN LÝ LỊCH LÀM VIỆC -->
         <li class="admin-sidebar-section">Quản Lý Nhân Sự</li>
         <li>
-            <a href="${pageContext.request.contextPath}/manager/schedules/?tab=schedules"
+            <a href="${pageContext.request.contextPath}/manager/schedules/"
                class="${fn:contains(requestURI, '/manager/schedules') ? 'active' : ''}">
                 <i class="bi bi-calendar-check"></i>
-                <span>Quản Lí Lịch Làm Việc</span>
+                <span>Lịch Làm Việc</span>
             </a>
         </li>
         <li>

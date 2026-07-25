@@ -4,7 +4,6 @@ import com.clinic.config.DatabaseConfig;
 import com.clinic.model.MedicalRecord;
 
 import java.sql.*;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,13 +25,13 @@ public class MedicalRecordDAO {
         "  mr.fetal_heart_rate, mr.fetal_presentation, mr.fetal_position, mr.fetal_movement, " +
         "  mr.cervical_dilation_cm, mr.cervical_effacement, mr.amniotic_fluid, mr.presentation_station, " +
         "  mr.edema, mr.proteinuria, mr.vaginal_bleeding, mr.uterine_contractions, mr.risk_flags_json, " +
-        "  mr.treatment_plan, mr.next_appointment_date, mr.referred_to, " +
+        "  mr.treatment_plan, mr.referred_to, " +
         "  pt.full_name AS patient_name, " +
         "  pt.phone_number AS patient_phone, " +
         "  CONVERT(varchar, pt.date_of_birth, 23)            AS patient_dob, " +
         "  a.patient_id AS patient_id, " +
         "  CONVERT(varchar, a.appointment_date, 23)          AS appointment_date, " +
-        "  CONVERT(varchar, a.time_slot, 108)                AS time_slot, " +
+        "  a.time_slot                                       AS time_slot, " +
         "  a.symptoms, " +
         "  CONVERT(varchar, a.last_menstrual_period, 23)     AS last_menstrual_period, " +
         "  a.pregnancy_id " +
@@ -177,6 +176,25 @@ public class MedicalRecordDAO {
         }
     }
 
+    /**
+     * Kiểm tra xem appointment đã có ít nhất 1 chỉ định siêu âm (bất kỳ trạng thái nào).
+     */
+    public boolean hasAnyUltrasoundOrderForAppointment(int appointmentId) {
+        String sql = "SELECT 1 FROM test_orders o "
+                + "JOIN medical_records mr ON mr.id = o.medical_record_id "
+                + "WHERE mr.appointment_id = ?";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, appointmentId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
     public boolean hasBlockingUltrasoundOrdersForAppointment(Connection conn, int appointmentId)
             throws SQLException {
         String sql = "SELECT 1 FROM test_orders o WITH (UPDLOCK, HOLDLOCK) "
@@ -213,8 +231,8 @@ public class MedicalRecordDAO {
             "  fetal_heart_rate, fetal_presentation, fetal_position, fetal_movement, " +
             "  cervical_dilation_cm, cervical_effacement, amniotic_fluid, presentation_station, " +
             "  edema, proteinuria, vaginal_bleeding, uterine_contractions, risk_flags_json, " +
-            "  treatment_plan, next_appointment_date, referred_to, status" +
-            ") VALUES (?,?,?,?,  ?,?,?,?,?,  ?,?,?,  ?,?,?,?,  ?,?,?,?,  ?,?,?,?,?,  ?,?,?,?)";
+            "  treatment_plan, referred_to, status" +
+            ") VALUES (?,?,?,?,  ?,?,?,?,?,  ?,?,?,  ?,?,?,?,  ?,?,?,?,  ?,?,?,?,?,  ?,?,?)";
 
         try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             bindParams(ps, mr, true, true);
@@ -248,13 +266,13 @@ public class MedicalRecordDAO {
             "  fetal_heart_rate=?, fetal_presentation=?, fetal_position=?, fetal_movement=?, " +
             "  cervical_dilation_cm=?, cervical_effacement=?, amniotic_fluid=?, presentation_station=?, " +
             "  edema=?, proteinuria=?, vaginal_bleeding=?, uterine_contractions=?, risk_flags_json=?, " +
-            "  treatment_plan=?, next_appointment_date=?, referred_to=?, status=? " +
+            "  treatment_plan=?, referred_to=?, status=? " +
             "WHERE id=? AND appointment_id=?";
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             bindParams(ps, mr, false, true);
-            ps.setInt(28, mr.getId());
-            ps.setInt(29, mr.getAppointmentId());
+            ps.setInt(27, mr.getId());
+            ps.setInt(28, mr.getAppointmentId());
             return ps.executeUpdate() > 0;
         }
     }
@@ -304,9 +322,6 @@ public class MedicalRecordDAO {
         ps.setString(i++, mr.getRiskFlagsJson());
         // Kế hoạch
         ps.setString(i++, mr.getTreatmentPlan());
-        if (mr.getNextAppointmentDate() != null) {
-            ps.setDate(i++, Date.valueOf(mr.getNextAppointmentDate()));
-        } else { ps.setNull(i++, Types.DATE); }
         ps.setString(i++, mr.getReferredTo());
         if (includeStatus) {
             ps.setString(i++, mr.getStatus() != null ? mr.getStatus() : "final");
@@ -364,8 +379,6 @@ public class MedicalRecordDAO {
 
         // Kế hoạch
         mr.setTreatmentPlan(rs.getString("treatment_plan"));
-        Date nad = rs.getDate("next_appointment_date");
-        if (nad != null) mr.setNextAppointmentDate(nad.toLocalDate());
         mr.setReferredTo(rs.getString("referred_to"));
         // Status — đọc an toàn, nếu cột chưa tồn tại thì dùng mặc định "final"
         try { mr.setStatus(rs.getString("status")); } catch (SQLException ignored) { mr.setStatus("final"); }

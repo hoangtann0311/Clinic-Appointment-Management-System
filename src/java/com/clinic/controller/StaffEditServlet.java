@@ -33,29 +33,36 @@ public class StaffEditServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         if (!requireReceptionAccess(req, resp)) return;
-        String idStr = req.getParameter("id");
-        if (idStr != null && !idStr.isEmpty()) {
-            try {
-                int id = Integer.parseInt(idStr);
-                Appointment apt = staffReceptionService.findAppointmentById(id);
-                if (apt != null) {
-                    req.setAttribute("apt", apt);
-                    req.setAttribute("doctors", staffReceptionService.getAllDoctors());
-                    req.setAttribute("services", staffReceptionService.getAllServices());
-                    req.setAttribute("today", LocalDate.now().toString());
-                    req.setAttribute("currentDisplayDate", LocalDate.now().format(DateTimeFormatter.ofPattern("dd 'tháng' MM, yyyy")));
+        try {
+            String idStr = req.getParameter("id");
+            if (idStr != null && !idStr.isEmpty()) {
+                try {
+                    int id = Integer.parseInt(idStr);
+                    Appointment apt = staffReceptionService.findAppointmentById(id);
+                    if (apt != null) {
+                        req.setAttribute("apt", apt);
+                        req.setAttribute("doctors", staffReceptionService.getAllDoctors());
+                        req.setAttribute("services", staffReceptionService.getAllServices());
+                        req.setAttribute("today", LocalDate.now().toString());
+                        req.setAttribute("currentDisplayDate", LocalDate.now().format(DateTimeFormatter.ofPattern("dd 'tháng' MM, yyyy")));
 
-                    Invoice preInvoice = new com.clinic.dao.InvoiceDAO().getByAppointmentIdAndType(id, "PRE_EXAM");
-                    req.setAttribute("preInvoice", preInvoice);
+                        Invoice preInvoice = new com.clinic.dao.InvoiceDAO().getByAppointmentIdAndType(id, "PRE_EXAM");
+                        req.setAttribute("preInvoice", preInvoice);
 
-                    req.getRequestDispatcher("/views/staff/reception-edit.jsp").forward(req, resp);
-                    return;
+                        req.getRequestDispatcher("/views/staff/reception-edit.jsp").forward(req, resp);
+                        return;
+                    }
+                } catch (NumberFormatException e) {
+                    e.printStackTrace();
                 }
-            } catch (NumberFormatException e) {
-                e.printStackTrace();
             }
+            resp.sendRedirect(req.getContextPath() + "/admin/reception");
+        } catch (Exception ex) {
+            System.err.println("[StaffEditServlet] doGet ERROR: " + ex.getMessage());
+            ex.printStackTrace();
+            req.setAttribute("errorMessage", "Không thể tải trang. Vui lòng thử lại sau.");
+            req.getRequestDispatcher("/views/staff/reception-edit.jsp").forward(req, resp);
         }
-        resp.sendRedirect(req.getContextPath() + "/admin/reception");
     }
 
     @Override
@@ -78,28 +85,7 @@ public class StaffEditServlet extends HttpServlet {
             return;
         }
 
-        if ("confirmPayment".equals(action)) {
-            String paymentMethod = req.getParameter("paymentMethod");
-            String transactionCode = req.getParameter("transactionCode");
-            String paymentNote = req.getParameter("paymentNote");
 
-            int userId = user != null ? user.getId() : 0;
-
-            Invoice preInvoice = new com.clinic.dao.InvoiceDAO().getByAppointmentIdAndType(id, "PRE_EXAM");
-            if (preInvoice == null || (!"PendingConfirmation".equalsIgnoreCase(preInvoice.getStatus())
-                    && !"Unpaid".equalsIgnoreCase(preInvoice.getStatus()))) {
-                resp.sendRedirect(req.getContextPath() + "/admin/reception/edit?id=" + id + "&error=" + java.net.URLEncoder.encode("Không thể xác nhận thanh toán cho hóa đơn này.", "UTF-8"));
-                return;
-            }
-
-            boolean success = staffReceptionService.confirmPayment(preInvoice.getId(), paymentMethod, transactionCode, paymentNote, userId);
-            if (success) {
-                resp.sendRedirect(req.getContextPath() + "/admin/reception/edit?id=" + id + "&success=paymentConfirmed");
-            } else {
-                resp.sendRedirect(req.getContextPath() + "/admin/reception/edit?id=" + id + "&error=" + java.net.URLEncoder.encode("Không thể xác nhận thanh toán.", "UTF-8"));
-            }
-            return;
-        }
 
         String doctorId = req.getParameter("doctorId");
         String serviceId = req.getParameter("serviceId");
@@ -110,6 +96,7 @@ public class StaffEditServlet extends HttpServlet {
 
         try {
             staffReceptionService.updateAppointment(id, doctorId, serviceId, appDate, timeSlot, symptoms, lmp);
+            req.getSession().setAttribute("queueSuccess", "Đã cập nhật lịch hẹn #" + id + " thành công.");
             resp.sendRedirect(req.getContextPath() + "/admin/reception");
 
         } catch (IllegalArgumentException e) {

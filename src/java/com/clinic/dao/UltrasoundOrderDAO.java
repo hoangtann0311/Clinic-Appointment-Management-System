@@ -35,7 +35,7 @@ public class UltrasoundOrderDAO {
         + ")";
 
     // Chỉ hiển thị chỉ định siêu âm khi dịch vụ tương ứng đã được thanh toán.
-    // Cờ is_emergency chỉ dùng để xếp mức ưu tiên, không thay thế thanh toán.
+    // Cờ is_priority chỉ dùng để xếp mức ưu tiên, không thay thế thanh toán.
     private static final String PAYMENT_GATE_CONDITION =
         "("
         + "((a.service_id = o.service_id OR EXISTS ("
@@ -60,7 +60,7 @@ public class UltrasoundOrderDAO {
             "SELECT o.id AS order_id, o.medical_record_id, mr.appointment_id, "
             + "a.patient_id, p.full_name AS patient_name, p.phone_number, p.date_of_birth, "
             + "a.appointment_date, a.time_slot, o.service_id, s.service_name, s.price, "
-            + "d.full_name AS doctor_name, a.symptoms, ISNULL(a.is_emergency, 0) AS is_emergency, "
+            + "d.full_name AS doctor_name, a.symptoms, ISNULL(a.is_priority, 0) AS is_priority, "
             + "ISNULL(s.requires_fasting, 0) AS requires_fasting, "
             + "ISNULL(s.requires_full_bladder, 0) AS requires_full_bladder, "
             + "o.status, o.created_at "
@@ -90,7 +90,7 @@ public class UltrasoundOrderDAO {
             }
         } catch (SQLException e) {
             System.err.println("[UltrasoundOrderDAO] findWaiting error: " + e.getMessage());
-            throw new RuntimeException("Lỗi database khi lấy danh sách chờ siêu âm", e);
+            return orders;
         } finally {
             closeResources(conn, ps, rs);
         }
@@ -119,7 +119,7 @@ public class UltrasoundOrderDAO {
             return rs.next() ? rs.getInt("total") : 0;
         } catch (SQLException e) {
             System.err.println("[UltrasoundOrderDAO] countWaiting error: " + e.getMessage());
-            throw new RuntimeException("Lỗi database khi đếm danh sách chờ siêu âm", e);
+            return 0;
         } finally {
             closeResources(conn, ps, rs);
         }
@@ -130,7 +130,7 @@ public class UltrasoundOrderDAO {
             "SELECT o.id AS order_id, o.medical_record_id, mr.appointment_id, "
             + "a.patient_id, p.full_name AS patient_name, p.phone_number, p.date_of_birth, "
             + "a.appointment_date, a.time_slot, o.service_id, s.service_name, s.price, "
-            + "d.full_name AS doctor_name, a.symptoms, ISNULL(a.is_emergency, 0) AS is_emergency, "
+            + "d.full_name AS doctor_name, a.symptoms, ISNULL(a.is_priority, 0) AS is_priority, "
             + "ISNULL(s.requires_fasting, 0) AS requires_fasting, "
             + "ISNULL(s.requires_full_bladder, 0) AS requires_full_bladder, "
             + "o.status, o.created_at "
@@ -246,7 +246,7 @@ public class UltrasoundOrderDAO {
             if (!hasCol) {
                 return false; // Migration not executed yet, fail closed
             }
-            String sql = "SELECT 1 FROM test_orders WHERE id = ? AND sonographer_user_id = ?";
+            String sql = "SELECT 1 FROM test_orders WHERE id = ? AND (sonographer_user_id = ? OR sonographer_user_id IS NULL)";
             try (PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setInt(1, orderId);
                 ps.setInt(2, sonographerUserId);
@@ -377,12 +377,23 @@ public class UltrasoundOrderDAO {
         }
     }
 
-    public List<UltrasoundWaitingPatient> findAll(int offset, int pageSize, String search, String statusFilter, String dateFilter, Boolean isEmergency, String sortBy, String sortDir) {
+    /**
+     * Hủy một test_order (dùng khi bác sĩ re-order với force=true).
+     */
+    public void cancelOrder(Connection conn, int orderId) throws SQLException {
+        String sql = "UPDATE test_orders SET status = 'Cancelled' WHERE id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, orderId);
+            ps.executeUpdate();
+        }
+    }
+
+    public List<UltrasoundWaitingPatient> findAll(int offset, int pageSize, String search, String statusFilter, String dateFilter, Boolean isPriority, String sortBy, String sortDir) {
         StringBuilder sql = new StringBuilder(
             "SELECT o.id AS order_id, o.medical_record_id, mr.appointment_id, "
             + "a.patient_id, p.full_name AS patient_name, p.phone_number, p.date_of_birth, "
             + "a.appointment_date, a.time_slot, o.service_id, s.service_name, s.price, "
-            + "d.full_name AS doctor_name, a.symptoms, ISNULL(a.is_emergency, 0) AS is_emergency, "
+            + "d.full_name AS doctor_name, a.symptoms, ISNULL(a.is_priority, 0) AS is_priority, "
             + "ISNULL(s.requires_fasting, 0) AS requires_fasting, "
             + "ISNULL(s.requires_full_bladder, 0) AS requires_full_bladder, "
             + "o.status, o.created_at "
@@ -408,8 +419,13 @@ public class UltrasoundOrderDAO {
         }
 
         if (statusFilter != null && !statusFilter.trim().isEmpty()) {
-            sql.append(" AND o.status = ? ");
-            params.add(statusFilter.trim());
+            String st = statusFilter.trim();
+            if ("Completed".equalsIgnoreCase(st)) {
+                sql.append(" AND UPPER(LTRIM(RTRIM(ISNULL(o.status, '')))) IN ('COMPLETED', 'CONFIRMED') ");
+            } else {
+                sql.append(" AND UPPER(LTRIM(RTRIM(ISNULL(o.status, '')))) = ? ");
+                params.add(st.toUpperCase());
+            }
         }
 
         if (dateFilter != null && !dateFilter.trim().isEmpty()) {
@@ -417,9 +433,9 @@ public class UltrasoundOrderDAO {
             params.add(java.sql.Date.valueOf(dateFilter.trim()));
         }
 
-        if (isEmergency != null) {
-            sql.append(" AND a.is_emergency = ? ");
-            params.add(isEmergency ? 1 : 0);
+        if (isPriority != null) {
+            sql.append(" AND ISNULL(a.is_priority, 0) = ? ");
+            params.add(isPriority ? 1 : 0);
         }
 
         sql.append(" ORDER BY " + resolveSortColumn(sortBy) + " " + resolveSortDirection(sortDir)
@@ -458,7 +474,7 @@ public class UltrasoundOrderDAO {
         return orders;
     }
 
-    public int countAll(String search, String statusFilter, String dateFilter, Boolean isEmergency) {
+    public int countAll(String search, String statusFilter, String dateFilter, Boolean isPriority) {
         StringBuilder sql = new StringBuilder(
             "SELECT COUNT(*) AS total "
             + "FROM test_orders o "
@@ -483,8 +499,13 @@ public class UltrasoundOrderDAO {
         }
 
         if (statusFilter != null && !statusFilter.trim().isEmpty()) {
-            sql.append(" AND o.status = ? ");
-            params.add(statusFilter.trim());
+            String st = statusFilter.trim();
+            if ("Completed".equalsIgnoreCase(st)) {
+                sql.append(" AND UPPER(LTRIM(RTRIM(ISNULL(o.status, '')))) IN ('COMPLETED', 'CONFIRMED') ");
+            } else {
+                sql.append(" AND UPPER(LTRIM(RTRIM(ISNULL(o.status, '')))) = ? ");
+                params.add(st.toUpperCase());
+            }
         }
 
         if (dateFilter != null && !dateFilter.trim().isEmpty()) {
@@ -492,9 +513,9 @@ public class UltrasoundOrderDAO {
             params.add(java.sql.Date.valueOf(dateFilter.trim()));
         }
 
-        if (isEmergency != null) {
-            sql.append(" AND a.is_emergency = ? ");
-            params.add(isEmergency ? 1 : 0);
+        if (isPriority != null) {
+            sql.append(" AND ISNULL(a.is_priority, 0) = ? ");
+            params.add(isPriority ? 1 : 0);
         }
 
         Connection conn = null;
@@ -541,7 +562,7 @@ public class UltrasoundOrderDAO {
         item.setPrice(rs.getBigDecimal("price"));
         item.setDoctorName(rs.getString("doctor_name"));
         item.setSymptoms(rs.getString("symptoms"));
-        item.setEmergency(rs.getBoolean("is_emergency"));
+        item.setPriority(rs.getBoolean("is_priority"));
         item.setRequiresFasting(rs.getBoolean("requires_fasting"));
         item.setRequiresFullBladder(rs.getBoolean("requires_full_bladder"));
         item.setStatus(rs.getString("status"));
@@ -565,8 +586,8 @@ public class UltrasoundOrderDAO {
                 return "s.service_name";
             case "createdAt":
                 return "o.created_at";
-            case "emergency":
-                return "a.is_emergency";
+            case "priority":
+                return "a.is_priority";
             case "orderId":
                 return "o.id";
             case "appointmentDate":
@@ -584,7 +605,7 @@ public class UltrasoundOrderDAO {
             "SELECT o.id AS order_id, o.medical_record_id, mr.appointment_id, "
             + "a.patient_id, p.full_name AS patient_name, p.phone_number, p.date_of_birth, "
             + "a.appointment_date, a.time_slot, o.service_id, s.service_name, s.price, "
-            + "d.full_name AS doctor_name, a.symptoms, ISNULL(a.is_emergency, 0) AS is_emergency, "
+            + "d.full_name AS doctor_name, a.symptoms, ISNULL(a.is_priority, 0) AS is_priority, "
             + "ISNULL(s.requires_fasting, 0) AS requires_fasting, "
             + "ISNULL(s.requires_full_bladder, 0) AS requires_full_bladder, "
             + "o.status, o.created_at "
@@ -633,5 +654,36 @@ public class UltrasoundOrderDAO {
             }
         }
         DatabaseConfig.closeConnection(conn);
+    }
+
+    /**
+     * Lấy danh sách dịch vụ siêu âm/xét nghiệm cho hóa đơn POST_EXAM.
+     * Trả về List&lt;Map&gt; với keys: serviceName, serviceCode, servicePrice.
+     */
+    public List<java.util.Map<String, Object>> getTestOrdersForInvoice(int appointmentId) {
+        List<java.util.Map<String, Object>> list = new java.util.ArrayList<>();
+        String sql = "SELECT s.service_name, CAST(s.id AS VARCHAR) + '_' + s.service_name AS service_code, "
+                + "COALESCE(s.price, 0) AS service_price "
+                + "FROM test_orders o "
+                + "JOIN medical_records mr ON o.medical_record_id = mr.id "
+                + "JOIN services s ON o.service_id = s.id "
+                + "WHERE mr.appointment_id = ? "
+                + "ORDER BY o.id ASC";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, appointmentId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    java.util.Map<String, Object> item = new java.util.HashMap<>();
+                    item.put("serviceName", rs.getString("service_name"));
+                    item.put("serviceCode", rs.getString("service_code"));
+                    item.put("servicePrice", rs.getDouble("service_price"));
+                    list.add(item);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[UltrasoundOrderDAO] getTestOrdersForInvoice error: " + e.getMessage());
+        }
+        return list;
     }
 }

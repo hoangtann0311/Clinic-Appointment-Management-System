@@ -3,6 +3,21 @@
 <%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
 <%@ include file="../common/header.jsp" %>
 
+<%-- Modal phóng to ảnh --%>
+<div class="modal fade" id="imageZoomModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-content bg-dark border-0 rounded-4">
+      <div class="modal-header border-0">
+        <span class="text-white small">Ảnh siêu âm</span>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center p-2">
+        <img id="zoomModalImage" src="" alt="Phóng to" style="max-width:100%;max-height:80vh;object-fit:contain;border-radius:8px;">
+      </div>
+    </div>
+  </div>
+</div>
+
 <style>
   .result-toast { position:fixed;top:76px;right:20px;z-index:1080;min-width:320px;max-width:440px; }
   .clinical-value { white-space:pre-wrap;line-height:1.65; }
@@ -14,13 +29,20 @@
   <div><h1 class="admin-page-title mb-1">Kết quả cận lâm sàng</h1>
     <div class="admin-page-subtitle">Bệnh nhân: <strong><c:out value="${recordInfo.patientName}" /></strong>
       — Ngày khám: <c:out value="${recordInfo.appointmentDate}" /> — Hồ sơ #${recordId}</div></div>
-  <a href="javascript:history.back()" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Quay lại hồ sơ</a>
+  <c:choose>
+    <c:when test="${not empty recordInfo.appointmentId}">
+      <a href="${pageContext.request.contextPath}/doctor/medical-records?apptId=${recordInfo.appointmentId}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Quay lại hồ sơ</a>
+    </c:when>
+    <c:otherwise>
+      <a href="${pageContext.request.contextPath}/doctor/medical-records" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Quay lại danh sách hồ sơ</a>
+    </c:otherwise>
+  </c:choose>
 </div>
 
-<c:if test="${not empty param.success}"><div class="alert alert-success alert-dismissible fade show shadow-sm result-toast" data-auto-dismiss="true">
+<c:if test="${not empty param.success}"><div class="alert alert-success alert-dismissible fade show" data-cams-toast role="alert">
   <i class="bi bi-check-circle-fill me-2"></i>Đã xác nhận kết quả siêu âm. Bệnh nhân có thể xem phiếu chính thức.
   <button class="btn-close" data-bs-dismiss="alert"></button></div></c:if>
-<c:if test="${not empty param.error}"><div class="alert alert-danger alert-dismissible fade show shadow-sm result-toast" data-auto-dismiss="true">
+<c:if test="${not empty param.error}"><div class="alert alert-danger alert-dismissible fade show" data-cams-toast role="alert">
   <i class="bi bi-exclamation-triangle-fill me-2"></i>
   <c:choose><c:when test="${param.error == 'incompleteConclusion'}">Ghi chú xác nhận phải có ít nhất 20 ký tự.</c:when>
     <c:when test="${param.error == 'confirmFailed'}">Chỉ có thể xác nhận phiếu đã được Bác sĩ siêu âm ký và đang ở trạng thái chờ xác nhận.</c:when>
@@ -45,16 +67,19 @@
           <div class="row g-3 mb-4">
             <div class="col-xl-4"><div class="small fw-semibold mb-2">1. Ảnh siêu âm gốc</div>
               <c:choose><c:when test="${not empty r.raw_image_id}">
-                <img loading="lazy" class="result-image" src="${pageContext.request.contextPath}/medical/ultrasound-image?id=${r.raw_image_id}" alt="Ảnh siêu âm gốc không có lớp khoanh">
+                <img loading="lazy" class="result-image" src="${pageContext.request.contextPath}/medical/ultrasound-image?id=${r.raw_image_id}" alt="Ảnh siêu âm gốc không có lớp khoanh"
+                     style="cursor:pointer" onclick="zoomImage(this.src)" title="Bấm để phóng to">
               </c:when><c:otherwise><div class="border rounded p-5 text-center text-muted">Chưa có ảnh</div></c:otherwise></c:choose>
             </div>
             <div class="col-xl-4"><div class="small fw-semibold mb-2">2. Vùng AI phân tích <span class="badge bg-secondary-subtle text-secondary">Tham khảo</span></div>
-              <c:choose><c:when test="${not empty r.ai_processed_image_url && not empty r.raw_image_id}"><img loading="lazy" class="result-image" src="${pageContext.request.contextPath}/medical/ai-image?orderId=${r.order_id}&amp;imageId=${r.raw_image_id}&amp;type=result" alt="Ảnh AI phân tích đúng ảnh gốc"></c:when>
+              <c:choose><c:when test="${not empty r.ai_processed_image_url && not empty r.raw_image_id}"><img loading="lazy" class="result-image" src="${pageContext.request.contextPath}/medical/ai-image?orderId=${r.order_id}&amp;imageId=${r.raw_image_id}&amp;type=result" alt="Ảnh AI phân tích đúng ảnh gốc"
+                     style="cursor:pointer" onclick="zoomImage(this.src)" title="Bấm để phóng to"></c:when>
               <c:otherwise><div class="border rounded p-5 text-center text-muted">AI không tạo vùng hợp lệ cho ảnh này</div></c:otherwise></c:choose>
             </div>
             <div class="col-xl-4"><div class="small fw-semibold mb-2">3. Vùng Bác sĩ siêu âm xác nhận/chỉnh sửa</div>
               <c:choose><c:when test="${not empty r.raw_image_id}"><div class="position-relative">
-                <img loading="lazy" id="review-image-${r.order_id}" class="result-image" src="${pageContext.request.contextPath}/medical/ultrasound-image?id=${r.raw_image_id}" alt="Ảnh có vùng Bác sĩ siêu âm xác nhận hoặc chỉnh sửa">
+                <img loading="lazy" id="review-image-${r.order_id}" class="result-image" src="${pageContext.request.contextPath}/medical/ultrasound-image?id=${r.raw_image_id}" alt="Ảnh có vùng Bác sĩ siêu âm xác nhận hoặc chỉnh sửa"
+                     style="cursor:pointer" onclick="zoomImage(this.src)" title="Bấm để phóng to">
                 <canvas id="review-overlay-${r.order_id}" class="position-absolute" style="inset:0;pointer-events:none"></canvas>
                 <textarea id="review-annotation-${r.order_id}" hidden><c:out value="${r.annotation_data}" /></textarea>
               </div></c:when><c:otherwise><div class="border rounded p-5 text-center text-muted">Chưa có vùng duyệt</div></c:otherwise></c:choose>
@@ -104,6 +129,10 @@
 </c:choose>
 
 <script>
+function zoomImage(src) {
+    document.getElementById('zoomModalImage').src = src;
+    new bootstrap.Modal(document.getElementById('imageZoomModal')).show();
+}
 (function(){
   document.querySelectorAll('[data-auto-dismiss="true"]').forEach(el=>setTimeout(()=>bootstrap.Alert.getOrCreateInstance(el).close(),4500));
   document.querySelectorAll('img[id^="review-image-"]').forEach(img=>{

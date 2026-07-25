@@ -430,7 +430,7 @@
          ALERT MESSAGES
          ============================================================ --%>
     <c:if test="${not empty success}">
-        <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert" style="border-radius:var(--r-md);">
+        <div class="alert alert-success alert-dismissible fade show" data-cams-toast role="alert">
             <c:choose>
                 <c:when test="${success eq 'approved'}">
                     <i class="bi bi-check-circle-fill me-2 fs-5"></i>
@@ -449,7 +449,7 @@
         </div>
     </c:if>
     <c:if test="${not empty error}">
-        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert" style="border-radius:var(--r-md);">
+        <div class="alert alert-danger alert-dismissible fade show" data-cams-toast role="alert">
             <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
             <div>${fn:escapeXml(error)}</div>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -656,9 +656,9 @@
                 <input type="hidden" name="tab" value="schedules">
                 <select name="status" class="form-select">
                     <option value="">Tất cả trạng thái</option>
-                    <option value="PENDING" ${statusFilter eq 'PENDING' ? 'selected' : ''}>🟠 Chờ xác nhận</option>
-                    <option value="APPROVED" ${statusFilter eq 'APPROVED' ? 'selected' : ''}>🟢 Đã xác nhận</option>
-                    <option value="REJECTED" ${statusFilter eq 'REJECTED' ? 'selected' : ''}>🔴 Đã từ chối</option>
+                    <option value="PENDING" ${statusFilter eq 'PENDING' ? 'selected' : ''}>Chờ xác nhận</option>
+                    <option value="APPROVED" ${statusFilter eq 'APPROVED' ? 'selected' : ''}>Đã xác nhận</option>
+                    <option value="REJECTED" ${statusFilter eq 'REJECTED' ? 'selected' : ''}>Đã từ chối</option>
                 </select>
                 <select name="doctorId" class="form-select">
                     <option value="">Tất cả Bác sĩ lâm sàng</option>

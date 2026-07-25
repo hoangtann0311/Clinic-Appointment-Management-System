@@ -81,7 +81,7 @@ public class PasswordResetTokenDAO {
             }
         } catch (SQLException e) {
             System.err.println("Lỗi khi tìm password reset token: " + e.getMessage());
-            throw new RuntimeException("Lỗi database khi tìm token", e);
+            return null;
         } finally {
             closeResources(conn, ps, rs);
         }

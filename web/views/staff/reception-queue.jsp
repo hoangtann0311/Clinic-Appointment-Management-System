@@ -91,23 +91,10 @@
                 <a href="${pageContext.request.contextPath}/admin/reception/doctor-schedules"
                    class="${fn:contains(requestURI, 'doctor-schedules') ? 'active' : ''}">
                     <i class="bi bi-calendar-week"></i>
-                    <span>Lịch Làm Việc Bác Sĩ</span>
+                    <span>Lịch Làm Việc</span>
                 </a>
             </li>
-            <li>
-                <a href="${pageContext.request.contextPath}/admin/reception/slots"
-                   class="${fn:contains(requestURI, '/slots') ? 'active' : ''}">
-                    <i class="bi bi-grid-3x3-gap"></i>
-                    <span>Khung Giờ Khám</span>
-                </a>
-            </li>
-            <li>
-                <a href="${pageContext.request.contextPath}/admin/reception/payments" 
-                   class="${fn:contains(requestURI, 'payments') ? 'active' : ''}">
-                    <i class="bi bi-credit-card-2-front"></i>
-                    <span>Xác Nhận Thanh Toán</span>
-                </a>
-            </li>
+
         </ul>
     </aside>
 
@@ -190,8 +177,23 @@
 
         <!-- Smart Queue List (Spans 100% width) -->
         <div class="admin-card mb-4">
-            <div class="card-header">
-                <h5><i class="bi bi-card-list"></i> Danh Sách Điều Phối Hàng Đợi</h5>
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h5 class="mb-0"><i class="bi bi-card-list"></i> Danh Sách Điều Phối Hàng Đợi</h5>
+                <form method="get" action="${pageContext.request.contextPath}/admin/reception" class="d-flex gap-2 align-items-center">
+                    <input type="hidden" name="date" value="${selectedDate}">
+                    <input type="text" name="search" class="form-control form-control-sm" placeholder="Tìm tên, SĐT, mã..." value="${fn:escapeXml(search)}" style="width: 200px;">
+                    <select name="status" class="form-select form-select-sm" style="width: 150px;">
+                        <option value="">-- Tất cả TT --</option>
+                        <option value="Pending" ${status == 'Pending' ? 'selected' : ''}>Chờ duyệt</option>
+                        <option value="Confirmed" ${status == 'Confirmed' ? 'selected' : ''}>Đã duyệt</option>
+                        <option value="Waiting" ${status == 'Waiting' ? 'selected' : ''}>Chờ khám</option>
+                        <option value="InProgress" ${status == 'InProgress' ? 'selected' : ''}>Đang khám</option>
+                    </select>
+                    <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search"></i> Lọc</button>
+                    <c:if test="${not empty search or not empty status}">
+                        <a href="${pageContext.request.contextPath}/admin/reception?date=${selectedDate}" class="btn btn-light btn-sm border" title="Xóa bộ lọc"><i class="bi bi-x-circle"></i></a>
+                    </c:if>
+                </form>
             </div>
             <div class="card-body p-0">
                 <c:if test="${not empty errors}">
@@ -239,12 +241,20 @@
                             <c:set var="statusLower" value="${fn:toLowerCase(apt.status)}"/>
 
                             <c:set var="isLate" value="${not empty lateAppointments && lateAppointments.contains(apt.id)}"/>
-                            <tr class="${apt.emergency ? 'table-warning' : (isLate ? 'table-danger bg-opacity-10' : '')}" style="${isLate && !apt.emergency ? 'background:#fff3e0;' : ''}">
+                            <tr class="${apt.priority ? 'table-warning' : (isLate ? 'table-danger bg-opacity-10' : '')}" style="${isLate && !apt.priority ? 'background:#fff3e0;' : ''}">
                                 <td>
-                                    <strong class="${apt.emergency ? 'text-warning-emphasis' : 'text-dark'}">
-                                        <c:out value="${apt.queueNumber != null ? apt.queueNumber : 'Chờ cấp'}"/>
+                                    <strong class="${apt.priority ? 'text-warning-emphasis' : 'text-dark'}">
+                                        <c:choose>
+                                            <c:when test="${apt.queueNumber != null && apt.queueNumber.length() >= 2}">
+                                                <c:out value="${apt.queueNumber}"/>
+                                            </c:when>
+                                            <c:when test="${statusLower == 'success' || statusLower == 'completed'}">
+                                                <span class="text-muted">—</span>
+                                            </c:when>
+                                            <c:otherwise>Chờ cấp</c:otherwise>
+                                        </c:choose>
                                     </strong>
-                                    <c:if test="${apt.emergency}">
+                                    <c:if test="${apt.priority}">
                                         <div class="mt-1">
                                             <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
                                                 <i class="bi bi-arrow-up-circle-fill me-1"></i>Ưu tiên
@@ -326,7 +336,7 @@
                                             <c:otherwise>Đã hủy</c:otherwise>
                                         </c:choose>
                                     </span>
-                                    <c:if test="${apt.emergency}">
+                                    <c:if test="${apt.priority}">
                                         <div class="small mt-2 text-warning-emphasis"
                                              title="Người thao tác: ${apt.prioritizedByName}; Thời gian: ${apt.prioritizedAtText}">
                                             <i class="bi bi-info-circle me-1"></i>
@@ -345,31 +355,47 @@
 
                                 <td>
                                     <c:choose>
-                                        <c:when test="${statusLower == 'pending' || statusLower == 'confirmed'}">
+                                        <c:when test="${statusLower == 'pending'}">
                                             <div class="d-flex flex-wrap justify-content-center gap-1">
-                                                <c:choose>
-                                                    <c:when test="${apt.preExamPaymentStatus == 'Paid'}">
-                                                        <form action="${pageContext.request.contextPath}/admin/reception/checkin"
-                                                              method="post"
-                                                              style="display:inline;">
-                                                            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
-                                                            <input type="hidden" name="id" value="${apt.id}">
-                                                            <button type="submit" class="btn-cams btn-cams-primary btn-sm" style="font-size:.72rem;padding:.2rem .45rem;">
-                                                                <i class="bi bi-check-circle"></i> Check-in
-                                                            </button>
-                                                        </form>
-                                                    </c:when>
+                                                <form action="${pageContext.request.contextPath}/admin/reception/approve-payment-request"
+                                                      method="post"
+                                                      style="display:inline;">
+                                                    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                                                    <input type="hidden" name="id" value="${apt.id}">
+                                                    <button type="submit" class="btn-cams btn-cams-primary btn-sm" style="font-size:.72rem;padding:.2rem .45rem;" title="Duyệt lịch đặt và tạo phiếu yêu cầu thanh toán gửi tới Bệnh nhân">
+                                                        <i class="bi bi-send-check"></i> Duyệt & Gửi YCTT
+                                                    </button>
+                                                </form>
 
-                                                    <c:otherwise>
-                                                        <button type="button"
-                                                                class="btn-cams btn-cams-secondary btn-sm"
-                                                                style="font-size:.7rem;padding:.15rem .4rem;"
-                                                                disabled
-                                                                title="Bệnh nhân chưa thanh toán hóa đơn PRE_EXAM">
-                                                            <i class="bi bi-lock-fill"></i> Chờ TT
-                                                        </button>
-                                                    </c:otherwise>
-                                                </c:choose>
+                                                <a href="${pageContext.request.contextPath}/admin/reception/edit?id=${apt.id}"
+                                                   class="btn-action btn-action-edit" style="font-size:.7rem;padding:.15rem .4rem;">
+                                                    <i class="bi bi-pencil-square"></i> Sửa
+                                                </a>
+
+                                                <form action="${pageContext.request.contextPath}/admin/reception/cancel"
+                                                      method="post"
+                                                      style="display:inline;"
+                                                      onsubmit="return confirm('Bạn có chắc chắn muốn hủy lịch hẹn khám này?')">
+                                                    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                                                    <input type="hidden" name="id" value="${apt.id}">
+                                                    <button type="submit" class="btn-action btn-action-delete" style="font-size:.7rem;padding:.15rem .4rem;">
+                                                        <i class="bi bi-x-circle"></i> Huỷ
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </c:when>
+
+                                        <c:when test="${statusLower == 'confirmed'}">
+                                            <div class="d-flex flex-wrap justify-content-center gap-1">
+                                                <form action="${pageContext.request.contextPath}/admin/reception/checkin"
+                                                      method="post"
+                                                      style="display:inline;">
+                                                    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                                                    <input type="hidden" name="id" value="${apt.id}">
+                                                    <button type="submit" class="btn-cams btn-cams-success btn-sm" style="font-size:.72rem;padding:.2rem .45rem;" title="Xác nhận bệnh nhân đã thanh toán tại quầy và xếp vào hàng đợi Bác sĩ">
+                                                        <i class="bi bi-person-check-fill"></i> Xác nhận TT & Check-in
+                                                    </button>
+                                                </form>
 
                                                 <a href="${pageContext.request.contextPath}/admin/reception/edit?id=${apt.id}"
                                                    class="btn-action btn-action-edit" style="font-size:.7rem;padding:.15rem .4rem;">
@@ -395,7 +421,7 @@
                                                     <i class="bi bi-person-fill-check"></i> Đang đợi Bác sĩ lâm sàng
                                                 </span>
                                                 <c:choose>
-                                                    <c:when test="${apt.emergency}">
+                                                    <c:when test="${apt.priority}">
                                                         <form method="post"
                                                               action="${pageContext.request.contextPath}/admin/reception/priority"
                                                               onsubmit="return confirm('Bỏ mức ưu tiên của ca khám này?');">
@@ -426,7 +452,7 @@
                                                 <span class="text-warning fw-semibold text-nowrap">
                                                     <i class="bi bi-activity"></i> Đang khám lâm sàng
                                                 </span>
-                                                <c:if test="${apt.emergency}">
+                                                <c:if test="${apt.priority}">
                                                     <form method="post"
                                                           action="${pageContext.request.contextPath}/admin/reception/priority"
                                                           onsubmit="return confirm('Bỏ mức ưu tiên của ca khám này?');">
@@ -471,6 +497,30 @@
                         </tbody>
                     </table>
                 </div>
+                <!-- Phân trang -->
+                <c:if test="${totalPages > 1}">
+                    <div class="d-flex justify-content-between align-items-center p-3 border-top bg-light">
+                        <small class="text-muted">
+                            Hiển thị trang <strong>${currentPage}</strong> / <strong>${totalPages}</strong> 
+                            (tổng cộng <strong>${totalRecords}</strong> bản ghi)
+                        </small>
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination pagination-sm mb-0">
+                                <li class="page-item ${currentPage == 1 ? 'disabled' : ''}">
+                                    <a class="page-link" href="${pageContext.request.contextPath}/admin/reception?date=${selectedDate}&search=${fn:escapeXml(search)}&status=${status}&page=${currentPage - 1}" tabindex="-1">Trước</a>
+                                </li>
+                                <c:forEach begin="1" end="${totalPages}" var="i">
+                                    <li class="page-item ${currentPage == i ? 'active' : ''}">
+                                        <a class="page-link" href="${pageContext.request.contextPath}/admin/reception?date=${selectedDate}&search=${fn:escapeXml(search)}&status=${status}&page=${i}">${i}</a>
+                                    </li>
+                                </c:forEach>
+                                <li class="page-item ${currentPage == totalPages ? 'disabled' : ''}">
+                                    <a class="page-link" href="${pageContext.request.contextPath}/admin/reception?date=${selectedDate}&search=${fn:escapeXml(search)}&status=${status}&page=${currentPage + 1}">Sau</a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                </c:if>
             </div>
         </div>
 

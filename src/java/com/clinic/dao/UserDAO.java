@@ -392,8 +392,8 @@ public class UserDAO {
                 return mapRowToUser(rs);
             }
         } catch (SQLException e) {
-            System.err.println("Lỗi khi tìm user theo verification token: " + e.getMessage());
-            throw new RuntimeException("Lỗi database khi tìm user theo token", e);
+            System.err.println("[UserDAO] findByVerificationToken ERROR: " + e.getMessage());
+            return null;
         } finally {
             closeResources(conn, ps, rs);
         }
@@ -421,8 +421,8 @@ public class UserDAO {
             int affectedRows = ps.executeUpdate();
             return affectedRows > 0;
         } catch (SQLException e) {
-            System.err.println("Lỗi khi xác thực user: " + e.getMessage());
-            throw new RuntimeException("Lỗi database khi xác thực user", e);
+            System.err.println("[UserDAO] verifyUser ERROR: " + e.getMessage());
+            return false;
         } finally {
             closeResources(conn, ps, null);
         }
@@ -457,8 +457,8 @@ public class UserDAO {
                 return mapRowToUser(rs);
             }
         } catch (SQLException e) {
-            System.err.println("Lỗi khi tìm user theo số điện thoại: " + e.getMessage());
-            throw new RuntimeException("Lỗi database khi tìm user theo số điện thoại", e);
+            System.err.println("[UserDAO] findByPhone ERROR: " + e.getMessage());
+            return null;
         } finally {
             closeResources(conn, ps, rs);
         }
@@ -542,8 +542,8 @@ public class UserDAO {
             int affectedRows = ps.executeUpdate();
             return affectedRows > 0;
         } catch (SQLException e) {
-            System.err.println("Lỗi khi cập nhật mật khẩu: " + e.getMessage());
-            throw new RuntimeException("Lỗi database khi cập nhật mật khẩu", e);
+            System.err.println("[UserDAO] updatePassword ERROR: " + e.getMessage());
+            return false;
         } finally {
             closeResources(conn, ps, null);
         }
@@ -577,8 +577,8 @@ public class UserDAO {
                 return mapRowToUser(rs);
             }
         } catch (SQLException e) {
-            System.err.println("Lỗi khi tìm user theo google_id: " + e.getMessage());
-            throw new RuntimeException("Lỗi database khi tìm user theo google_id", e);
+            System.err.println("[UserDAO] findByGoogleId ERROR: " + e.getMessage());
+            return null;
         } finally {
             closeResources(conn, ps, rs);
         }
@@ -607,8 +607,8 @@ public class UserDAO {
             int affectedRows = ps.executeUpdate();
             return affectedRows > 0;
         } catch (SQLException e) {
-            System.err.println("Lỗi khi cập nhật google_id: " + e.getMessage());
-            throw new RuntimeException("Lỗi database khi cập nhật google_id", e);
+            System.err.println("[UserDAO] updateGoogleId ERROR: " + e.getMessage());
+            return false;
         } finally {
             closeResources(conn, ps, null);
         }
@@ -647,7 +647,7 @@ public class UserDAO {
                     hasCreatedAtColumn = false;
                 } else {
                     System.err.println("[UserDAO] findAll error: " + e.getMessage());
-                    throw new RuntimeException("Lỗi database khi lấy danh sách users", e);
+                    return new java.util.ArrayList<>();
                 }
             }
         }
@@ -658,7 +658,7 @@ public class UserDAO {
             return findAllInternal(offset, pageSize, search, roleIds, statusFilter, fullCol, includeDeleted);
         } catch (SQLException e2) {
             System.err.println("[UserDAO] findAll error: " + e2.getMessage());
-            throw new RuntimeException("Lỗi database khi lấy danh sách users", e2);
+            return new java.util.ArrayList<>();
         }
     }
 
@@ -828,7 +828,7 @@ public class UserDAO {
                 while (rs.next()) result.put(rs.getInt("role_id"), rs.getInt("total"));
             }
         } catch (SQLException e) {
-            throw new RuntimeException("Lỗi database khi thống kê users theo vai trò", e);
+            System.err.println("[UserDAO] countGroupedByRole ERROR: " + e.getMessage());
         }
         return result;
     }
@@ -1237,11 +1237,11 @@ public class UserDAO {
                     return getRecentUsersInternal(limit, false);
                 } catch (SQLException e2) {
                     System.err.println("[UserDAO] getRecentUsers fallback also failed: " + e2.getMessage());
-                    throw new RuntimeException("Lỗi database khi lấy recent users", e2);
+                    return new java.util.ArrayList<>();
                 }
             }
             System.err.println("[UserDAO] getRecentUsers error: " + e.getMessage());
-            throw new RuntimeException("Lỗi database khi lấy recent users", e);
+            return new java.util.ArrayList<>();
         }
     }
 

@@ -6,7 +6,7 @@
 <%-- ── Banner ──────────────────────────────────────────────────────────────── --%>
 <div class="row mb-4">
     <div class="col-12">
-        <div class="card border-0 rounded-4" style="background: linear-gradient(135deg,#d27b9f,#b86689); color:#fff;">
+        <div class="card border-0 bg-primary bg-gradient text-white rounded-4">
             <div class="card-body p-4">
                 <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
                     <div>
@@ -30,7 +30,7 @@
 
 <%-- ── Flash messages ───────────────────────────────────────────────────────── --%>
 <c:if test="${not empty success}">
-    <div class="alert alert-success alert-dismissible fade show rounded-3 mb-3" role="alert">
+    <div class="alert alert-success alert-dismissible fade show" data-cams-toast role="alert">
         <i class="bi bi-check-circle-fill me-2"></i>
         <c:choose>
             <c:when test="${success == 'created'}">Đăng ký lịch làm việc thành công! Vui lòng chờ quản lý xác nhận.</c:when>
@@ -41,7 +41,7 @@
     </div>
 </c:if>
 <c:if test="${not empty error}">
-    <div class="alert alert-danger alert-dismissible fade show rounded-3 mb-3" role="alert">
+    <div class="alert alert-danger alert-dismissible fade show" data-cams-toast role="alert">
         <i class="bi bi-exclamation-triangle-fill me-2"></i>${error}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
@@ -374,7 +374,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 rounded-4 shadow">
             <div class="modal-header rounded-top-4 text-white border-0"
-                 style="background: linear-gradient(135deg,#d27b9f,#b86689);">
+                 style="background: linear-gradient(135deg,#0d6efd,#0a58ca);">
                 <h5 class="modal-title fw-bold" id="createModalLabel">
                     <i class="bi bi-calendar2-plus me-2"></i>Đăng Ký Lịch Làm Việc
                 </h5>
@@ -634,7 +634,7 @@
             end:    "${s.endTime}",
             status: "${s.status}",
             slots:  ${s.maxSlots},
-            notes:  "${s.notes != null ? s.notes : ''}"
+            notes:  "${fn:escapeXml(s.notes != null ? s.notes : '')}"
         }<c:if test="${!st.last}">,</c:if>
         </c:forEach>
     ];

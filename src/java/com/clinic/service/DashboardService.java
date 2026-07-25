@@ -322,35 +322,32 @@ public class DashboardService {
     }
 
     // ──────────────────────────────────────────────
-    // KPI: CA CẤP CỨU (Emergency)
+    // KPI: CA ƯU TIÊN ĐANG CHỜ (Priority Waiting)
     // ──────────────────────────────────────────────
 
-    /** Số ca cấp cứu hôm nay. */
-    public int getEmergencyCasesToday() {
+    public int getPriorityWaitingCasesToday() {
         try {
-            return dashboardDAO.countEmergencyToday();
+            return dashboardDAO.countPriorityWaitingToday();
         } catch (Exception e) {
-            System.err.println("DashboardService: Lỗi getEmergencyCasesToday - " + e.getMessage());
+            System.err.println("DashboardService: Lỗi getPriorityWaitingCasesToday - " + e.getMessage());
             return 0;
         }
     }
 
-    /** Số ca cấp cứu toàn bộ thời gian (không lọc ngày). */
-    public int getEmergencyCasesAll() {
+    public int getPriorityWaitingCasesAll() {
         try {
-            return dashboardDAO.countEmergencyAll();
+            return dashboardDAO.countPriorityWaitingAll();
         } catch (Exception e) {
-            System.err.println("DashboardService: Lỗi getEmergencyCasesAll - " + e.getMessage());
+            System.err.println("DashboardService: Lỗi getPriorityWaitingCasesAll - " + e.getMessage());
             return 0;
         }
     }
 
-    /** Số ca cấp cứu trong khoảng ngày. */
-    public int getEmergencyCases(LocalDate from, LocalDate to) {
+    public int getPriorityWaitingCases(LocalDate from, LocalDate to) {
         try {
-            return dashboardDAO.countEmergency(from, to);
+            return dashboardDAO.countPriorityWaiting(from, to);
         } catch (Exception e) {
-            System.err.println("DashboardService: Lỗi getEmergencyCases(range) - " + e.getMessage());
+            System.err.println("DashboardService: Lỗi getPriorityWaitingCases(range) - " + e.getMessage());
             return 0;
         }
     }

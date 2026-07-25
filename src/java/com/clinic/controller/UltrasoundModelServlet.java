@@ -44,13 +44,13 @@ public class UltrasoundModelServlet extends HttpServlet {
                 ? null : new File(scriptPath);
 
         request.setAttribute("modelName",
-                AppConfig.get("ai.model.name", "CAMS Fibroid Hybrid"));
+                AppConfig.get("ai.model.name", "OCSS Fibroid Hybrid (YOLOv3 + U-Net)"));
         request.setAttribute("modelVersion",
-                AppConfig.get("ai.model.version", "CAMS-FIBROID-HYBRID-v1.0"));
+                AppConfig.get("ai.model.version", "v4_neg035 + approved37_ep70"));
         request.setAttribute("trainingRunId",
-                AppConfig.get("ai.model.trainingRunId", "UNET-APPROVED-37"));
+                AppConfig.get("ai.model.trainingRunId", "FINAL-DETECTOR-V4-NEG035"));
         request.setAttribute("trainingDate",
-                AppConfig.get("ai.model.trainingDate", "Hồ sơ huấn luyện hiện hành"));
+                AppConfig.get("ai.model.trainingDate", "2026-07-02 (Đã đối chiếu audit)"));
         request.setAttribute("inferenceScript",
                 scriptFile == null ? "predict_for_web.py" : scriptFile.getName());
         request.setAttribute("runtimeReady",

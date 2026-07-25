@@ -148,33 +148,14 @@
                                 </td>
                                 <td class="col-actions text-end pe-3">
                                     <div class="act-group">
-                                        <%-- Thanh toán --%>
-                                        <c:if test="${a.preExamPaymentStatus != 'Paid' && a.preExamPaymentStatus != 'PendingConfirmation' && st == 'pending'}">
-                                            <a href="${pageContext.request.contextPath}/patient/payment?appointmentId=${a.id}"
-                                               class="btn btn-success btn-sm"><i class="bi bi-credit-card me-1"></i>Thanh toán</a>
-                                        </c:if>
-                                        <%-- Đóng phí DV --%>
-                                        <c:if test="${not empty postExamInvoices[a.id]}">
-                                            <a href="${pageContext.request.contextPath}/patient/payment?appointmentId=${a.id}&type=POST_EXAM"
-                                               class="btn btn-outline-info btn-sm"><i class="bi bi-receipt me-1"></i>Đóng phí DV</a>
-                                        </c:if>
-                                        <%-- Mua thuốc --%>
-                                        <c:if test="${not empty prescriptionInvoices[a.id]}">
-                                            <a href="${pageContext.request.contextPath}/patient/payment?appointmentId=${a.id}&type=PRESCRIPTION"
-                                               class="btn btn-outline-success btn-sm"><i class="bi bi-capsule me-1"></i>Mua thuốc</a>
-                                        </c:if>
-                                        <%-- Chọn mua thuốc --%>
-                                        <c:if test="${not empty pendingPrescriptionChoices[a.id]}">
-                                            <a href="${pageContext.request.contextPath}/patient/invoices#prescription-decisions"
-                                               class="btn btn-outline-success btn-sm"><i class="bi bi-ui-checks me-1"></i>Chọn thuốc</a>
-                                        </c:if>
-                                        <%-- Đổi lịch: chỉ khi chưa thanh toán xong --%>
-                                        <c:if test="${st == 'pending' && a.preExamPaymentStatus != 'Paid'}">
+                                        <span class="badge bg-light text-secondary border small px-2 py-1"><i class="bi bi-info-circle me-1"></i>Thủ tục & thanh toán tại quầy Lễ tân</span>
+                                        <%-- Đổi lịch --%>
+                                        <c:if test="${st == 'pending' || st == 'confirmed'}">
                                             <a href="${pageContext.request.contextPath}/patient/booking?rescheduleId=${a.id}"
                                                class="btn btn-outline-warning btn-sm"><i class="bi bi-arrow-repeat me-1"></i>Đổi lịch</a>
                                         </c:if>
                                         <%-- Huỷ: chỉ khi chưa thanh toán xong --%>
-                                        <c:if test="${st == 'pending' && a.preExamPaymentStatus != 'Paid'}">
+                                        <c:if test="${(st == 'pending' || st == 'confirmed') && a.preExamPaymentStatus != 'Paid'}">
                                             <form method="post" action="${pageContext.request.contextPath}/patient/appointments"
                                                   onsubmit="return confirm('Bạn có chắc muốn huỷ lịch hẹn này?');">
                                                 <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">

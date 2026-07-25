@@ -41,54 +41,61 @@ public class UltrasoundWaitingListServlet extends HttpServlet {
             return;
         }
 
-        int page = 1;
-        String pageStr = request.getParameter("page");
-        if (pageStr != null && !pageStr.trim().isEmpty()) {
-            try {
-                page = Integer.parseInt(pageStr);
-            } catch (NumberFormatException e) {
-                page = 1;
+        try {
+            int page = 1;
+            String pageStr = request.getParameter("page");
+            if (pageStr != null && !pageStr.trim().isEmpty()) {
+                try {
+                    page = Integer.parseInt(pageStr);
+                } catch (NumberFormatException e) {
+                    page = 1;
+                }
             }
+
+            String search = request.getParameter("search");
+            String status = request.getParameter("status");
+            if (status == null) {
+                status = "Pending";
+            }
+            String date = request.getParameter("date");
+            String sortBy = ultrasoundOrderService.normalizeSortBy(request.getParameter("sortBy"));
+            String sortDir = ultrasoundOrderService.normalizeSortDir(request.getParameter("sortDir"));
+
+            // Lấy danh sách chỉ định siêu âm theo bộ lọc và phân trang
+            List<UltrasoundWaitingPatient> waitingPatients =
+                    ultrasoundOrderService.getOrders(page, PAGE_SIZE, search, status, date, null, sortBy, sortDir);
+
+            int totalOrders = ultrasoundOrderService.countOrders(search, status, date, null);
+            int totalPages = (int) Math.ceil((double) totalOrders / PAGE_SIZE);
+            if (totalPages <= 0) totalPages = 1;
+
+            request.setAttribute("waitingPatients", waitingPatients);
+            request.setAttribute("totalOrders", totalOrders);
+            request.setAttribute("currentPage", page);
+            request.setAttribute("totalPages", totalPages);
+
+            request.setAttribute("searchParam", search);
+            request.setAttribute("statusParam", status);
+            request.setAttribute("dateParam", date);
+
+            request.setAttribute("sortBy", sortBy);
+            request.setAttribute("sortDir", sortDir);
+            request.setAttribute("nextSortDir", "asc".equals(sortDir) ? "desc" : "asc");
+            request.setAttribute("actionUrl", request.getContextPath() + getRequestPath(request));
+            request.setAttribute("success", request.getParameter("success"));
+            request.setAttribute("error", request.getParameter("error"));
+
+            // Sidebar stats
+            request.setAttribute("currentDisplayDate", java.time.LocalDate.now().toString());
+
+            request.getRequestDispatcher("/views/sonographer/waiting-list.jsp")
+                    .forward(request, response);
+        } catch (Exception ex) {
+            System.err.println("[UltrasoundWaitingListServlet] doGet ERROR: " + ex.getMessage());
+            ex.printStackTrace();
+            request.setAttribute("errorMessage", "Không thể tải trang. Vui lòng thử lại sau.");
+            request.getRequestDispatcher("/views/sonographer/waiting-list.jsp").forward(request, response);
         }
-
-        String search = request.getParameter("search");
-        String status = request.getParameter("status");
-        if (status == null) {
-            status = "Pending";
-        }
-        String date = request.getParameter("date");
-        String sortBy = ultrasoundOrderService.normalizeSortBy(request.getParameter("sortBy"));
-        String sortDir = ultrasoundOrderService.normalizeSortDir(request.getParameter("sortDir"));
-
-        // Lấy danh sách chỉ định siêu âm theo bộ lọc và phân trang
-        List<UltrasoundWaitingPatient> waitingPatients =
-                ultrasoundOrderService.getOrders(page, PAGE_SIZE, search, status, date, null, sortBy, sortDir);
-
-        int totalOrders = ultrasoundOrderService.countOrders(search, status, date, null);
-        int totalPages = (int) Math.ceil((double) totalOrders / PAGE_SIZE);
-        if (totalPages <= 0) totalPages = 1;
-
-        request.setAttribute("waitingPatients", waitingPatients);
-        request.setAttribute("totalOrders", totalOrders);
-        request.setAttribute("currentPage", page);
-        request.setAttribute("totalPages", totalPages);
-        
-        request.setAttribute("searchParam", search);
-        request.setAttribute("statusParam", status);
-        request.setAttribute("dateParam", date);
-
-        request.setAttribute("sortBy", sortBy);
-        request.setAttribute("sortDir", sortDir);
-        request.setAttribute("nextSortDir", "asc".equals(sortDir) ? "desc" : "asc");
-        request.setAttribute("actionUrl", request.getContextPath() + getRequestPath(request));
-        request.setAttribute("success", request.getParameter("success"));
-        request.setAttribute("error", request.getParameter("error"));
-
-        // Sidebar stats
-        request.setAttribute("currentDisplayDate", java.time.LocalDate.now().toString());
-
-        request.getRequestDispatcher("/views/sonographer/waiting-list.jsp")
-                .forward(request, response);
     }
 
     @Override

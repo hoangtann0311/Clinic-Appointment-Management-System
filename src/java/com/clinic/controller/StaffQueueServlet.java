@@ -1,5 +1,7 @@
 package com.clinic.controller;
 
+import com.clinic.dao.InvoiceDAO;
+import com.clinic.model.Invoice;
 import com.clinic.model.User;
 import com.clinic.service.StaffReceptionService;
 import jakarta.servlet.ServletException;
@@ -16,6 +18,7 @@ import java.io.IOException;
 @WebServlet(urlPatterns = {
         "/admin/reception",
         "/admin/reception/checkin",
+        "/admin/reception/approve-payment-request",
         "/admin/reception/cancel",
         "/admin/reception/priority"
 })
@@ -39,10 +42,11 @@ public class StaffQueueServlet extends HttpServlet {
         String path = req.getServletPath();
 
         if ("/admin/reception/checkin".equals(path)
+                || "/admin/reception/approve-payment-request".equals(path)
                 || "/admin/reception/cancel".equals(path)
                 || "/admin/reception/priority".equals(path)) {
             resp.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED,
-                    "Check-in, hủy lịch và cập nhật ưu tiên phải dùng POST.");
+                    "Các thao tác thay đổi dữ liệu phải dùng POST.");
             return;
         }
         renderQueue(req, resp);
@@ -57,6 +61,19 @@ public class StaffQueueServlet extends HttpServlet {
             return;
         }
         String path = req.getServletPath();
+
+        if ("/admin/reception/approve-payment-request".equals(path)) {
+            String id = req.getParameter("id");
+            try {
+                staffReceptionService.approveAndRequestPayment(id, user.getId());
+                req.getSession().setAttribute("queueSuccess", "Đã duyệt lịch đặt & gửi yêu cầu thanh toán thành công!");
+                resp.sendRedirect(req.getContextPath() + "/admin/reception");
+            } catch (IllegalArgumentException e) {
+                req.getSession().setAttribute("queueError", e.getMessage());
+                resp.sendRedirect(req.getContextPath() + "/admin/reception");
+            }
+            return;
+        }
 
         if ("/admin/reception/priority".equals(path)) {
             try {
@@ -89,10 +106,11 @@ public class StaffQueueServlet extends HttpServlet {
 
             try {
                 staffReceptionService.checkInPatient(id);
+                req.getSession().setAttribute("queueSuccess", "Check-in thành công!");
                 resp.sendRedirect(req.getContextPath() + "/admin/reception");
             } catch (IllegalArgumentException e) {
-                req.setAttribute("errors", Collections.singletonList(e.getMessage()));
-                renderQueue(req, resp);
+                req.getSession().setAttribute("queueError", e.getMessage());
+                resp.sendRedirect(req.getContextPath() + "/admin/reception");
             }
 
             return;
@@ -103,59 +121,88 @@ public class StaffQueueServlet extends HttpServlet {
 
             try {
                 staffReceptionService.cancelAppointment(id);
+                req.getSession().setAttribute("queueSuccess", "Đã huỷ lịch hẹn thành công.");
                 resp.sendRedirect(req.getContextPath() + "/admin/reception");
             } catch (IllegalArgumentException e) {
-                req.setAttribute("errors", Collections.singletonList(e.getMessage()));
-                renderQueue(req, resp);
+                req.getSession().setAttribute("queueError", e.getMessage());
+                resp.sendRedirect(req.getContextPath() + "/admin/reception");
             }
 
             return;
         }
 
+
+
         resp.sendRedirect(req.getContextPath() + "/admin/reception");
     }
 
     private void renderQueue(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        LocalDate selectedDate;
+        try {
+            LocalDate selectedDate;
 
-        String dateParam = req.getParameter("date");
-        if (dateParam != null && !dateParam.isEmpty()) {
-            try {
-                selectedDate = LocalDate.parse(dateParam);
-            } catch (java.time.format.DateTimeParseException e) {
+            String dateParam = req.getParameter("date");
+            if (dateParam != null && !dateParam.isEmpty()) {
+                try {
+                    selectedDate = LocalDate.parse(dateParam);
+                } catch (java.time.format.DateTimeParseException e) {
+                    selectedDate = LocalDate.now();
+                    req.setAttribute("errors", Collections.singletonList("Ngày lọc không hợp lệ. Hệ thống đã hiển thị lịch hôm nay."));
+                }
+            } else {
                 selectedDate = LocalDate.now();
-                req.setAttribute("errors", Collections.singletonList("Ngày lọc không hợp lệ. Hệ thống đã hiển thị lịch hôm nay."));
             }
-        } else {
-            selectedDate = LocalDate.now();
+
+            LocalDate currentDate = LocalDate.now();
+
+            DateTimeFormatter displayFormatter = DateTimeFormatter.ofPattern("dd 'tháng' MM, yyyy");
+
+            String searchParam = req.getParameter("search");
+            String statusParam = req.getParameter("status");
+            String pageParam = req.getParameter("page");
+            int page = 1;
+            if (pageParam != null && !pageParam.trim().isEmpty()) {
+                try {
+                    page = Integer.parseInt(pageParam);
+                } catch (NumberFormatException ignored) {}
+            }
+            int pageSize = 10;
+
+            req.setAttribute("selectedDate", selectedDate.toString());
+            req.setAttribute("displayDate", selectedDate.format(displayFormatter));
+
+    // Ngày hiện tại dùng riêng cho header trên cùng
+            req.setAttribute("currentDisplayDate", currentDate.format(displayFormatter));
+
+            StaffReceptionService.QueueResult pagedQueue = staffReceptionService.getSmartQueuePaginated(selectedDate, searchParam, statusParam, page, pageSize);
+            
+            req.setAttribute("queue", pagedQueue.appointments);
+            req.setAttribute("totalPages", pagedQueue.totalPages);
+            req.setAttribute("currentPage", pagedQueue.currentPage);
+            req.setAttribute("totalRecords", pagedQueue.totalRecords);
+            req.setAttribute("search", searchParam);
+            req.setAttribute("status", statusParam);
+
+            req.setAttribute("todayAppointments", staffReceptionService.getWidgetAppointmentsByDate(selectedDate));
+            req.setAttribute("waitingQueue", staffReceptionService.getWidgetWaitingQueueByDate(selectedDate));
+            // Đánh dấu bệnh nhân đến muộn (>60 phút sau giờ hẹn)
+            req.setAttribute("lateAppointments", staffReceptionService.getLateAppointmentIds(selectedDate));
+            Object queueSuccess = req.getSession().getAttribute("queueSuccess");
+            if (queueSuccess != null) {
+                req.setAttribute("queueSuccess", queueSuccess);
+                req.getSession().removeAttribute("queueSuccess");
+            }
+            Object queueError = req.getSession().getAttribute("queueError");
+            if (queueError != null) {
+                req.setAttribute("queueError", queueError);
+                req.getSession().removeAttribute("queueError");
+            }
+            req.getRequestDispatcher("/views/staff/reception-queue.jsp").forward(req, resp);
+        } catch (Exception ex) {
+            System.err.println("[StaffQueueServlet] renderQueue ERROR: " + ex.getMessage());
+            ex.printStackTrace();
+            req.setAttribute("errorMessage", "Không thể tải trang. Vui lòng thử lại sau.");
+            req.getRequestDispatcher("/views/staff/reception-queue.jsp").forward(req, resp);
         }
-
-        LocalDate currentDate = LocalDate.now();
-
-        DateTimeFormatter displayFormatter = DateTimeFormatter.ofPattern("dd 'tháng' MM, yyyy");
-
-        req.setAttribute("selectedDate", selectedDate.toString());
-        req.setAttribute("displayDate", selectedDate.format(displayFormatter));
-
-// Ngày hiện tại dùng riêng cho header trên cùng
-        req.setAttribute("currentDisplayDate", currentDate.format(displayFormatter));
-
-        req.setAttribute("queue", staffReceptionService.getSmartQueueByDate(selectedDate));
-        req.setAttribute("todayAppointments", staffReceptionService.getWidgetAppointmentsByDate(selectedDate));
-        req.setAttribute("waitingQueue", staffReceptionService.getWidgetWaitingQueueByDate(selectedDate));
-        // Đánh dấu bệnh nhân đến muộn (>60 phút sau giờ hẹn)
-        req.setAttribute("lateAppointments", staffReceptionService.getLateAppointmentIds(selectedDate));
-        Object queueSuccess = req.getSession().getAttribute("queueSuccess");
-        if (queueSuccess != null) {
-            req.setAttribute("queueSuccess", queueSuccess);
-            req.getSession().removeAttribute("queueSuccess");
-        }
-        Object queueError = req.getSession().getAttribute("queueError");
-        if (queueError != null) {
-            req.setAttribute("queueError", queueError);
-            req.getSession().removeAttribute("queueError");
-        }
-        req.getRequestDispatcher("/views/staff/reception-queue.jsp").forward(req, resp);
     }
 
     private String getClientIp(HttpServletRequest req) {

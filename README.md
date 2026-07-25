@@ -18,7 +18,7 @@ Cho phép bệnh nhân đặt lịch trực tuyến và Staff đặt lịch tạ
 
 Hỗ trợ check-in, cấp số thứ tự và quản lý hàng đợi.
 
-Ưu tiên ca khẩn cấp nội bộ bằng cơ chế SOS.
+Ưu tiên tiếp nhận ca nội bộ bằng cờ is_priority do Staff kích hoạt kèm lý do.
 
 Quản lý bệnh án, thai kỳ và lịch sử khám.
 
@@ -48,7 +48,7 @@ Quản lý time-slot.
 
 Đặt lịch từ Patient Portal hoặc tại quầy.
 
-Check-in, hàng đợi và SOS.
+Check-in, hàng đợi và ưu tiên tiếp nhận.
 
 Quản lý bệnh án và thai kỳ.
 
@@ -80,7 +80,7 @@ Cổng thanh toán trực tuyến chính thức.
 
 Tích hợp HIS/EMR của bệnh viện bên ngoài.
 
-GPS SOS thực tế.
+Định vị GPS khẩn cấp thực tế.
 
 Zalo, SMS hoặc OTT chính thức.
 
@@ -196,7 +196,7 @@ Không khám, kê đơn hoặc xác nhận AI
 
 Staff
 
-Đặt lịch tại quầy, check-in, queue, SOS và xác nhận thanh toán
+Đặt lịch tại quầy, check-in, queue, ưu tiên tiếp nhận và xác nhận thanh toán
 
 Không sửa bệnh án hoặc kết luận siêu âm
 
@@ -232,8 +232,8 @@ flowchart TD
     C --> D[Patient hoặc Staff đặt lịch]
     D --> E[Staff xác nhận thanh toán pre-exam]
     E --> F[Staff check-in và cấp queue number]
-    F --> G{Ca SOS?}
-    G -- Có --> H[Ưu tiên Emergency_SOS]
+    F --> G{Ca ưu tiên?}
+    G -- Có --> H[Waiting + cờ is_priority]
     G -- Không --> I[Waiting]
     H --> J[Doctor khám]
     I --> J
@@ -359,11 +359,12 @@ Trạng thái chuẩn của Appointment:
 Pending
 Confirmed
 Waiting
-Emergency_SOS
 InProgress
 Completed
 Cancelled
 NoShow
+
+Ưu tiên tiếp nhận không phải là một trạng thái riêng: đây là cờ `is_priority` gắn trên appointment (kết hợp với status `Waiting`), do Staff bật/tắt kèm lý do.
 
 7.4. Staff Check-in và hàng đợi
 
@@ -397,29 +398,29 @@ Appointment Cancelled, Completed hoặc NoShow không được check-in.
 
 Dữ liệu queue và appointment phải được cập nhật nhất quán.
 
-7.5. Emergency SOS
+7.5. Ưu tiên tiếp nhận
 
-SOS là cơ chế điều phối ưu tiên nội bộ.
+Ưu tiên tiếp nhận là cơ chế điều phối nội bộ do Staff kích hoạt.
 
-Khi kích hoạt SOS, hệ thống phải:
+Khi bật ưu tiên, hệ thống phải:
 
-Chuyển appointment sang Emergency_SOS.
+Đặt cờ is_priority = 1 trên appointment (giữ nguyên status Waiting).
 
-Đưa ca lên trước ca Waiting.
+Đưa ca lên trước các ca Waiting thường trong hàng đợi.
 
-Lưu lý do.
+Lưu lý do (bắt buộc, 5-500 ký tự).
 
 Lưu người thao tác.
 
 Lưu thời điểm.
 
-Gửi thông báo nội bộ.
-
 Ghi audit log.
+
+Staff có thể tắt ưu tiên (is_priority = 0) để đưa ca về thứ tự Waiting thường.
 
 Không làm mất queue number hoặc hồ sơ.
 
-SOS không thay thế quy trình cấp cứu y tế thực tế.
+Cơ chế ưu tiên tiếp nhận không thay thế quy trình cấp cứu y tế thực tế.
 
 7.6. Medical Record và Pregnancy Tracking
 
@@ -719,7 +720,7 @@ Appointment được tạo, đổi hoặc hủy.
 
 Patient check-in.
 
-Ca SOS được kích hoạt hoặc hủy.
+Ưu tiên tiếp nhận được bật hoặc tắt.
 
 Yêu cầu siêu âm mới.
 
@@ -739,7 +740,7 @@ Thay đổi giá.
 
 Check-in.
 
-SOS.
+Bật hoặc tắt ưu tiên tiếp nhận.
 
 Thanh toán.
 
@@ -1026,11 +1027,11 @@ Staff xác nhận thanh toán.
 
 Staff check-in và cấp queue number.
 
-AT-03 — SOS
+AT-03 — Ưu tiên tiếp nhận
 
-Kích hoạt SOS cho ca hợp lệ.
+Bật ưu tiên (is_priority) cho ca hợp lệ kèm lý do.
 
-Ca SOS được ưu tiên.
+Ca ưu tiên được đưa lên trước ca Waiting thường.
 
 Có notification và audit.
 

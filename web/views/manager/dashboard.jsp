@@ -523,7 +523,7 @@
                     <div class="kpi-content">
                         <div class="kpi-value">${not empty totalAppointments ? totalAppointments : 0}</div>
                         <div class="kpi-label"><c:choose><c:when test="${isCustomRange}">Lịch Hẹn (Khoảng)</c:when><c:otherwise>Tổng Lịch Hẹn</c:otherwise></c:choose></div>
-                        <div class="kpi-sub"><i class="bi bi-clock"></i> ${isCustomRange ? dateRangeLabel : 'Hôm nay'}</div>
+                        <div class="kpi-sub"><i class="bi bi-clock"></i> ${isCustomRange ? dateRangeLabel : 'Toàn thời gian'}</div>
                     </div>
                 </div>
             </div>
@@ -584,23 +584,9 @@
                 <div class="card-body">
                     <div class="kpi-icon"><i class="bi bi-cash-coin"></i></div>
                     <div class="kpi-content">
-                        <div class="kpi-value" style="font-size:0.92rem;">
-                            <c:choose>
-                                <c:when test="${not empty revenueTodayRaw and revenueTodayRaw > 0}">
-                                    <fmt:formatNumber value="${revenueTodayRaw}" pattern="#,###"/> VNĐ
-                                </c:when>
-                                <c:otherwise>0 VNĐ</c:otherwise>
-                            </c:choose>
-                        </div>
-                        <div class="kpi-label">${not empty revenueKpiLabel ? revenueKpiLabel : 'Doanh Thu Hôm Nay'}</div>
-                        <div class="kpi-sub"><i class="bi bi-graph-up"></i> Tổng:
-                            <c:choose>
-                                <c:when test="${not empty revenueTotalRaw and revenueTotalRaw > 0}">
-                                    <fmt:formatNumber value="${revenueTotalRaw}" pattern="#,###"/> VNĐ
-                                </c:when>
-                                <c:otherwise>0 VNĐ</c:otherwise>
-                            </c:choose>
-                        </div>
+                        <div class="kpi-value" style="font-size:1.05rem;">${not empty revenueToday ? revenueToday : '0 VNĐ'}</div>
+                        <div class="kpi-label">Doanh Thu Hôm Nay</div>
+                        <div class="kpi-sub"><i class="bi bi-graph-up"></i> Tổng: ${not empty revenue ? revenue : '0 VNĐ'}</div>
                     </div>
                 </div>
             </div>
@@ -783,15 +769,10 @@
     <%-- DỊCH VỤ — Tổng Quan Nhanh --%>
     <%-- ════════════════════════════════════════════ --%>
     <div class="row g-3 mb-4">
-        <div class="col-xl-12">
+        <div class="col-xl-6">
             <div class="admin-card h-100">
                 <div class="card-header">
-                    <h5><i class="bi bi-bar-chart-steps"></i> Dịch Vụ — Lượt Sử Dụng <span style="font-size:0.68rem;font-weight:400;color:var(--c-muted);">
-                        <c:choose>
-                            <c:when test="${isCustomRange}">(${dateRangeLabel})</c:when>
-                            <c:otherwise>(Hôm nay)</c:otherwise>
-                        </c:choose>
-                    </span></h5>
+                    <h5><i class="bi bi-bar-chart-steps"></i> Dịch Vụ — Lượt Sử Dụng</h5>
                 </div>
                 <div class="card-body p-0">
                     <c:choose>
@@ -822,6 +803,47 @@
                 </div>
             </div>
         </div>
+        <div class="col-xl-6">
+            <div class="admin-card h-100">
+                <div class="card-header">
+                    <h5><i class="bi bi-cash-stack"></i> Doanh Thu Dịch Vụ <span style="font-size:0.68rem;font-weight:400;color:var(--c-muted);">(Tất cả thời gian)</span></h5>
+                </div>
+                <div class="card-body p-0">
+                    <c:choose>
+                        <c:when test="${not empty topServicesByRevenue}">
+                            <div class="admin-table-wrapper">
+                                <table class="admin-table compact">
+                                    <thead><tr><th>#</th><th>Tên Dịch Vụ</th><th style="text-align:right;">Doanh Thu</th><th style="text-align:right;">Lượt SD</th></tr></thead>
+                                    <tbody>
+                                        <c:forEach var="svc" items="${topServicesByRevenue}" varStatus="row">
+                                            <tr>
+                                                <td><span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:.68rem;font-weight:800;color:#fff;background:${row.index == 0 ? '#10B981' : (row.index == 1 ? '#94A3B8' : '#9CA3AF')};">${row.count}</span></td>
+                                                <td><div style="font-weight:600;"><c:out value="${svc.serviceName}"/></div></td>
+                                                <td style="font-family:var(--font-display);font-weight:700;color:#059669;text-align:right;">
+                                                    <c:choose>
+                                                        <c:when test="${svc.totalRevenue >= 1000000000}"><fmt:formatNumber value="${svc.totalRevenue / 1000000000}" maxFractionDigits="2"/> Tỷ</c:when>
+                                                        <c:when test="${svc.totalRevenue >= 1000000}"><fmt:formatNumber value="${svc.totalRevenue / 1000000}" maxFractionDigits="1"/> Triệu</c:when>
+                                                        <c:when test="${svc.totalRevenue > 0}"><fmt:formatNumber value="${svc.totalRevenue}" pattern="#,###"/> đ</c:when>
+                                                        <c:otherwise>—</c:otherwise>
+                                                    </c:choose>
+                                                </td>
+                                                <td style="font-family:var(--font-display);font-weight:600;text-align:right;">${svc.totalUsage > 0 ? svc.totalUsage : '—'}</td>
+                                            </tr>
+                                        </c:forEach>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </c:when>
+                        <c:otherwise>
+                            <div class="admin-empty-state" style="padding:1.5rem;">
+                                <i class="bi bi-cash"></i>
+                                <p class="mt-1 mb-0">Chưa có dữ liệu doanh thu. Hóa đơn cần được xác nhận thanh toán bởi Lễ Tân.</p>
+                            </div>
+                        </c:otherwise>
+                    </c:choose>
+                </div>
+            </div>
+        </div>
     </div>
 
     <%-- ════════════════════════════════════════════ --%>
@@ -829,9 +851,9 @@
     <%-- ════════════════════════════════════════════ --%>
     <div class="row g-3 mb-4">
         <%-- Dịch vụ & Thuốc KPI cards --%>
-        <div class="col-xl-6">
+        <div class="col-xl-12">
             <div class="row g-3">
-                <div class="col-6">
+                <div class="col-4">
                     <div class="card kpi-card kpi-services fade-in-up">
                         <div class="card-body">
                             <div class="kpi-icon"><i class="bi bi-activity"></i></div>
@@ -843,21 +865,7 @@
                         </div>
                     </div>
                 </div>
-                <!-- Danh Mục Thuốc: đã ẩn — manager không cần quản lý thuốc
-                <div class="col-6">
-                    <div class="card kpi-card kpi-medicines fade-in-up">
-                        <div class="card-body">
-                            <div class="kpi-icon"><i class="bi bi-capsule"></i></div>
-                            <div class="kpi-content">
-                                <div class="kpi-value">${not empty totalMedicines ? totalMedicines : 0}</div>
-                                <div class="kpi-label">Danh Mục Thuốc</div>
-                                <div class="kpi-sub">Đang quản lý</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                -->
-                <div class="col-6">
+                <div class="col-4">
                     <div class="card kpi-card fade-in-up" style="--kpi-accent:#3b82f6;">
                         <div class="card-body" style="border-top:3px solid #3b82f6 !important;">
                             <div class="kpi-icon" style="background:#dbeafe;color:#2563eb;"><i class="bi bi-people-fill"></i></div>
@@ -869,25 +877,13 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-6">
+                <div class="col-4">
                     <div class="card kpi-card fade-in-up" style="--kpi-accent:#10b981;">
                         <div class="card-body" style="border-top:3px solid #10b981 !important;">
                             <div class="kpi-icon" style="background:#d1fae5;color:#059669;"><i class="bi bi-cash-stack"></i></div>
                             <div class="kpi-content">
-                                <div class="kpi-value" style="font-size:1.05rem;">
-                                    <c:choose>
-                                        <c:when test="${not empty revenueTotalRaw and revenueTotalRaw > 0}">
-                                            <fmt:formatNumber value="${revenueTotalRaw}" pattern="#,###"/> VNĐ
-                                        </c:when>
-                                        <c:otherwise>0 VNĐ</c:otherwise>
-                                    </c:choose>
-                                </div>
-                                <div class="kpi-label">
-                                    <c:choose>
-                                        <c:when test="${isCustomRange}">Doanh Thu (Khoảng)</c:when>
-                                        <c:otherwise>Tổng Doanh Thu</c:otherwise>
-                                    </c:choose>
-                                </div>
+                                <div class="kpi-value" style="font-size:1.05rem;">${not empty revenue ? revenue : '0 VNĐ'}</div>
+                                <div class="kpi-label">Tổng Doanh Thu</div>
                                 <div class="kpi-sub"><i class="bi bi-check-circle"></i> Đã thanh toán</div>
                             </div>
                         </div>
@@ -896,50 +892,6 @@
             </div>
         </div>
 
-        <!-- Cảnh Báo Tồn Kho: đã ẩn — manager không cần quản lý kho thuốc
-        <div class="col-xl-6">
-            <div class="admin-card h-100">
-                <div class="card-header d-flex align-items-center justify-content-between">
-                    <h5><i class="bi bi-exclamation-triangle-fill" style="color:#e65100;"></i> Cảnh Báo Tồn Kho</h5>
-                    <a href="${pageContext.request.contextPath}/manager/medicines/" class="btn-sm-outline-pink">Quản lý kho <i class="bi bi-arrow-right"></i></a>
-                </div>
-                <div class="card-body p-0">
-                    <c:choose>
-                        <c:when test="${not empty lowStockMedicines}">
-                            <div class="admin-table-wrapper">
-                                <table class="admin-table compact">
-                                    <thead><tr><th>Thuốc</th><th>Tồn Kho</th><th>Trạng Thái</th></tr></thead>
-                                    <tbody>
-                                        <c:forEach var="med" items="${lowStockMedicines}">
-                                            <tr>
-                                                <td><div style="font-weight:600;"><c:out value="${med.name}"/></div><small style="font-size:0.68rem;color:var(--c-muted);"><c:out value="${med.dosage}"/></small></td>
-                                                <td><span style="font-family:var(--font-display);font-weight:800;font-size:0.9rem;color:${med.stockQuantity <= 0 ? '#c62828' : (med.stockQuantity <= 3 ? '#c62828' : '#e65100')};">${med.stockQuantity}</span></td>
-                                                <td>
-                                                    <c:choose>
-                                                        <c:when test="${med.stockQuantity <= 0}"><span class="stock-out">HẾT HÀNG</span></c:when>
-                                                        <c:when test="${med.stockQuantity <= 3}"><span class="stock-low">Sắp hết</span></c:when>
-                                                        <c:otherwise><span class="stock-ok">Còn ít</span></c:otherwise>
-                                                    </c:choose>
-                                                </td>
-                                            </tr>
-                                        </c:forEach>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </c:when>
-                        <c:otherwise>
-                            <div class="admin-empty-state" style="padding:1.5rem;">
-                                <c:choose>
-                                    <c:when test="${isCustomRange}"><i class="bi bi-inbox" style="font-size:1.8rem;color:var(--c-muted);"></i><p class="text-muted mt-1 mb-0" style="font-size:0.8rem;">Tồn kho là dữ liệu hiện tại.</p></c:when>
-                                    <c:otherwise><i class="bi bi-check-circle" style="font-size:1.8rem;color:#2e7d32;"></i><p class="text-muted mt-1 mb-0" style="font-size:0.8rem;color:#2e7d32 !important;"><strong>Tất cả thuốc đều đủ tồn kho.</strong></p></c:otherwise>
-                                </c:choose>
-                            </div>
-                        </c:otherwise>
-                    </c:choose>
-                </div>
-            </div>
-        </div>
-        -->
 
     </div>
 

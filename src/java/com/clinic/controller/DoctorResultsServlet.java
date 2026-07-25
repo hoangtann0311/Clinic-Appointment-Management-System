@@ -1,11 +1,11 @@
 package com.clinic.controller;
 
 import com.clinic.config.DatabaseConfig;
-import com.clinic.model.User;
-import com.clinic.service.UltrasoundOrderService;
 import com.clinic.dao.DoctorDAO;
 import com.clinic.dao.MedicalRecordDAO;
 import com.clinic.dao.UltrasoundOrderDAO;
+import com.clinic.model.User;
+import com.clinic.service.UltrasoundOrderService;
 import com.clinic.model.UltrasoundWaitingPatient;
 
 import jakarta.servlet.ServletException;
@@ -27,8 +27,6 @@ import java.util.Map;
 @WebServlet("/doctor/results")
 public class DoctorResultsServlet extends HttpServlet {
 
-    private final DoctorDAO doctorDAO = new DoctorDAO();
-
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
@@ -38,49 +36,56 @@ public class DoctorResultsServlet extends HttpServlet {
         if (session == null || session.getAttribute("user") == null) {
             resp.sendRedirect(req.getContextPath() + "/login"); return;
         }
-        User user = (User) session.getAttribute("user");
-        if (user.getRoleId() != 2) {
-            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ Bác sĩ mới được xem và xác nhận kết quả siêu âm.");
-            return;
-        }
+        try {
+            User user = (User) session.getAttribute("user");
+            if (user.getRoleId() != 2) {
+                resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ Bác sĩ mới được xem và xác nhận kết quả siêu âm.");
+                return;
+            }
 
-        // recordId
-        String ridStr = req.getParameter("recordId");
-        if (ridStr == null || ridStr.isBlank()) {
-            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Thiếu recordId."); return;
-        }
-        int recordId;
-        try { recordId = Integer.parseInt(ridStr); }
-        catch (NumberFormatException e) {
-            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "recordId không hợp lệ."); return;
-        }
+            // recordId
+            String ridStr = req.getParameter("recordId");
+            if (ridStr == null || ridStr.isBlank()) {
+                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Thiếu recordId."); return;
+            }
+            int recordId;
+            try { recordId = Integer.parseInt(ridStr); }
+            catch (NumberFormatException e) {
+                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "recordId không hợp lệ."); return;
+            }
 
-        // IDOR Check
-        Integer doctorId = doctorDAO.getDoctorIdByUserId(user.getId());
-        if (doctorId == null) {
-            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Tài khoản chưa liên kết hồ sơ bác sĩ.");
-            return;
+            // IDOR Check
+            Integer doctorId = DoctorDAO.getDoctorIdByUserId(user.getId());
+            if (doctorId == null) {
+                resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Tài khoản chưa liên kết hồ sơ bác sĩ.");
+                return;
+            }
+
+            MedicalRecordDAO recordDAO = new MedicalRecordDAO();
+            if (!recordDAO.recordBelongsToDoctor(recordId, doctorId)) {
+                resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền truy cập kết quả siêu âm của bệnh án này.");
+                return;
+            }
+
+            UltrasoundOrderService orderService = new UltrasoundOrderService();
+            boolean reviewSchemaSupported = orderService.isReviewSchemaSupported();
+            // Load kết quả siêu âm
+            List<Map<String,Object>> ultrasoundResults = loadUltrasoundResults(recordId, reviewSchemaSupported);
+            // Load thông tin hồ sơ (tên BN, ngày khám)
+            Map<String,String> recordInfo = loadRecordInfo(recordId);
+
+            req.setAttribute("recordId",          recordId);
+            req.setAttribute("recordInfo",         recordInfo);
+            req.setAttribute("ultrasoundResults",  ultrasoundResults);
+            req.setAttribute("doctorName",         user.getFullName());
+            req.setAttribute("reviewSchemaSupported", reviewSchemaSupported);
+            req.getRequestDispatcher("/views/doctors/doctor_results.jsp").forward(req, resp);
+        } catch (Exception ex) {
+            System.err.println("[DoctorResultsServlet] doGet ERROR: " + ex.getMessage());
+            ex.printStackTrace();
+            req.setAttribute("errorMessage", "Không thể tải trang. Vui lòng thử lại sau.");
+            req.getRequestDispatcher("/views/doctors/doctor_results.jsp").forward(req, resp);
         }
-
-        MedicalRecordDAO recordDAO = new MedicalRecordDAO();
-        if (!recordDAO.recordBelongsToDoctor(recordId, doctorId)) {
-            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền truy cập kết quả siêu âm của bệnh án này.");
-            return;
-        }
-
-        UltrasoundOrderService orderService = new UltrasoundOrderService();
-        boolean reviewSchemaSupported = orderService.isReviewSchemaSupported();
-        // Load kết quả siêu âm
-        List<Map<String,Object>> ultrasoundResults = loadUltrasoundResults(recordId, reviewSchemaSupported);
-        // Load thông tin hồ sơ (tên BN, ngày khám)
-        Map<String,String> recordInfo = loadRecordInfo(recordId);
-
-        req.setAttribute("recordId",          recordId);
-        req.setAttribute("recordInfo",         recordInfo);
-        req.setAttribute("ultrasoundResults",  ultrasoundResults);
-        req.setAttribute("doctorName",         user.getFullName());
-        req.setAttribute("reviewSchemaSupported", reviewSchemaSupported);
-        req.getRequestDispatcher("/views/doctors/doctor_results.jsp").forward(req, resp);
     }
 
     /**
@@ -128,7 +133,7 @@ public class DoctorResultsServlet extends HttpServlet {
         }
 
         // IDOR Check
-        Integer doctorId = doctorDAO.getDoctorIdByUserId(user.getId());
+        Integer doctorId = DoctorDAO.getDoctorIdByUserId(user.getId());
         if (doctorId == null) {
             resp.sendRedirect(req.getContextPath() + "/doctor/results?recordId=" + recordId + "&error=noDoctorProfile");
             return;
@@ -225,7 +230,7 @@ public class DoctorResultsServlet extends HttpServlet {
         String sql =
             "SELECT p.full_name AS patient_name, " +
             "       CONVERT(varchar, a.appointment_date, 23) AS appointment_date, " +
-            "       mr.final_diagnosis " +
+            "       mr.final_diagnosis, mr.appointment_id " +
             "FROM medical_records mr " +
             "JOIN appointments a ON a.id = mr.appointment_id " +
             "JOIN patients p ON p.id = a.patient_id " +
@@ -238,6 +243,7 @@ public class DoctorResultsServlet extends HttpServlet {
             if (rs.next()) {
                 info.put("patientName",     rs.getString("patient_name"));
                 info.put("appointmentDate", rs.getString("appointment_date"));
+                info.put("appointmentId",   String.valueOf(rs.getInt("appointment_id")));
                 info.put("finalDiagnosis",  rs.getString("final_diagnosis"));
             }
         } catch (SQLException e) {
@@ -267,4 +273,5 @@ public class DoctorResultsServlet extends HttpServlet {
         }
         return list;
     }
+
 }

@@ -14,7 +14,7 @@ public class Appointment {
     private String bookingSource;
     private String symptoms;
     private LocalDate lastMenstrualPeriod; // nullable
-    private boolean isEmergency;
+    private boolean isPriority;
     private String status;
     private Integer serviceId; // nullable
     private String queueNumber; // Số thứ tự tiếp đón, e.g. "STT-02"
@@ -50,7 +50,7 @@ public class Appointment {
 
     public Appointment(int id, Patient patient, Doctor doctor, ServiceItem service, LocalDate appointmentDate, 
                        String timeSlot, String symptoms, LocalDate lastMenstrualPeriod, String gestationalAge, 
-                       boolean isEmergency, String status) {
+                       boolean isPriority, String status) {
         this.id = id;
         this.patient = patient;
         this.patientId = patient != null ? patient.getId() : 0;
@@ -65,7 +65,7 @@ public class Appointment {
         this.symptoms = symptoms;
         this.lastMenstrualPeriod = lastMenstrualPeriod;
         this.gestationalAge = gestationalAge;
-        this.isEmergency = isEmergency;
+        this.isPriority = isPriority;
         this.status = status;
     }
 
@@ -100,8 +100,8 @@ public class Appointment {
     public LocalDate getLastMenstrualPeriod() { return lastMenstrualPeriod; }
     public void setLastMenstrualPeriod(LocalDate lastMenstrualPeriod) { this.lastMenstrualPeriod = lastMenstrualPeriod; }
 
-    public boolean isEmergency() { return isEmergency; }
-    public void setEmergency(boolean emergency) { isEmergency = emergency; }
+    public boolean isPriority() { return isPriority; }
+    public void setPriority(boolean priority) { isPriority = priority; }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }

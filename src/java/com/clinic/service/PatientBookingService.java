@@ -70,7 +70,7 @@ public class PatientBookingService {
      * Danh sách time-slot còn trống (AVAILABLE) của 1 bác sĩ trong 1 ngày.
      * Không trả slot của ngày quá khứ.
      */
-    public List<TimeSlot> getAvailableSlots(int doctorId, LocalDate date) {
+    public List<TimeSlot> getAvailableSlots(int doctorId, LocalDate date, boolean isStaff) {
         if (doctorId <= 0 || date == null || date.isBefore(LocalDate.now())) {
             return List.of();
         }
@@ -80,9 +80,20 @@ public class PatientBookingService {
         LinkedHashMap<LocalTime, TimeSlot> unique = new LinkedHashMap<>();
         for (TimeSlot slot : slots) {
             if (!slot.isAvailable()) continue; // loại slot đã qua giờ
+            
+            if (!isStaff) {
+                java.time.LocalDateTime slotDateTime = java.time.LocalDateTime.of(slot.getWorkDate().toLocalDate(), slot.getStartTime().toLocalTime());
+                if (java.time.LocalDateTime.now().plusMinutes(30).isAfter(slotDateTime)) {
+                    continue; // Ẩn các slot cách hiện tại dưới 30 phút
+                }
+            }
             unique.putIfAbsent(slot.getStartTime().toLocalTime(), slot);
         }
         return new ArrayList<>(unique.values());
+    }
+
+    public List<TimeSlot> getAvailableSlots(int doctorId, LocalDate date) {
+        return getAvailableSlots(doctorId, date, false);
     }
 
     /**
@@ -158,14 +169,36 @@ public class PatientBookingService {
             return null;
         }
 
-        // 3. Triệu chứng bắt buộc (BA 4.2: "Patient nhập triệu chứng và ngày kinh cuối")
+        // 3. Triệu chứng bắt buộc (áp dụng chung chuẩn validation)
         if (symptoms == null || symptoms.trim().isEmpty()) {
-            errors.put("symptoms", "Vui lòng mô tả triệu chứng.");
+            errors.put("symptoms", "Vui lòng nhập triệu chứng hoặc lý do khám.");
             return null;
-        }
-        if (symptoms.trim().length() > 500) {
-            errors.put("symptoms", "Triệu chứng không được vượt quá 500 ký tự.");
-            return null;
+        } else {
+            String cleanSymptoms = symptoms.trim();
+            if (cleanSymptoms.length() < 10) {
+                errors.put("symptoms", "Triệu chứng/lý do khám quá ngắn. Vui lòng nhập tối thiểu 10 ký tự.");
+                return null;
+            }
+            if (cleanSymptoms.length() > 500) {
+                errors.put("symptoms", "Triệu chứng/lý do khám không được vượt quá 500 ký tự.");
+                return null;
+            }
+            if (cleanSymptoms.matches("^[0-9\\s]+$")) {
+                errors.put("symptoms", "Triệu chứng/lý do khám không được chỉ chứa số.");
+                return null;
+            }
+            if (!cleanSymptoms.matches("^[\\p{L}0-9\\s,.()/-]+$")) {
+                errors.put("symptoms", "Triệu chứng/lý do khám chứa ký tự không hợp lệ.");
+                return null;
+            }
+            if (cleanSymptoms.toLowerCase().matches(".*(.)\\1{5,}.*")) {
+                errors.put("symptoms", "Triệu chứng/lý do khám không hợp lệ. Vui lòng nhập nội dung rõ ràng hơn.");
+                return null;
+            }
+            if (cleanSymptoms.split("\\s+").length < 2) {
+                errors.put("symptoms", "Triệu chứng/lý do khám cần có ít nhất 2 từ.");
+                return null;
+            }
         }
 
         // 4. Ngày kinh cuối — không bắt buộc, nhưng nếu có phải hợp lệ, không ở tương lai
@@ -194,12 +227,20 @@ public class PatientBookingService {
             return null;
         }
 
-        // 6. Chống trường hợp đặt lịch vào thời gian đã qua
+        // 6. Chống trường hợp đặt lịch quá sát giờ (phải book trước 30p)
         LocalDate workDate = slot.getWorkDate().toLocalDate();
         LocalTime startTime = slot.getStartTime().toLocalTime();
-        if (workDate.isBefore(LocalDate.now())
-                || (workDate.isEqual(LocalDate.now()) && startTime.isBefore(LocalTime.now()))) {
-            errors.put("general", "Không thể đặt lịch vào thời điểm đã qua. Vui lòng chọn khung giờ khác.");
+        java.time.LocalDateTime slotDateTime = java.time.LocalDateTime.of(workDate, startTime);
+        if (java.time.LocalDateTime.now().plusMinutes(30).isAfter(slotDateTime)) {
+            errors.put("general", "Bệnh nhân phải đặt lịch trước giờ khám ít nhất 30 phút. Vui lòng chọn khung giờ khác.");
+            return null;
+        }
+
+        // Kiểm tra 1 bệnh nhân chỉ có 1 lịch khám ngoại trú còn hiệu lực trong cùng 1 ngày
+        AppointmentValidationService validationService = new AppointmentValidationService();
+        String sameDayError = validationService.validateSameDayActiveAppointment(patientId, workDate, null, false, null);
+        if (sameDayError != null) {
+            errors.put("general", sameDayError);
             return null;
         }
 
@@ -346,6 +387,12 @@ public class PatientBookingService {
 
         if (!"Pending".equalsIgnoreCase(appt.getStatus()) && !"Confirmed".equalsIgnoreCase(appt.getStatus())) {
             errors.put("general", "Chỉ có thể đổi lịch hẹn đang ở trạng thái Chờ xác nhận hoặc Đã xác nhận.");
+            return false;
+        }
+
+        // Đã thanh toán → không được tự ý đổi lịch (cần liên hệ lễ tân hoàn tiền)
+        if (appointmentDAO.isPreExamPaid(appointmentId)) {
+            errors.put("general", "Lịch hẹn đã thanh toán. Vui lòng liên hệ lễ tân để được hỗ trợ đổi lịch.");
             return false;
         }
 

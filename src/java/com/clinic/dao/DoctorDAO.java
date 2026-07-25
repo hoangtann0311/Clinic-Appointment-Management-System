@@ -140,23 +140,20 @@ public class DoctorDAO {
     }
 
     /**
-     * Lấy doctor_id từ user_id mà không cần load toàn bộ Doctor entity.
-     * Dùng cho AuthorizationFilter và các servlet cần kiểm tra nhanh.
+     * Lấy doctor_id từ user_id. Dùng chung cho tất cả servlet Doctor để tránh
+     * duplicate code (8 servlet từng copy-paste cùng một SQL query).
      *
-     * @param userId ID của user trong bảng users
-     * @return doctor id nếu user có hồ sơ bác sĩ, null nếu không
+     * @return doctor id hoặc null nếu user chưa liên kết hồ sơ bác sĩ
      */
-    public Integer getDoctorIdByUserId(int userId) {
+    public static Integer getDoctorIdByUserId(int userId) {
         String sql = "SELECT id FROM doctors WHERE user_id = ?";
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection c = DatabaseConfig.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setInt(1, userId);
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt("id");
-                }
+                if (rs.next()) return rs.getInt("id");
             }
-        } catch (SQLException e) {
+        } catch (Exception e) {
             System.err.println("[DoctorDAO] getDoctorIdByUserId ERROR: " + e.getMessage());
         }
         return null;

@@ -270,8 +270,8 @@
 
     <%-- ── ALERT MESSAGES ── --%>
     <c:if test="${not empty success}">
-        <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert">
-            <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+        <div class="alert alert-success alert-dismissible fade show" data-cams-toast role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
             <div>
                 <c:choose>
                     <c:when test="${success eq 'created'}"><strong>Thành công!</strong> Đã thêm mới vào danh mục. Mục mới sẽ có hiệu lực ngay lập tức trong toàn hệ thống.</c:when>
@@ -283,8 +283,8 @@
         </div>
     </c:if>
     <c:if test="${not empty error}">
-        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+        <div class="alert alert-danger alert-dismissible fade show" data-cams-toast role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
             <div>${error}</div>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
@@ -663,7 +663,7 @@
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
                         <i class="bi bi-x-circle me-1"></i>Hủy
                     </button>
-                    <button type="submit" class="btn btn-primary-pink" onclick="return confirm('Xác nhận cập nhật đơn giá dịch vụ này?\n\n⚠️ Giá mới sẽ được áp dụng cho tất cả giao dịch mới.')">
+                    <button type="submit" class="btn btn-primary-pink" onclick="return confirm('Xác nhận cập nhật đơn giá dịch vụ này?\n\nLưu ý: Giá mới sẽ được áp dụng cho tất cả giao dịch mới.')">
                         <i class="bi bi-check-lg me-1"></i>Cập Nhật Đơn Giá
                     </button>
                 </div>
@@ -738,7 +738,7 @@
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
                         <i class="bi bi-x-circle me-1"></i>Hủy
                     </button>
-                    <button type="submit" class="btn btn-primary-pink" onclick="return confirm('Xác nhận cập nhật đơn giá thuốc này?\n\n⚠️ Giá mới sẽ được áp dụng cho tất cả giao dịch mới.')">
+                    <button type="submit" class="btn btn-primary-pink" onclick="return confirm('Xác nhận cập nhật đơn giá thuốc này?\n\nLưu ý: Giá mới sẽ được áp dụng cho tất cả giao dịch mới.')">
                         <i class="bi bi-check-lg me-1"></i>Cập Nhật Đơn Giá
                     </button>
                 </div>

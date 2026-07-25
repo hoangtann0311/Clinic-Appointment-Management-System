@@ -154,23 +154,43 @@ public class MockAiEngineServlet extends HttpServlet {
             System.err.println("[MockAiEngineServlet] Lỗi khi chạy Python: " + e.getMessage());
         }
 
-        // Đồng bộ lưu trữ sang thư mục source (phòng hờ rebuild)
-        if (success && sourceOutputDir != null) {
+        // Đồng bộ lưu trữ sang thư mục vĩnh viễn .ocss và thư mục source
+        if (success) {
+            String ocssOutputDir = AppConfig.getAiResultsAbsoluteDir() + File.separator + orderIdStr;
             try {
-                File srcDirFile = new File(sourceOutputDir);
-                if (!srcDirFile.exists()) {
-                    srcDirFile.mkdirs();
+                File ocssDirFile = new File(ocssOutputDir);
+                if (!ocssDirFile.exists()) {
+                    ocssDirFile.mkdirs();
                 }
                 for (String fileName : new String[]{"result.json", "result.png", "mask.png", "raw_mask.png"}) {
                     File fromFile = new File(absoluteOutputDir, fileName);
                     if (fromFile.exists()) {
-                        File toFile = new File(sourceOutputDir, fileName);
+                        File toFile = new File(ocssDirFile, fileName);
                         Files.copy(fromFile.toPath(), toFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
                     }
                 }
-                System.out.println("[MockAiEngineServlet] Copied AI results to source folder successfully.");
+                System.out.println("[MockAiEngineServlet] Copied AI results to .ocss persistent folder successfully.");
             } catch (Exception e) {
-                System.err.println("[MockAiEngineServlet] Failed to copy AI results to source folder: " + e.getMessage());
+                System.err.println("[MockAiEngineServlet] Failed to copy AI results to .ocss folder: " + e.getMessage());
+            }
+
+            if (sourceOutputDir != null) {
+                try {
+                    File srcDirFile = new File(sourceOutputDir);
+                    if (!srcDirFile.exists()) {
+                        srcDirFile.mkdirs();
+                    }
+                    for (String fileName : new String[]{"result.json", "result.png", "mask.png", "raw_mask.png"}) {
+                        File fromFile = new File(absoluteOutputDir, fileName);
+                        if (fromFile.exists()) {
+                            File toFile = new File(srcDirFile, fileName);
+                            Files.copy(fromFile.toPath(), toFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                        }
+                    }
+                    System.out.println("[MockAiEngineServlet] Copied AI results to source folder successfully.");
+                } catch (Exception e) {
+                    System.err.println("[MockAiEngineServlet] Failed to copy AI results to source folder: " + e.getMessage());
+                }
             }
         }
 

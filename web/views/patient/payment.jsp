@@ -56,7 +56,7 @@
 
         <%-- ALERTS --%>
         <c:if test="${not empty success}">
-            <div class="alert alert-success alert-dismissible fade show">
+            <div class="alert alert-success alert-dismissible fade show" data-cams-toast role="alert">
                 <i class="bi bi-check-circle-fill me-2"></i>
                 <c:choose>
                     <c:when test="${success == 'ThanhToanChoXacNhan'}">
@@ -71,7 +71,7 @@
             </div>
         </c:if>
         <c:if test="${not empty error}">
-            <div class="alert alert-danger alert-dismissible fade show">
+            <div class="alert alert-danger alert-dismissible fade show" data-cams-toast role="alert">
                 <i class="bi bi-exclamation-triangle-fill me-2"></i>${error}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
@@ -373,7 +373,7 @@
                         <div id="holdExpiredBox" class="alert alert-danger" style="display:none;">
                             <i class="bi bi-exclamation-triangle-fill me-2"></i>
                             Đã hết thời gian giữ chỗ. Slot có thể đã được nhả cho người khác — vui lòng
-                            <a href="${pageContext.request.contextPath}/patient/book">đặt lịch lại</a>.
+                            <a href="${pageContext.request.contextPath}/patient/booking">đặt lịch lại</a>.
                         </div>
                     </c:if>
 
@@ -385,7 +385,7 @@
                             <div class="col-6">
                                 <label class="payment-method-card d-block p-3 text-center" id="cashCard">
                                     <input type="radio" name="paymentMethod" value="Cash" id="cashRadio" onchange="showMethod('cash')">
-                                    <div class="fs-1 mb-2">💵</div>
+                                    <div class="fs-1 mb-2 text-success"><i class="bi bi-cash-stack"></i></div>
                                     <div class="fw-bold">Tiền mặt</div>
                                     <div class="text-muted small mt-1">Thanh toán tại quầy lễ tân</div>
                                 </label>
@@ -393,7 +393,7 @@
                             <div class="col-6">
                                 <label class="payment-method-card d-block p-3 text-center" id="bankCard">
                                     <input type="radio" name="paymentMethod" value="BankTransfer" id="bankRadio" onchange="showMethod('bank')">
-                                    <div class="fs-1 mb-2">🏦</div>
+                                    <div class="fs-1 mb-2 text-primary"><i class="bi bi-bank"></i></div>
                                     <div class="fw-bold">Chuyển khoản</div>
                                     <div class="text-muted small mt-1">Chuyển khoản ngân hàng</div>
                                 </label>

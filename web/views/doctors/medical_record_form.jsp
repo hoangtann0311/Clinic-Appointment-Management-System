@@ -42,6 +42,11 @@
      ══════════════════════════════════════════════════════ --%>
 <c:if test="${mode == 'list'}">
 
+  <%-- Thông báo lỗi --%>
+  <c:if test="${not empty errorMessage}">
+    <div class="alert alert-danger rounded-3 mb-3"><i class="bi bi-exclamation-triangle-fill me-2"></i>${errorMessage}</div>
+  </c:if>
+
   <div class="row mb-4">
     <div class="col">
       <div class="card border-0 rounded-4 text-white" style="background:linear-gradient(135deg,#1a6b3c,#28a745);">
@@ -113,7 +118,7 @@
                       <div class="d-flex align-items-center gap-2">
                         <div class="rounded-circle bg-success bg-opacity-10 text-success fw-bold d-flex align-items-center justify-content-center"
                              style="width:36px;height:36px;min-width:36px;font-size:.85rem;">
-                          ${fn:toUpperCase(fn:substring(rec.patientName,0,1))}
+                          ${not empty rec.patientName ? fn:toUpperCase(fn:substring(rec.patientName,0,1)) : '?'}
                         </div>
                         <span class="fw-medium">${rec.patientName}</span>
                       </div>
@@ -169,8 +174,13 @@
     <div class="alert alert-danger rounded-3 mb-3"><i class="bi bi-exclamation-triangle-fill me-2"></i>${errorMessage}</div>
   </c:if>
   <c:if test="${param.saved == '1'}">
-    <div class="alert alert-success rounded-3 mb-3 d-flex align-items-center gap-2">
-      <i class="bi bi-check-circle-fill fs-5"></i><span>Hồ sơ bệnh án đã được lưu thành công!</span>
+    <div class="alert alert-success alert-dismissible fade show" data-cams-toast role="alert">
+      <i class="bi bi-check-circle-fill me-2"></i>
+      <c:choose>
+        <c:when test="${param.draft == '1'}">Đã lưu nháp hồ sơ bệnh án.</c:when>
+        <c:otherwise>Đã chốt hồ sơ &amp; hoàn thành khám thành công!</c:otherwise>
+      </c:choose>
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
   </c:if>
 
@@ -186,17 +196,17 @@
   </c:if>
 
   <c:if test="${param.success == 'requested'}">
-    <div class="alert alert-success rounded-3 mb-3 d-flex align-items-center gap-2" role="alert">
-      <i class="bi bi-check-circle-fill fs-5"></i>
+    <div class="alert alert-success alert-dismissible fade show" data-cams-toast role="alert">
+      <i class="bi bi-check-circle-fill me-2"></i>
       <c:choose>
         <c:when test="${param.billing == 'additional'}">
-          <span><strong>Đã tạo chỉ định siêu âm ngoài dịch vụ đã đặt.</strong> Đã phát sinh hóa đơn sau khám; Bác sĩ siêu âm sẽ thực hiện sau khi xác nhận thanh toán.</span>
+          Đã tạo chỉ định siêu âm. Hóa đơn sau khám đã được phát sinh; Bác sĩ siêu âm sẽ thực hiện sau khi BN thanh toán.
         </c:when>
         <c:otherwise>
-          <span><strong>Đã tạo chỉ định siêu âm.</strong> Dịch vụ đã nằm trong lịch hẹn (không phát sinh chi phí).</span>
+          Đã tạo chỉ định siêu âm (đã bao gồm trong lịch hẹn, không phát sinh phí).
         </c:otherwise>
       </c:choose>
-      <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Đóng"></button>
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
   </c:if>
 
@@ -259,7 +269,7 @@
                               <div class="text-center mb-3">
             <div class="rounded-circle bg-success bg-opacity-10 text-success fw-bold d-flex align-items-center justify-content-center mx-auto mb-2"
                  style="width:56px;height:56px;font-size:1.3rem;">
-              ${fn:toUpperCase(fn:substring(record.patientName,0,1))}
+              ${not empty record.patientName ? fn:toUpperCase(fn:substring(record.patientName,0,1)) : '?'}
             </div>
             <h6 class="fw-bold mb-1">${record.patientName}</h6>
             <span class="badge bg-secondary-subtle text-secondary small px-2 py-1">Mã BN: ${record.patientId > 0 ? '#P-' : ''}${record.patientId > 0 ? record.patientId : 'Chưa có'}</span>
@@ -289,7 +299,7 @@
             </div>
             <div class="py-1 border-bottom border-light">
               <span class="text-muted small fw-medium d-block mb-1">Triệu chứng lúc đặt lịch</span>
-              <div class="p-2 bg-light rounded text-dark small" style="white-space:pre-wrap; line-height: 1.4; text-align: left;">
+              <div style="white-space:pre-wrap;line-height:1.5;text-align:left!important;padding:8px 10px;background:#f8f9fa;border-radius:6px;font-size:.82rem;">
                 <c:out value="${not empty record.symptoms ? record.symptoms : '(không ghi nhận)'}"/>
               </div>
             </div>
@@ -308,7 +318,8 @@
             </c:if>
           </div>
 
-          <%-- Khối Chỉ định / Xem kết quả siêu âm --%>
+          <%-- Khối Chỉ định / Xem kết quả siêu âm — chỉ hiện sau khi đã lưu nháp --%>
+          <c:if test="${record.id > 0}">
           <hr class="my-3">
           <div class="d-grid gap-2">
             <c:choose>
@@ -346,6 +357,15 @@
                         <i class="bi bi-file-earmark-medical me-1"></i> Tạo Chỉ định Siêu âm
                     </button>
                 </form>
+                <%-- Checkbox: bác sĩ xác nhận không cần siêu âm cho ca này --%>
+                <div class="form-check mt-3 p-3 border rounded-3 bg-light" id="skipUltrasoundBox">
+                  <input class="form-check-input" type="checkbox" id="ultrasoundSkipped" name="ultrasoundSkipped"
+                         value="true" ${param.ultrasoundSkipped == 'true' ? 'checked' : ''} onchange="onUltrasoundSkippedChanged()">
+                  <label class="form-check-label small fw-semibold" for="ultrasoundSkipped">
+                    <i class="bi bi-hand-thumbs-up me-1 text-success"></i>Không cần chỉ định siêu âm cho ca khám này
+                  </label>
+                  <div class="form-text small mt-1">Tích chọn nếu sau khi thăm khám lâm sàng, bác sĩ xác định ca này không cần siêu âm.</div>
+                </div>
               </c:when>
               <c:otherwise>
                 <div class="alert alert-secondary small mb-0 rounded-3">
@@ -354,6 +374,14 @@
               </c:otherwise>
             </c:choose>
           </div>
+          </c:if><%-- end record.id > 0 (ultrasound section) --%>
+          <c:if test="${record.id == 0 && canEditRecord}">
+          <hr class="my-3">
+          <div class="alert alert-light border small mb-0 rounded-3 text-center py-2">
+            <i class="bi bi-info-circle me-1 text-primary"></i>
+            Lưu nháp thông tin khám lâm sàng trước để ra quyết định siêu âm.
+          </div>
+          </c:if>
 
         </div>
       </div>
@@ -382,29 +410,65 @@
           <input type="hidden" name="recordId" value="${record.id}"/>
         </c:if>
 
-        <%-- Navigation 4 tab chuẩn hóa --%>
-        <ul class="nav obs-nav border-bottom mb-0 bg-light rounded-top-4" id="obsTabs">
-          <li class="nav-item">
-            <button class="nav-link active" type="button" data-tab="tab1">
-              <i class="bi bi-heart-pulse me-1"></i>1. Sinh hiệu mẹ &amp; Đánh giá thai
-            </button>
-          </li>
-          <li class="nav-item">
-            <button class="nav-link" type="button" data-tab="tab2">
-              <i class="bi bi-activity me-1"></i>2. Khám sản khoa
-            </button>
-          </li>
-          <li class="nav-item">
-            <button class="nav-link" type="button" data-tab="tab3">
-              <i class="bi bi-exclamation-triangle me-1"></i>3. Dấu hiệu nguy hiểm
-            </button>
-          </li>
-          <li class="nav-item">
-            <button class="nav-link" type="button" data-tab="tab4">
-              <i class="bi bi-clipboard2-pulse me-1"></i>4. Chẩn đoán &amp; Kế hoạch
-            </button>
-          </li>
-        </ul>
+        <%-- ════ STEP-BASED PROGRESS INDICATOR ════ --%>
+        <c:set var="draftSaved" value="${record.id > 0}"/>
+        <c:set var="usResolved" value="${!hasBlockingUltrasound}"/>
+        <c:if test="${canEditRecord}">
+        <div class="d-flex align-items-center gap-2 mb-4 flex-wrap" id="stepIndicator">
+          <c:set var="step1Done" value="${draftSaved}"/>
+          <span class="badge rounded-pill px-3 py-2 ${step1Done ? 'bg-success' : 'bg-primary'}">
+            <i class="bi ${step1Done ? 'bi-check-circle-fill' : 'bi-1-circle-fill'} me-1"></i>Khám lâm sàng
+          </span>
+          <i class="bi bi-chevron-right text-muted"></i>
+          <c:set var="step2Active" value="${draftSaved && !usResolved}"/>
+          <span class="badge rounded-pill px-3 py-2 ${usResolved ? 'bg-success' : step2Active ? 'bg-primary' : 'bg-secondary'}">
+            <i class="bi ${usResolved ? 'bi-check-circle-fill' : step2Active ? 'bi-2-circle-fill' : 'bi-2-circle'} me-1"></i>Siêu âm
+          </span>
+          <i class="bi bi-chevron-right text-muted"></i>
+          <span class="badge rounded-pill px-3 py-2 ${usResolved && draftSaved ? 'bg-primary' : 'bg-secondary'}">
+            <i class="bi ${usResolved && draftSaved ? 'bi-3-circle-fill' : 'bi-3-circle'} me-1"></i>Chẩn đoán &amp; Kê đơn
+          </span>
+        </div>
+        </c:if>
+
+        <%-- ════ CLINICAL DATA (STEP 1) — collapse sau khi lưu nháp ════ --%>
+        <c:if test="${canEditRecord}">
+        <div class="card border-0 shadow-sm mb-3">
+          <div class="card-header bg-white d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#clinicalSection" role="button" aria-expanded="${draftSaved ? 'false' : 'true'}" style="cursor:pointer;">
+            <h6 class="mb-0">
+              <i class="bi ${step1Done ? 'bi-check-circle-fill text-success' : 'bi-1-circle-fill text-primary'} me-2"></i>
+              <c:choose>
+                <c:when test="${step1Done}">Thông tin lâm sàng <span class="badge bg-success ms-2 small">Đã lưu</span></c:when>
+                <c:otherwise>Bước 1: Khám lâm sàng</c:otherwise>
+              </c:choose>
+            </h6>
+            <i class="bi bi-chevron-down collapse-icon"></i>
+          </div>
+          <div class="collapse ${draftSaved ? '' : 'show'}" id="clinicalSection">
+          <div class="card-body p-3">
+            <%-- Navigation 4 tab — giữ nguyên cấu trúc cũ --%>
+            <ul class="nav obs-nav border-bottom mb-0 bg-light rounded-top-4" id="obsTabs">
+              <li class="nav-item">
+                <button class="nav-link active" type="button" data-tab="tab1">
+                  <i class="bi bi-heart-pulse me-1"></i>1. Sinh hiệu mẹ &amp; Đánh giá thai
+                </button>
+              </li>
+              <li class="nav-item">
+                <button class="nav-link" type="button" data-tab="tab2">
+                  <i class="bi bi-activity me-1"></i>2. Khám sản khoa
+                </button>
+              </li>
+              <li class="nav-item">
+                <button class="nav-link" type="button" data-tab="tab3">
+                  <i class="bi bi-exclamation-triangle me-1"></i>3. Dấu hiệu nguy hiểm
+                </button>
+              </li>
+              <li class="nav-item">
+                <button class="nav-link" type="button" data-tab="tab4">
+                  <i class="bi bi-clipboard2-pulse me-1"></i>4. Chẩn đoán &amp; Kế hoạch
+                </button>
+              </li>
+            </ul>
 
         <div class="card rounded-0 rounded-bottom-4 border-0 shadow-sm">
           <div class="card-body p-4">
@@ -534,7 +598,7 @@
             <%-- ═══ TAB 2: KHÁM SẢN KHOA / CHUYỂN DẠ ═══ --%>
             <div id="tab2" style="display:none;">
               <div class="form-check form-switch mb-3 p-3 bg-light rounded-3 border">
-                <input class="form-check-input" type="checkbox" id="enableLaborExamToggle"
+                <input class="form-check-input" type="checkbox" id="enableLaborExamToggle" name="enableLaborExamToggle"
                        onchange="toggleLaborExamSection(this.checked)"
                        <c:if test="${not empty record.cervicalDilationCm or not empty record.cervicalEffacement or not empty record.presentationStation}">checked</c:if>>
                 <label class="form-check-label fw-bold text-primary" for="enableLaborExamToggle">
@@ -626,7 +690,7 @@
                     <select name="edema" class="form-select risk-select">
                       <option value="Không" <c:if test="${record.edema == 'Không' || empty record.edema}">selected</c:if>>Không</option>
                       <option value="Chi dưới" <c:if test="${record.edema == 'Chi dưới'}">selected</c:if>>Chi dưới</option>
-                      <option value="Toàn thân" <c:if test="${record.edema == 'Toàn thân'}">selected</c:if>>Toàn thân ⚠</option>
+                      <option value="Toàn thân" <c:if test="${record.edema == 'Toàn thân'}">selected</c:if>>Toàn thân (Nguy cơ cao)</option>
                     </select>
                   </div>
                   <div class="col-sm-4">
@@ -634,8 +698,8 @@
                     <select name="proteinuria" class="form-select risk-select">
                       <option value="Âm tính" <c:if test="${record.proteinuria == 'Âm tính' || empty record.proteinuria}">selected</c:if>>Âm tính</option>
                       <option value="1+" <c:if test="${record.proteinuria == '1+'}">selected</c:if>>1+</option>
-                      <option value="2+" <c:if test="${record.proteinuria == '2+'}">selected</c:if>>2+ ⚠</option>
-                      <option value="3+" <c:if test="${record.proteinuria == '3+'}">selected</c:if>>3+ ⚠⚠</option>
+                      <option value="2+" <c:if test="${record.proteinuria == '2+'}">selected</c:if>>2+ (Nguy cơ)</option>
+                      <option value="3+" <c:if test="${record.proteinuria == '3+'}">selected</c:if>>3+ (Nguy cơ rất cao)</option>
                     </select>
                   </div>
                 </div>
@@ -675,12 +739,7 @@
                   <textarea name="treatmentPlan" class="form-control mb-3" rows="3"
                             placeholder="Hướng xử trí, lời khuyên cho sản phụ, chế độ dinh dưỡng…">${record.treatmentPlan}</textarea>
                   <div class="row g-3">
-                    <div class="col-sm-6">
-                      <label class="form-label fw-medium"><i class="bi bi-calendar-plus me-1 text-primary"></i>Ngày tái khám</label>
-                      <input type="date" name="nextAppointmentDate" id="nextApptDate" class="form-control"
-                             value="${record.nextAppointmentDate}">
-                    </div>
-                    <div class="col-sm-6">
+                    <div class="col-12">
                       <label class="form-label fw-medium"><i class="bi bi-arrow-up-right-circle me-1 text-primary"></i>Chuyển viện / Chuyên khoa</label>
                       <input type="text" name="referredTo" class="form-control"
                              placeholder="Để trống nếu không chuyển" value="${record.referredTo}">
@@ -689,6 +748,24 @@
                 </div>
               </div>
 
+              <%-- Nếu còn siêu âm đang chờ xử lý → chặn kê đơn + chốt hồ sơ --%>
+              <c:if test="${hasBlockingUltrasound}">
+              <div class="alert alert-warning border-0 rounded-3 mb-3 d-flex align-items-center gap-3" role="alert">
+                <i class="bi bi-hourglass-split fs-3"></i>
+                <div>
+                  <strong>Đang chờ kết quả siêu âm</strong>
+                  <div class="small mt-1">Chưa thể kê đơn thuốc và chốt hồ sơ. Vui lòng chờ Bác sĩ Siêu âm hoàn tất và bạn xác nhận kết quả trước.</div>
+                </div>
+                <c:if test="${record.id > 0}">
+                  <a href="${pageContext.request.contextPath}/doctor/results?recordId=${record.id}"
+                     class="btn btn-outline-primary btn-sm rounded-pill ms-auto text-nowrap">
+                    <i class="bi bi-soundwave me-1"></i>Xem kết quả siêu âm
+                  </a>
+                </c:if>
+              </div>
+              </c:if>
+
+              <c:if test="${!hasBlockingUltrasound}">
               <%-- Card C: Kê đơn thuốc (embedded) --%>
               <div class="card border-0 bg-light rounded-3 mb-3">
                 <div class="card-body">
@@ -825,8 +902,60 @@
               </template>
 
             </div>
+              </c:if><%-- end !hasBlockingUltrasound (prescription section) --%>
 
-          </div><%-- card-body --%>
+          </div><%-- card-body (tabs 1-4) --%>
+          </div><%-- collapse clinicalSection --%>
+          </div><%-- clinical card --%>
+          </c:if>
+
+          <%-- ════ STEP 2: SIÊU ÂM (chỉ hiện sau lưu nháp) ════ --%>
+          <c:if test="${draftSaved && canEditRecord}">
+          <div class="card border-0 shadow-sm mb-3" id="ultrasoundStepCard">
+            <div class="card-header bg-white">
+              <h6 class="mb-0">
+                <i class="bi ${usResolved ? 'bi-check-circle-fill text-success' : 'bi-2-circle-fill text-primary'} me-2"></i>
+                <c:choose>
+                  <c:when test="${existingUltrasoundOrders}">Bước 2: Siêu âm — <span class="text-muted">đã chỉ định</span></c:when>
+                  <c:otherwise>Bước 2: Quyết định siêu âm</c:otherwise>
+                </c:choose>
+              </h6>
+            </div>
+            <div class="card-body p-3">
+              <c:choose>
+                <c:when test="${hasBlockingUltrasound}">
+                  <div class="alert alert-warning mb-0 d-flex align-items-center gap-3">
+                    <i class="bi bi-hourglass-split fs-3"></i>
+                    <div class="flex-grow-1">
+                      <strong>Đang chờ kết quả siêu âm</strong>
+                      <div class="small mt-1">Bác sĩ Siêu âm đang xử lý. Sau khi có kết quả, bạn xác nhận rồi mới kê đơn và chốt hồ sơ.</div>
+                    </div>
+                    <a href="${pageContext.request.contextPath}/doctor/results?recordId=${record.id}" class="btn btn-outline-primary btn-sm rounded-pill text-nowrap">
+                      <i class="bi bi-soundwave me-1"></i>Xem kết quả
+                    </a>
+                  </div>
+                </c:when>
+                <c:otherwise>
+                  <div class="alert alert-success mb-0 d-flex align-items-center gap-2">
+                    <i class="bi bi-check-circle-fill"></i>
+                    <span>Siêu âm đã hoàn tất — chuyển sang bước Chẩn đoán &amp; Kê đơn.</span>
+                  </div>
+                </c:otherwise>
+              </c:choose>
+            </div>
+          </div>
+          </c:if>
+
+          <%-- ════ STEP 3: CHẨN ĐOÁN & KÊ ĐƠN + ACTION BAR ════ --%>
+          <c:if test="${canEditRecord && draftSaved && usResolved}">
+          <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white">
+              <h6 class="mb-0">
+                <i class="bi bi-3-circle-fill text-primary me-2"></i>Bước 3: Chẩn đoán &amp; Kê đơn
+              </h6>
+            </div>
+            <div class="card-body p-0">
+          </c:if>
 
           <%-- ════ THANH HÀNH ĐỘNG STICKY (ACTION BAR) ════ --%>
           <div class="doctor-action-bar">
@@ -839,6 +968,7 @@
                     <i class="bi bi-arrow-left me-1"></i>Quay lại
                   </a>
 
+                  <c:if test="${!hasBlockingUltrasound}">
                   <button type="button" onclick="doSubmit('draft')" id="btnDraft" class="btn btn-outline-warning rounded-3 px-4">
                     <i class="bi bi-file-earmark me-2"></i>Lưu nháp
                   </button>
@@ -846,6 +976,7 @@
                   <button type="button" onclick="confirmAndSubmitFinal()" id="btnFinal" class="btn btn-success rounded-3 px-4 ms-auto fw-semibold">
                     <i class="bi bi-floppy me-2"></i>Chốt hồ sơ &amp; hoàn thành khám
                   </button>
+                  </c:if>
                 </div>
               </c:when>
               <c:otherwise>
@@ -859,8 +990,86 @@
             </c:choose>
           </div>
 
-        </div><%-- card --%>
       </form>
+
+      <c:if test="${canEditRecord && draftSaved && usResolved}">
+          </div><%-- card-body (step 3) --%>
+          </div><%-- step 3 card --%>
+      </c:if>
+
+      <%-- ════ READ-ONLY VIEW: Hồ sơ đã chốt (không còn edit được) ════ --%>
+      <c:if test="${!canEditRecord && record.id > 0}">
+      <div class="card border-0 shadow-sm mt-3">
+        <div class="card-header bg-success bg-opacity-10 d-flex justify-content-between align-items-center">
+          <h6 class="mb-0"><i class="bi bi-check-circle-fill text-success me-2"></i>Hồ sơ đã hoàn thành</h6>
+          <span class="badge bg-success">Read-Only</span>
+        </div>
+        <div class="card-body p-4">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="border rounded-3 p-3 mb-3 bg-light">
+                <h6 class="small fw-bold text-uppercase text-muted mb-2">Sinh hiệu</h6>
+                <div class="d-flex flex-wrap gap-3 small">
+                  <span><strong>Cân nặng:</strong> ${not empty record.weightKg ? record.weightKg : '—'} kg</span>
+                  <span><strong>Chiều cao:</strong> ${not empty record.heightCm ? record.heightCm : '—'} cm</span>
+                  <span><strong>Mạch:</strong> ${not empty record.pulseBpm ? record.pulseBpm : '—'} bpm</span>
+                  <span><strong>Nhiệt độ:</strong> ${not empty record.temperatureC ? record.temperatureC : '—'}°C</span>
+                  <span><strong>HA:</strong> ${not empty record.bloodPressure ? record.bloodPressure : '—'}</span>
+                </div>
+              </div>
+              <div class="border rounded-3 p-3 mb-3 bg-light">
+                <h6 class="small fw-bold text-uppercase text-muted mb-2">Thai kỳ</h6>
+                <div class="d-flex flex-wrap gap-3 small">
+                  <span><strong>Tuổi thai:</strong> ${not empty record.gestationalAgeWeeks ? record.gestationalAgeWeeks : '—'} tuần ${not empty record.gestationalAgeDays ? record.gestationalAgeDays : '0'} ngày</span>
+                  <span><strong>Tim thai:</strong> ${not empty record.fetalHeartRate ? record.fetalHeartRate : '—'} bpm</span>
+                  <span><strong>Chiều cao TC:</strong> ${not empty record.fundalHeightCm ? record.fundalHeightCm : '—'} cm</span>
+                  <span><strong>Ngôi thai:</strong> ${not empty record.fetalPresentation ? record.fetalPresentation : '—'}</span>
+                </div>
+              </div>
+              <div class="border rounded-3 p-3 mb-3 bg-light">
+                <h6 class="small fw-bold text-uppercase text-muted mb-2">Khám cổ tử cung</h6>
+                <div class="d-flex flex-wrap gap-3 small">
+                  <span><strong>Độ mở CTC:</strong> ${not empty record.cervicalDilationCm ? record.cervicalDilationCm : '—'} cm</span>
+                  <span><strong>Độ xóa CTC:</strong> ${not empty record.cervicalEffacementPercent ? record.cervicalEffacementPercent : '—'}%</span>
+                  <span><strong>Ngôi thai/CTC:</strong> ${not empty record.cervicalStation ? record.cervicalStation : '—'}</span>
+                  <span><strong>Tình trạng ối:</strong> ${not empty record.amnioticFluidDescription ? record.amnioticFluidDescription : '—'}</span>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="border rounded-3 p-3 mb-3 bg-light">
+                <h6 class="small fw-bold text-uppercase text-muted mb-2">Chẩn đoán & Điều trị</h6>
+                <p class="small mb-2" style="white-space:pre-wrap;"><strong>Chẩn đoán:</strong> ${not empty record.finalDiagnosis ? record.finalDiagnosis : '—'}</p>
+                <p class="small mb-0" style="white-space:pre-wrap;"><strong>Ghi chú lâm sàng:</strong> ${not empty record.clinicalNotes ? record.clinicalNotes : '—'}</p>
+              </div>
+              <div class="border rounded-3 p-3 mb-3 bg-light">
+                <h6 class="small fw-bold text-uppercase text-muted mb-2">Dấu hiệu nguy cơ</h6>
+                <p class="small mb-0">
+                  <c:choose>
+                    <c:when test="${record.hasRisk()}"><span class="badge bg-danger">Có yếu tố nguy cơ</span></c:when>
+                    <c:otherwise><span class="badge bg-success bg-opacity-10 text-success">Không ghi nhận</span></c:otherwise>
+                  </c:choose>
+                </p>
+              </div>
+              <c:if test="${record.id > 0}">
+              <div class="border rounded-3 p-3 mb-3">
+                <a href="${pageContext.request.contextPath}/doctor/results?recordId=${record.id}"
+                   class="btn btn-outline-primary btn-sm rounded-pill w-100">
+                  <i class="bi bi-soundwave me-1"></i>Xem kết quả siêu âm
+                </a>
+              </div>
+              </c:if>
+            </div>
+          </div>
+          <div class="d-flex justify-content-end mt-3">
+            <a href="${pageContext.request.contextPath}/doctor/appointments" class="btn btn-outline-secondary rounded-3 px-4">
+              <i class="bi bi-arrow-left me-1"></i>Quay lại lịch hẹn
+            </a>
+          </div>
+        </div>
+      </div>
+      </c:if>
+
     </div><%-- col --%>
   </div><%-- row --%>
 
@@ -984,7 +1193,7 @@
   function submitObsForm() {
     ['finalDiagnosis','weightKg','heightCm','pulseBpm','temperatureC',
      'systolicBP','diastolicBP','gestationalAgeWeeks','gestationalAgeDays',
-     'fetalHeartRate','fundalHeightCm','cervicalDilationCm','nextAppointmentDate'].forEach(clearFieldError);
+     'fetalHeartRate','fundalHeightCm','cervicalDilationCm'].forEach(clearFieldError);
 
     let firstError = null;
     const isFinal = document.getElementById('submitActionField').value === 'final';
@@ -1028,19 +1237,6 @@
     validateNum('fundalHeightCm',       5,  50, 'Chiều cao tử cung (cm)', 'tab1');
 
     validateNum('cervicalDilationCm', 0, 10, 'Độ mở CTC (cm)', 'tab2');
-
-    // Ngày tái khám >= hôm nay
-    if (!firstError) {
-      const nadEl = document.querySelector('[name="nextAppointmentDate"]');
-      if (nadEl && nadEl.value) {
-        const today = new Date(); today.setHours(0,0,0,0);
-        const picked = new Date(nadEl.value);
-        if (picked < today) {
-          showFieldError('nextAppointmentDate', 'Ngày tái khám phải từ hôm nay trở đi.', 'tab4');
-          firstError = 'nextAppointmentDate';
-        }
-      }
-    }
 
     // Đơn thuốc kèm theo
     if (!firstError) {
@@ -1165,10 +1361,22 @@
       return;
     }
 
+    // Kiểm tra bác sĩ đã ra quyết định về siêu âm chưa
+    const ultrasoundSkipped = document.getElementById('ultrasoundSkipped');
+    const hasExistingUltrasound = ${not empty existingUltrasoundOrders && existingUltrasoundOrders ? 'true' : 'false'};
+    if (!hasExistingUltrasound && ultrasoundSkipped && !ultrasoundSkipped.checked) {
+      alert('Vui lòng ra quyết định về siêu âm trước khi chốt hồ sơ:\n'
+        + '- Tạo Chỉ định Siêu âm (nếu cần)\n'
+        + '- Hoặc tích chọn "Không cần chỉ định siêu âm"');
+      document.getElementById('skipUltrasoundBox').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
     const rxCount = document.querySelectorAll('#rxMedicineRows .rx-medicine-row').length;
     const hasRisk = document.getElementById('riskBox').classList.contains('active');
 
     let summaryHtml = '<div><strong>Chẩn đoán:</strong> ' + diag + '</div>';
+    summaryHtml += '<div><strong>Siêu âm:</strong> ' + (ultrasoundSkipped && ultrasoundSkipped.checked ? 'Không cần' : (hasExistingUltrasound ? 'Đã chỉ định' : 'Chưa quyết định')) + '</div>';
     summaryHtml += '<div><strong>Đơn thuốc:</strong> ' + rxCount + ' loại thuốc</div>';
     if (hasRisk) {
       summaryHtml += '<div class="text-danger mt-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>Có ghi nhận yếu tố nguy cơ.</div>';
@@ -1177,6 +1385,10 @@
     document.getElementById('modalSummary').innerHTML = summaryHtml;
     const modal = new bootstrap.Modal(document.getElementById('finalConfirmModal'));
     modal.show();
+  }
+
+  function onUltrasoundSkippedChanged() {
+    // Reset nếu bác sĩ đổi ý và tạo chỉ định siêu âm mới
   }
 
   function executeFinalSubmit() {

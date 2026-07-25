@@ -1431,19 +1431,7 @@ body.admin-login-page {
     background-color: #fff7f7 !important;
 }
 
-.sonographer-theme .sos-blink {
-    border-left: 4px solid #b91c1c !important;
-}
 
-@keyframes cams-pulse-sos {
-    0%, 100% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.04); opacity: .9; }
-}
-
-.sonographer-theme .sos-blink,
-.sonographer-theme .sos-pulse {
-    animation: cams-pulse-sos 1.2s ease-in-out infinite;
-}
 
 @media (max-width: 767.98px) {
     .doctor-theme .admin-main { padding: 1rem; }

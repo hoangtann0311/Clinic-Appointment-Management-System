@@ -161,13 +161,13 @@ public final class AuthorizationConfig {
         Map.entry("/admin/reception/booking",          "appointment.create"),
         Map.entry("/admin/reception/checkin",          "appointment.edit"),
         Map.entry("/admin/reception/cancel",           "appointment.cancel"),
-        Map.entry("/admin/reception/priority",         "appointment.edit"),
+        Map.entry("/admin/reception/priority",         "queue.priority"),
         Map.entry("/admin/reception/edit",             "appointment.edit"),
         Map.entry("/admin/reception/doctor-schedules", "appointment.view"),
         Map.entry("/admin/reception/slots",            "appointment.view"),
         Map.entry("/admin/reception/patient-lookup",   "user.view"),
-        Map.entry("/admin/reception/payments",         "payment.view"),
-        Map.entry("/admin/reception/payments/",        "payment.view"),
+
+        Map.entry("/admin/reception/quick-pay",        "appointment.edit"),
 
         // ──────────── SONOGRAPHER ZONE (/sonographer/*) ────────────
         Map.entry("/sonographer/dashboard", "ultrasound.view"),

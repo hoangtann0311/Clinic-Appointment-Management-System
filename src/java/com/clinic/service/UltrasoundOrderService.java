@@ -200,6 +200,12 @@ public class UltrasoundOrderService {
      */
     public int createUltrasoundRequestInTransaction(int apptId, int medicalRecordId, int doctorId, int serviceId,
                                                     boolean includedInBookedAppointment, BigDecimal price, String reorderReason) {
+        return createUltrasoundRequestInTransaction(apptId, medicalRecordId, doctorId, serviceId, includedInBookedAppointment, price, reorderReason, false);
+    }
+
+    public int createUltrasoundRequestInTransaction(int apptId, int medicalRecordId, int doctorId, int serviceId,
+                                                    boolean includedInBookedAppointment, BigDecimal price, String reorderReason,
+                                                    boolean force) {
         Connection conn = null;
         try {
             conn = DatabaseConfig.getConnection();
@@ -290,15 +296,14 @@ public class UltrasoundOrderService {
             conn.setAutoCommit(false);
             String state = null;
             try (java.sql.PreparedStatement ps = conn.prepareStatement(
-                    "SELECT status FROM test_orders WITH (UPDLOCK, ROWLOCK) "
-                            + "WHERE id = ? AND sonographer_user_id = ?")) {
+                    "SELECT status FROM test_orders WITH (UPDLOCK, ROWLOCK) WHERE id = ?")) {
                 ps.setInt(1, img.getTestOrderId());
-                ps.setInt(2, img.getUploadedBy());
                 try (java.sql.ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) state = rs.getString(1);
                 }
             }
-            if (!"InProgress".equalsIgnoreCase(state)) {
+            if (state == null || (!"InProgress".equalsIgnoreCase(state) && !"Uploaded".equalsIgnoreCase(state)
+                    && !"Pending".equalsIgnoreCase(state) && !"Waiting".equalsIgnoreCase(state) && !"Ordered".equalsIgnoreCase(state))) {
                 conn.rollback();
                 return false;
             }
@@ -317,20 +322,80 @@ public class UltrasoundOrderService {
                 return false;
             }
             try (java.sql.PreparedStatement ps = conn.prepareStatement(
-                    "UPDATE test_orders SET status = 'Uploaded' WHERE id = ? "
-                            + "AND sonographer_user_id = ? AND UPPER(LTRIM(RTRIM(ISNULL(status, '')))) = 'INPROGRESS'")) {
-                ps.setInt(1, img.getTestOrderId());
-                ps.setInt(2, img.getUploadedBy());
-                if (ps.executeUpdate() != 1) {
-                    conn.rollback();
-                    return false;
-                }
+                    "UPDATE test_orders SET status = 'Uploaded', sonographer_user_id = ? WHERE id = ?")) {
+                ps.setInt(1, img.getUploadedBy());
+                ps.setInt(2, img.getTestOrderId());
+                ps.executeUpdate();
             }
             conn.commit();
             return true;
         } catch (SQLException e) {
             if (conn != null) try { conn.rollback(); } catch (SQLException ignored) { }
             System.err.println("[UltrasoundOrderService] upload metadata failed: " + e.getClass().getSimpleName());
+            return false;
+        } finally {
+            if (conn != null) try { conn.setAutoCommit(true); } catch (SQLException ignored) { }
+            DatabaseConfig.closeConnection(conn);
+        }
+    }
+
+    public boolean replaceUltrasoundImage(UltrasoundImage img) {
+        if (img == null || img.getTestOrderId() <= 0 || img.getUploadedBy() <= 0) {
+            return false;
+        }
+
+        Connection conn = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            conn.setAutoCommit(false);
+            int orderId = img.getTestOrderId();
+
+            // 1. Xóa các bản ghi phụ thuộc trước để tránh vi phạm khóa ngoại (FK constraint)
+            try (java.sql.PreparedStatement ps = conn.prepareStatement(
+                    "IF OBJECT_ID(N'dbo.ultrasound_annotations', N'U') IS NOT NULL DELETE FROM ultrasound_annotations WHERE order_id = ?")) {
+                ps.setInt(1, orderId);
+                ps.executeUpdate();
+            } catch (Exception ignored) { }
+
+            try (java.sql.PreparedStatement ps = conn.prepareStatement(
+                    "IF OBJECT_ID(N'dbo.ultrasound_reports', N'U') IS NOT NULL DELETE FROM ultrasound_reports WHERE test_order_id = ? AND review_status != 'Accepted'")) {
+                ps.setInt(1, orderId);
+                ps.executeUpdate();
+            } catch (Exception ignored) { }
+
+            try (java.sql.PreparedStatement ps = conn.prepareStatement(
+                    "DELETE FROM ai_analysis_results WHERE test_order_id = ?")) {
+                ps.setInt(1, orderId);
+                ps.executeUpdate();
+            } catch (Exception ignored) { }
+
+            // 2. Xóa các tệp ảnh siêu âm cũ của order
+            try (java.sql.PreparedStatement ps = conn.prepareStatement(
+                    "DELETE FROM ultrasound_images WHERE test_order_id = ?")) {
+                ps.setInt(1, orderId);
+                ps.executeUpdate();
+            } catch (Exception ignored) { }
+
+            // 3. Thêm tệp ảnh siêu âm mới
+            if (ultrasoundImageDAO.insert(conn, img) <= 0) {
+                conn.rollback();
+                return false;
+            }
+
+            // 4. Cập nhật trạng thái ca về Uploaded và gán Bác sĩ siêu âm phụ trách
+            try (java.sql.PreparedStatement ps = conn.prepareStatement(
+                    "UPDATE test_orders SET status = 'Uploaded', sonographer_user_id = ? WHERE id = ?")) {
+                ps.setInt(1, img.getUploadedBy());
+                ps.setInt(2, orderId);
+                ps.executeUpdate();
+            }
+
+            conn.commit();
+            return true;
+        } catch (SQLException e) {
+            if (conn != null) try { conn.rollback(); } catch (SQLException ignored) { }
+            System.err.println("[UltrasoundOrderService] replaceUltrasoundImage ERROR: " + e.getMessage());
+            e.printStackTrace();
             return false;
         } finally {
             if (conn != null) try { conn.setAutoCommit(true); } catch (SQLException ignored) { }
