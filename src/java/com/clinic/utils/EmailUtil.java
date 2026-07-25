@@ -49,8 +49,15 @@ public class EmailUtil {
 
     // ========================================================
 
-    /** App URL dùng trong link xác thực */
-    private static final String APP_BASE_URL = "http://localhost:8080/ClinicAppointmentManagementSystem";
+    /**
+     * App URL dùng trong link xác thực.
+     * Được resolve động qua AppConfig.getBaseUrl() để hỗ trợ deploy đa môi trường.
+     * Thứ tự ưu tiên: biến môi trường APP_BASE_URL → system property app.base.url
+     * → file cấu hình ngoài → fallback http://localhost:8080/ClinicAppointmentManagementSystem
+     */
+    private static String getAppBaseUrl() {
+        return com.clinic.config.AppConfig.getBaseUrl();
+    }
 
     /** Cờ đánh dấu email đã được cấu hình hay chưa */
     private static boolean configured = false;
@@ -73,7 +80,7 @@ public class EmailUtil {
      * @param token   verification token
      */
     public static void sendVerificationEmail(String toEmail, String toName, String token) {
-        String verificationLink = APP_BASE_URL + "/verify-email?token=" + token;
+        String verificationLink = getAppBaseUrl() + "/verify-email?token=" + token;
         String subject = "X\u00e1c Th\u1ef1c T\u00e0i Kho\u1ea3n - Ph\u00f2ng Kh\u00e1m S\u1ea3n";
 
         // Nội dung email HTML
@@ -278,7 +285,7 @@ public class EmailUtil {
      * @param token   password reset token
      */
     public static void sendPasswordResetEmail(String toEmail, String toName, String token) {
-        String resetLink = APP_BASE_URL + "/reset-password?token=" + token;
+        String resetLink = getAppBaseUrl() + "/reset-password?token=" + token;
         String subject = "\u0110\u1eb7t L\u1ea1i M\u1eadt Kh\u1ea9u - Ph\u00f2ng Kh\u00e1m S\u1ea3n";
 
         // Nội dung email HTML
@@ -401,7 +408,7 @@ public class EmailUtil {
      * @param password mật khẩu (plain text) được admin tạo
      */
     public static void sendNewAccountEmail(String toEmail, String toName, String password) {
-        String loginUrl = APP_BASE_URL + "/login?prompt=1";
+        String loginUrl = getAppBaseUrl() + "/login?prompt=1";
         String subject = "Tài Khoản Đã Được Tạo - Phòng Khám Sản";
 
         String htmlContent = buildNewAccountEmailHtml(toName, toEmail, password, loginUrl);
@@ -548,7 +555,7 @@ public class EmailUtil {
      */
     public static void sendGoogleConfirmationSync(String toEmail, String toName, String token)
             throws Exception {
-        String verificationLink = APP_BASE_URL + "/verify-email?token=" + token;
+        String verificationLink = getAppBaseUrl() + "/verify-email?token=" + token;
         String subject = "Xác Nhận Đăng Ký Google - Phòng Khám Sản";
         String htmlContent = buildGoogleRegistrationEmailHtml(toName, verificationLink);
 
@@ -559,7 +566,7 @@ public class EmailUtil {
     }
 
     public static void sendGoogleRegistrationConfirmationEmail(String toEmail, String toName, String token) {
-        String verificationLink = APP_BASE_URL + "/verify-email?token=" + token;
+        String verificationLink = getAppBaseUrl() + "/verify-email?token=" + token;
         String subject = "Xác Nhận Đăng Ký Google - Phòng Khám Sản";
 
         String htmlContent = buildGoogleRegistrationEmailHtml(toName, verificationLink);

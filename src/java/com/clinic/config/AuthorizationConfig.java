@@ -103,8 +103,8 @@ public final class AuthorizationConfig {
         Map.entry("/admin/users/",       "user.view"),
         Map.entry("/admin/staff",        "user.view"),
         Map.entry("/admin/staff/",       "user.view"),
-        Map.entry("/admin/roles",        "system.manage_roles"),
-        Map.entry("/admin/roles/",       "system.manage_roles"),
+        // Map.entry("/admin/roles",        "system.manage_roles"),   // ĐÃ KHÓA: phân quyền động bị vô hiệu hóa
+        // Map.entry("/admin/roles/",       "system.manage_roles"),  // ĐÃ KHÓA: phân quyền động bị vô hiệu hóa
         Map.entry("/admin/audit-logs",   "system.view_audit_logs"),
         Map.entry("/admin/audit-logs/",  "system.view_audit_logs"),
         Map.entry("/admin/services",     "service.view"),
@@ -121,8 +121,8 @@ public final class AuthorizationConfig {
         Map.entry("/manager/dashboard",     "report.view_dashboard"),
         Map.entry("/manager/services",      "service.view"),
         Map.entry("/manager/services/",     "service.view"),
-        Map.entry("/manager/medicines",     "medicine.view"),
-        Map.entry("/manager/medicines/",    "medicine.view"),
+        // Map.entry("/manager/medicines",     "medicine.view"),   // ĐÃ ẨN: manager không cần quản lý thuốc
+        // Map.entry("/manager/medicines/",    "medicine.view"),  // ĐÃ ẨN: manager không cần quản lý thuốc
         Map.entry("/manager/schedules",     "schedule.view"),
         Map.entry("/manager/schedules/",    "schedule.view"),
         Map.entry("/manager/time-slots",    "schedule.view"),
@@ -231,7 +231,8 @@ public final class AuthorizationConfig {
     // thường chỉ log khi bị từ chối)
     // ═══════════════════════════════════════════════════════════
     public static final Set<String> CRITICAL_PATH_PREFIXES = Set.of(
-        "/admin/users", "/admin/roles",
+        "/admin/users",
+        // "/admin/roles", // ĐÃ KHÓA: phân quyền động bị vô hiệu hóa
         "/admin/audit-logs"
     );
 

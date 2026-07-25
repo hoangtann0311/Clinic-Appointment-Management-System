@@ -604,6 +604,7 @@ public class AdminDashboardDAO {
             + "FROM users u "
             + "LEFT JOIN roles r ON u.role_id = r.id "
             + "WHERE u.is_deleted = 0 ");
+        sql.append("AND u.status IN ('Active', 'Inactive') ");
         if (hasDateFilter) {
             sql.append("AND u.created_at >= ? AND u.created_at <= ? ");
         }

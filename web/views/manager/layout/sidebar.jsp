@@ -46,6 +46,7 @@
                 <span>Dịch Vụ Y Tế</span>
             </a>
         </li>
+        <!-- Danh Mục Thuốc: đã ẩn — manager không cần quản lý thuốc
         <li>
             <a href="${pageContext.request.contextPath}/manager/medicines/"
                class="${fn:contains(requestURI, '/manager/medicines') ? 'active' : ''}">
@@ -53,14 +54,15 @@
                 <span>Danh Mục Thuốc</span>
             </a>
         </li>
+        -->
 
         <!-- QUẢN LÝ LỊCH LÀM VIỆC -->
         <li class="admin-sidebar-section">Quản Lý Nhân Sự</li>
         <li>
-            <a href="${pageContext.request.contextPath}/manager/schedules/"
+            <a href="${pageContext.request.contextPath}/manager/schedules/?tab=schedules"
                class="${fn:contains(requestURI, '/manager/schedules') ? 'active' : ''}">
                 <i class="bi bi-calendar-check"></i>
-                <span>Lịch Làm Việc</span>
+                <span>Quản Lí Lịch Làm Việc</span>
             </a>
         </li>
         <li>

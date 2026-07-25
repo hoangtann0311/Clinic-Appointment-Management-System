@@ -176,18 +176,18 @@ public class DashboardServlet extends HttpServlet {
         request.setAttribute("isCustomRange", isCustomRange);
         request.setAttribute("today", today);
 
-        // Tổng số dịch vụ và thuốc — lọc theo ngày tạo nếu có date filter
+        // Tổng số dịch vụ — lọc theo ngày tạo nếu có date filter
         LocalDate countMaxDate = isCustomRange ? dateTo : null;
         request.setAttribute("totalServices", serviceService.getTotalServices(null, null, countMaxDate));
-        request.setAttribute("totalMedicines", medicineService.getTotalMedicines(null, null, countMaxDate));
+        // totalMedicines: đã ẩn — manager không cần quản lý thuốc
+        // request.setAttribute("totalMedicines", medicineService.getTotalMedicines(null, null, countMaxDate));
 
-        // ─── Widget "Cảnh Báo Tồn Kho" — thuốc sắp hết (stock ≤ 10) ───
-        // Chỉ hiển thị khi xem dữ liệu hiện tại, không áp dụng cho khoảng ngày lịch sử
-        if (!isCustomRange) {
-            request.setAttribute("lowStockMedicines", medicineService.getLowStockMedicines(10, 5));
-        } else {
-            request.setAttribute("lowStockMedicines", null);
-        }
+        // lowStockMedicines: đã ẩn — manager không cần cảnh báo tồn kho
+        // if (!isCustomRange) {
+        //     request.setAttribute("lowStockMedicines", medicineService.getLowStockMedicines(10, 5));
+        // } else {
+        //     request.setAttribute("lowStockMedicines", null);
+        // }
 
         // ─── DashboardService (dùng cho doanh thu tổng hợp: dịch vụ + thuốc) ───
         DashboardService dashboardService = new DashboardService();
@@ -264,7 +264,7 @@ public class DashboardServlet extends HttpServlet {
                 : dashboardService.getTotalPatients();
         int totalAppointments = isCustomRange
                 ? dashboardService.getTotalAppointments(dateFrom, dateTo)
-                : dashboardService.getTotalAppointments();
+                : dashboardService.getTotalAppointments(today, today);
         int waitingPatients = isCustomRange
                 ? dashboardService.getWaitingPatients(dateFrom, dateTo)
                 : dashboardService.getWaitingPatients();
