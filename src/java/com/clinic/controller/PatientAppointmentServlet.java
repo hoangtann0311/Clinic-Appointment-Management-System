@@ -2,7 +2,6 @@ package com.clinic.controller;
 
 import com.clinic.model.Appointment;
 import com.clinic.model.Invoice;
-import com.clinic.model.Prescription;
 import com.clinic.model.User;
 import com.clinic.service.PatientBookingService;
 
@@ -62,30 +61,25 @@ public class PatientAppointmentServlet extends HttpServlet {
             request.setAttribute("keyword", keyword);
             request.setAttribute("status", status);
 
-            // Batch load invoices + prescription status — 2 queries thay vì N*3 queries
+            // ── Load invoice data cho hiển thị cột "Thanh toán" ──
             com.clinic.dao.InvoiceDAO invoiceDAO = new com.clinic.dao.InvoiceDAO();
-            com.clinic.dao.PrescriptionDAO prescriptionDAO = new com.clinic.dao.PrescriptionDAO();
 
-            java.util.List<Integer> apptIds = new java.util.ArrayList<>();
-            for (Appointment apt : appointments) apptIds.add(apt.getId());
-
-            // 1 query: tất cả POST_EXAM + PRESCRIPTION invoices
-            java.util.Map<Integer, java.util.Map<String, Invoice>> invoiceMap =
-                    invoiceDAO.getPostExamAndPrescriptionInvoices(apptIds);
-
-            Map<Integer, Invoice> postExamInvoices = new HashMap<>();
+            Map<Integer, String> preExamPaymentMethods = new HashMap<>();
+            Map<Integer, String> preExamPaymentStatuses = new HashMap<>();
             for (Appointment apt : appointments) {
-                java.util.Map<String, Invoice> map = invoiceMap.getOrDefault(apt.getId(), java.util.Collections.emptyMap());
-                Invoice postInv = map.get("POST_EXAM");
-                if (postInv != null && !"Paid".equalsIgnoreCase(postInv.getStatus()) && !"PendingConfirmation".equalsIgnoreCase(postInv.getStatus())) {
-                    postExamInvoices.put(apt.getId(), postInv);
+                Invoice preInv = invoiceDAO.getByAppointmentIdAndType(apt.getId(), "PRE_EXAM");
+                if (preInv != null) {
+                    if (preInv.getPaymentMethod() != null && !preInv.getPaymentMethod().isEmpty()) {
+                        preExamPaymentMethods.put(apt.getId(), preInv.getPaymentMethod());
+                    }
+                    if ("Paid".equalsIgnoreCase(preInv.getStatus())) {
+                        preExamPaymentStatuses.put(apt.getId(), "Paid");
+                    }
                 }
             }
-            // 1 query: đã đánh giá chưa (để ẩn nút sau khi đánh giá)
-            Map<Integer, Boolean> hasReviewed = new com.clinic.dao.ReviewDAO().batchHasReviewed(apptIds);
 
-            request.setAttribute("postExamInvoices", postExamInvoices);
-            request.setAttribute("hasReviewed", hasReviewed);
+            request.setAttribute("preExamPaymentMethods", preExamPaymentMethods);
+            request.setAttribute("preExamPaymentStatuses", preExamPaymentStatuses);
 
             HttpSession session = request.getSession(false);
             if (session != null && session.getAttribute("bookingSuccess") != null) {
@@ -109,8 +103,6 @@ public class PatientAppointmentServlet extends HttpServlet {
             request.getRequestDispatcher("/views/patient/appointments.jsp").forward(request, response);
         }
     }
-
-    private final com.clinic.dao.AppointmentDAO appointmentDAO = new com.clinic.dao.AppointmentDAO();
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)

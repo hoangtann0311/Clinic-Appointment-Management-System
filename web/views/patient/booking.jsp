@@ -69,7 +69,7 @@
             <c:forEach var="ea" items="${existingAppointments}">
                 <div class="d-flex align-items-center gap-2 py-1">
                     <span class="badge bg-secondary">#APT-${ea.id}</span>
-                    <span>BS. ${ea.doctorName} — Ngày <fmt:formatDate value="${ea.appointmentDate}" pattern="dd/MM/yyyy"/> — <strong>${ea.timeSlot}</strong></span>
+                    <span>BS. ${ea.doctorName} — Ngày ${ea.appointmentDate} — <strong>${ea.timeSlot}</strong></span>
                     <span class="badge ${ea.status == 'Pending' ? 'bg-info' : (ea.status == 'Confirmed' ? 'bg-primary' : (ea.status == 'Waiting' ? 'bg-warning' : 'bg-success'))}">${ea.status}</span>
                 </div>
             </c:forEach>
