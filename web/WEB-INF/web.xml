@@ -51,6 +51,13 @@
     </context-param>
 
     <!-- ============================================================
+         LISTENERS
+         ============================================================ -->
+    <listener>
+        <listener-class>com.clinic.listener.BackgroundJobListener</listener-class>
+    </listener>
+
+    <!-- ============================================================
          FILTER ORDER
          ============================================================
          Tất cả filter dùng annotation @WebFilter, Tomcat thực thi

@@ -37,23 +37,35 @@
     </div>
 
     <div class="admin-topbar-right">
-        <div class="topbar-date d-none d-lg-flex">
-            <i class="bi bi-calendar3"></i>
-            <span>${not empty currentDisplayDate ? currentDisplayDate : 'Hôm nay'}</span>
+        <div class="dropdown admin-topbar-dropdown">
+            <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="adminUserDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <div class="admin-avatar-sm me-2">
+                    ${not empty sessionScope.user.fullName ? fn:substring(sessionScope.user.fullName, 0, 1) : '?'}
+                </div>
+                <span class="d-none d-md-inline fw-semibold text-dark">${sessionScope.user.fullName}</span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg rounded-3" aria-labelledby="adminUserDropdown">
+                <li class="dropdown-header">
+                    <h6 class="text-dark mb-0 fw-bold">${sessionScope.user.fullName}</h6>
+                    <small class="text-muted">
+                        <c:choose>
+                            <c:when test="${sessionScope.user.roleId == 1}">Quản Lý</c:when>
+                            <c:when test="${sessionScope.user.roleId == 2}">Bác Sĩ Lâm Sàng</c:when>
+                            <c:when test="${sessionScope.user.roleId == 3}">Admin</c:when>
+                            <c:when test="${sessionScope.user.roleId == 4}">Lễ Tân</c:when>
+                            <c:when test="${sessionScope.user.roleId == 6}">Bác Sĩ Siêu Âm</c:when>
+                            <c:otherwise>Nhân viên</c:otherwise>
+                        </c:choose>
+                    </small>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a class="dropdown-item text-danger" href="${pageContext.request.contextPath}/logout">
+                        <i class="bi bi-box-arrow-right me-2"></i>Đăng Xuất
+                    </a>
+                </li>
+            </ul>
         </div>
-        <div class="admin-topbar-user d-none d-md-flex">
-            <div class="admin-avatar-sm">
-                ${fn:substring(sessionScope.user.fullName, 0, 1)}
-            </div>
-            <span class="header-display-name">${sessionScope.user.fullName}</span>
-            <span class="admin-topbar-role">
-                <i class="bi bi-shield-check me-1"></i>Lễ Tân
-            </span>
-        </div>
-        <a href="${pageContext.request.contextPath}/logout" class="admin-topbar-logout" title="Đăng xuất">
-            <i class="bi bi-box-arrow-right"></i>
-            <span class="d-none d-md-inline">Đăng xuất</span>
-        </a>
     </div>
 </nav>
 

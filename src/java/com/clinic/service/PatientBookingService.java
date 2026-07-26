@@ -115,14 +115,14 @@ public class PatientBookingService {
             return null;
         }
 
-        // 6. Kiểm tra đặt lịch trước 30 phút
+        // 6. Kiểm tra đặt lịch trước 30 phút so với giờ KẾT THÚC ca
         Date workDate = getScheduleWorkDate(scheduleId);
-        String startTime = getScheduleStartTime(scheduleId);
-        if (workDate != null && startTime != null) {
-            java.time.LocalTime st = java.time.LocalTime.parse(startTime);
-            java.time.LocalDateTime slotDateTime = java.time.LocalDateTime.of(workDate.toLocalDate(), st);
-            if (java.time.LocalDateTime.now().plusMinutes(30).isAfter(slotDateTime)) {
-                errors.put("general", "Phải đặt lịch trước giờ khám ít nhất 30 phút.");
+        String endTime = getScheduleEndTime(scheduleId);
+        if (workDate != null && endTime != null) {
+            java.time.LocalTime et = java.time.LocalTime.parse(endTime);
+            java.time.LocalDateTime slotEndDateTime = java.time.LocalDateTime.of(workDate.toLocalDate(), et);
+            if (java.time.LocalDateTime.now().plusMinutes(30).isAfter(slotEndDateTime)) {
+                errors.put("general", "Ca khám này đã sắp kết thúc, vui lòng chọn ca khác.");
                 return null;
             }
         }
@@ -242,8 +242,8 @@ public class PatientBookingService {
                 java.time.LocalTime time = java.time.LocalTime.of(
                         Integer.parseInt(parts[0]), Integer.parseInt(parts.length > 1 ? parts[1] : "0"));
                 java.time.LocalDateTime apptDateTime = java.time.LocalDateTime.of(appt.getAppointmentDate(), time);
-                if (apptDateTime.isBefore(java.time.LocalDateTime.now().plusMinutes(30))) {
-                    errors.put("general", "Chỉ được huỷ/đổi lịch trước giờ khám tối thiểu 30 phút.");
+                if (apptDateTime.isBefore(java.time.LocalDateTime.now())) {
+                    errors.put("general", "Không thể huỷ/đổi lịch khám đã qua.");
                     return false;
                 }
             } catch (Exception ignored) {}
@@ -286,8 +286,8 @@ public class PatientBookingService {
                 java.time.LocalTime time = java.time.LocalTime.of(
                         Integer.parseInt(parts[0]), Integer.parseInt(parts.length > 1 ? parts[1] : "0"));
                 java.time.LocalDateTime apptDateTime = java.time.LocalDateTime.of(appt.getAppointmentDate(), time);
-                if (apptDateTime.isBefore(java.time.LocalDateTime.now().plusMinutes(30))) {
-                    errors.put("general", "Chỉ được đổi lịch trước giờ khám tối thiểu 30 phút.");
+                if (apptDateTime.isBefore(java.time.LocalDateTime.now())) {
+                    errors.put("general", "Không thể huỷ/đổi lịch khám đã qua.");
                     return false;
                 }
             } catch (Exception ignored) {}
@@ -364,6 +364,18 @@ public class PatientBookingService {
             ps.setInt(1, scheduleId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) return rs.getTime("start_time").toLocalTime().toString().substring(0, 5);
+            }
+        } catch (Exception e) { }
+        return null;
+    }
+
+    private String getScheduleEndTime(int scheduleId) {
+        String sql = "SELECT s.end_time FROM doctor_schedules ds INNER JOIN shifts s ON ds.shift_id = s.id WHERE ds.id = ?";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, scheduleId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getTime("end_time").toLocalTime().toString().substring(0, 5);
             }
         } catch (Exception e) { }
         return null;

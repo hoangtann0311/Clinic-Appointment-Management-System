@@ -85,14 +85,14 @@ public class PatientSlotApiServlet extends HttpServlet {
                 + "s.name AS shift_name, s.start_time, s.end_time "
                 + "FROM doctor_schedules ds "
                 + "INNER JOIN shifts s ON ds.shift_id = s.id "
-                + "WHERE ds.doctor_id = ? AND ds.work_date = ? AND ds.status = 'APPROVED' "
+                + "WHERE ds.doctor_id = ? AND ds.work_date = ? AND ds.status = 'APPROVED' AND s.is_active = 1 "
                 + "ORDER BY s.start_time";
         } else {
             sql = "SELECT ds.id, ds.work_date, ds.max_slots, ds.booked_count, ds.status, "
                 + "s.name AS shift_name, s.start_time, s.end_time "
                 + "FROM doctor_schedules ds "
                 + "INNER JOIN shifts s ON ds.shift_id = s.id "
-                + "WHERE ds.doctor_id = ? AND ds.work_date = ? AND ds.status = 'APPROVED' "
+                + "WHERE ds.doctor_id = ? AND ds.work_date = ? AND ds.status = 'APPROVED' AND s.is_active = 1 "
                 + "AND COALESCE(ds.booked_count, 0) < ds.max_slots "
                 + "ORDER BY s.start_time";
         }
@@ -126,6 +126,15 @@ public class PatientSlotApiServlet extends HttpServlet {
                         
                         if (!first) json.append(",");
                         first = false;
+                        
+                        String shiftCategory = "morning";
+                        if (shiftName != null) {
+                            if (shiftName.toLowerCase().contains("chiều")) {
+                                shiftCategory = "afternoon";
+                            } else if (shiftName.toLowerCase().contains("tối")) {
+                                shiftCategory = "evening";
+                            }
+                        }
 
                         json.append("{")
                             .append("\"id\":").append(id).append(",")
@@ -133,6 +142,7 @@ public class PatientSlotApiServlet extends HttpServlet {
                             .append("\"endTime\":\"").append(end.toString().substring(0, 5)).append("\",")
                             .append("\"label\":\"").append(timeLabel).append("\",")
                             .append("\"shiftName\":\"").append(escapeJson(shiftName != null ? shiftName : "")).append("\",")
+                            .append("\"shiftCategory\":\"").append(shiftCategory).append("\",")
                             .append("\"maxSlots\":").append(maxSlots).append(",")
                             .append("\"bookedCount\":").append(bookedCount).append(",")
                             .append("\"remaining\":").append(maxSlots - bookedCount).append(",")

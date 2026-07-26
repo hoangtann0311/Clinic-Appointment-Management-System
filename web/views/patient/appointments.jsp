@@ -204,7 +204,7 @@
             </div>
             <div class="p-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2" style="font-size:.82rem;color:#64748b;">
                 <span>Tổng: <strong style="color:#172033;">${fn:length(appointments)}</strong> lịch hẹn</span>
-                <span><i class="bi bi-info-circle me-1"></i>Có thể huỷ/đổi trong 15 phút sau khi đặt, hoặc trước giờ khám tối thiểu 2 tiếng.</span>
+                <span><i class="bi bi-info-circle me-1"></i>Có thể huỷ/đổi lịch khám bất cứ lúc nào trước giờ hẹn (miễn là chưa thanh toán).</span>
             </div>
             
             <c:if test="${totalPages > 1}">
