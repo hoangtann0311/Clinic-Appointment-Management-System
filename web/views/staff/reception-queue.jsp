@@ -33,23 +33,35 @@
         </a>
     </div>
     <div class="admin-topbar-right">
-        <div class="topbar-date d-none d-lg-flex">
-            <i class="bi bi-calendar3"></i>
-            ${not empty currentDisplayDate ? currentDisplayDate : 'Hôm nay'}
+        <div class="dropdown admin-topbar-dropdown">
+            <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="adminUserDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <div class="admin-avatar-sm me-2">
+                    ${not empty sessionScope.user.fullName ? fn:substring(sessionScope.user.fullName, 0, 1) : '?'}
+                </div>
+                <span class="d-none d-md-inline fw-semibold text-dark">${sessionScope.user.fullName}</span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg rounded-3" aria-labelledby="adminUserDropdown">
+                <li class="dropdown-header">
+                    <h6 class="text-dark mb-0 fw-bold">${sessionScope.user.fullName}</h6>
+                    <small class="text-muted">
+                        <c:choose>
+                            <c:when test="${sessionScope.user.roleId == 1}">Quản Lý</c:when>
+                            <c:when test="${sessionScope.user.roleId == 2}">Bác Sĩ Lâm Sàng</c:when>
+                            <c:when test="${sessionScope.user.roleId == 3}">Admin</c:when>
+                            <c:when test="${sessionScope.user.roleId == 4}">Lễ Tân</c:when>
+                            <c:when test="${sessionScope.user.roleId == 6}">Bác Sĩ Siêu Âm</c:when>
+                            <c:otherwise>Nhân viên</c:otherwise>
+                        </c:choose>
+                    </small>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a class="dropdown-item text-danger" href="${pageContext.request.contextPath}/logout">
+                        <i class="bi bi-box-arrow-right me-2"></i>Đăng Xuất
+                    </a>
+                </li>
+            </ul>
         </div>
-        <div class="admin-topbar-user d-none d-md-flex">
-            <div class="admin-avatar-sm">
-                ${fn:substring(sessionScope.user.fullName, 0, 1)}
-            </div>
-            <span>${sessionScope.user.fullName}</span>
-            <span class="admin-topbar-role">
-                <i class="bi bi-shield-check me-1"></i>Lễ Tân
-            </span>
-        </div>
-        <a href="${pageContext.request.contextPath}/logout" class="admin-topbar-logout" title="Đăng xuất">
-            <i class="bi bi-box-arrow-right"></i>
-            <span class="d-none d-md-inline">Đăng xuất</span>
-        </a>
     </div>
 </nav>
 
@@ -217,6 +229,7 @@
                     <div class="alert alert-success alert-dismissible fade show m-3" data-cams-toast role="alert">
                         <i class="bi bi-check-circle-fill me-2"></i>
                         <c:out value="${queueSuccess}"/>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                 </c:if>
 
@@ -286,7 +299,14 @@
                                     </c:choose>
                                 </td>
 
-                                <td class="fw-medium"><c:out value="${apt.timeSlot}"/></td>
+                                <td class="fw-medium">
+                                    <c:out value="${apt.timeSlot}"/>
+                                    <c:if test="${not empty apt.createdAtText}">
+                                        <div class="small text-muted fw-normal mt-1" style="font-size: 0.75rem;">
+                                            <i class="bi bi-clock-history"></i> Đặt lúc: <c:out value="${apt.createdAtText}"/>
+                                        </div>
+                                    </c:if>
+                                </td>
 
                                 <td class="fw-semibold text-primary">
                                     <c:out value="${apt.gestationalAge != null ? apt.gestationalAge : '—'}"/>
@@ -337,9 +357,9 @@
                                         </c:choose>
                                     </span>
                                     <c:if test="${apt.priority}">
-                                        <div class="small mt-2 text-warning-emphasis"
+                                        <div class="mt-2 text-danger fw-semibold" style="font-size: 0.8rem;"
                                              title="Người thao tác: ${apt.prioritizedByName}; Thời gian: ${apt.prioritizedAtText}">
-                                            <i class="bi bi-info-circle me-1"></i>
+                                            <i class="bi bi-star-fill text-warning me-1"></i>
                                             <c:out value="${apt.priorityReason}"/>
                                             <c:if test="${not empty apt.prioritizedByName}">
                                                 <br><span class="text-muted">
@@ -362,9 +382,9 @@
                                                       style="display:inline;">
                                                     <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                                     <input type="hidden" name="id" value="${apt.id}">
-                                                    <button type="submit" class="btn-cams btn-cams-primary btn-sm" style="font-size:.72rem;padding:.2rem .45rem;" title="Duyệt lịch đặt và tạo phiếu yêu cầu thanh toán gửi tới Bệnh nhân">
-                                                        <i class="bi bi-send-check"></i> Duyệt & Gửi YCTT
-                                                    </button>
+                                                     <button type="submit" class="btn-cams btn-cams-primary btn-sm" style="font-size:.72rem;padding:.2rem .45rem;" title="Duyệt lịch hẹn và tạo hóa đơn thanh toán trước khám (bệnh nhân sẽ nộp tiền mặt khi đến quầy)">
+                                                         <i class="bi bi-clipboard2-check"></i> Duyệt &amp; Tạo HĐ
+                                                     </button>
                                                 </form>
 
                                                 <a href="${pageContext.request.contextPath}/admin/reception/edit?id=${apt.id}"
@@ -392,9 +412,9 @@
                                                       style="display:inline;">
                                                     <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                                     <input type="hidden" name="id" value="${apt.id}">
-                                                    <button type="submit" class="btn-cams btn-cams-success btn-sm" style="font-size:.72rem;padding:.2rem .45rem;" title="Xác nhận bệnh nhân đã thanh toán tại quầy và xếp vào hàng đợi Bác sĩ">
-                                                        <i class="bi bi-person-check-fill"></i> Xác nhận TT & Check-in
-                                                    </button>
+                                                     <button type="submit" class="btn-cams btn-cams-success btn-sm" style="font-size:.72rem;padding:.2rem .45rem;" title="Xác nhận bệnh nhân đã nộp tiền mặt tại quầy và đưa vào hàng đợi Bác sĩ">
+                                                         <i class="bi bi-cash-coin"></i> Thu Tiền &amp; Check-in
+                                                     </button>
                                                 </form>
 
                                                 <a href="${pageContext.request.contextPath}/admin/reception/edit?id=${apt.id}"

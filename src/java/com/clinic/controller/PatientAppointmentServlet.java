@@ -42,6 +42,7 @@ public class PatientAppointmentServlet extends HttpServlet {
             int page = 1;
             int pageSize = 10;
             String keyword = request.getParameter("keyword");
+            String status = request.getParameter("status");
 
             if (request.getParameter("page") != null) {
                 try {
@@ -51,14 +52,15 @@ public class PatientAppointmentServlet extends HttpServlet {
                 }
             }
 
-            List<Appointment> appointments = bookingService.getMyAppointmentsPaginated(user.getId(), keyword, page, pageSize);
-            int totalAppointments = bookingService.countMyAppointments(user.getId(), keyword);
+            List<Appointment> appointments = bookingService.getMyAppointmentsPaginated(user.getId(), keyword, status, page, pageSize);
+            int totalAppointments = bookingService.countMyAppointments(user.getId(), keyword, status);
             int totalPages = (int) Math.ceil((double) totalAppointments / pageSize);
 
             request.setAttribute("appointments", appointments);
             request.setAttribute("currentPage", page);
             request.setAttribute("totalPages", totalPages);
             request.setAttribute("keyword", keyword);
+            request.setAttribute("status", status);
 
             // Batch load invoices + prescription status — 2 queries thay vì N*3 queries
             com.clinic.dao.InvoiceDAO invoiceDAO = new com.clinic.dao.InvoiceDAO();
@@ -72,38 +74,18 @@ public class PatientAppointmentServlet extends HttpServlet {
                     invoiceDAO.getPostExamAndPrescriptionInvoices(apptIds);
 
             Map<Integer, Invoice> postExamInvoices = new HashMap<>();
-            Map<Integer, Invoice> prescriptionInvoices = new HashMap<>();
             for (Appointment apt : appointments) {
                 java.util.Map<String, Invoice> map = invoiceMap.getOrDefault(apt.getId(), java.util.Collections.emptyMap());
                 Invoice postInv = map.get("POST_EXAM");
                 if (postInv != null && !"Paid".equalsIgnoreCase(postInv.getStatus()) && !"PendingConfirmation".equalsIgnoreCase(postInv.getStatus())) {
                     postExamInvoices.put(apt.getId(), postInv);
                 }
-                Invoice rxInv = map.get("PRESCRIPTION");
-                if (rxInv != null && !"Paid".equalsIgnoreCase(rxInv.getStatus()) && !"PendingConfirmation".equalsIgnoreCase(rxInv.getStatus())) {
-                    prescriptionInvoices.put(apt.getId(), rxInv);
-                }
             }
-
-            // 1 query: tất cả prescription purchase status
-            Map<Integer, Boolean> prescriptionPurchaseResolved = prescriptionDAO.batchIsPurchaseResolved(apptIds);
-
             // 1 query: đã đánh giá chưa (để ẩn nút sau khi đánh giá)
             Map<Integer, Boolean> hasReviewed = new com.clinic.dao.ReviewDAO().batchHasReviewed(apptIds);
 
             request.setAttribute("postExamInvoices", postExamInvoices);
-            request.setAttribute("prescriptionInvoices", prescriptionInvoices);
-            request.setAttribute("prescriptionPurchaseResolved", prescriptionPurchaseResolved);
             request.setAttribute("hasReviewed", hasReviewed);
-
-            // Pending prescription choices (vẫn 1 query như cũ)
-            Map<Integer, Prescription> pendingPrescriptionChoices = new HashMap<>();
-            for (Prescription prescription : prescriptionDAO.getPatientPurchaseChoices(user.getId())) {
-                if ("Pending".equalsIgnoreCase(prescription.getPurchaseDecision())) {
-                    pendingPrescriptionChoices.put(prescription.getAppointmentId(), prescription);
-                }
-            }
-            request.setAttribute("pendingPrescriptionChoices", pendingPrescriptionChoices);
 
             HttpSession session = request.getSession(false);
             if (session != null && session.getAttribute("bookingSuccess") != null) {

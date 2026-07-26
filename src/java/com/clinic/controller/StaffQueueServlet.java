@@ -68,7 +68,7 @@ public class StaffQueueServlet extends HttpServlet {
             String id = req.getParameter("id");
             try {
                 staffReceptionService.approveAndRequestPayment(id, user.getId());
-                req.getSession().setAttribute("queueSuccess", "Đã duyệt lịch đặt & gửi yêu cầu thanh toán thành công!");
+                req.getSession().setAttribute("queueSuccess", "Đã duyệt lịch hẹn & tạo hóa đơn thanh toán trước khám. Bệnh nhân sẽ đến quầy nộp tiền và check-in.");
                 resp.sendRedirect(req.getContextPath() + "/admin/reception");
             } catch (IllegalArgumentException e) {
                 req.getSession().setAttribute("queueError", e.getMessage());
@@ -108,7 +108,7 @@ public class StaffQueueServlet extends HttpServlet {
 
             try {
                 staffReceptionService.checkInPatient(id);
-                req.getSession().setAttribute("queueSuccess", "Check-in thành công!");
+                req.getSession().setAttribute("queueSuccess", "Thu tiền & Check-in thành công! Bệnh nhân đã được xếp vào hàng đợi chờ Bác sĩ.");
                 resp.sendRedirect(req.getContextPath() + "/admin/reception");
             } catch (IllegalArgumentException e) {
                 req.getSession().setAttribute("queueError", e.getMessage());

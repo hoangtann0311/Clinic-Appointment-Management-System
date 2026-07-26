@@ -36,23 +36,35 @@
         </a>
     </div>
     <div class="admin-topbar-right">
-        <div class="topbar-date d-none d-lg-flex">
-            <i class="bi bi-calendar3"></i>
-            ${not empty currentDisplayDate ? currentDisplayDate : 'Hôm nay'}
+        <div class="dropdown admin-topbar-dropdown">
+            <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="adminUserDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <div class="admin-avatar-sm me-2">
+                    ${not empty sessionScope.user.fullName ? fn:substring(sessionScope.user.fullName, 0, 1) : '?'}
+                </div>
+                <span class="d-none d-md-inline fw-semibold text-dark">${sessionScope.user.fullName}</span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg rounded-3" aria-labelledby="adminUserDropdown">
+                <li class="dropdown-header">
+                    <h6 class="text-dark mb-0 fw-bold">${sessionScope.user.fullName}</h6>
+                    <small class="text-muted">
+                        <c:choose>
+                            <c:when test="${sessionScope.user.roleId == 1}">Quản Lý</c:when>
+                            <c:when test="${sessionScope.user.roleId == 2}">Bác Sĩ Lâm Sàng</c:when>
+                            <c:when test="${sessionScope.user.roleId == 3}">Admin</c:when>
+                            <c:when test="${sessionScope.user.roleId == 4}">Lễ Tân</c:when>
+                            <c:when test="${sessionScope.user.roleId == 6}">Bác Sĩ Siêu Âm</c:when>
+                            <c:otherwise>Nhân viên</c:otherwise>
+                        </c:choose>
+                    </small>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a class="dropdown-item text-danger" href="${pageContext.request.contextPath}/logout">
+                        <i class="bi bi-box-arrow-right me-2"></i>Đăng Xuất
+                    </a>
+                </li>
+            </ul>
         </div>
-        <div class="admin-topbar-user d-none d-md-flex">
-            <div class="admin-avatar-sm">
-                ${fn:substring(sessionScope.user.fullName, 0, 1)}
-            </div>
-            <span>${sessionScope.user.fullName}</span>
-            <span class="admin-topbar-role">
-                <i class="bi bi-shield-check me-1"></i>Lễ Tân
-            </span>
-        </div>
-        <a href="${pageContext.request.contextPath}/logout" class="admin-topbar-logout" title="Đăng xuất">
-            <i class="bi bi-box-arrow-right"></i>
-            <span class="d-none d-md-inline">Đăng xuất</span>
-        </a>
     </div>
 </nav>
 
@@ -226,8 +238,8 @@
                             <i class="bi bi-clipboard2-pulse me-2"></i>Thông tin y tế
                         </h6>
                         <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold small">Ngày kinh cuối (LMP) <span class="text-muted fw-normal">(nếu có)</span></label>
+                            <div class="col-md-6 mb-3">
+                                <label for="lastMenstrualPeriod" class="form-label fw-semibold small text-muted">Ngày kinh cuối (LMP) <span style="font-size: 0.85em;">(Tùy chọn - Bỏ qua nếu không nhớ)</span></label>
                                 <input type="date" name="lastMenstrualPeriod" id="lastMenstrualPeriod" class="form-control"
                                        value="${param.lastMenstrualPeriod}"
                                        onchange="calculateLMPAge()" oninput="calculateLMPAge()">
@@ -244,6 +256,16 @@
                                           style="resize:vertical;text-align:left;"><c:out value="${param.symptoms}"/></textarea>
                                 <small class="text-muted mt-1 d-block">Nhập rõ ràng, tối thiểu 10 ký tự</small>
                             </div>
+                        </div>
+                    </div>
+
+                    <div id="fastCheckinContainer" class="border rounded-3 p-3 mb-4 bg-success bg-opacity-10 border-success border-opacity-25" style="display: none;">
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" role="switch" id="checkInImmediately" name="checkInImmediately" value="true" checked>
+                            <label class="form-check-label fw-bold text-success" for="checkInImmediately">
+                                <i class="bi bi-lightning-charge-fill me-1"></i>Bệnh nhân đang ở quầy — Xác nhận thanh toán & Check-in ngay
+                            </label>
+                            <small class="d-block text-muted mt-1">Lịch sẽ tự động được duyệt, sinh hóa đơn và xếp vào hàng đợi chờ khám.</small>
                         </div>
                     </div>
 
@@ -314,6 +336,22 @@
     function onDoctorOrDateChanged() {
         updatePriceDisplay();
         loadAvailableSlots();
+        
+        let dateVal = document.getElementById('appointmentDate').value;
+        let today = new Date();
+        today.setHours(0, 0, 0, 0);
+        let selectedDate = new Date(dateVal);
+        selectedDate.setHours(0, 0, 0, 0);
+        
+        let fastCheckinContainer = document.getElementById('fastCheckinContainer');
+        let checkInInput = document.getElementById('checkInImmediately');
+        if (selectedDate.getTime() === today.getTime()) {
+            fastCheckinContainer.style.display = 'block';
+            checkInInput.checked = true;
+        } else {
+            fastCheckinContainer.style.display = 'none';
+            checkInInput.checked = false;
+        }
     }
 
     function loadAvailableSlots() {
@@ -338,8 +376,9 @@
                     slots.forEach(function (slot) {
                         const selected = selectedSlot && selectedSlot === slot.label ? ' selected' : '';
                         let price = (slot.price != null && slot.price > 0) ? slot.price : 0;
+                        let displayLabel = slot.shiftName ? slot.shiftName + ' (' + slot.label + ')' : slot.label;
                         html += '<option value="' + slot.label + '" data-price="' + price + '"' + selected + '>'
-                            + slot.label + ' — ' + (price > 0 ? new Intl.NumberFormat('vi-VN').format(price) + 'đ' : 'Liên hệ')
+                            + displayLabel + ' — ' + (price > 0 ? new Intl.NumberFormat('vi-VN').format(price) + 'đ' : 'Liên hệ')
                             + '</option>';
                     });
                 } else {

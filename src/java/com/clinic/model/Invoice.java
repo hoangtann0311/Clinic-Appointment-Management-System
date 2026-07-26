@@ -31,8 +31,17 @@ public class Invoice implements Serializable {
     private String appointmentDate;
     private String serviceName;
     private String confirmedByName;
+    private java.util.List<InvoiceItem> items;
 
     public Invoice() {
+    }
+
+    public java.util.List<InvoiceItem> getItems() {
+        return items;
+    }
+
+    public void setItems(java.util.List<InvoiceItem> items) {
+        this.items = items;
     }
 
     public int getId() {

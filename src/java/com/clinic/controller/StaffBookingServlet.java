@@ -72,10 +72,12 @@ public class StaffBookingServlet extends HttpServlet {
         String address = req.getParameter("address");
         String cccd = req.getParameter("cccd");
         String overrideReason = req.getParameter("overrideReason");
+        boolean checkInImmediately = "true".equals(req.getParameter("checkInImmediately"));
+        
         try {
             Appointment appt = staffReceptionService.createManualBookingWithOverride(
                     name, phone, dob, doctorId, null, appDate, timeSlot, symptoms, lmp,
-                    address, cccd, overrideReason
+                    address, cccd, overrideReason, checkInImmediately, user.getId()
             );
 
             // Thông báo cho bác sĩ về lịch hẹn mới
