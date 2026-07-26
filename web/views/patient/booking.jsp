@@ -256,9 +256,8 @@
                         <i class="bi bi-arrow-repeat me-1 text-primary"></i>
                         <strong>Chính sách huỷ / đổi lịch:</strong>
                         <ul class="mb-0 mt-1 ps-3">
-                            <li><strong>15 phút đầu</strong> sau khi đặt → có thể huỷ hoặc đổi ngay (nếu còn ≥ 2 tiếng trước giờ khám).</li>
-                            <li><strong>Sau 15 phút</strong> → vẫn huỷ/đổi được miễn là còn ≥ 2 tiếng trước giờ khám.</li>
-                            <li><strong>Còn dưới 2 tiếng</strong> trước giờ khám → không thể tự huỷ/đổi, vui lòng liên hệ lễ tân.</li>
+                            <li><strong>Huỷ/Đổi lịch:</strong> Bệnh nhân có thể huỷ hoặc đổi lịch khám bất cứ lúc nào trước giờ hẹn (miễn là chưa thanh toán).</li>
+
                         </ul>
                     </div>
                 </form>
@@ -344,8 +343,9 @@
         const isToday = (date === todayStr);
         const nowTimeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
 
-        const morning = slots.filter(s => s.time < '12:00');
-        const afternoon = slots.filter(s => s.time >= '12:00');
+        const morning = slots.filter(s => s.shiftCategory === 'morning');
+        const afternoon = slots.filter(s => s.shiftCategory === 'afternoon');
+        const evening = slots.filter(s => s.shiftCategory === 'evening');
 
         let html = '';
         if (morning.length > 0) {
@@ -353,8 +353,12 @@
             html += '<div class="d-flex flex-wrap gap-2 mb-3">' + morning.map(s => slotButtonHtml(s, isToday, nowTimeStr)).join('') + '</div>';
         }
         if (afternoon.length > 0) {
-            html += '<div class="slot-period-label mb-2"><i class="bi bi-moon me-1"></i>Chiều</div>';
-            html += '<div class="d-flex flex-wrap gap-2">' + afternoon.map(s => slotButtonHtml(s, isToday, nowTimeStr)).join('') + '</div>';
+            html += '<div class="slot-period-label mb-2"><i class="bi bi-brightness-high me-1"></i>Chiều</div>';
+            html += '<div class="d-flex flex-wrap gap-2 mb-3">' + afternoon.map(s => slotButtonHtml(s, isToday, nowTimeStr)).join('') + '</div>';
+        }
+        if (evening.length > 0) {
+            html += '<div class="slot-period-label mb-2"><i class="bi bi-moon me-1"></i>Tối</div>';
+            html += '<div class="d-flex flex-wrap gap-2">' + evening.map(s => slotButtonHtml(s, isToday, nowTimeStr)).join('') + '</div>';
         }
         html += '<div class="slot-notice mt-3" style="display:none;"></div>';
         container.innerHTML = html;
@@ -423,11 +427,14 @@
     }
 
     function slotButtonHtml(s, isToday, nowTimeStr) {
-        const isPast = isToday && (s.time < nowTimeStr);
+        // So sánh với s.endTime để biết ca khám đã kết thúc chưa.
+        // Thực tế backend yêu cầu đặt trước 30 phút so với lúc KẾT THÚC, nên ta có thể 
+        // cho phép UI hiển thị đến tận lúc kết thúc, backend sẽ validate kỹ hơn.
+        const isPast = isToday && (s.endTime < nowTimeStr);
         let titleText = 'Khung giờ này hiện không khả dụng';
         
         if (isPast) {
-            titleText = 'Khung giờ này đã trôi qua trong ngày';
+            titleText = 'Ca khám này đã kết thúc';
         } else if (s.status === 'AVAILABLE' && s.available === false) {
             titleText = 'Đã quá hạn đặt lịch (phải đặt trước 30 phút)';
         }
@@ -438,18 +445,18 @@
                  + 'style="opacity: 0.45; pointer-events: none; cursor: not-allowed;" '
                  + 'title="' + titleText + '" '
                  + 'data-status="' + s.status + '" data-mine="' + (s.mine === true) + '">'
-                 + s.time
+                 + (s.shiftName ? s.shiftName + ' (' + s.label + ')' : s.label)
                  + '</button>';
         }
         if (s.price === null || s.price === undefined || s.price === '') {
             return '<button type="button" class="btn btn-outline-secondary btn-sm slot-btn" disabled '
                  + 'title="Gia kham chua duoc cong bo">'
-                 + s.time
+                 + (s.shiftName ? s.shiftName + ' (' + s.label + ')' : s.label)
                  + '</button>';
         }
         return '<button type="button" class="btn btn-outline-primary btn-sm slot-btn" '
              + 'data-slot-id="' + s.id + '" data-label="' + s.label + '" data-price="' + (s.price !== null ? s.price : '') + '">'
-             + s.time
+             + (s.shiftName ? s.shiftName + ' (' + s.label + ')' : s.label)
              + '</button>';
     }
 

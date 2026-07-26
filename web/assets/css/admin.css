@@ -250,6 +250,37 @@ body.admin-body {
     border-color: var(--pink-200);
 }
 
+.admin-topbar-dropdown .dropdown-toggle {
+    padding: 0.375rem 0.875rem 0.375rem 0.375rem;
+    background: var(--pink-50);
+    border-radius: var(--r-pill);
+    border: 1px solid var(--pink-200);
+    transition: all var(--t-fast);
+}
+.admin-topbar-dropdown .dropdown-toggle:hover, .admin-topbar-dropdown .dropdown-toggle[aria-expanded="true"] {
+    background: var(--pink-100);
+    border-color: var(--pink-300);
+}
+.admin-topbar-dropdown .dropdown-toggle::after {
+    margin-left: 0.5rem;
+    color: var(--c-primary-dark);
+}
+.admin-topbar-dropdown .dropdown-menu {
+    border: 1px solid var(--c-outline-variant);
+    padding: 0.5rem 0;
+    min-width: 200px;
+    margin-top: 0.5rem !important;
+}
+.admin-topbar-dropdown .dropdown-item {
+    font-size: 0.875rem;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    transition: all var(--t-fast);
+}
+.admin-topbar-dropdown .dropdown-item:hover {
+    background-color: var(--pink-50);
+    color: var(--c-primary);
+}
 /* ============================================================
    SIDEBAR
    ============================================================ */

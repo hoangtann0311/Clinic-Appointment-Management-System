@@ -1813,4 +1813,44 @@ public class AppointmentDAO {
             }
         }
     }
+    public List<Integer> getExpiredUnpaidAppointments() {
+        List<Integer> list = new ArrayList<>();
+        String sql = "SELECT a.id, a.created_at, ds.work_date, s.start_time " +
+                     "FROM appointments a " +
+                     "JOIN invoices i ON a.id = i.appointment_id " +
+                     "JOIN doctor_schedules ds ON a.schedule_id = ds.id " +
+                     "JOIN shifts s ON ds.shift_id = s.id " +
+                     "WHERE a.status = 'Pending' " +
+                     "AND i.invoice_type = 'PRE_EXAM' " +
+                     "AND i.status = 'Unpaid'";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            java.time.LocalDateTime now = java.time.LocalDateTime.now();
+            while (rs.next()) {
+                int id = rs.getInt("id");
+                java.sql.Timestamp createdTs = rs.getTimestamp("created_at");
+                java.sql.Date workDateSql = rs.getDate("work_date");
+                java.sql.Time startTimeSql = rs.getTime("start_time");
+                
+                if (createdTs == null || workDateSql == null || startTimeSql == null) continue;
+                
+                java.time.LocalDateTime createdAt = createdTs.toLocalDateTime();
+                java.time.LocalDateTime shiftStart = java.time.LocalDateTime.of(workDateSql.toLocalDate(), startTimeSql.toLocalTime());
+                
+                // Deadline = MAX(shiftStart - 15 mins, createdAt + 15 mins)
+                java.time.LocalDateTime advanceDeadline = shiftStart.minusMinutes(15);
+                java.time.LocalDateTime walkInDeadline = createdAt.plusMinutes(15);
+                
+                java.time.LocalDateTime deadline = advanceDeadline.isAfter(walkInDeadline) ? advanceDeadline : walkInDeadline;
+                
+                if (now.isAfter(deadline) || now.isEqual(deadline)) {
+                    list.add(id);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
 }

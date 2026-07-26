@@ -79,34 +79,43 @@
                 </a>
             </div>
             <div class="admin-topbar-right">
-                <div class="admin-topbar-user d-none d-md-flex">
-                    <c:choose>
-                        <c:when test="${not empty sessionScope.user.avatarUrl}">
-                            <img src="${sessionScope.user.avatarUrl}" alt="Avatar" class="admin-avatar-sm"
-                                 style="object-fit:cover;"
-                                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-                            <div class="admin-avatar-sm" style="display:none;">
-                                ${not empty sessionScope.user.fullName ? fn:substring(sessionScope.user.fullName, 0, 1) : '?'}
-                            </div>
-                        </c:when>
-                        <c:otherwise>
-                            <div class="admin-avatar-sm">
-                                ${not empty sessionScope.user.fullName ? fn:substring(sessionScope.user.fullName, 0, 1) : '?'}
-                            </div>
-                        </c:otherwise>
-                    </c:choose>
-                    <span>${sessionScope.user.fullName}</span>
-                    <span class="admin-topbar-role">
-                        <i class="bi bi-briefcase-fill me-1"></i>${sessionScope.user.roleId == 2 ? 'Bác sĩ lâm sàng' : 'Bác sĩ siêu âm'}
-                    </span>
+        <div class="dropdown admin-topbar-dropdown">
+            <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="adminUserDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <div class="admin-avatar-sm me-2">
+                    ${not empty sessionScope.user.fullName ? fn:substring(sessionScope.user.fullName, 0, 1) : '?'}
                 </div>
-
-                <a href="${pageContext.request.contextPath}/logout" class="admin-topbar-logout" title="Đăng xuất">
-                    <i class="bi bi-box-arrow-right"></i>
-                    <span class="d-none d-md-inline">Đăng xuất</span>
-                </a>
-            </div>
-        </nav>
+                <span class="d-none d-md-inline fw-semibold text-dark">${sessionScope.user.fullName}</span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg rounded-3" aria-labelledby="adminUserDropdown">
+                <li class="dropdown-header">
+                    <h6 class="text-dark mb-0 fw-bold">${sessionScope.user.fullName}</h6>
+                    <small class="text-muted">
+                        <c:choose>
+                            <c:when test="${sessionScope.user.roleId == 1}">Quản Lý</c:when>
+                            <c:when test="${sessionScope.user.roleId == 2}">Bác Sĩ Lâm Sàng</c:when>
+                            <c:when test="${sessionScope.user.roleId == 3}">Admin</c:when>
+                            <c:when test="${sessionScope.user.roleId == 4}">Lễ Tân</c:when>
+                            <c:when test="${sessionScope.user.roleId == 6}">Bác Sĩ Siêu Âm</c:when>
+                            <c:otherwise>Nhân viên</c:otherwise>
+                        </c:choose>
+                    </small>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a class="dropdown-item" href="${pageContext.request.contextPath}/doctor/profile">
+                        <i class="bi bi-person-circle me-2 text-muted"></i>Hồ Sơ Cá Nhân
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a class="dropdown-item text-danger" href="${pageContext.request.contextPath}/logout">
+                        <i class="bi bi-box-arrow-right me-2"></i>Đăng Xuất
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
 
         <!-- Sidebar Backdrop (mobile) -->
         <div class="admin-sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
@@ -167,12 +176,6 @@
                             <a href="${pageContext.request.contextPath}/doctor/patients">
                                 <i class="bi bi-people"></i>
                                 <span>Danh Sách Bệnh Nhân</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="${pageContext.request.contextPath}/doctor/profile">
-                                <i class="bi bi-person-circle"></i>
-                                <span>Hồ Sơ Của Tôi</span>
                             </a>
                         </li>
                         <li>
@@ -460,7 +463,7 @@
                                     </li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li>
-                                        <a class="dropdown-item" href="${pageContext.request.contextPath}/patient/profile">
+                                        <a class="dropdown-item" href="${sessionScope.user.roleId == 5 ? pageContext.request.contextPath.concat('/patient/profile') : pageContext.request.contextPath.concat('/profile')}">
                                             <i class="bi bi-person me-2"></i>Hồ sơ cá nhân
                                         </a>
                                     </li>
