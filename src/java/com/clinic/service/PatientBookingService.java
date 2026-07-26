@@ -33,6 +33,16 @@ public class PatientBookingService {
         return doctorDAO.getAllDoctors();
     }
 
+    public List<Doctor> getDoctorsPaginated(String keyword, int page, int pageSize) {
+        int limit = pageSize;
+        int offset = (page - 1) * pageSize;
+        return doctorDAO.getDoctorsPaginated(keyword, offset, limit);
+    }
+
+    public int countDoctors(String keyword) {
+        return doctorDAO.countDoctors(keyword);
+    }
+
     public List<ServiceItem> getAllServices() {
         return serviceDAO.getAllServices();
     }
@@ -40,7 +50,7 @@ public class PatientBookingService {
     /**
      * Đặt lịch khám — scheduleId là doctor_schedules.id.
      */
-    public Appointment bookAppointment(int userId, int scheduleId, int serviceId,
+    public Appointment bookAppointment(int userId, int scheduleId, String expectedTimeSlot, int serviceId,
                                         String symptoms, String lmpStr,
                                         Map<String, String> errors) {
 
@@ -119,21 +129,28 @@ public class PatientBookingService {
 
         // 7. Kiểm tra trùng lịch trong ngày
         AppointmentValidationService validationService = new AppointmentValidationService();
-        String sameDayError = validationService.validateSameDayActiveAppointment(patientId,
+        int doctorId = getScheduleDoctorId(scheduleId);
+        String sameDayError = validationService.validateSameDayActiveAppointment(patientId, doctorId,
                 workDate != null ? workDate.toLocalDate() : null, null, false, null);
         if (sameDayError != null) {
             errors.put("general", sameDayError);
             return null;
         }
 
-        // 8. Lấy giá từ schedule (dùng giá mặc định nếu không có)
-        double basePrice = 200000.00; // giá khám mặc định
+        // 8. Lấy giá từ bác sĩ (giá mặc định + kinh nghiệm)
+        com.clinic.dao.DoctorDAO docDao = new com.clinic.dao.DoctorDAO();
+        com.clinic.model.Doctor doctor = docDao.findById(doctorId);
+        double basePrice = 200000.00;
+        if (doctor != null && doctor.getExperienceYears() > 0) {
+            basePrice += (doctor.getExperienceYears() * 50000.00);
+        }
+        
         String gestationalAge = AppointmentDAO.calculateGestationalAge(lmp,
                 workDate != null ? workDate.toLocalDate() : null);
 
         // 9. Đặt lịch
         boolean success = appointmentDAO.bookSlotAndCreateAppointment(
-                userId, patientId, scheduleId, actualServiceId, basePrice,
+                userId, patientId, scheduleId, expectedTimeSlot, actualServiceId, basePrice,
                 cleanSymptoms, lmp, gestationalAge, errors);
 
         if (!success) return null;
@@ -165,6 +182,27 @@ public class PatientBookingService {
         return appointmentDAO.getByPatientId(patientId);
     }
 
+    public List<Appointment> getMyAppointmentsPaginated(int userId, String keyword, int page, int pageSize) {
+        int patientId = patientDAO.getPatientIdByUserId(userId);
+        if (patientId <= 0) {
+            com.clinic.model.User currentUser = new com.clinic.dao.UserDAO().findById(userId);
+            if (currentUser != null) {
+                com.clinic.model.Patient created = patientDAO.createPatientWithUserId(
+                        currentUser.getFullName(), currentUser.getPhone(), null, userId);
+                if (created != null) patientId = created.getId();
+            }
+        }
+        if (patientId <= 0) return List.of();
+        int offset = (page - 1) * pageSize;
+        return appointmentDAO.getByPatientIdPaginated(patientId, keyword, offset, pageSize);
+    }
+
+    public int countMyAppointments(int userId, String keyword) {
+        int patientId = patientDAO.getPatientIdByUserId(userId);
+        if (patientId <= 0) return 0;
+        return appointmentDAO.countByPatientId(patientId, keyword);
+    }
+
     public boolean cancelAppointment(int userId, int appointmentId, Map<String, String> errors) {
         int patientId = patientDAO.getPatientIdByUserId(userId);
         if (patientId <= 0) {
@@ -179,6 +217,11 @@ public class PatientBookingService {
         }
         if (appt.getPatientId() != patientId) {
             errors.put("general", "Bạn không có quyền huỷ lịch hẹn này.");
+            return false;
+        }
+
+        if (appt.isPreExamPaid() || "PendingConfirmation".equalsIgnoreCase(appt.getPreExamPaymentStatus())) {
+            errors.put("general", "Lịch hẹn đã thanh toán hoặc đang chờ xác nhận. Vui lòng liên hệ Hotline phòng khám để được hỗ trợ hủy lịch và hoàn tiền.");
             return false;
         }
         if (!"Pending".equalsIgnoreCase(appt.getStatus()) && !"Confirmed".equalsIgnoreCase(appt.getStatus())) {
@@ -199,14 +242,83 @@ public class PatientBookingService {
                 java.time.LocalTime time = java.time.LocalTime.of(
                         Integer.parseInt(parts[0]), Integer.parseInt(parts.length > 1 ? parts[1] : "0"));
                 java.time.LocalDateTime apptDateTime = java.time.LocalDateTime.of(appt.getAppointmentDate(), time);
-                if (apptDateTime.isBefore(java.time.LocalDateTime.now().plusHours(2))) {
-                    errors.put("general", "Chỉ được huỷ/đổi lịch trước giờ khám tối thiểu 2 tiếng.");
+                if (apptDateTime.isBefore(java.time.LocalDateTime.now().plusMinutes(30))) {
+                    errors.put("general", "Chỉ được huỷ/đổi lịch trước giờ khám tối thiểu 30 phút.");
                     return false;
                 }
             } catch (Exception ignored) {}
         }
 
         return appointmentDAO.cancelAppointmentAndReleaseSlot(appointmentId, userId, "Bệnh nhân huỷ lịch hẹn");
+    }
+
+    public boolean rescheduleAppointment(int userId, int appointmentId, int newSlotId, String expectedTimeSlot, Map<String, String> errors) {
+        int patientId = patientDAO.getPatientIdByUserId(userId);
+        if (patientId <= 0) {
+            errors.put("general", "Tài khoản của bạn chưa có hồ sơ bệnh nhân.");
+            return false;
+        }
+
+        Appointment appt = appointmentDAO.findAppointmentById(appointmentId);
+        if (appt == null) {
+            errors.put("general", "Lịch hẹn không tồn tại.");
+            return false;
+        }
+        if (appt.getPatientId() != patientId) {
+            errors.put("general", "Bạn không có quyền đổi lịch hẹn này.");
+            return false;
+        }
+        if (!"Pending".equalsIgnoreCase(appt.getStatus()) && !"Confirmed".equalsIgnoreCase(appt.getStatus())) {
+            errors.put("general", "Chỉ có thể đổi lịch hẹn đang ở trạng thái Chờ xác nhận hoặc Đã xác nhận.");
+            return false;
+        }
+        if (appointmentDAO.isPreExamPaid(appointmentId)) {
+            errors.put("general", "Lịch hẹn đã thanh toán. Vui lòng liên hệ lễ tân để được hỗ trợ đổi lịch.");
+            return false;
+        }
+
+        // Time check for rescheduling
+        if (appt.getAppointmentDate() != null && appt.getTimeSlot() != null) {
+            try {
+                String[] parts = appt.getTimeSlot().contains(" - ")
+                        ? appt.getTimeSlot().split(" - ")[0].trim().split(":")
+                        : appt.getTimeSlot().split("-")[0].trim().split(":");
+                java.time.LocalTime time = java.time.LocalTime.of(
+                        Integer.parseInt(parts[0]), Integer.parseInt(parts.length > 1 ? parts[1] : "0"));
+                java.time.LocalDateTime apptDateTime = java.time.LocalDateTime.of(appt.getAppointmentDate(), time);
+                if (apptDateTime.isBefore(java.time.LocalDateTime.now().plusMinutes(30))) {
+                    errors.put("general", "Chỉ được đổi lịch trước giờ khám tối thiểu 30 phút.");
+                    return false;
+                }
+            } catch (Exception ignored) {}
+        }
+
+        Integer oldSlotId = appt.getSlotId();
+        if (oldSlotId == null) {
+            errors.put("general", "Lịch hẹn cũ không có thông tin ca khám.");
+            return false;
+        }
+
+        if (oldSlotId == newSlotId) {
+            errors.put("slotId", "Ca khám mới trùng với ca khám hiện tại.");
+            return false;
+        }
+
+        if (!isScheduleAvailable(newSlotId)) {
+            errors.put("slotId", "Ca khám mới đã hết chỗ hoặc không khả dụng.");
+            return false;
+        }
+
+        Date workDate = getScheduleWorkDate(newSlotId);
+        String startTimeStr = getScheduleStartTime(newSlotId);
+        if (workDate == null || startTimeStr == null) {
+            errors.put("slotId", "Không tìm thấy thông tin ca khám mới.");
+            return false;
+        }
+        
+        java.sql.Time startTime = java.sql.Time.valueOf(expectedTimeSlot != null && !expectedTimeSlot.isEmpty() ? expectedTimeSlot + ":00" : startTimeStr + ":00");
+
+        return appointmentDAO.rescheduleAppointmentTransaction(appointmentId, oldSlotId, newSlotId, userId, workDate, startTime, errors);
     }
 
     // ── Helpers ──
@@ -231,6 +343,18 @@ public class PatientBookingService {
                 return rs.next() ? rs.getDate("work_date") : null;
             }
         } catch (Exception e) { return null; }
+    }
+
+    private int getScheduleDoctorId(int scheduleId) {
+        String sql = "SELECT doctor_id FROM doctor_schedules WHERE id = ?";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, scheduleId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt("doctor_id");
+            }
+        } catch (Exception e) { return 0; }
+        return 0;
     }
 
     private String getScheduleStartTime(int scheduleId) {

@@ -41,6 +41,40 @@ public class DoctorPatientListServlet extends HttpServlet {
             String keyword = req.getParameter("keyword");
             boolean hasKw = keyword != null && !keyword.isBlank();
 
+            int page = 1;
+            int pageSize = 10;
+            String pageParam = req.getParameter("page");
+            if (pageParam != null && !pageParam.isBlank()) {
+                try { page = Integer.parseInt(pageParam.trim()); } catch (Exception ignored) {}
+            }
+            if (page < 1) page = 1;
+
+            // Đếm tổng số bản ghi
+            String countSql = "SELECT COUNT(DISTINCT p.id) FROM patients p " +
+                              "JOIN appointments a ON a.patient_id = p.id " +
+                              "LEFT JOIN users u ON p.user_id = u.id " +
+                              "WHERE a.doctor_id = ? " +
+                              (hasKw ? "AND (p.full_name LIKE ? OR p.phone_number LIKE ? OR " + EncryptionUtil.decryptEmailWhere("u.email") + " LIKE ?) " : "");
+            int totalRecords = 0;
+            try (Connection conn = DatabaseConfig.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(countSql)) {
+                ps.setInt(1, doctorId);
+                if (hasKw) {
+                    String lk = "%" + keyword.trim() + "%";
+                    ps.setString(2, lk);
+                    ps.setString(3, lk);
+                    ps.setString(4, lk);
+                }
+                ResultSet rs = ps.executeQuery();
+                if (rs.next()) totalRecords = rs.getInt(1);
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+
+            int totalPages = (int) Math.ceil((double) totalRecords / pageSize);
+            if (page > totalPages && totalPages > 0) page = totalPages;
+            int offset = (page - 1) * pageSize;
+
             // Lấy danh sách bệnh nhân đã từng có appointment với bác sĩ này
             String sql =
                 "SELECT DISTINCT p.id, COALESCE(NULLIF(p.full_name,''), N'Người dùng') AS full_name, " +
@@ -53,7 +87,8 @@ public class DoctorPatientListServlet extends HttpServlet {
                 "LEFT JOIN users u ON p.user_id = u.id " +
                 "WHERE a.doctor_id = ? " +
                 (hasKw ? "AND (p.full_name LIKE ? OR p.phone_number LIKE ? OR " + EncryptionUtil.decryptEmailWhere("u.email") + " LIKE ?) " : "") +
-                "ORDER BY last_visit DESC";
+                "ORDER BY last_visit DESC " +
+                "OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
 
             List<PatientRow> patients = new ArrayList<>();
             try (Connection conn = DatabaseConfig.getConnection();
@@ -61,12 +96,15 @@ public class DoctorPatientListServlet extends HttpServlet {
                 ps.setInt(1, doctorId);
                 ps.setInt(2, doctorId);
                 ps.setInt(3, doctorId);
+                int paramIndex = 4;
                 if (hasKw) {
                     String lk = "%" + keyword.trim() + "%";
-                    ps.setString(4, lk);
-                    ps.setString(5, lk);
-                    ps.setString(6, lk);
+                    ps.setString(paramIndex++, lk);
+                    ps.setString(paramIndex++, lk);
+                    ps.setString(paramIndex++, lk);
                 }
+                ps.setInt(paramIndex++, offset);
+                ps.setInt(paramIndex, pageSize);
                 ResultSet rs = ps.executeQuery();
                 while (rs.next()) {
                     PatientRow row = new PatientRow();
@@ -85,6 +123,9 @@ public class DoctorPatientListServlet extends HttpServlet {
             req.setAttribute("patients",    patients);
             req.setAttribute("keyword",     keyword != null ? keyword : "");
             req.setAttribute("doctorName",  user.getFullName());
+            req.setAttribute("currentPage", page);
+            req.setAttribute("totalPages",  totalPages);
+            req.setAttribute("totalRecords",totalRecords);
             req.getRequestDispatcher("/views/doctors/patient_list.jsp").forward(req, resp);
         } catch (Exception ex) {
             System.err.println("[DoctorPatientListServlet] doGet ERROR: " + ex.getMessage());

@@ -181,7 +181,7 @@ public class AppointmentValidationService {
      * @param overrideReason Lý do override của Staff (nếu có)
      * @return Thông báo lỗi nếu vi phạm, hoặc null nếu hợp lệ
      */
-    public String validateSameDayActiveAppointment(int patientId, LocalDate date, Integer excludeApptId, boolean isStaff, String overrideReason) {
+    public String validateSameDayActiveAppointment(int patientId, int doctorId, LocalDate date, Integer excludeApptId, boolean isStaff, String overrideReason) {
         if (patientId <= 0 || date == null) return null;
 
         List<Appointment> existing = appointmentDAO.getByPatientId(patientId);
@@ -190,7 +190,7 @@ public class AppointmentValidationService {
             if (excludeApptId != null && a.getId() == excludeApptId) {
                 continue;
             }
-            if (a.getAppointmentDate() != null && a.getAppointmentDate().equals(date)) {
+            if (a.getAppointmentDate() != null && a.getAppointmentDate().equals(date) && a.getDoctorId() == doctorId) {
                 String st = a.getStatus();
                 if (st != null && (st.equalsIgnoreCase("Pending")
                         || st.equalsIgnoreCase("Confirmed")
@@ -203,7 +203,7 @@ public class AppointmentValidationService {
         }
 
         if (hasConflict) {
-            return "Bệnh nhân đã có 1 lịch khám ngoại trú còn hiệu lực trong ngày " + date + ". Không thể đặt thêm lịch mới cùng ngày.";
+            return "Bệnh nhân đã có 1 lịch khám với bác sĩ này còn hiệu lực trong ngày " + date + ". Không thể đặt thêm.";
         }
 
         return null;

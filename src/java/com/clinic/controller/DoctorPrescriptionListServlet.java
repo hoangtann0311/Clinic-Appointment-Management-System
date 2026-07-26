@@ -40,6 +40,39 @@ public class DoctorPrescriptionListServlet extends HttpServlet {
             String keyword = req.getParameter("keyword");
             boolean hasKw = keyword != null && !keyword.isBlank();
 
+            int page = 1;
+            int pageSize = 10;
+            String pageParam = req.getParameter("page");
+            if (pageParam != null && !pageParam.isBlank()) {
+                try { page = Integer.parseInt(pageParam.trim()); } catch (Exception ignored) {}
+            }
+            if (page < 1) page = 1;
+
+            String countSql = "SELECT COUNT(*) FROM prescriptions p " +
+                              "JOIN medical_records mr ON p.medical_record_id = mr.id " +
+                              "JOIN appointments a ON mr.appointment_id = a.id " +
+                              "JOIN patients pt ON a.patient_id = pt.id " +
+                              "WHERE a.doctor_id = ? " +
+                              (hasKw ? "AND (pt.full_name LIKE ? OR p.prescription_code LIKE ?) " : "");
+            int totalRecords = 0;
+            try (Connection conn = DatabaseConfig.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(countSql)) {
+                ps.setInt(1, doctorId);
+                if (hasKw) {
+                    String lk = "%" + keyword.trim() + "%";
+                    ps.setString(2, lk);
+                    ps.setString(3, lk);
+                }
+                ResultSet rs = ps.executeQuery();
+                if (rs.next()) totalRecords = rs.getInt(1);
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+
+            int totalPages = (int) Math.ceil((double) totalRecords / pageSize);
+            if (page > totalPages && totalPages > 0) page = totalPages;
+            int offset = (page - 1) * pageSize;
+
             String sql =
                 "SELECT p.id, p.prescription_code, p.status, p.created_at, " +
                 "       pt.full_name AS patient_name, pt.id AS patient_id, " +
@@ -52,17 +85,21 @@ public class DoctorPrescriptionListServlet extends HttpServlet {
                 "JOIN patients pt ON a.patient_id = pt.id " +
                 "WHERE a.doctor_id = ? " +
                 (hasKw ? "AND (pt.full_name LIKE ? OR p.prescription_code LIKE ?) " : "") +
-                "ORDER BY p.created_at DESC";
+                "ORDER BY p.created_at DESC " +
+                "OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
 
             List<PrescriptionRow> rows = new ArrayList<>();
             try (Connection conn = DatabaseConfig.getConnection();
                  PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setInt(1, doctorId);
+                int paramIndex = 2;
                 if (hasKw) {
                     String lk = "%" + keyword.trim() + "%";
-                    ps.setString(2, lk);
-                    ps.setString(3, lk);
+                    ps.setString(paramIndex++, lk);
+                    ps.setString(paramIndex++, lk);
                 }
+                ps.setInt(paramIndex++, offset);
+                ps.setInt(paramIndex, pageSize);
                 ResultSet rs = ps.executeQuery();
                 while (rs.next()) {
                     PrescriptionRow row = new PrescriptionRow();
@@ -86,6 +123,9 @@ public class DoctorPrescriptionListServlet extends HttpServlet {
             req.setAttribute("prescriptions", rows);
             req.setAttribute("keyword",       keyword != null ? keyword : "");
             req.setAttribute("doctorName",    user.getFullName());
+            req.setAttribute("currentPage", page);
+            req.setAttribute("totalPages",  totalPages);
+            req.setAttribute("totalRecords",totalRecords);
             req.getRequestDispatcher("/views/doctors/prescription_list.jsp").forward(req, resp);
         } catch (Exception e) {
             System.err.println("[DoctorPrescriptionListServlet] doGet ERROR: " + e.getMessage());

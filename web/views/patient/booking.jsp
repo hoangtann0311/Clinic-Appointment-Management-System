@@ -76,20 +76,24 @@
     <div class="col-lg-8">
         <div class="card mb-3">
             <div class="card-body">
-                <div class="row g-3 align-items-end">
-                    <div class="col-md-7">
-                        <label class="form-label fw-semibold small">Tìm theo tên Bác sĩ lâm sàng</label>
-                        <div class="input-group">
-                            <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                            <input type="text" id="doctorSearchInput" class="form-control"
-                                   placeholder="Nhập tên Bác sĩ lâm sàng hoặc chuyên khoa...">
+                <form action="${pageContext.request.contextPath}/patient/booking" method="GET">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-7">
+                            <label class="form-label fw-semibold small">Tìm theo tên Bác sĩ lâm sàng</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                                <input type="text" name="keyword" class="form-control"
+                                       value="${fn:escapeXml(keyword)}"
+                                       placeholder="Nhập tên Bác sĩ lâm sàng hoặc chuyên khoa...">
+                                <button type="submit" class="btn btn-outline-secondary">Tìm kiếm</button>
+                            </div>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label fw-semibold small">Chọn ngày khám</label>
+                            <input type="date" id="examDateInput" class="form-control" min="${today}" value="${today}">
                         </div>
                     </div>
-                    <div class="col-md-5">
-                        <label class="form-label fw-semibold small">Chọn ngày khám</label>
-                        <input type="date" id="examDateInput" class="form-control" min="${today}" value="${today}">
-                    </div>
-                </div>
+                </form>
                 <div class="form-text mt-2">
                     <i class="bi bi-info-circle me-1"></i>Bấm "Chọn" ở thẻ bác sĩ để xem khung giờ trống trong ngày đã chọn.
                 </div>
@@ -144,9 +148,29 @@
                 </div>
             </c:forEach>
         </div>
-        <div id="noDoctorFound" class="text-center text-muted py-4" style="display:none;">
-            Không tìm thấy Bác sĩ lâm sàng phù hợp.
-        </div>
+        <c:if test="${empty doctors}">
+            <div id="noDoctorFound" class="text-center text-muted py-4">
+                Không tìm thấy Bác sĩ lâm sàng phù hợp.
+            </div>
+        </c:if>
+
+        <c:if test="${totalPages > 1}">
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center mb-0">
+                    <li class="page-item ${currentPage == 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="?page=${currentPage - 1}&keyword=${fn:escapeXml(keyword)}">Trước</a>
+                    </li>
+                    <c:forEach begin="1" end="${totalPages}" var="i">
+                        <li class="page-item ${currentPage == i ? 'active' : ''}">
+                            <a class="page-link" href="?page=${i}&keyword=${fn:escapeXml(keyword)}">${i}</a>
+                        </li>
+                    </c:forEach>
+                    <li class="page-item ${currentPage == totalPages ? 'disabled' : ''}">
+                        <a class="page-link" href="?page=${currentPage + 1}&keyword=${fn:escapeXml(keyword)}">Sau</a>
+                    </li>
+                </ul>
+            </nav>
+        </c:if>
     </div>
 
     <%-- ══════════ CỘT PHẢI: tóm tắt lịch khám ══════════ --%>
@@ -246,22 +270,9 @@
 <script>
 (function () {
     const contextPath = "${pageContext.request.contextPath}";
-    const searchInput = document.getElementById('doctorSearchInput');
     const dateInput = document.getElementById('examDateInput');
     const doctorCards = document.querySelectorAll('.doctor-card-wrapper');
     const noDoctorFound = document.getElementById('noDoctorFound');
-
-    // ── Lọc Bác sĩ lâm sàng theo tên/chuyên khoa (client-side) ──
-    searchInput.addEventListener('input', function () {
-        const kw = this.value.trim().toLowerCase();
-        let visible = 0;
-        doctorCards.forEach(function (card) {
-            const match = card.dataset.name.includes(kw);
-            card.style.display = match ? '' : 'none';
-            if (match) visible++;
-        });
-        noDoctorFound.style.display = visible === 0 ? '' : 'none';
-    });
 
     // ── Xổ / ẩn khung giờ của 1 Bác sĩ lâm sàng ──
     document.querySelectorAll('.toggle-doctor-btn').forEach(function (btn) {

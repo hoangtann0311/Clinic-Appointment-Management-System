@@ -128,8 +128,33 @@
                         </tbody>
                     </table>
                 </div>
-                <div class="p-3 text-muted small border-top">
-                    Tổng: <strong>${fn:length(prescriptions)}</strong> đơn thuốc
+                </div>
+                <div class="card-footer bg-white p-3 border-top d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div class="text-muted small">
+                        Hiển thị <strong>${fn:length(prescriptions)}</strong> trên tổng <strong>${totalRecords}</strong> đơn thuốc
+                    </div>
+                    <c:if test="${totalPages > 1}">
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination pagination-sm mb-0">
+                                <c:set var="queryParams" value="" />
+                                <c:if test="${not empty keyword}">
+                                    <c:set var="queryParams" value="&keyword=${fn:escapeXml(keyword)}" />
+                                </c:if>
+
+                                <li class="page-item ${currentPage == 1 ? 'disabled' : ''}">
+                                    <a class="page-link" href="?page=${currentPage - 1}${queryParams}">Trước</a>
+                                </li>
+                                <c:forEach begin="1" end="${totalPages}" var="i">
+                                    <li class="page-item ${i == currentPage ? 'active' : ''}">
+                                        <a class="page-link" href="?page=${i}${queryParams}">${i}</a>
+                                    </li>
+                                </c:forEach>
+                                <li class="page-item ${currentPage == totalPages ? 'disabled' : ''}">
+                                    <a class="page-link" href="?page=${currentPage + 1}${queryParams}">Sau</a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </c:if>
                 </div>
             </c:otherwise>
         </c:choose>

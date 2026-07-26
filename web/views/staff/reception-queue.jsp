@@ -197,7 +197,7 @@
             </div>
             <div class="card-body p-0">
                 <c:if test="${not empty errors}">
-                    <div class="alert alert-danger m-3">
+                    <div class="alert alert-danger m-3" data-cams-toast="true">
                         <strong>Không thể thực hiện thao tác:</strong>
                         <ul class="mb-0 mt-2">
                             <c:forEach var="err" items="${errors}">
@@ -461,6 +461,17 @@
                                                         <input type="hidden" name="id" value="${apt.id}">
                                                         <button type="submit" class="btn btn-sm btn-outline-secondary">
                                                             <i class="bi bi-arrow-down-circle me-1"></i>Bỏ ưu tiên
+                                                        </button>
+                                                    </form>
+                                                </c:if>
+                                                <c:if test="${unpaidPostExamAptIds.contains(apt.id)}">
+                                                    <form action="${pageContext.request.contextPath}/admin/reception/approve-post-exam"
+                                                          method="post"
+                                                          style="display:inline;">
+                                                        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                                                        <input type="hidden" name="id" value="${apt.id}">
+                                                        <button type="submit" class="btn-cams btn-cams-success btn-sm mt-1" style="font-size:.72rem;padding:.2rem .45rem;" title="Xác nhận thanh toán dịch vụ cận lâm sàng">
+                                                            <i class="bi bi-cash-coin"></i> Xác nhận TT dịch vụ
                                                         </button>
                                                     </form>
                                                 </c:if>

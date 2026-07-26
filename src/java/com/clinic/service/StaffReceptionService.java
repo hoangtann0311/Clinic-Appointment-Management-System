@@ -188,15 +188,10 @@ public class StaffReceptionService {
             throw new IllegalArgumentException("Dịch vụ khám mặc định chưa được cấu hình. Vui lòng liên hệ quản trị viên.");
         }
 
-        // 5. Kiểm tra trùng khung giờ.
-        boolean slotBooked = appointmentDAO.isSlotBooked(
-                null,
-                doctor.getId(),
-                appDate,
-                slot
-        );
-        if (slotBooked) {
-            throw new IllegalArgumentException("Khung giờ này đã có bệnh nhân đặt. Vui lòng chọn giờ khác.");
+        // 5. Tìm schedule_id tương ứng trong doctor_schedules
+        Integer foundSlotId = findAvailableOrCurrentSlot(doctor.getId(), appDate, slot, null);
+        if (foundSlotId == null) {
+            throw new IllegalArgumentException("Ca làm việc này đã hết chỗ hoặc không tồn tại. Vui lòng chọn ca khác.");
         }
 
         // 6. Tìm hoặc tạo bệnh nhân
@@ -211,7 +206,7 @@ public class StaffReceptionService {
         }
 
         // Kiểm tra 1 bệnh nhân chỉ có 1 lịch khám ngoại trú còn hiệu lực trong cùng 1 ngày
-        String sameDayError = validationService.validateSameDayActiveAppointment(patient.getId(), appDate, null, true, overrideReason);
+        String sameDayError = validationService.validateSameDayActiveAppointment(patient.getId(), doctor.getId(), appDate, null, true, overrideReason);
         if (sameDayError != null) {
             throw new IllegalArgumentException(sameDayError);
         }
@@ -224,41 +219,6 @@ public class StaffReceptionService {
             } catch (Exception e) {
                 System.err.println("[StaffReceptionService] Không thể cập nhật address/cccd: " + e.getMessage());
             }
-        }
-
-        // Tìm slotId tương ứng trong time_slots
-        java.sql.Time startTime = null;
-        if (slot != null && slot.contains("-")) {
-            try {
-                String startPart = slot.split("-")[0].trim();
-                startTime = java.sql.Time.valueOf(java.time.LocalTime.parse(startPart));
-            } catch (Exception ignored) {}
-        }
-
-        Integer foundSlotId = null;
-        if (startTime != null) {
-            String findSlotSql = "SELECT id FROM time_slots WHERE doctor_id = ? AND work_date = ? AND start_time = CAST(? AS time) AND status = 'AVAILABLE'";
-            try (Connection conn = DatabaseConfig.getConnection();
-                 PreparedStatement ps = conn.prepareStatement(findSlotSql)) {
-                ps.setInt(1, doctor.getId());
-                ps.setDate(2, java.sql.Date.valueOf(appDate));
-                ps.setTime(3, startTime);
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (rs.next()) {
-                        foundSlotId = rs.getInt("id");
-                    }
-                }
-            } catch (SQLException e) {
-                System.err.println("[StaffReceptionService] Lỗi khi tìm time_slot cho manual booking: " + e.getMessage());
-            }
-        }
-
-        // UI data can be forged. A normal booking must always resolve to an
-        // approved, currently available time_slot on the doctor's roster.
-        if (foundSlotId == null) {
-            throw new IllegalArgumentException(
-                    "Khung giờ đã hết chỗ hoặc không thuộc lịch làm việc đã được xác nhận của bác sĩ. Vui lòng chọn lại."
-            );
         }
 
         // 7. Tính tuổi thai
@@ -430,6 +390,13 @@ public class StaffReceptionService {
                 }
             }
 
+            // Mark PRE_EXAM invoice as Paid to track revenue for Manager
+            try {
+                mockPayPreExamInvoice(String.valueOf(appointmentId));
+            } catch (Exception e) {
+                System.err.println("[StaffReceptionService] Warning: Could not mark PRE_EXAM invoice as Paid during check-in: " + e.getMessage());
+            }
+
             // Đặt trạng thái Waiting và xếp lại STT hàng đợi trong cùng 1 DB transaction
             if (!appointmentDAO.checkInAndRenumber(appointmentId)) {
                 throw new IllegalArgumentException("Không thể check-in. Vui lòng kiểm tra lại trạng thái lịch hẹn.");
@@ -470,6 +437,48 @@ public class StaffReceptionService {
                     "appointments",
                     apt.getStatus(),
                     "Confirmed"
+            );
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Mã lịch hẹn không hợp lệ.");
+        }
+    }
+
+    public void approvePostExamPayment(String id, int staffUserId) {
+        try {
+            int appointmentId = Integer.parseInt(id);
+            Appointment apt = appointmentDAO.findAppointmentById(appointmentId);
+            if (apt == null) {
+                throw new IllegalArgumentException("Không tìm thấy lịch hẹn.");
+            }
+            if (!"InProgress".equalsIgnoreCase(apt.getStatus())) {
+                throw new IllegalArgumentException("Chỉ ca khám đang ở trạng thái Đang khám mới có thể thực hiện thao tác này.");
+            }
+
+            com.clinic.model.Invoice invoice = invoiceDAO.getByAppointmentIdAndType(appointmentId, "POST_EXAM");
+            if (invoice == null || !"Unpaid".equalsIgnoreCase(invoice.getStatus())) {
+                throw new IllegalArgumentException("Không tìm thấy hóa đơn cận lâm sàng chưa thanh toán.");
+            }
+
+            String sql = "UPDATE invoices SET status = 'Paid', confirmed_by = ?, payment_date = GETDATE() WHERE id = ?";
+            try (java.sql.Connection conn = com.clinic.config.DatabaseConfig.getConnection();
+                 java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setInt(1, staffUserId);
+                ps.setInt(2, invoice.getId());
+                int rows = ps.executeUpdate();
+                if (rows == 0) {
+                    throw new IllegalArgumentException("Không thể cập nhật trạng thái hóa đơn.");
+                }
+            } catch (java.sql.SQLException e) {
+                System.err.println("[StaffReceptionService] approvePostExamPayment ERROR: " + e.getMessage());
+                throw new IllegalArgumentException("Lỗi hệ thống khi cập nhật thanh toán cận lâm sàng.");
+            }
+
+            auditLogDAO.logAction(
+                    "Lễ tân xác nhận thanh toán cận lâm sàng cho hóa đơn #" + invoice.getId(),
+                    "Staff",
+                    "invoices",
+                    invoice.getStatus(),
+                    "Paid"
             );
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException("Mã lịch hẹn không hợp lệ.");
@@ -666,16 +675,6 @@ public class StaffReceptionService {
                 throw new IllegalArgumentException("Lịch hẹn đã được đánh dấu vắng mặt, không thể hủy.");
             }
 
-            // A paid appointment cannot be silently cancelled because its
-            // receipt must remain auditable and requires a separate refund
-            // decision. Unpaid/pending receipts are voided by the DAO
-            // transaction together with slot release.
-            if (appointmentDAO.isPreExamPaid(appointmentId)) {
-                throw new IllegalArgumentException(
-                        "Lịch hẹn đã thanh toán. Không thể hủy trực tiếp; cần xử lý hoàn tiền theo quy trình quản lý."
-                );
-            }
-
             boolean success = appointmentDAO.cancelAppointmentAndReleaseSlot(appointmentId, 0, "Lễ tân hủy lịch hẹn");
             if (!success) {
                 throw new IllegalArgumentException("Không thể hủy lịch hẹn hoặc lịch đã hoàn thành/đang khám.");
@@ -787,20 +786,31 @@ public class StaffReceptionService {
     }
 
     private Integer findAvailableOrCurrentSlot(int doctorId, LocalDate workDate, String slot, Integer currentSlotId) {
-        if (slot == null || !slot.contains("-")) return null;
+        if (slot == null || slot.trim().isEmpty()) return null;
         try {
-            java.time.LocalTime start = java.time.LocalTime.parse(slot.split("-")[0].trim());
-            String sql = "SELECT id FROM time_slots WHERE doctor_id = ? AND work_date = ? AND start_time = CAST(? AS time) "
-                    + "AND (status = 'AVAILABLE' OR (id = ? AND status IN ('HELD', 'WAITING_VERIFICATION')))";
+            java.time.LocalTime time = null;
+            if (slot.contains("-")) {
+                time = java.time.LocalTime.parse(slot.split("-")[0].trim());
+            } else {
+                time = java.time.LocalTime.parse(slot.trim());
+            }
+
+            String sql = "SELECT ds.id FROM doctor_schedules ds "
+                    + "INNER JOIN shifts s ON ds.shift_id = s.id "
+                    + "WHERE ds.doctor_id = ? AND ds.work_date = ? AND s.start_time <= CAST(? AS time) "
+                    + "AND (s.end_time >= CAST(? AS time) OR s.end_time < s.start_time) "
+                    + "AND (ds.status = 'APPROVED' AND COALESCE(ds.booked_count, 0) < ds.max_slots "
+                    + "     OR ds.id = ?)";
             try (Connection conn = DatabaseConfig.getConnection();
                  PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setInt(1, doctorId);
                 ps.setDate(2, java.sql.Date.valueOf(workDate));
-                ps.setTime(3, java.sql.Time.valueOf(start));
+                ps.setTime(3, java.sql.Time.valueOf(time));
+                ps.setTime(4, java.sql.Time.valueOf(time));
                 if (currentSlotId != null) {
-                    ps.setInt(4, currentSlotId);
+                    ps.setInt(5, currentSlotId);
                 } else {
-                    ps.setInt(4, -1);
+                    ps.setInt(5, -1);
                 }
                 try (ResultSet rs = ps.executeQuery()) {
                     return rs.next() ? rs.getInt("id") : null;

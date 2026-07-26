@@ -46,6 +46,20 @@
         </span>
     </div>
     <div class="card-body p-4 pt-3">
+        <form action="${pageContext.request.contextPath}/patient/invoices" method="GET" class="mb-4">
+            <div class="row">
+                <div class="col-md-6 col-lg-5">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" name="keyword" class="form-control border-start-0 ps-0"
+                               value="${fn:escapeXml(keyword)}"
+                               placeholder="Tìm theo mã HĐ, tên Bác sĩ, dịch vụ...">
+                        <button type="submit" class="btn btn-primary">Tìm kiếm</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+
         <c:choose>
             <c:when test="${not empty invoices}">
                 <div class="table-responsive">
@@ -71,16 +85,12 @@
                                     <td>
                                         <c:choose>
                                             <c:when test="${inv.invoiceType == 'PRE_EXAM'}">
-                                                <span class="fw-semibold text-dark"><i class="bi bi-person-badge me-1 text-primary"></i>Khám & Dịch vụ ban đầu</span>
+                                                <span class="fw-semibold text-dark"><i class="bi bi-person-badge me-1 text-primary"></i>Dịch vụ khám lâm sàng</span>
                                                 <div class="small text-muted">Do Lễ tân phát hành</div>
                                             </c:when>
                                             <c:when test="${inv.invoiceType == 'POST_EXAM'}">
-                                                <span class="fw-semibold text-dark"><i class="bi bi-activity me-1 text-danger"></i>Chỉ định Siêu âm / Xét nghiệm</span>
-                                                <div class="small text-muted">Do Bác sĩ chỉ định</div>
-                                            </c:when>
-                                            <c:when test="${inv.invoiceType == 'PRESCRIPTION'}">
-                                                <span class="fw-semibold text-dark"><i class="bi bi-capsule me-1 text-success"></i>Đơn thuốc điều trị</span>
-                                                <div class="small text-muted">Do Bác sĩ chỉ định</div>
+                                                <span class="fw-semibold text-dark"><i class="bi bi-activity me-1 text-danger"></i>${not empty inv.serviceName ? inv.serviceName : 'Chỉ định Cận lâm sàng'}</span>
+                                                <div class="small text-muted">Do Bác sĩ phát hành</div>
                                             </c:when>
                                             <c:otherwise>
                                                 <span class="fw-semibold text-dark"><i class="bi bi-receipt me-1"></i>Hóa đơn khám bệnh</span>
@@ -135,6 +145,26 @@
                         </tbody>
                     </table>
                 </div>
+                
+                <c:if test="${totalPages > 1}">
+                    <div class="d-flex justify-content-center mt-4">
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination mb-0">
+                                <li class="page-item ${currentPage == 1 ? 'disabled' : ''}">
+                                    <a class="page-link" href="?page=${currentPage - 1}&keyword=${fn:escapeXml(keyword)}">Trước</a>
+                                </li>
+                                <c:forEach begin="1" end="${totalPages}" var="i">
+                                    <li class="page-item ${currentPage == i ? 'active' : ''}">
+                                        <a class="page-link" href="?page=${i}&keyword=${fn:escapeXml(keyword)}">${i}</a>
+                                    </li>
+                                </c:forEach>
+                                <li class="page-item ${currentPage == totalPages ? 'disabled' : ''}">
+                                    <a class="page-link" href="?page=${currentPage + 1}&keyword=${fn:escapeXml(keyword)}">Sau</a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                </c:if>
             </c:when>
             <c:otherwise>
                 <div class="text-center py-5">

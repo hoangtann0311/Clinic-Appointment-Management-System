@@ -120,7 +120,7 @@
             </div>
             <div class="card-body">
                 <c:if test="${not empty errors}">
-                    <div class="alert alert-danger">
+                    <div class="alert alert-danger" data-cams-toast="true">
                         <strong>Không thể cập nhật lịch hẹn:</strong>
                         <ul class="mb-0 mt-2">
                             <c:forEach var="err" items="${errors}">

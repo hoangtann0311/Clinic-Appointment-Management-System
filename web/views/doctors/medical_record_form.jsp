@@ -44,7 +44,7 @@
 
   <%-- Thông báo lỗi --%>
   <c:if test="${not empty errorMessage}">
-    <div class="alert alert-danger rounded-3 mb-3"><i class="bi bi-exclamation-triangle-fill me-2"></i>${errorMessage}</div>
+    <div class="alert alert-danger rounded-3 mb-3" data-cams-toast="true"><i class="bi bi-exclamation-triangle-fill me-2"></i>${errorMessage}</div>
   </c:if>
 
   <div class="row mb-4">
@@ -171,7 +171,7 @@
 
   <%-- Thông báo lỗi / Thành công --%>
   <c:if test="${not empty errorMessage}">
-    <div class="alert alert-danger rounded-3 mb-3"><i class="bi bi-exclamation-triangle-fill me-2"></i>${errorMessage}</div>
+    <div class="alert alert-danger rounded-3 mb-3" data-cams-toast="true"><i class="bi bi-exclamation-triangle-fill me-2"></i>${errorMessage}</div>
   </c:if>
   <c:if test="${param.saved == '1'}">
     <div class="alert alert-success alert-dismissible fade show" data-cams-toast role="alert">

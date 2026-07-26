@@ -70,7 +70,7 @@
 
             <%-- ========== Error Messages ========== --%>
             <c:if test="${not empty errors}">
-                <div class="login-alert login-alert-danger" role="alert">
+                <div class="login-alert login-alert-danger" role="alert" data-cams-toast="true">
                     <div>
                         <i class="bi bi-exclamation-triangle-fill me-2 fs-6"></i>
                         <strong>Lỗi đặt lại mật khẩu:</strong>

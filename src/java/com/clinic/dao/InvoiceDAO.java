@@ -217,6 +217,24 @@ public class InvoiceDAO {
         return null;
     }
 
+    public java.util.Set<Integer> getUnpaidPostExamAppointmentIds(java.time.LocalDate date) {
+        java.util.Set<Integer> set = new java.util.HashSet<>();
+        String sql = "SELECT i.appointment_id FROM invoices i JOIN appointments a ON a.id = i.appointment_id "
+                   + "WHERE i.invoice_type = 'POST_EXAM' AND i.status = 'Unpaid' AND a.appointment_date = ?";
+        try (java.sql.Connection conn = DatabaseConfig.getConnection();
+             java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setDate(1, java.sql.Date.valueOf(date));
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    set.add(rs.getInt(1));
+                }
+            }
+        } catch (java.sql.SQLException e) {
+            System.err.println("[InvoiceDAO] getUnpaidPostExamAppointmentIds ERROR: " + e.getMessage());
+        }
+        return set;
+    }
+
     /** Batch: lấy tất cả POST_EXAM + PRESCRIPTION invoices cho nhiều appointment. */
     public java.util.Map<Integer, java.util.Map<String, Invoice>> getPostExamAndPrescriptionInvoices(
             java.util.List<Integer> appointmentIds) {
@@ -482,6 +500,82 @@ public class InvoiceDAO {
             closeResources(conn, ps, rs);
         }
         return list;
+    }
+
+    public List<Invoice> getInvoicesByPatientUserIdPaginated(int userId, String keyword, int offset, int limit) {
+        String sql = BASE_SELECT + " WHERE pt.user_id = ? AND i.status <> 'Cancelled' ";
+        
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            sql += "AND (i.transaction_code LIKE ? OR d.full_name LIKE ? OR s.service_name LIKE ?) ";
+        }
+        
+        sql += "ORDER BY i.id DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+        
+        List<Invoice> list = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setInt(1, userId);
+            
+            int paramIndex = 2;
+            if (keyword != null && !keyword.trim().isEmpty()) {
+                String like = "%" + keyword.trim() + "%";
+                ps.setString(paramIndex++, like);
+                ps.setString(paramIndex++, like);
+                ps.setString(paramIndex++, like);
+            }
+            
+            ps.setInt(paramIndex++, offset);
+            ps.setInt(paramIndex, limit);
+            
+            rs = ps.executeQuery();
+            while (rs.next()) {
+                list.add(mapRow(rs));
+            }
+        } catch (SQLException e) {
+            System.err.println("[InvoiceDAO] getInvoicesByPatientUserIdPaginated ERROR: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return list;
+    }
+
+    public int countInvoicesByPatientUserId(int userId, String keyword) {
+        String sql = "SELECT COUNT(*) FROM invoices i "
+                + "JOIN appointments a ON i.appointment_id = a.id "
+                + "JOIN patients pt ON a.patient_id = pt.id "
+                + "LEFT JOIN doctors d ON a.doctor_id = d.id "
+                + "LEFT JOIN services s ON a.service_id = s.id "
+                + "WHERE pt.user_id = ? AND i.status <> 'Cancelled' ";
+        
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            sql += "AND (i.transaction_code LIKE ? OR d.full_name LIKE ? OR s.service_name LIKE ?) ";
+        }
+        
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setInt(1, userId);
+            if (keyword != null && !keyword.trim().isEmpty()) {
+                String like = "%" + keyword.trim() + "%";
+                ps.setString(2, like);
+                ps.setString(3, like);
+                ps.setString(4, like);
+            }
+            rs = ps.executeQuery();
+            if (rs.next()) return rs.getInt(1);
+        } catch (SQLException e) {
+            System.err.println("[InvoiceDAO] countInvoicesByPatientUserId ERROR: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return 0;
     }
 
     /**

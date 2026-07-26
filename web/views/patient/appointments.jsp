@@ -78,6 +78,19 @@
 <c:if test="${not empty bookingError}">
     <div class="alert alert-danger alert-dismissible fade show" data-cams-toast role="alert"><i class="bi bi-exclamation-triangle-fill me-2"></i>${bookingError}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 </c:if>
+<form action="${pageContext.request.contextPath}/patient/appointments" method="GET" class="mb-4">
+    <div class="row">
+        <div class="col-md-6 col-lg-5">
+            <div class="input-group">
+                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" name="keyword" class="form-control border-start-0 ps-0"
+                       value="${fn:escapeXml(keyword)}"
+                       placeholder="Tìm bác sĩ, dịch vụ, trạng thái...">
+                <button type="submit" class="btn btn-primary">Tìm kiếm</button>
+            </div>
+        </div>
+    </div>
+</form>
 
 <c:choose>
     <%-- ── Empty state ── --%>
@@ -193,6 +206,26 @@
                 <span>Tổng: <strong style="color:#172033;">${fn:length(appointments)}</strong> lịch hẹn</span>
                 <span><i class="bi bi-info-circle me-1"></i>Có thể huỷ/đổi trong 15 phút sau khi đặt, hoặc trước giờ khám tối thiểu 2 tiếng.</span>
             </div>
+            
+            <c:if test="${totalPages > 1}">
+                <div class="p-3 border-top d-flex justify-content-center">
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination mb-0">
+                            <li class="page-item ${currentPage == 1 ? 'disabled' : ''}">
+                                <a class="page-link" href="?page=${currentPage - 1}&keyword=${fn:escapeXml(keyword)}">Trước</a>
+                            </li>
+                            <c:forEach begin="1" end="${totalPages}" var="i">
+                                <li class="page-item ${currentPage == i ? 'active' : ''}">
+                                    <a class="page-link" href="?page=${i}&keyword=${fn:escapeXml(keyword)}">${i}</a>
+                                </li>
+                            </c:forEach>
+                            <li class="page-item ${currentPage == totalPages ? 'disabled' : ''}">
+                                <a class="page-link" href="?page=${currentPage + 1}&keyword=${fn:escapeXml(keyword)}">Sau</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </c:if>
         </div>
     </c:otherwise>
 </c:choose>

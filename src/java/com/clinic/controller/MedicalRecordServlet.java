@@ -83,8 +83,8 @@ public class MedicalRecordServlet extends HttpServlet {
             // ── Danh sách ───────────────────────────────────────────────────
             try {
                 String keyword = req.getParameter("keyword");
-                List<MedicalRecord> records = dao.getByDoctorId(doctorId, keyword);
-                req.setAttribute("records",    records);
+                java.util.List<com.clinic.model.PatientMedicalSummary> patientSummaries = dao.getPatientSummariesByDoctorId(doctorId, keyword);
+                req.setAttribute("patientSummaries", patientSummaries);
                 req.setAttribute("keyword",    keyword != null ? keyword : "");
                 req.setAttribute("doctorName", user.getFullName());
                 req.setAttribute("mode",       "list");

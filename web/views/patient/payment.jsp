@@ -45,8 +45,7 @@
             <div>
                 <h2 class="fw-bold mb-0">
                     <c:choose>
-                    <c:when test="${invoiceType == 'POST_EXAM'}">Thanh Toán Chỉ Định Sau Khám</c:when>
-                        <c:when test="${invoiceType == 'PRESCRIPTION'}">Thanh Toán Đơn Thuốc</c:when>
+                        <c:when test="${invoiceType == 'POST_EXAM'}">Thanh Toán Chỉ Định Sau Khám</c:when>
                         <c:otherwise>Thanh Toán Hóa Đơn Lâm Sàng</c:otherwise>
                     </c:choose>
                 </h2>
@@ -101,38 +100,7 @@
                             <c:if test="${not empty invoice.transactionCode}">
                                 <div class="col-12"><span class="text-muted small">Mã giao dịch</span><div><code>${invoice.transactionCode}</code></div></div>
                             </c:if>
-                            <c:if test="${invoiceType == 'PRESCRIPTION' && not empty prescriptionItems}">
-                                <div class="col-12">
-                                    <hr class="my-2">
-                                    <span class="text-muted small fw-bold mb-2 d-block">DANH SÁCH THUỐC ĐÃ THANH TOÁN</span>
-                                    <div class="table-responsive">
-                                        <table class="table table-sm mb-0">
-                                            <thead>
-                                                <tr>
-                                                    <th>#</th>
-                                                    <th>Tên thuốc</th>
-                                                    <th>Đơn vị</th>
-                                                    <th class="text-center">Số lượng</th>
-                                                    <th class="text-end">Đơn giá</th>
-                                                    <th class="text-end">Thành tiền</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <c:forEach var="item" items="${prescriptionItems}" varStatus="st">
-                                                    <tr>
-                                                        <td>${st.index + 1}</td>
-                                                        <td>${item.medicineName}</td>
-                                                        <td>${item.medicineUnit}</td>
-                                                        <td class="text-center">${item.quantity}</td>
-                                                        <td class="text-end"><fmt:formatNumber value="${item.price}" pattern="#,###"/>đ</td>
-                                                        <td class="text-end"><fmt:formatNumber value="${item.price * item.quantity}" pattern="#,###"/>đ</td>
-                                                    </tr>
-                                                </c:forEach>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </c:if>
+
                             <c:if test="${invoiceType == 'POST_EXAM' && not empty testOrders}">
                                 <div class="col-12">
                                     <hr class="my-2">
@@ -203,36 +171,7 @@
                                     <div class="col-12"><span class="text-muted small">Mã giao dịch</span><div><code>${invoice.transactionCode}</code></div></div>
                                 </c:if>
                             </div>
-                            <c:if test="${invoiceType == 'PRESCRIPTION' && not empty prescriptionItems}">
-                                <hr class="my-3">
-                                <p class="text-muted small fw-bold mb-2">DANH SÁCH THUỐC ĐÃ KÊ</p>
-                                <div class="table-responsive">
-                                    <table class="table table-sm mb-0">
-                                        <thead>
-                                            <tr>
-                                                <th>#</th>
-                                                <th>Tên thuốc</th>
-                                                <th>Đơn vị</th>
-                                                <th class="text-center">Số lượng</th>
-                                                <th class="text-end">Đơn giá</th>
-                                                <th class="text-end">Thành tiền</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <c:forEach var="item" items="${prescriptionItems}" varStatus="st">
-                                                <tr>
-                                                    <td>${st.index + 1}</td>
-                                                    <td>${item.medicineName}</td>
-                                                    <td>${item.medicineUnit}</td>
-                                                    <td class="text-center">${item.quantity}</td>
-                                                    <td class="text-end"><fmt:formatNumber value="${item.price}" pattern="#,###"/>đ</td>
-                                                    <td class="text-end"><fmt:formatNumber value="${item.price * item.quantity}" pattern="#,###"/>đ</td>
-                                                </tr>
-                                            </c:forEach>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </c:if>
+
                             <c:if test="${invoiceType == 'POST_EXAM' && not empty testOrders}">
                                 <hr class="my-3">
                                 <p class="text-muted small fw-bold mb-2">DANH SÁCH CHỈ ĐỊNH PHÁT SINH</p>
@@ -288,36 +227,7 @@
                                 <div class="col-md-6"><span class="text-muted small">Giờ khám</span><div class="fw-bold">${appointment.timeSlot}</div></div>
                                 <div class="col-md-6"><span class="text-muted small">Dịch vụ</span><div class="fw-bold"><c:choose><c:when test="${not empty appointment.serviceName}">${appointment.serviceName}</c:when><c:otherwise>Khám lâm sàng<c:if test="${not empty appointment.doctor}"> (${appointment.doctor.specialization})</c:if></c:otherwise></c:choose></div></div>
                             </div>
-                            <c:if test="${invoiceType == 'PRESCRIPTION' && not empty prescriptionItems}">
-                                <hr class="my-3">
-                                <p class="text-muted small fw-bold mb-2">DANH SÁCH THUỐC ĐÃ KÊ</p>
-                                <div class="table-responsive">
-                                    <table class="table table-sm mb-0">
-                                        <thead>
-                                            <tr>
-                                                <th>#</th>
-                                                <th>Tên thuốc</th>
-                                                <th>Đơn vị</th>
-                                                <th class="text-center">Số lượng</th>
-                                                <th class="text-end">Đơn giá</th>
-                                                <th class="text-end">Thành tiền</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <c:forEach var="item" items="${prescriptionItems}" varStatus="st">
-                                                <tr>
-                                                    <td>${st.index + 1}</td>
-                                                    <td>${item.medicineName}</td>
-                                                    <td>${item.medicineUnit}</td>
-                                                    <td class="text-center">${item.quantity}</td>
-                                                    <td class="text-end"><fmt:formatNumber value="${item.price}" pattern="#,###"/>đ</td>
-                                                    <td class="text-end"><fmt:formatNumber value="${item.price * item.quantity}" pattern="#,###"/>đ</td>
-                                                </tr>
-                                            </c:forEach>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </c:if>
+
                             <c:if test="${invoiceType == 'POST_EXAM' && not empty testOrders}">
                                 <hr class="my-3">
                                 <p class="text-muted small fw-bold mb-2">DANH SÁCH CHỈ ĐỊNH PHÁT SINH</p>
@@ -344,13 +254,7 @@
                                     </table>
                                 </div>
                             </c:if>
-                            <c:if test="${invoiceType == 'PRESCRIPTION' && not empty previousPrescriptionTotal && previousPrescriptionTotal > 0}">
-                                <div class="alert alert-info mt-2 mb-0">
-                                    <i class="bi bi-info-circle me-1"></i>
-                                    Đơn thuốc đã được cập nhật. Bạn đã thanh toán <strong><fmt:formatNumber value="${previousPrescriptionTotal}" pattern="#,###"/>đ</strong> trước đó.
-                                    Phần chênh lệch cần thanh toán thêm: <strong class="text-danger"><fmt:formatNumber value="${invoice.totalAmount}" pattern="#,###"/>đ</strong>.
-                                </div>
-                            </c:if>
+
                             <hr class="my-3">
                             <div class="d-flex justify-content-between align-items-center">
                                 <span class="text-muted fw-semibold">TỔNG TIỀN CẦN THANH TOÁN</span>

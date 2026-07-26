@@ -95,9 +95,9 @@
     }
 
     function levelFromAlert(alert) {
-        if (alert.classList.contains('alert-success')) return 'success';
-        if (alert.classList.contains('alert-danger')) return 'danger';
-        if (alert.classList.contains('alert-warning')) return 'warning';
+        if (alert.classList.contains('alert-success') || alert.classList.contains('login-alert-success')) return 'success';
+        if (alert.classList.contains('alert-danger') || alert.classList.contains('login-alert-danger')) return 'danger';
+        if (alert.classList.contains('alert-warning') || alert.classList.contains('login-alert-warning')) return 'warning';
         return 'info';
     }
 
@@ -110,7 +110,7 @@
     }
 
     function convertFlashAlerts() {
-        var alerts = document.querySelectorAll('.alert');
+        var alerts = document.querySelectorAll('.alert, .login-alert');
         Array.prototype.forEach.call(alerts, function (alert) {
             if (alert.dataset.camsToastHandled === 'true' || alert.closest('#cams-toast-region')) return;
             // Only transient flash messages may become toasts. Persistent

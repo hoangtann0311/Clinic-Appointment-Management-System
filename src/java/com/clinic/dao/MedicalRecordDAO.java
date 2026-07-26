@@ -2,6 +2,7 @@ package com.clinic.dao;
 
 import com.clinic.config.DatabaseConfig;
 import com.clinic.model.MedicalRecord;
+import com.clinic.model.PatientMedicalSummary;
 
 import java.sql.*;
 import java.time.LocalDateTime;
@@ -96,6 +97,54 @@ public class MedicalRecordDAO {
     }
 
     public List<MedicalRecord> getByDoctorId(int doctorId) { return getByDoctorId(doctorId, null); }
+
+    public List<PatientMedicalSummary> getPatientSummariesByDoctorId(int doctorId, String keyword) {
+        boolean hasKw = keyword != null && !keyword.isBlank();
+        String sql = "SELECT pt.id AS patient_id, pt.full_name AS patient_name, " +
+                "pt.phone_number AS patient_phone, pt.date_of_birth AS patient_dob, " +
+                "COUNT(mr.id) AS total_visits, " +
+                "MAX(a.appointment_date) AS last_visit_date, " +
+                "(SELECT TOP 1 m2.final_diagnosis FROM medical_records m2 JOIN appointments a2 ON m2.appointment_id = a2.id WHERE a2.patient_id = pt.id ORDER BY a2.appointment_date DESC) AS last_diagnosis, " +
+                "MAX(CAST(CASE WHEN mr.vaginal_bleeding = 1 OR mr.uterine_contractions = 1 OR mr.edema = N'Toàn thân' OR mr.proteinuria IN ('2+', '3+') THEN 1 ELSE 0 END AS INT)) AS has_risk " +
+                "FROM patients pt " +
+                "JOIN appointments a ON pt.id = a.patient_id " +
+                "JOIN medical_records mr ON a.id = mr.appointment_id " +
+                "WHERE a.doctor_id = ? ";
+        if (hasKw) {
+            sql += "AND (pt.full_name LIKE ? OR pt.phone_number LIKE ?) ";
+        }
+        sql += "GROUP BY pt.id, pt.full_name, pt.phone_number, pt.date_of_birth " +
+               "ORDER BY last_visit_date DESC";
+
+        List<PatientMedicalSummary> list = new ArrayList<>();
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, doctorId);
+            if (hasKw) { 
+                String lk = "%" + keyword.trim() + "%"; 
+                ps.setString(2, lk); 
+                ps.setString(3, lk); 
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    PatientMedicalSummary summary = new PatientMedicalSummary();
+                    summary.setPatientId(rs.getInt("patient_id"));
+                    summary.setPatientName(rs.getString("patient_name"));
+                    summary.setPatientPhone(rs.getString("patient_phone"));
+                    Date dob = rs.getDate("patient_dob");
+                    summary.setPatientDob(dob != null ? dob.toString() : null);
+                    summary.setTotalVisits(rs.getInt("total_visits"));
+                    summary.setLastVisitDate(rs.getDate("last_visit_date"));
+                    summary.setLastDiagnosis(rs.getString("last_diagnosis"));
+                    summary.setHasRisk(rs.getInt("has_risk") > 0);
+                    list.add(summary);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
 
     public List<MedicalRecord> getByPatientId(int patientId) {
         String sql = BASE_SELECT + "WHERE a.patient_id = ? ORDER BY mr.created_at DESC";
