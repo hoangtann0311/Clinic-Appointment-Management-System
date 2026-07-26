@@ -22,9 +22,32 @@
         border-color: var(--pt-pink-600, #b86689) !important;
         box-shadow: 0 3px 10px rgba(184,102,137,0.22);
     }
-    .slot-period-label { font-weight: 700; color: var(--pt-muted, #8a5e74); font-size: .82rem; letter-spacing: .04em; text-transform: uppercase; }
+    .slot-period-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 8px;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+    }
+    .slot-period-label {
+        font-weight: 700;
+        color: var(--pt-muted, #8a5e74);
+        font-size: .78rem;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+        white-space: nowrap;
+        min-width: 80px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .slot-period-label.morning { color: #d97706; }
+    .slot-period-label.afternoon { color: #0ea5e9; }
+    .slot-period-label.evening { color: #7c3aed; }
+    .slot-period-slots { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
     .slot-btn.slot-locked {
-        min-width: 76px;
+        min-width: 70px;
         background: var(--pt-surface-var, #f4f4f6) !important;
         color: #9a9aa2 !important;
         border-color: #e2e2e6 !important;
@@ -35,6 +58,28 @@
     .doctor-panel { display: none; border-top: 1.5px solid var(--pt-outline, #f0dae5); background: var(--pt-surface-var, #fff6fb); border-radius: 0 0 14px 14px; }
     .toggle-doctor-btn.expanded { background: var(--pt-pink-600, #b86689) !important; border-color: var(--pt-pink-600, #b86689) !important; }
 </style>
+
+<c:if test="${not empty existingAppointments}">
+    <div class="alert alert-warning alert-dismissible fade show d-flex align-items-start gap-3 mb-4" role="alert" style="background: #fff8e1; border: 1.5px solid #ffcc02; border-radius: 12px;">
+        <div style="font-size: 1.5rem; flex-shrink: 0;">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+        </div>
+        <div class="flex-grow-1">
+            <strong class="d-block mb-2">Bạn đã có lịch hẹn đang chờ xử lý</strong>
+            <c:forEach var="ea" items="${existingAppointments}">
+                <div class="d-flex align-items-center gap-2 py-1">
+                    <span class="badge bg-secondary">#APT-${ea.id}</span>
+                    <span>BS. ${ea.doctorName} — Ngày <fmt:formatDate value="${ea.appointmentDate}" pattern="dd/MM/yyyy"/> — <strong>${ea.timeSlot}</strong></span>
+                    <span class="badge ${ea.status == 'Pending' ? 'bg-info' : (ea.status == 'Confirmed' ? 'bg-primary' : (ea.status == 'Waiting' ? 'bg-warning' : 'bg-success'))}">${ea.status}</span>
+                </div>
+            </c:forEach>
+            <div class="mt-2 small text-muted">
+                <i class="bi bi-info-circle me-1"></i>Mỗi bệnh nhân chỉ được <strong>1 lịch khám/ngày</strong>. Nếu bạn muốn đổi sang bác sĩ hoặc khung giờ khác, vui lòng <a href="${pageContext.request.contextPath}/patient/appointments" class="fw-bold">vào danh sách lịch hẹn</a> để đổi lịch (nếu còn trong thời gian cho phép).
+            </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+</c:if>
 
 <div class="row mb-4">
     <div class="col-12">
@@ -76,26 +121,22 @@
     <div class="col-lg-8">
         <div class="card mb-3">
             <div class="card-body">
-                <form action="${pageContext.request.contextPath}/patient/booking" method="GET">
-                    <div class="row g-3 align-items-end">
-                        <div class="col-md-7">
-                            <label class="form-label fw-semibold small">Tìm theo tên Bác sĩ lâm sàng</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                                <input type="text" name="keyword" class="form-control"
-                                       value="${fn:escapeXml(keyword)}"
-                                       placeholder="Nhập tên Bác sĩ lâm sàng hoặc chuyên khoa...">
-                                <button type="submit" class="btn btn-outline-secondary">Tìm kiếm</button>
-                            </div>
-                        </div>
-                        <div class="col-md-5">
-                            <label class="form-label fw-semibold small">Chọn ngày khám</label>
-                            <input type="date" id="examDateInput" class="form-control" min="${today}" value="${today}">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-7">
+                        <label class="form-label fw-semibold small">Tìm theo tên Bác sĩ lâm sàng</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                            <input type="text" id="doctorSearchInput" class="form-control"
+                                   placeholder="Gõ tên Bác sĩ lâm sàng hoặc chuyên khoa...">
                         </div>
                     </div>
-                </form>
+                    <div class="col-md-5">
+                        <label class="form-label fw-semibold small">Chọn ngày khám</label>
+                        <input type="date" id="examDateInput" class="form-control" min="${today}" value="${today}">
+                    </div>
+                </div>
                 <div class="form-text mt-2">
-                    <i class="bi bi-info-circle me-1"></i>Bấm "Chọn" ở thẻ bác sĩ để xem khung giờ trống trong ngày đã chọn.
+                    <i class="bi bi-info-circle me-1"></i>Gõ tên bác sĩ để lọc ngay • Bấm "Chọn" để xem khung giờ trống trong ngày đã chọn.
                 </div>
             </div>
         </div>
@@ -187,6 +228,7 @@
                 <form method="post" action="${pageContext.request.contextPath}/patient/booking" id="bookingForm" style="display:none;">
                     <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                     <input type="hidden" name="slotId" id="hiddenSlotId" required>
+                    <input type="hidden" name="timeSlot" id="hiddenTimeSlot" required>
                     <c:if test="${not empty rescheduleId}">
                         <input type="hidden" name="rescheduleId" value="${rescheduleId}">
                     </c:if>
@@ -225,8 +267,8 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label fw-semibold small">Ngày kinh cuối (nếu có)</label>
-                            <input type="date" name="lastMenstrualPeriod" class="form-control form-control-sm" max="${today}">
+                            <label class="form-label fw-bold">Ngày đầu kỳ kinh cuối (LMP) <span class="text-muted fw-normal" style="font-size: 0.85em;">(Tùy chọn - Bỏ qua nếu không nhớ)</span></label>
+                            <input type="date" name="lastMenstrualPeriod" class="form-control form-control-sm" max="${today}" value="${param.lastMenstrualPeriod}">
                             <c:if test="${not empty errors.lmp}">
                                 <div class="text-danger small mt-1">${errors.lmp}</div>
                             </c:if>
@@ -248,16 +290,19 @@
 
                     <div class="mt-3 p-3 rounded-3 small" style="background:#f8fafc;border:1px dashed #cbd5e1;line-height:1.6;">
                         <i class="bi bi-info-circle me-1 text-primary"></i>
-                        <strong>Chính sách đặt khám & nhận bệnh:</strong>
+                        <strong>Quy trình đặt khám & tiếp nhận:</strong>
                         <ul class="mb-2 mt-1 ps-3">
-                            <li>Vui lòng đặt lịch ít nhất <strong>30 phút</strong> trước giờ khám.</li>
-                            <li>Quý khách cần có mặt tại quầy Lễ tân để check-in chậm nhất <strong>15 phút</strong> trước giờ hẹn. Lịch hẹn sẽ bị từ chối nếu quý khách đến muộn hơn thời gian này.</li>
+                            <li><strong>Bước 1 - Đặt lịch:</strong> Bạn chọn bác sĩ, ngày và khung giờ phù hợp. Lịch hẹn được tạo với trạng thái <em>Chờ duyệt</em>.</li>
+                            <li><strong>Bước 2 - Phòng khám duyệt lịch:</strong> Nhân viên Lễ tân sẽ xem xét và duyệt lịch của bạn, đồng thời tạo hóa đơn phí khám.</li>
+                            <li><strong>Bước 3 - Đến phòng khám:</strong> Bạn đến quầy Lễ tân để nộp tiền khám và check-in <strong>trước giờ hẹn ít nhất 15 phút</strong>.</li>
+                            <li><strong>Bước 4 - Vào khám:</strong> Sau khi check-in, bạn được xếp số thứ tự và chờ bác sĩ gọi vào khám.</li>
                         </ul>
                         <i class="bi bi-arrow-repeat me-1 text-primary"></i>
                         <strong>Chính sách huỷ / đổi lịch:</strong>
                         <ul class="mb-0 mt-1 ps-3">
-                            <li><strong>Huỷ/Đổi lịch:</strong> Bệnh nhân có thể huỷ hoặc đổi lịch khám bất cứ lúc nào trước giờ hẹn (miễn là chưa thanh toán).</li>
-
+                            <li>Có thể huỷ hoặc đổi lịch khi lịch đang ở trạng thái <em>Chờ duyệt</em> hoặc <em>Đã xác nhận</em>.</li>
+                            <li>Không thể tự huỷ/đổi lịch sau khi đã nộp tiền khám tại quầy — vui lòng liên hệ Lễ tân.</li>
+                            <li>Không thể tự huỷ/đổi lịch đã qua giờ hẹn.</li>
                         </ul>
                     </div>
                 </form>
@@ -270,8 +315,23 @@
 (function () {
     const contextPath = "${pageContext.request.contextPath}";
     const dateInput = document.getElementById('examDateInput');
+    const searchInput = document.getElementById('doctorSearchInput');
     const doctorCards = document.querySelectorAll('.doctor-card-wrapper');
     const noDoctorFound = document.getElementById('noDoctorFound');
+
+    // ── Lọc Bác sĩ lâm sàng real-time theo tên/chuyên khoa (client-side) ──
+    if (searchInput) {
+        searchInput.addEventListener('input', function () {
+            const kw = this.value.trim().toLowerCase();
+            let visible = 0;
+            doctorCards.forEach(function (card) {
+                const match = card.dataset.name.includes(kw);
+                card.style.display = match ? '' : 'none';
+                if (match) visible++;
+            });
+            if (noDoctorFound) noDoctorFound.style.display = visible === 0 ? '' : 'none';
+        });
+    }
 
     // ── Xổ / ẩn khung giờ của 1 Bác sĩ lâm sàng ──
     document.querySelectorAll('.toggle-doctor-btn').forEach(function (btn) {
@@ -343,24 +403,17 @@
         const isToday = (date === todayStr);
         const nowTimeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
 
-        const morning = slots.filter(s => s.shiftCategory === 'morning');
-        const afternoon = slots.filter(s => s.shiftCategory === 'afternoon');
-        const evening = slots.filter(s => s.shiftCategory === 'evening');
-
-        let html = '';
-        if (morning.length > 0) {
-            html += '<div class="slot-period-label mb-2"><i class="bi bi-sun me-1"></i>Sáng</div>';
-            html += '<div class="d-flex flex-wrap gap-2 mb-3">' + morning.map(s => slotButtonHtml(s, isToday, nowTimeStr)).join('') + '</div>';
+        let html = '<div class="d-flex flex-wrap gap-2 mb-3">';
+        slots.forEach(s => {
+            html += slotButtonHtml(s, isToday, nowTimeStr);
+        });
+        html += '</div>';
+        
+        if (slots.length === 0) {
+            html = '<div class="text-muted small">Bác sĩ lâm sàng không còn ca khám trống vào ngày này. Vui lòng chọn ngày khác.</div>';
         }
-        if (afternoon.length > 0) {
-            html += '<div class="slot-period-label mb-2"><i class="bi bi-brightness-high me-1"></i>Chiều</div>';
-            html += '<div class="d-flex flex-wrap gap-2 mb-3">' + afternoon.map(s => slotButtonHtml(s, isToday, nowTimeStr)).join('') + '</div>';
-        }
-        if (evening.length > 0) {
-            html += '<div class="slot-period-label mb-2"><i class="bi bi-moon me-1"></i>Tối</div>';
-            html += '<div class="d-flex flex-wrap gap-2">' + evening.map(s => slotButtonHtml(s, isToday, nowTimeStr)).join('') + '</div>';
-        }
-        html += '<div class="slot-notice mt-3" style="display:none;"></div>';
+        
+        html += '<div class="slot-notice mt-2" style="display:none;"></div>';
         container.innerHTML = html;
 
         container.querySelectorAll('.slot-btn:not(.slot-locked):not(.slot-disabled)').forEach(function (btn) {
@@ -389,17 +442,17 @@
     function slotStatusText(status, mine) {
         if (mine) {
             switch (status) {
-                case 'HELD': return 'Bạn chưa thanh toán khung giờ này, vui lòng hoàn tất thanh toán trong thời gian giữ chỗ (15 phút).';
-                case 'WAITING_VERIFICATION': return 'Bạn đã thanh toán khung giờ này, đang chờ xác nhận.';
-                case 'BOOKED': return 'Bạn đã đặt thành công khung giờ này.';
+                case 'HELD': return 'Bạn đã đặt lịch ca này nhưng chưa thanh toán. Vui lòng có mặt tại quầy lễ tân để hoàn tất thủ tục tối thiểu 15 phút trước giờ bắt đầu ca khám.';
+                case 'WAITING_VERIFICATION': return 'Bạn đã hoàn tất thanh toán ca này.';
+                case 'BOOKED': return 'Bạn đã đặt thành công ca khám này.';
                 default: return 'Khung giờ này thuộc về bạn nhưng hiện không thể chọn lại.';
             }
         }
         switch (status) {
-            case 'HELD': return 'Khung giờ này đang được một bệnh nhân khác giữ chỗ, vui lòng chọn khung giờ khác.';
-            case 'WAITING_VERIFICATION': return 'Khung giờ này đã có bệnh nhân khác gửi thanh toán và đang chờ lễ tân xác nhận, vui lòng chọn khung giờ khác.';
-            case 'BOOKED': return 'Khung giờ này đã được đặt kín, vui lòng chọn khung giờ khác.';
-            default: return 'Khung giờ này hiện không thể đặt, vui lòng chọn khung giờ khác.';
+            case 'HELD': return 'Ca khám này đang được một bệnh nhân khác giữ chỗ, vui lòng chọn ca khác.';
+            case 'WAITING_VERIFICATION': return 'Ca khám này đã có bệnh nhân khác gửi thanh toán và đang chờ lễ tân xác nhận, vui lòng chọn ca khác.';
+            case 'BOOKED': return 'Ca khám này đã được đặt kín, vui lòng chọn ca khác.';
+            default: return 'Ca khám này hiện không thể đặt, vui lòng chọn ca khác.';
         }
     }
 
@@ -427,36 +480,35 @@
     }
 
     function slotButtonHtml(s, isToday, nowTimeStr) {
-        // So sánh với s.endTime để biết ca khám đã kết thúc chưa.
-        // Thực tế backend yêu cầu đặt trước 30 phút so với lúc KẾT THÚC, nên ta có thể 
-        // cho phép UI hiển thị đến tận lúc kết thúc, backend sẽ validate kỹ hơn.
-        const isPast = isToday && (s.endTime < nowTimeStr);
-        let titleText = 'Khung giờ này hiện không khả dụng';
-        
-        if (isPast) {
-            titleText = 'Ca khám này đã kết thúc';
-        } else if (s.status === 'AVAILABLE' && s.available === false) {
-            titleText = 'Đã quá hạn đặt lịch (phải đặt trước 30 phút)';
+        let titleText = s.statusLabel || 'Khung giờ này hiện không khả dụng';
+
+        // Slot thuộc về chính bệnh nhân đang đăng nhập → hiển thị đặc biệt, vẫn cho bấm để xem thông tin
+        if (s.mine === true) {
+            return '<button type="button" class="btn btn-sm slot-btn slot-locked" '
+                 + 'style="background: #e8f5e9 !important; color: #2e7d32 !important; border-color: #a5d6a7 !important; cursor: pointer;" '
+                 + 'title="Bạn đã đặt lịch này. Nhấn để xem chi tiết." '
+                 + 'data-status="' + s.status + '" data-mine="true">'
+                 + '<i class="bi bi-check-circle-fill me-1"></i>' + s.shiftName + ' (' + s.label + ')'
+                 + '</button>';
         }
 
-        // available === false (mọi trạng thái khác AVAILABLE) hoặc đã trôi qua trong ngày -> làm mờ, chặn click
-        if (s.available === false || isPast) {
-            return '<button type="button" class="btn btn-outline-secondary btn-sm slot-btn slot-locked slot-disabled disabled" '
-                 + 'style="opacity: 0.45; pointer-events: none; cursor: not-allowed;" '
+        // available === false → làm mờ, vẫn cho bấm để hiện thông báo lý do
+        if (s.available === false) {
+            return '<button type="button" class="btn btn-outline-secondary btn-sm slot-btn slot-locked" '
                  + 'title="' + titleText + '" '
-                 + 'data-status="' + s.status + '" data-mine="' + (s.mine === true) + '">'
-                 + (s.shiftName ? s.shiftName + ' (' + s.label + ')' : s.label)
+                 + 'data-status="' + s.status + '" data-mine="false">'
+                 + s.shiftName + ' (' + s.label + ')'
                  + '</button>';
         }
         if (s.price === null || s.price === undefined || s.price === '') {
             return '<button type="button" class="btn btn-outline-secondary btn-sm slot-btn" disabled '
                  + 'title="Gia kham chua duoc cong bo">'
-                 + (s.shiftName ? s.shiftName + ' (' + s.label + ')' : s.label)
+                 + s.shiftName + ' (' + s.label + ')'
                  + '</button>';
         }
         return '<button type="button" class="btn btn-outline-primary btn-sm slot-btn" '
              + 'data-slot-id="' + s.id + '" data-label="' + s.label + '" data-price="' + (s.price !== null ? s.price : '') + '">'
-             + (s.shiftName ? s.shiftName + ' (' + s.label + ')' : s.label)
+             + s.shiftName + ' (' + s.label + ')'
              + '</button>';
     }
 
@@ -465,6 +517,7 @@
         document.getElementById('summaryEmpty').style.display = 'none';
         document.getElementById('bookingForm').style.display = 'block';
         document.getElementById('hiddenSlotId').value = slotId;
+        document.getElementById('hiddenTimeSlot').value = label;
         document.getElementById('summaryDoctorName').textContent = doctorName;
         document.getElementById('summaryDate').textContent = date;
         document.getElementById('summaryTime').textContent = label;

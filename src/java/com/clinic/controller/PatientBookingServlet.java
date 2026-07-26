@@ -66,6 +66,27 @@ public class PatientBookingServlet extends HttpServlet {
             request.setAttribute("keyword", keyword);
             request.setAttribute("today", LocalDate.now().toString());
 
+            // ── Kiểm tra BN đã có lịch active nào chưa → hiển thị cảnh báo trên UI ──
+            com.clinic.dao.PatientDAO patientDAO = new com.clinic.dao.PatientDAO();
+            int patientId = patientDAO.getPatientIdByUserId(user.getId());
+            if (patientId > 0) {
+                List<Appointment> activeAppointments = bookingService.getMyAppointments(user.getId());
+                // Lọc các lịch đang active (chưa kết thúc)
+                java.util.List<Appointment> upcoming = new java.util.ArrayList<>();
+                for (Appointment a : activeAppointments) {
+                    if (a.getStatus() != null &&
+                        !"Cancelled".equalsIgnoreCase(a.getStatus()) &&
+                        !"NoShow".equalsIgnoreCase(a.getStatus()) &&
+                        !"SUCCESS".equalsIgnoreCase(a.getStatus()) &&
+                        !"Completed".equalsIgnoreCase(a.getStatus())) {
+                        upcoming.add(a);
+                    }
+                }
+                if (!upcoming.isEmpty()) {
+                    request.setAttribute("existingAppointments", upcoming);
+                }
+            }
+
             request.getRequestDispatcher("/views/patient/booking.jsp").forward(request, response);
         } catch (Exception ex) {
             System.err.println("[PatientBookingServlet] doGet ERROR: " + ex.getMessage());
@@ -122,7 +143,11 @@ public class PatientBookingServlet extends HttpServlet {
                 );
                 if (appointment != null) {
                     HttpSession session = request.getSession();
-                    session.setAttribute("bookingSuccess", "Đã đăng ký lịch khám thành công! Vui lòng có mặt tại quầy Lễ tân để check-in chậm nhất 15 phút trước giờ hẹn. Nếu đến muộn hơn, lịch hẹn sẽ không thể check-in.");
+                    session.setAttribute("bookingSuccess",
+                            "Đặt lịch thành công! Lịch hẹn của bạn đang ở trạng thái <b>Chờ duyệt</b>. " +
+                            "Nhân viên Lễ tân sẽ xem xét và duyệt lịch, sau đó bạn cần <b>đến quầy nộp tiền khám</b> trước khi vào gặp bác sĩ. " +
+                            "Nếu lịch không được duyệt trong vòng 24 giờ, hệ thống sẽ tự động hủy.");
+
                     response.sendRedirect(request.getContextPath() + "/patient/appointments");
                     return;
                 }

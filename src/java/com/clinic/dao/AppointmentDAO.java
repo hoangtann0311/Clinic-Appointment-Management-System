@@ -59,12 +59,15 @@ public class AppointmentDAO {
                 "       AND UPPER(i.status) = 'CANCELLED' " +
                 "   ) THEN 'Cancelled' " +
                 "   ELSE 'Unpaid' " +
-                "END AS pre_exam_payment_status " +
+                "END AS pre_exam_payment_status, a.created_at, " +
+                "sh.name AS shift_name, sh.start_time AS shift_start, sh.end_time AS shift_end " +
                 "FROM appointments a " +
                 "LEFT JOIN patients p ON a.patient_id = p.id " +
                 "LEFT JOIN doctors d ON a.doctor_id = d.id " +
                 "LEFT JOIN users priority_user ON a.prioritized_by = priority_user.id " +
-                "LEFT JOIN services s ON a.service_id = s.id";
+                "LEFT JOIN services s ON a.service_id = s.id " +
+                "LEFT JOIN doctor_schedules ds ON a.schedule_id = ds.id " +
+                "LEFT JOIN shifts sh ON ds.shift_id = sh.id";
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
@@ -222,17 +225,18 @@ public class AppointmentDAO {
      * transaction. This prevents two concurrent reception requests from both
      * creating appointments for the same available slot.
      */
+    // [V4-FIX] Kiểm tra theo patient+ngày (không filter theo doctor_id)
+    // 1 bệnh nhân chỉ được 1 lịch khám active/ngày bất kể bác sĩ nào
     public boolean hasActiveAppointmentOnDate(Connection conn, int patientId, int doctorId, LocalDate date, Integer excludeApptId) throws SQLException {
         String sql = "SELECT 1 FROM appointments WITH (UPDLOCK, HOLDLOCK) " +
-                     "WHERE patient_id = ? AND doctor_id = ? AND appointment_date = ? " +
+                     "WHERE patient_id = ? AND appointment_date = ? " +
                      "AND status IN ('Pending', 'Confirmed', 'Waiting', 'InProgress') " +
                      (excludeApptId != null ? "AND id <> ?" : "");
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, patientId);
-            ps.setInt(2, doctorId);
-            ps.setDate(3, java.sql.Date.valueOf(date));
+            ps.setDate(2, java.sql.Date.valueOf(date));
             if (excludeApptId != null) {
-                ps.setInt(4, excludeApptId);
+                ps.setInt(3, excludeApptId);
             }
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next();
@@ -244,8 +248,7 @@ public class AppointmentDAO {
         // Hold 15 phút — giống online. Staff cần xác nhận thanh toán ngay sau khi
         // bệnh nhân trả tiền. Nếu bệnh nhân chưa sẵn sàng thanh toán → không giữ slot.
         String holdSlotSql = "UPDATE doctor_schedules SET booked_count = booked_count + 1, updated_at = GETDATE() "
-                + "held_until = DATEADD(MINUTE, 15, GETDATE()), updated_at = GETDATE() "
-                + "WHERE id = ? AND status = 'AVAILABLE'";
+                + "WHERE id = ? AND status = 'APPROVED' AND booked_count < max_slots";
         String insertSql = "INSERT INTO appointments (patient_id, doctor_id, appointment_date, booking_source, symptoms, "
                 + "last_menstrual_period, is_priority, status, service_id, time_slot, queue_number, schedule_id) "
                 + "VALUES (?, ?, ?, 'Staff', ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -262,12 +265,7 @@ public class AppointmentDAO {
                 }
 
                 try (PreparedStatement holdPs = conn.prepareStatement(holdSlotSql)) {
-                    if (bookedByUserId != null) {
-                        holdPs.setInt(1, bookedByUserId);
-                    } else {
-                        holdPs.setNull(1, java.sql.Types.INTEGER);
-                    }
-                    holdPs.setInt(2, slotId);
+                    holdPs.setInt(1, slotId);
                     if (holdPs.executeUpdate() != 1) {
                         conn.rollback();
                         return null;
@@ -338,6 +336,7 @@ public class AppointmentDAO {
                 "d.full_name AS doctor_name, d.specialization AS doctor_spec, " +
                 "COALESCE(s.service_name, (SELECT STRING_AGG(sa.service_name, N', ') FROM appointment_services aps JOIN services sa ON sa.id = aps.service_id WHERE aps.appointment_id = a.id), N'Khám thai định kỳ') AS service_name, s.price AS service_price, s.duration_mins AS service_dur, " +
                 "s.requires_fasting AS service_fasting, s.requires_full_bladder AS service_bladder, s.required_room_type AS service_room, " +
+                "sh.name AS shift_name, sh.start_time AS shift_start, sh.end_time AS shift_end, " +
                 "CASE " +
                 "   WHEN EXISTS ( " +
                 "       SELECT 1 FROM invoices i " +
@@ -364,6 +363,8 @@ public class AppointmentDAO {
                 "LEFT JOIN doctors d ON a.doctor_id = d.id " +
                 "LEFT JOIN users priority_user ON a.prioritized_by = priority_user.id " +
                 "LEFT JOIN services s ON a.service_id = s.id " +
+                "LEFT JOIN doctor_schedules ds ON a.schedule_id = ds.id " +
+                "LEFT JOIN shifts sh ON ds.shift_id = sh.id " +
                 "WHERE a.patient_id = ? " +
                 "ORDER BY a.appointment_date DESC, a.time_slot DESC";
         List<Appointment> list = new ArrayList<>();
@@ -381,7 +382,7 @@ public class AppointmentDAO {
         return list;
     }
 
-    public List<Appointment> getByPatientIdPaginated(int patientId, String keyword, int offset, int limit) {
+    public List<Appointment> getByPatientIdPaginated(int patientId, String keyword, String status, int offset, int limit) {
         String sql = "SELECT a.id, a.patient_id, a.doctor_id, a.pregnancy_id, a.appointment_date, a.booking_source, a.schedule_id, " +
                 "a.symptoms, a.last_menstrual_period, ISNULL(a.is_priority, 0) AS is_priority, a.priority_reason, a.prioritized_at, a.prioritized_by, " +
                 "a.status, a.service_id, a.time_slot, a.queue_number, priority_user.full_name AS prioritized_by_name, " +
@@ -389,6 +390,7 @@ public class AppointmentDAO {
                 "d.full_name AS doctor_name, d.specialization AS doctor_spec, " +
                 "COALESCE(s.service_name, (SELECT STRING_AGG(sa.service_name, N', ') FROM appointment_services aps JOIN services sa ON sa.id = aps.service_id WHERE aps.appointment_id = a.id), N'Khám thai định kỳ') AS service_name, s.price AS service_price, s.duration_mins AS service_dur, " +
                 "s.requires_fasting AS service_fasting, s.requires_full_bladder AS service_bladder, s.required_room_type AS service_room, " +
+                "sh.name AS shift_name, sh.start_time AS shift_start, sh.end_time AS shift_end, " +
                 "CASE " +
                 "   WHEN EXISTS ( " +
                 "       SELECT 1 FROM invoices i " +
@@ -415,10 +417,20 @@ public class AppointmentDAO {
                 "LEFT JOIN doctors d ON a.doctor_id = d.id " +
                 "LEFT JOIN users priority_user ON a.prioritized_by = priority_user.id " +
                 "LEFT JOIN services s ON a.service_id = s.id " +
+                "LEFT JOIN doctor_schedules ds ON a.schedule_id = ds.id " +
+                "LEFT JOIN shifts sh ON ds.shift_id = sh.id " +
                 "WHERE a.patient_id = ? ";
 
         if (keyword != null && !keyword.trim().isEmpty()) {
             sql += "AND (d.full_name LIKE ? OR s.service_name LIKE ? OR a.status LIKE ?) ";
+        }
+        
+        if (status != null && !status.trim().isEmpty()) {
+            if ("Completed".equalsIgnoreCase(status.trim())) {
+                sql += "AND a.status IN ('Completed', 'SUCCESS') ";
+            } else {
+                sql += "AND a.status = ? ";
+            }
         }
         
         sql += "ORDER BY a.appointment_date DESC, a.time_slot DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
@@ -436,6 +448,12 @@ public class AppointmentDAO {
                 ps.setString(paramIndex++, like);
                 ps.setString(paramIndex++, like);
             }
+
+            if (status != null && !status.trim().isEmpty()) {
+                if (!"Completed".equalsIgnoreCase(status.trim())) {
+                    ps.setString(paramIndex++, status.trim());
+                }
+            }
             
             ps.setInt(paramIndex++, offset);
             ps.setInt(paramIndex, limit);
@@ -451,7 +469,7 @@ public class AppointmentDAO {
         return list;
     }
 
-    public int countByPatientId(int patientId, String keyword) {
+    public int countByPatientId(int patientId, String keyword, String status) {
         String sql = "SELECT COUNT(*) FROM appointments a " +
                      "LEFT JOIN doctors d ON a.doctor_id = d.id " +
                      "LEFT JOIN services s ON a.service_id = s.id " +
@@ -460,16 +478,29 @@ public class AppointmentDAO {
         if (keyword != null && !keyword.trim().isEmpty()) {
             sql += "AND (d.full_name LIKE ? OR s.service_name LIKE ? OR a.status LIKE ?) ";
         }
+        if (status != null && !status.trim().isEmpty()) {
+            if ("Completed".equalsIgnoreCase(status.trim())) {
+                sql += "AND a.status IN ('Completed', 'SUCCESS') ";
+            } else {
+                sql += "AND a.status = ? ";
+            }
+        }
         
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             
             ps.setInt(1, patientId);
+            int paramIndex = 2;
             if (keyword != null && !keyword.trim().isEmpty()) {
                 String like = "%" + keyword.trim() + "%";
-                ps.setString(2, like);
-                ps.setString(3, like);
-                ps.setString(4, like);
+                ps.setString(paramIndex++, like);
+                ps.setString(paramIndex++, like);
+                ps.setString(paramIndex++, like);
+            }
+            if (status != null && !status.trim().isEmpty()) {
+                if (!"Completed".equalsIgnoreCase(status.trim())) {
+                    ps.setString(paramIndex, status.trim());
+                }
             }
             
             try (ResultSet rs = ps.executeQuery()) {
@@ -641,15 +672,31 @@ public class AppointmentDAO {
         }
     }
 
-    public void updateStatus(int id, String status) {
+    public boolean updateStatus(int id, String newStatus) {
         String sql = "UPDATE appointments SET status = ? WHERE id = ?";
+
+        // State machine rules
+        if ("Confirmed".equalsIgnoreCase(newStatus)) {
+            sql += " AND status = 'Pending'";
+        } else if ("Waiting".equalsIgnoreCase(newStatus)) {
+            sql += " AND status IN ('Pending', 'Confirmed')";
+        } else if ("InProgress".equalsIgnoreCase(newStatus)) {
+            sql += " AND status = 'Waiting'";
+        } else if ("Completed".equalsIgnoreCase(newStatus) || "SUCCESS".equalsIgnoreCase(newStatus)) {
+            sql += " AND status = 'InProgress'";
+        } else if ("Cancelled".equalsIgnoreCase(newStatus) || "NoShow".equalsIgnoreCase(newStatus)) {
+            sql += " AND status IN ('Pending', 'Confirmed', 'Waiting')";
+        }
+
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, status);
+            ps.setString(1, newStatus);
             ps.setInt(2, id);
-            ps.executeUpdate();
+            int rows = ps.executeUpdate();
+            return rows > 0;
         } catch (Exception e) {
             e.printStackTrace();
+            return false;
         }
     }
 
@@ -922,17 +969,20 @@ public class AppointmentDAO {
     public boolean approveBookingAndEnsurePreExamInvoice(int appointmentId) {
         String sqlUpdateAppt = "UPDATE appointments SET status = 'Confirmed' WHERE id = ? AND (status = 'Pending' OR status = 'Confirmed')";
         String sqlCheckInvoice = "SELECT id FROM invoices WHERE appointment_id = ? AND UPPER(invoice_type) = 'PRE_EXAM'";
-        String sqlInsertInvoice = "INSERT INTO invoices (appointment_id, amount, status, invoice_type, created_at) " +
-                "VALUES (?, ?, 'Unpaid', 'PRE_EXAM', CURRENT_TIMESTAMP)";
+        // Fix: dùng total_amount (tên cột đúng) và GETDATE() thay vì CURRENT_TIMESTAMP (SQL Server)
+        String sqlInsertInvoice = "INSERT INTO invoices (appointment_id, total_amount, status, invoice_type, created_at) " +
+                "VALUES (?, ?, 'Unpaid', 'PRE_EXAM', GETDATE())";
 
         try (Connection conn = DatabaseConfig.getConnection()) {
             conn.setAutoCommit(false);
             try {
+                // 1. Chuyển trạng thái sang Confirmed
                 try (PreparedStatement ps = conn.prepareStatement(sqlUpdateAppt)) {
                     ps.setInt(1, appointmentId);
                     ps.executeUpdate();
                 }
 
+                // 2. Kiểm tra đã có HĐ PRE_EXAM chưa
                 boolean hasInvoice = false;
                 try (PreparedStatement ps = conn.prepareStatement(sqlCheckInvoice)) {
                     ps.setInt(1, appointmentId);
@@ -941,24 +991,24 @@ public class AppointmentDAO {
                     }
                 }
 
+                // 3. Tạo HĐ PRE_EXAM nếu chưa có
                 if (!hasInvoice) {
-                    double basePrice = 250000;
-                    String sqlPrice = "SELECT ISNULL(ts.price, ISNULL(s.price, 250000)) AS final_price " +
-                            "FROM appointments a " +
-                            "LEFT JOIN doctor_schedules ds2 ON a.schedule_id = ds2.id " +
-                            "LEFT JOIN services s ON a.service_id = s.id " +
-                            "WHERE a.id = ?";
-                    try (PreparedStatement ps = conn.prepareStatement(sqlPrice)) {
+                    // Fix: đọc base_fee trực tiếp từ appointments (đã tính = basePrice + servicePrice khi đặt lịch)
+                    // Fallback 250,000 nếu base_fee null/0
+                    double invoiceAmount = 250000;
+                    String sqlReadFee = "SELECT ISNULL(base_fee, 250000) AS fee FROM appointments WHERE id = ?";
+                    try (PreparedStatement ps = conn.prepareStatement(sqlReadFee)) {
                         ps.setInt(1, appointmentId);
                         try (ResultSet rs = ps.executeQuery()) {
                             if (rs.next()) {
-                                basePrice = rs.getDouble("final_price");
+                                double fee = rs.getDouble("fee");
+                                if (fee > 0) invoiceAmount = fee;
                             }
                         }
                     }
                     try (PreparedStatement ps = conn.prepareStatement(sqlInsertInvoice)) {
                         ps.setInt(1, appointmentId);
-                        ps.setDouble(2, basePrice);
+                        ps.setDouble(2, invoiceAmount);
                         ps.executeUpdate();
                     }
                 }
@@ -1114,10 +1164,13 @@ public class AppointmentDAO {
             "       a.appointment_date, a.booking_source, a.symptoms, " +
             "       a.last_menstrual_period, ISNULL(a.is_priority, 0) AS is_priority, a.priority_reason, a.status, " +
             "       a.service_id, a.time_slot, a.schedule_id, " +
-            "       COALESCE(u.full_name, pt.full_name) AS patient_name " +
+            "       COALESCE(u.full_name, pt.full_name) AS patient_name, " +
+            "       sh.name AS shift_name, sh.start_time AS shift_start, sh.end_time AS shift_end " +
             "FROM   appointments a " +
             "JOIN   patients  pt ON a.patient_id = pt.id " +
             "LEFT JOIN users  u  ON pt.user_id   = u.id " +
+            "LEFT JOIN doctor_schedules ds ON a.schedule_id = ds.id " +
+            "LEFT JOIN shifts sh ON ds.shift_id = sh.id " +
             "WHERE  a.doctor_id = ? " +
             "  AND  a.appointment_date = ? ");
 
@@ -1145,10 +1198,13 @@ public class AppointmentDAO {
             "       a.appointment_date, a.booking_source, a.symptoms, " +
             "       a.last_menstrual_period, ISNULL(a.is_priority, 0) AS is_priority, a.priority_reason, a.status, " +
             "       a.service_id, a.time_slot, a.schedule_id, " +
-            "       COALESCE(u.full_name, pt.full_name) AS patient_name " +
+            "       COALESCE(u.full_name, pt.full_name) AS patient_name, " +
+            "       sh.name AS shift_name, sh.start_time AS shift_start, sh.end_time AS shift_end " +
             "FROM   appointments a " +
             "JOIN   patients  pt ON a.patient_id = pt.id " +
             "LEFT JOIN users  u  ON pt.user_id   = u.id " +
+            "LEFT JOIN doctor_schedules ds ON a.schedule_id = ds.id " +
+            "LEFT JOIN shifts sh ON ds.shift_id = sh.id " +
             "WHERE  a.doctor_id = ? " +
             "  AND  a.appointment_date BETWEEN ? AND ? " +
             "  AND  a.status <> 'Pending' " + // ẩn lịch hẹn chưa được Staff xác nhận thanh toán
@@ -1175,10 +1231,13 @@ public class AppointmentDAO {
             "       a.appointment_date, a.booking_source, a.symptoms, " +
             "       a.last_menstrual_period, ISNULL(a.is_priority, 0) AS is_priority, a.priority_reason, a.status, " +
             "       a.service_id, a.time_slot, a.schedule_id, " +
-            "       COALESCE(u.full_name, pt.full_name) AS patient_name " +
+            "       COALESCE(u.full_name, pt.full_name) AS patient_name, " +
+            "       sh.name AS shift_name, sh.start_time AS shift_start, sh.end_time AS shift_end " +
             "FROM   appointments a " +
             "JOIN   patients  pt ON a.patient_id = pt.id " +
             "LEFT JOIN users  u  ON pt.user_id   = u.id " +
+            "LEFT JOIN doctor_schedules ds ON a.schedule_id = ds.id " +
+            "LEFT JOIN shifts sh ON ds.shift_id = sh.id " +
             "WHERE  a.doctor_id = ? " +
             "  AND  a.status <> 'Pending' " + // ẩn lịch hẹn chưa được Staff xác nhận thanh toán
             (filterStatus ? "  AND  LOWER(a.status) = LOWER(?) " : "") +
@@ -1349,8 +1408,21 @@ public class AppointmentDAO {
         String gestationalAge = calculateGestationalAge(lmp, appDate);
         String status = rs.getString("status");
         
-        java.sql.Time timeSql = rs.getTime("time_slot");
-        String timeSlot = formatTimeSlot(timeSql, status);
+        String timeSlot = null;
+        try {
+            String shiftName = rs.getString("shift_name");
+            java.sql.Time shiftStart = rs.getTime("shift_start");
+            java.sql.Time shiftEnd = rs.getTime("shift_end");
+            if (shiftName != null && shiftStart != null && shiftEnd != null) {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+                timeSlot = shiftName + " (" + shiftStart.toLocalTime().format(formatter) + " - " + shiftEnd.toLocalTime().format(formatter) + ")";
+            }
+        } catch (SQLException ignored) {}
+        
+        if (timeSlot == null) {
+            java.sql.Time timeSql = rs.getTime("time_slot");
+            timeSlot = formatTimeSlot(timeSql, status);
+        }
         
         boolean isPriority = rs.getBoolean("is_priority");
         String queueNum = rs.getString("queue_number");
@@ -1465,6 +1537,15 @@ public class AppointmentDAO {
 
         a.setBookingSource(rs.getString("booking_source"));
         a.setSymptoms(rs.getString("symptoms"));
+        
+        try {
+            java.sql.Timestamp createdAt = rs.getTimestamp("created_at");
+            if (createdAt != null) {
+                a.setCreatedAt(createdAt.toLocalDateTime());
+            }
+        } catch (SQLException ignored) {
+            // column might not exist in some queries
+        }
 
         Date lmp = rs.getDate("last_menstrual_period");
         if (lmp != null) a.setLastMenstrualPeriod(lmp.toLocalDate());
@@ -1491,7 +1572,27 @@ public class AppointmentDAO {
 
         Time timeSlot = rs.getTime("time_slot");
         if (timeSlot != null) {
-            a.setTimeSlot(formatTimeSlot(timeSlot, status));
+            try {
+                Time shiftStart = rs.getTime("shift_start");
+                Time shiftEnd = rs.getTime("shift_end");
+                String shiftName = rs.getString("shift_name");
+                
+                if (shiftStart != null && shiftEnd != null) {
+                    LocalTime s = shiftStart.toLocalTime();
+                    LocalTime e = shiftEnd.toLocalTime();
+                    DateTimeFormatter fmt = DateTimeFormatter.ofPattern("HH:mm");
+                    String label = s.format(fmt) + " - " + e.format(fmt);
+                    if (shiftName != null) {
+                        a.setTimeSlot(shiftName + " (" + label + ")");
+                    } else {
+                        a.setTimeSlot(label);
+                    }
+                } else {
+                    a.setTimeSlot(formatTimeSlot(timeSlot, status));
+                }
+            } catch (SQLException ignored) {
+                a.setTimeSlot(formatTimeSlot(timeSlot, status));
+            }
         }
 
         a.setPatientName(rs.getString("patient_name"));
@@ -1532,7 +1633,7 @@ public class AppointmentDAO {
             }
 
             // 2. Lấy thông tin doctor_schedule (doctor_id, work_date, giờ từ shifts)
-            String selectSlotSql = "SELECT ds.doctor_id, ds.work_date, s.start_time "
+            String selectSlotSql = "SELECT ds.doctor_id, ds.work_date, s.start_time, s.end_time "
                     + "FROM doctor_schedules ds "
                     + "INNER JOIN shifts s ON ds.shift_id = s.id "
                     + "WHERE ds.id = ?";
@@ -1547,13 +1648,23 @@ public class AppointmentDAO {
             int doctorId = rs.getInt("doctor_id");
             Date workDate = rs.getDate("work_date");
             Time startTime = rs.getTime("start_time");
+            Time endTime = rs.getTime("end_time");
             rs.close(); rs = null;
             selectSlotPs.close(); selectSlotPs = null;
 
-            // Format time_slot label từ giờ shift hoặc expectedTimeSlot
-            String finalTimeSlotStr = (expectedTimeSlot != null && !expectedTimeSlot.trim().isEmpty()) 
-                    ? expectedTimeSlot.trim() + ":00" 
-                    : startTime.toString();
+            // Format time_slot label dạng "HH:mm - HH:mm" để hiển thị đẹp trên UI
+            String startLabel = startTime != null ? startTime.toString().substring(0, 5) : "00:00";
+            String endLabel = endTime != null ? endTime.toString().substring(0, 5) : "";
+            String finalTimeSlotStr;
+            if (expectedTimeSlot != null && !expectedTimeSlot.trim().isEmpty()) {
+                // BN chọn giờ cụ thể trong ca (trường hợp split slot), giữ nguyên
+                finalTimeSlotStr = expectedTimeSlot.trim().contains(" - ")
+                        ? expectedTimeSlot.trim()
+                        : expectedTimeSlot.trim() + (endLabel.isEmpty() ? "" : " - " + endLabel);
+            } else {
+                // Dùng toàn bộ ca: "08:00 - 12:00"
+                finalTimeSlotStr = startLabel + (endLabel.isEmpty() ? "" : " - " + endLabel);
+            }
 
             // Kiểm tra trùng lịch hẹn active trong cùng ngày
             if (hasActiveAppointmentOnDate(conn, patientId, doctorId, workDate.toLocalDate(), null)) {
@@ -1562,23 +1673,23 @@ public class AppointmentDAO {
                 return false;
             }
 
-            // 3. Giá dịch vụ
-            double servicePrice;
-            String selectServiceSql = "SELECT price FROM services WHERE id = ? AND is_active = 1";
-            try (PreparedStatement selectServicePs = conn.prepareStatement(selectServiceSql)) {
-                selectServicePs.setInt(1, serviceId);
-                try (ResultSet srs = selectServicePs.executeQuery()) {
-                    if (!srs.next()) {
-                        conn.rollback();
-                        errors.put("serviceId", "Dịch vụ khám không còn khả dụng, vui lòng chọn lại.");
-                        return false;
+            // 3. Lấy giá dịch vụ (dùng để lưu vào base_fee của appointment; HĐ PRE_EXAM sẽ được tạo khi Lễ tân duyệt)
+            double servicePrice = 0;
+            if (serviceId > 0) {
+                String selectServiceSql = "SELECT price FROM services WHERE id = ? AND is_active = 1";
+                try (PreparedStatement selectServicePs = conn.prepareStatement(selectServiceSql)) {
+                    selectServicePs.setInt(1, serviceId);
+                    try (ResultSet srs = selectServicePs.executeQuery()) {
+                        if (srs.next()) {
+                            servicePrice = srs.getDouble("price");
+                        }
+                        // Nếu không tìm thấy service → bỏ qua, vẫn cho đặt lịch với base_fee
                     }
-                    servicePrice = srs.getDouble("price");
                 }
             }
             double totalAmount = basePrice + servicePrice;
 
-            // 4. Tạo lịch hẹn
+            // 4. Tạo lịch hẹn (status = 'Pending', chưa có HĐ — HĐ sẽ được tạo sau khi Lễ tân duyệt)
             String insertApptSql = "INSERT INTO appointments (patient_id, doctor_id, appointment_date, booking_source, symptoms, "
                     + "last_menstrual_period, is_priority, status, service_id, time_slot, schedule_id, base_fee) "
                     + "VALUES (?, ?, ?, 'WEB', ?, ?, 0, 'Pending', ?, ?, ?, ?)";
@@ -1592,10 +1703,10 @@ public class AppointmentDAO {
             } else {
                 insertApptPs.setNull(5, java.sql.Types.DATE);
             }
-            insertApptPs.setInt(6, serviceId);
+            insertApptPs.setInt(6, serviceId > 0 ? serviceId : 0);
             insertApptPs.setString(7, finalTimeSlotStr);
             insertApptPs.setInt(8, scheduleId);
-            insertApptPs.setDouble(9, basePrice);
+            insertApptPs.setDouble(9, totalAmount);
 
             insertApptPs.executeUpdate();
 
@@ -1612,13 +1723,8 @@ public class AppointmentDAO {
             rs.close();
             rs = null;
 
-            // 5. Tạo hóa đơn PRE_EXAM = phí khám bác sĩ + một dịch vụ chính.
-            String insertInvoiceSql = "INSERT INTO invoices (appointment_id, total_amount, status, invoice_type, created_at) "
-                    + "VALUES (?, ?, 'Unpaid', 'PRE_EXAM', GETDATE())";
-            insertInvoicePs = conn.prepareStatement(insertInvoiceSql);
-            insertInvoicePs.setInt(1, appointmentId);
-            insertInvoicePs.setDouble(2, totalAmount);
-            insertInvoicePs.executeUpdate();
+            // KHÔNG tạo HĐ PRE_EXAM ở đây nữa.
+            // HĐ PRE_EXAM sẽ được tạo bởi approveBookingAndEnsurePreExamInvoice() khi Lễ tân duyệt lịch.
 
             conn.commit();
             return true;
@@ -1641,6 +1747,7 @@ public class AppointmentDAO {
             }
         }
     }
+
 
     public boolean cancelAppointmentAndReleaseSlot(int appointmentId, int cancelledByUserId, String reason) {
         Connection conn = null;
@@ -1721,6 +1828,32 @@ public class AppointmentDAO {
             }
         }
     }
+    /**
+     * Tạo label time_slot dạng "HH:mm - HH:mm" từ shift liên kết với schedule.
+     * Dùng khi đổi lịch để lưu nhãn hiển thị thay vì SQL Time.
+     */
+    private String getNewSlotLabel(Connection conn, int scheduleId, Time startTimeFallback) throws SQLException {
+        String sql = "SELECT s.start_time, s.end_time FROM doctor_schedules ds " +
+                     "INNER JOIN shifts s ON ds.shift_id = s.id WHERE ds.id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, scheduleId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    Time st = rs.getTime("start_time");
+                    Time et = rs.getTime("end_time");
+                    String startLabel = st != null ? st.toLocalTime().toString().substring(0, 5) : "00:00";
+                    String endLabel   = et != null ? et.toLocalTime().toString().substring(0, 5) : "";
+                    return startLabel + (endLabel.isEmpty() ? "" : " - " + endLabel);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[AppointmentDAO] getNewSlotLabel fallback: " + e.getMessage());
+        }
+        // Fallback: dùng startTime được truyền vào (dạng HH:mm)
+        return startTimeFallback != null
+                ? startTimeFallback.toLocalTime().toString().substring(0, 5)
+                : "00:00";
+    }
 
     public boolean rescheduleAppointmentTransaction(int appointmentId, int oldSlotId, int newSlotId, int userId, Date workDate, Time startTime, java.util.Map<String, String> errors) {
         Connection conn = null;
@@ -1785,14 +1918,26 @@ public class AppointmentDAO {
             updateOldSlotPs.setInt(2, oldSlotId);
             updateOldSlotPs.executeUpdate();
 
-            // 3. Update appointment
-            String updateApptSql = "UPDATE appointments SET appointment_date = ?, time_slot = ?, schedule_id = ? WHERE id = ?";
+            // 3. Cập nhật appointment: đổi ca, thời gian, và reset về Pending
+            // BN đổi lịch → cần Lễ tân duyệt lại cho slot mới → reset Pending
+            // time_slot lưu dạng label "HH:mm - HH:mm" để hiển thị đúng trên UI
+            String newTimeSlotLabel = getNewSlotLabel(conn, newSlotId, startTime);
+            String updateApptSql = "UPDATE appointments SET appointment_date = ?, time_slot = ?, schedule_id = ?, status = 'Pending' WHERE id = ?";
             updateApptPs = conn.prepareStatement(updateApptSql);
             updateApptPs.setDate(1, workDate);
-            updateApptPs.setTime(2, startTime);
+            updateApptPs.setString(2, newTimeSlotLabel);
             updateApptPs.setInt(3, newSlotId);
             updateApptPs.setInt(4, appointmentId);
             updateApptPs.executeUpdate();
+
+            // 4. Hủy hóa đơn PRE_EXAM Unpaid cũ (nếu có)
+            // Khi Lễ tân duyệt slot mới, hóa đơn mới sẽ được tạo với giá của slot mới
+            String cancelOldInvoiceSql = "UPDATE invoices SET status = 'Cancelled' " +
+                    "WHERE appointment_id = ? AND invoice_type = 'PRE_EXAM' AND status = 'Unpaid'";
+            try (PreparedStatement cancelPs = conn.prepareStatement(cancelOldInvoiceSql)) {
+                cancelPs.setInt(1, appointmentId);
+                cancelPs.executeUpdate();
+            }
 
             conn.commit();
             return true;
@@ -1815,12 +1960,15 @@ public class AppointmentDAO {
     }
     public List<Integer> getExpiredUnpaidAppointments() {
         List<Integer> list = new ArrayList<>();
+        // Luồng đúng: Pending → (Lễ tân duyệt) → Confirmed + PRE_EXAM Unpaid → (BN đến nộp tiền) → Waiting
+        // Auto-hủy nhắm vào: Confirmed + PRE_EXAM Unpaid + Ca khám đã bắt đầu quá 15 phút (BN không đến)
+        // Không hủy Pending vì Pending chưa có hóa đơn và chưa được xác nhận slot chính thức.
         String sql = "SELECT a.id, a.created_at, ds.work_date, s.start_time " +
                      "FROM appointments a " +
                      "JOIN invoices i ON a.id = i.appointment_id " +
                      "JOIN doctor_schedules ds ON a.schedule_id = ds.id " +
                      "JOIN shifts s ON ds.shift_id = s.id " +
-                     "WHERE a.status = 'Pending' " +
+                     "WHERE a.status = 'Confirmed' " +
                      "AND i.invoice_type = 'PRE_EXAM' " +
                      "AND i.status = 'Unpaid'";
         try (Connection conn = DatabaseConfig.getConnection();
@@ -1835,16 +1983,14 @@ public class AppointmentDAO {
                 
                 if (createdTs == null || workDateSql == null || startTimeSql == null) continue;
                 
-                java.time.LocalDateTime createdAt = createdTs.toLocalDateTime();
-                java.time.LocalDateTime shiftStart = java.time.LocalDateTime.of(workDateSql.toLocalDate(), startTimeSql.toLocalTime());
+                java.time.LocalDateTime shiftStart = java.time.LocalDateTime.of(
+                        workDateSql.toLocalDate(), startTimeSql.toLocalTime());
                 
-                // Deadline = MAX(shiftStart - 15 mins, createdAt + 15 mins)
-                java.time.LocalDateTime advanceDeadline = shiftStart.minusMinutes(15);
-                java.time.LocalDateTime walkInDeadline = createdAt.plusMinutes(15);
+                // Hủy nếu ca khám đã bắt đầu được 15 phút mà bệnh nhân vẫn chưa nộp tiền
+                // (nghĩa là BN đã được duyệt nhưng không đến quầy trước giờ khám)
+                java.time.LocalDateTime autoHuyDeadline = shiftStart.plusMinutes(15);
                 
-                java.time.LocalDateTime deadline = advanceDeadline.isAfter(walkInDeadline) ? advanceDeadline : walkInDeadline;
-                
-                if (now.isAfter(deadline) || now.isEqual(deadline)) {
+                if (now.isAfter(autoHuyDeadline)) {
                     list.add(id);
                 }
             }

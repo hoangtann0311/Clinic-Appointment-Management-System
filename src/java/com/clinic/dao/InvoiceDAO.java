@@ -502,11 +502,14 @@ public class InvoiceDAO {
         return list;
     }
 
-    public List<Invoice> getInvoicesByPatientUserIdPaginated(int userId, String keyword, int offset, int limit) {
+    public List<Invoice> getInvoicesByPatientUserIdPaginated(int userId, String keyword, String status, int offset, int limit) {
         String sql = BASE_SELECT + " WHERE pt.user_id = ? AND i.status <> 'Cancelled' ";
         
         if (keyword != null && !keyword.trim().isEmpty()) {
             sql += "AND (i.transaction_code LIKE ? OR d.full_name LIKE ? OR s.service_name LIKE ?) ";
+        }
+        if (status != null && !status.trim().isEmpty()) {
+            sql += "AND i.status = ? ";
         }
         
         sql += "ORDER BY i.id DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
@@ -527,6 +530,9 @@ public class InvoiceDAO {
                 ps.setString(paramIndex++, like);
                 ps.setString(paramIndex++, like);
             }
+            if (status != null && !status.trim().isEmpty()) {
+                ps.setString(paramIndex++, status.trim());
+            }
             
             ps.setInt(paramIndex++, offset);
             ps.setInt(paramIndex, limit);
@@ -543,7 +549,7 @@ public class InvoiceDAO {
         return list;
     }
 
-    public int countInvoicesByPatientUserId(int userId, String keyword) {
+    public int countInvoicesByPatientUserId(int userId, String keyword, String status) {
         String sql = "SELECT COUNT(*) FROM invoices i "
                 + "JOIN appointments a ON i.appointment_id = a.id "
                 + "JOIN patients pt ON a.patient_id = pt.id "
@@ -554,6 +560,9 @@ public class InvoiceDAO {
         if (keyword != null && !keyword.trim().isEmpty()) {
             sql += "AND (i.transaction_code LIKE ? OR d.full_name LIKE ? OR s.service_name LIKE ?) ";
         }
+        if (status != null && !status.trim().isEmpty()) {
+            sql += "AND i.status = ? ";
+        }
         
         Connection conn = null;
         PreparedStatement ps = null;
@@ -562,11 +571,15 @@ public class InvoiceDAO {
             conn = DatabaseConfig.getConnection();
             ps = conn.prepareStatement(sql);
             ps.setInt(1, userId);
+            int paramIndex = 2;
             if (keyword != null && !keyword.trim().isEmpty()) {
                 String like = "%" + keyword.trim() + "%";
-                ps.setString(2, like);
-                ps.setString(3, like);
-                ps.setString(4, like);
+                ps.setString(paramIndex++, like);
+                ps.setString(paramIndex++, like);
+                ps.setString(paramIndex++, like);
+            }
+            if (status != null && !status.trim().isEmpty()) {
+                ps.setString(paramIndex, status.trim());
             }
             rs = ps.executeQuery();
             if (rs.next()) return rs.getInt(1);

@@ -238,8 +238,8 @@
                             <i class="bi bi-clipboard2-pulse me-2"></i>Thông tin y tế
                         </h6>
                         <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold small">Ngày kinh cuối (LMP) <span class="text-muted fw-normal">(nếu có)</span></label>
+                            <div class="col-md-6 mb-3">
+                                <label for="lastMenstrualPeriod" class="form-label fw-semibold small text-muted">Ngày kinh cuối (LMP) <span style="font-size: 0.85em;">(Tùy chọn - Bỏ qua nếu không nhớ)</span></label>
                                 <input type="date" name="lastMenstrualPeriod" id="lastMenstrualPeriod" class="form-control"
                                        value="${param.lastMenstrualPeriod}"
                                        onchange="calculateLMPAge()" oninput="calculateLMPAge()">
@@ -256,6 +256,16 @@
                                           style="resize:vertical;text-align:left;"><c:out value="${param.symptoms}"/></textarea>
                                 <small class="text-muted mt-1 d-block">Nhập rõ ràng, tối thiểu 10 ký tự</small>
                             </div>
+                        </div>
+                    </div>
+
+                    <div id="fastCheckinContainer" class="border rounded-3 p-3 mb-4 bg-success bg-opacity-10 border-success border-opacity-25" style="display: none;">
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" role="switch" id="checkInImmediately" name="checkInImmediately" value="true" checked>
+                            <label class="form-check-label fw-bold text-success" for="checkInImmediately">
+                                <i class="bi bi-lightning-charge-fill me-1"></i>Bệnh nhân đang ở quầy — Xác nhận thanh toán & Check-in ngay
+                            </label>
+                            <small class="d-block text-muted mt-1">Lịch sẽ tự động được duyệt, sinh hóa đơn và xếp vào hàng đợi chờ khám.</small>
                         </div>
                     </div>
 
@@ -326,6 +336,22 @@
     function onDoctorOrDateChanged() {
         updatePriceDisplay();
         loadAvailableSlots();
+        
+        let dateVal = document.getElementById('appointmentDate').value;
+        let today = new Date();
+        today.setHours(0, 0, 0, 0);
+        let selectedDate = new Date(dateVal);
+        selectedDate.setHours(0, 0, 0, 0);
+        
+        let fastCheckinContainer = document.getElementById('fastCheckinContainer');
+        let checkInInput = document.getElementById('checkInImmediately');
+        if (selectedDate.getTime() === today.getTime()) {
+            fastCheckinContainer.style.display = 'block';
+            checkInInput.checked = true;
+        } else {
+            fastCheckinContainer.style.display = 'none';
+            checkInInput.checked = false;
+        }
     }
 
     function loadAvailableSlots() {

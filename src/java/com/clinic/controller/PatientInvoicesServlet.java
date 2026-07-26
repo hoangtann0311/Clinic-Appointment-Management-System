@@ -40,6 +40,7 @@ public class PatientInvoicesServlet extends HttpServlet {
             int page = 1;
             int pageSize = 10;
             String keyword = request.getParameter("keyword");
+            String status = request.getParameter("status");
 
             if (request.getParameter("page") != null) {
                 try {
@@ -50,14 +51,17 @@ public class PatientInvoicesServlet extends HttpServlet {
             }
             
             int offset = (page - 1) * pageSize;
-            List<Invoice> invoices = invoiceDAO.getInvoicesByPatientUserIdPaginated(user.getId(), keyword, offset, pageSize);
-            int totalInvoices = invoiceDAO.countInvoicesByPatientUserId(user.getId(), keyword);
+            List<Invoice> invoices = invoiceDAO.getInvoicesByPatientUserIdPaginated(user.getId(), keyword, status, offset, pageSize);
+
+            
+            int totalInvoices = invoiceDAO.countInvoicesByPatientUserId(user.getId(), keyword, status);
             int totalPages = (int) Math.ceil((double) totalInvoices / pageSize);
 
             request.setAttribute("invoices", invoices);
             request.setAttribute("currentPage", page);
             request.setAttribute("totalPages", totalPages);
             request.setAttribute("keyword", keyword);
+            request.setAttribute("status", status);
             
             request.getRequestDispatcher("/views/patient/invoices.jsp").forward(request, response);
         } catch (Exception e) {

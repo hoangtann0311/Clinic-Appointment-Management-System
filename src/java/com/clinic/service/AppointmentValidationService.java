@@ -60,8 +60,8 @@ public class AppointmentValidationService {
                     if (age < 10) {
                         errors.add("Tuổi bệnh nhân phải từ 10 tuổi trở lên.");
                     }
-                    if (age > 65) {
-                        errors.add("Tuổi bệnh nhân không được vượt quá 65 tuổi. Vui lòng liên hệ bác sĩ để được tư vấn riêng.");
+                    if (age > 100) {
+                        errors.add("Tuổi bệnh nhân không hợp lệ (vượt quá 100 tuổi).");
                     }
                 }
             } catch (Exception e) {
@@ -173,39 +173,48 @@ public class AppointmentValidationService {
      * Kiểm tra một bệnh nhân chỉ có 1 lịch khám ngoại trú còn hiệu lực trong cùng 1 ngày.
      * Trạng thái active: Pending, Confirmed, Waiting, InProgress.
      * Trạng thái kết thúc: Cancelled, NoShow, SUCCESS, Completed.
+     * [V1-FIX] Không lọc theo bác sĩ — 1 bệnh nhân chỉ được 1 lịch khám/ngày tại phòng khám này.
      *
      * @param patientId      ID bệnh nhân
+     * @param doctorId       Không dùng nữa (giữ tham số để không đổi signature)
      * @param date           Ngày khám
-     * @param excludeApptId ID lịch hẹn hiện tại (khi edit/reschedule)
+     * @param excludeApptId  ID lịch hẹn hiện tại (khi edit/reschedule)
      * @param isStaff        Thao tác bởi Staff
-     * @param overrideReason Lý do override của Staff (nếu có)
+     * @param overrideReason Lý do override của Staff (để bỏ qua check nếu cần)
      * @return Thông báo lỗi nếu vi phạm, hoặc null nếu hợp lệ
      */
     public String validateSameDayActiveAppointment(int patientId, int doctorId, LocalDate date, Integer excludeApptId, boolean isStaff, String overrideReason) {
         if (patientId <= 0 || date == null) return null;
 
-        List<Appointment> existing = appointmentDAO.getByPatientId(patientId);
-        boolean hasConflict = false;
-        for (Appointment a : existing) {
-            if (excludeApptId != null && a.getId() == excludeApptId) {
-                continue;
-            }
-            if (a.getAppointmentDate() != null && a.getAppointmentDate().equals(date) && a.getDoctorId() == doctorId) {
-                String st = a.getStatus();
-                if (st != null && (st.equalsIgnoreCase("Pending")
-                        || st.equalsIgnoreCase("Confirmed")
-                        || st.equalsIgnoreCase("Waiting")
-                        || st.equalsIgnoreCase("InProgress"))) {
-                    hasConflict = true;
-                    break;
+        // Staff có override reason hợp lệ → bỏ qua kiểm tra trùng lịch
+        if (isStaff && overrideReason != null && !overrideReason.trim().isEmpty()) {
+            return null;
+        }
+
+        // Kiểm tra bệnh nhân đã có bất kỳ lịch active nào trong ngày (không phân biệt bác sĩ)
+        String sql = "SELECT COUNT(*) FROM appointments " +
+                "WHERE patient_id = ? AND appointment_date = ? " +
+                "AND status IN ('Pending','Confirmed','Waiting','InProgress') " +
+                (excludeApptId != null ? "AND id != ? " : "");
+        try (java.sql.Connection conn = DatabaseConfig.getConnection();
+             java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, patientId);
+            ps.setDate(2, java.sql.Date.valueOf(date));
+            if (excludeApptId != null) ps.setInt(3, excludeApptId);
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                if (rs.next() && rs.getInt(1) > 0) {
+                    if (isStaff) {
+                        return "Bệnh nhân đã có 1 lịch khám còn hiệu lực trong ngày " + date +
+                                ". Nếu muốn tiếp tục đặt, hãy nhập Lý do ngoại lệ (Override Reason).";
+                    } else {
+                        return "Bạn đã có 1 lịch khám còn hiệu lực trong ngày này. Không thể đặt thêm lịch mới.";
+                    }
                 }
             }
+        } catch (Exception e) {
+            // Lỗi DB: bỏ qua check này, không block booking
+            System.err.println("[AppointmentValidationService] validateSameDayActiveAppointment error: " + e.getMessage());
         }
-
-        if (hasConflict) {
-            return "Bệnh nhân đã có 1 lịch khám với bác sĩ này còn hiệu lực trong ngày " + date + ". Không thể đặt thêm.";
-        }
-
         return null;
     }
 

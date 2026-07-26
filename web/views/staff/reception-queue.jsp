@@ -229,6 +229,7 @@
                     <div class="alert alert-success alert-dismissible fade show m-3" data-cams-toast role="alert">
                         <i class="bi bi-check-circle-fill me-2"></i>
                         <c:out value="${queueSuccess}"/>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                 </c:if>
 
@@ -298,7 +299,14 @@
                                     </c:choose>
                                 </td>
 
-                                <td class="fw-medium"><c:out value="${apt.timeSlot}"/></td>
+                                <td class="fw-medium">
+                                    <c:out value="${apt.timeSlot}"/>
+                                    <c:if test="${not empty apt.createdAtText}">
+                                        <div class="small text-muted fw-normal mt-1" style="font-size: 0.75rem;">
+                                            <i class="bi bi-clock-history"></i> Đặt lúc: <c:out value="${apt.createdAtText}"/>
+                                        </div>
+                                    </c:if>
+                                </td>
 
                                 <td class="fw-semibold text-primary">
                                     <c:out value="${apt.gestationalAge != null ? apt.gestationalAge : '—'}"/>
@@ -349,9 +357,9 @@
                                         </c:choose>
                                     </span>
                                     <c:if test="${apt.priority}">
-                                        <div class="small mt-2 text-warning-emphasis"
+                                        <div class="mt-2 text-danger fw-semibold" style="font-size: 0.8rem;"
                                              title="Người thao tác: ${apt.prioritizedByName}; Thời gian: ${apt.prioritizedAtText}">
-                                            <i class="bi bi-info-circle me-1"></i>
+                                            <i class="bi bi-star-fill text-warning me-1"></i>
                                             <c:out value="${apt.priorityReason}"/>
                                             <c:if test="${not empty apt.prioritizedByName}">
                                                 <br><span class="text-muted">
@@ -374,9 +382,9 @@
                                                       style="display:inline;">
                                                     <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                                     <input type="hidden" name="id" value="${apt.id}">
-                                                    <button type="submit" class="btn-cams btn-cams-primary btn-sm" style="font-size:.72rem;padding:.2rem .45rem;" title="Duyệt lịch đặt và tạo phiếu yêu cầu thanh toán gửi tới Bệnh nhân">
-                                                        <i class="bi bi-send-check"></i> Duyệt & Gửi YCTT
-                                                    </button>
+                                                     <button type="submit" class="btn-cams btn-cams-primary btn-sm" style="font-size:.72rem;padding:.2rem .45rem;" title="Duyệt lịch hẹn và tạo hóa đơn thanh toán trước khám (bệnh nhân sẽ nộp tiền mặt khi đến quầy)">
+                                                         <i class="bi bi-clipboard2-check"></i> Duyệt &amp; Tạo HĐ
+                                                     </button>
                                                 </form>
 
                                                 <a href="${pageContext.request.contextPath}/admin/reception/edit?id=${apt.id}"
@@ -404,9 +412,9 @@
                                                       style="display:inline;">
                                                     <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                                     <input type="hidden" name="id" value="${apt.id}">
-                                                    <button type="submit" class="btn-cams btn-cams-success btn-sm" style="font-size:.72rem;padding:.2rem .45rem;" title="Xác nhận bệnh nhân đã thanh toán tại quầy và xếp vào hàng đợi Bác sĩ">
-                                                        <i class="bi bi-person-check-fill"></i> Xác nhận TT & Check-in
-                                                    </button>
+                                                     <button type="submit" class="btn-cams btn-cams-success btn-sm" style="font-size:.72rem;padding:.2rem .45rem;" title="Xác nhận bệnh nhân đã nộp tiền mặt tại quầy và đưa vào hàng đợi Bác sĩ">
+                                                         <i class="bi bi-cash-coin"></i> Thu Tiền &amp; Check-in
+                                                     </button>
                                                 </form>
 
                                                 <a href="${pageContext.request.contextPath}/admin/reception/edit?id=${apt.id}"

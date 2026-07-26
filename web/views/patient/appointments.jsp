@@ -80,12 +80,23 @@
 </c:if>
 <form action="${pageContext.request.contextPath}/patient/appointments" method="GET" class="mb-4">
     <div class="row">
-        <div class="col-md-6 col-lg-5">
+        <div class="col-md-7 col-lg-6">
             <div class="input-group">
                 <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
                 <input type="text" name="keyword" class="form-control border-start-0 ps-0"
                        value="${fn:escapeXml(keyword)}"
-                       placeholder="Tìm bác sĩ, dịch vụ, trạng thái...">
+                       placeholder="Tìm bác sĩ, dịch vụ...">
+                
+                <select name="status" class="form-select" style="max-width: 160px;">
+                    <option value="">-- Trạng thái --</option>
+                    <option value="Pending" ${status == 'Pending' ? 'selected' : ''}>Chờ duyệt</option>
+                    <option value="Confirmed" ${status == 'Confirmed' ? 'selected' : ''}>Đã duyệt</option>
+                    <option value="Waiting" ${status == 'Waiting' ? 'selected' : ''}>Đang chờ khám</option>
+                    <option value="InProgress" ${status == 'InProgress' ? 'selected' : ''}>Đang khám lâm sàng</option>
+                    <option value="Completed" ${status == 'Completed' ? 'selected' : ''}>Đã hoàn thành</option>
+                    <option value="Cancelled" ${status == 'Cancelled' ? 'selected' : ''}>Đã hủy</option>
+                </select>
+
                 <button type="submit" class="btn btn-primary">Tìm kiếm</button>
             </div>
         </div>
@@ -178,7 +189,7 @@
                                             </form>
                                         </c:if>
                                         <%-- Đánh giá --%>
-                                        <c:if test="${(st == 'success' || st == 'completed') && prescriptionPurchaseResolved[a.id] && !hasReviewed[a.id]}">
+                                        <c:if test="${(st == 'success' || st == 'completed') && !hasReviewed[a.id]}">
                                             <button type="button" class="btn btn-outline-primary btn-sm"
                                                     data-bs-toggle="modal" data-bs-target="#reviewModal"
                                                     data-appt-id="${a.id}"
@@ -188,12 +199,6 @@
                                         </c:if>
                                         <c:if test="${(st == 'success' || st == 'completed') && hasReviewed[a.id]}">
                                             <span class="text-success small"><i class="bi bi-check-circle-fill me-1"></i>Đã đánh giá</span>
-                                        </c:if>
-                                        <c:if test="${(st == 'success' || st == 'completed') && !prescriptionPurchaseResolved[a.id] && !hasReviewed[a.id]}">
-                                            <button type="button" class="btn btn-outline-secondary btn-sm" disabled
-                                                    title="Cần hoàn tất lựa chọn mua thuốc hoặc thanh toán hóa đơn thuốc trước">
-                                                <i class="bi bi-lock me-1"></i>Chưa thể ĐG
-                                            </button>
                                         </c:if>
                                     </div>
                                 </td>

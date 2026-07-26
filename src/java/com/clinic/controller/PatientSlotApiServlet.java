@@ -79,6 +79,30 @@ public class PatientSlotApiServlet extends HttpServlet {
             basePrice += (doctor.getExperienceYears() * 50000.00);
         }
 
+        // ── Xác định patientId của user hiện tại để đánh dấu slot "mine" ──
+        int currentPatientId = 0;
+        if (!isStaff) {
+            currentPatientId = new com.clinic.dao.PatientDAO().getPatientIdByUserId(user.getId());
+        }
+
+        // ── Lấy danh sách schedule_id mà patient hiện tại đã có lịch active ──
+        Set<Integer> mySlotIds = new HashSet<>();
+        if (currentPatientId > 0) {
+            String mySlotsSql = "SELECT a.schedule_id FROM appointments a "
+                    + "WHERE a.patient_id = ? AND a.status IN ('Pending','Confirmed','Waiting','InProgress')";
+            try (Connection conn2 = DatabaseConfig.getConnection();
+                 PreparedStatement ps2 = conn2.prepareStatement(mySlotsSql)) {
+                ps2.setInt(1, currentPatientId);
+                try (ResultSet rs2 = ps2.executeQuery()) {
+                    while (rs2.next()) {
+                        mySlotIds.add(rs2.getInt("schedule_id"));
+                    }
+                }
+            } catch (SQLException e) {
+                System.err.println("[PatientSlotApiServlet] mine-check ERROR: " + e.getMessage());
+            }
+        }
+
         String sql;
         if (showAll) {
             sql = "SELECT ds.id, ds.work_date, ds.max_slots, ds.booked_count, ds.status, "
@@ -101,7 +125,7 @@ public class PatientSlotApiServlet extends HttpServlet {
         boolean first = true;
 
         try (Connection conn = DatabaseConfig.getConnection()) {
-            
+
             // 2. Fetch schedules
             try (PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setInt(1, doctorId);
@@ -112,21 +136,33 @@ public class PatientSlotApiServlet extends HttpServlet {
                         int maxSlots = rs.getInt("max_slots");
                         int bookedCount = rs.getInt("booked_count");
                         String shiftName = rs.getString("shift_name");
-                        
+
                         java.sql.Time sTimeSql = rs.getTime("start_time");
                         java.sql.Time eTimeSql = rs.getTime("end_time");
                         if (sTimeSql == null || eTimeSql == null || maxSlots <= 0) continue;
-                        
+
                         LocalTime start = sTimeSql.toLocalTime();
                         LocalTime end = eTimeSql.toLocalTime();
                         String timeLabel = start.toString().substring(0, 5) + " - " + end.toString().substring(0, 5);
-                        
-                        boolean available = bookedCount < maxSlots;
-                        if (!showAll && !available) continue; // Skip if showAll is false and it's booked
-                        
+
+                        // ── Đánh dấu slot này có phải của chính BN đang đăng nhập không ──
+                        boolean isMine = mySlotIds.contains(id);
+
+                        boolean isTimeOver = false;
+                        if (date.isEqual(LocalDate.now())) {
+                            java.time.LocalDateTime slotEndDateTime = java.time.LocalDateTime.of(date, end);
+                            if (java.time.LocalDateTime.now().plusMinutes(30).isAfter(slotEndDateTime)) {
+                                isTimeOver = true;
+                            }
+                        }
+
+                        // Slot available = còn chỗ + chưa hết thời gian (hoặc là slot của chính mình)
+                        boolean available = (bookedCount < maxSlots || isMine) && !isTimeOver;
+                        if (!showAll && !available) continue;
+
                         if (!first) json.append(",");
                         first = false;
-                        
+
                         String shiftCategory = "morning";
                         if (shiftName != null) {
                             if (shiftName.toLowerCase().contains("chiều")) {
@@ -134,6 +170,22 @@ public class PatientSlotApiServlet extends HttpServlet {
                             } else if (shiftName.toLowerCase().contains("tối")) {
                                 shiftCategory = "evening";
                             }
+                        }
+
+                        String statusStr;
+                        String statusLabel;
+                        if (isMine) {
+                            statusStr = "BOOKED";
+                            statusLabel = "Bạn đã đặt lịch này";
+                        } else if (isTimeOver) {
+                            statusStr = "EXPIRED";
+                            statusLabel = "Sắp kết thúc";
+                        } else if (bookedCount >= maxSlots) {
+                            statusStr = "FULL";
+                            statusLabel = "Đã nhận đủ " + maxSlots + "/" + maxSlots + " BN";
+                        } else {
+                            statusStr = "AVAILABLE";
+                            statusLabel = "Còn " + (maxSlots - bookedCount) + "/" + maxSlots + " chỗ";
                         }
 
                         json.append("{")
@@ -145,12 +197,12 @@ public class PatientSlotApiServlet extends HttpServlet {
                             .append("\"shiftCategory\":\"").append(shiftCategory).append("\",")
                             .append("\"maxSlots\":").append(maxSlots).append(",")
                             .append("\"bookedCount\":").append(bookedCount).append(",")
-                            .append("\"remaining\":").append(maxSlots - bookedCount).append(",")
-                            .append("\"status\":\"").append(available ? "AVAILABLE" : "FULL").append("\",")
-                            .append("\"statusLabel\":\"").append(available ? "Còn trống" : "Hết chỗ").append("\",")
+                            .append("\"remaining\":").append(Math.max(0, maxSlots - bookedCount)).append(",")
+                            .append("\"status\":\"").append(statusStr).append("\",")
+                            .append("\"statusLabel\":\"").append(statusLabel).append("\",")
                             .append("\"available\":").append(available).append(",")
                             .append("\"price\":").append(basePrice).append(",")
-                            .append("\"mine\":false")
+                            .append("\"mine\":").append(isMine)
                             .append("}");
                     }
                 }

@@ -91,11 +91,13 @@ public class StaffEditServlet extends HttpServlet {
         String serviceId = req.getParameter("serviceId");
         String appDate = req.getParameter("appointmentDate");
         String timeSlot = req.getParameter("timeSlot");
+        String scheduleIdStr = req.getParameter("scheduleId");
         String symptoms = req.getParameter("symptoms");
         String lmp = req.getParameter("lastMenstrualPeriod");
 
         try {
-            staffReceptionService.updateAppointment(id, doctorId, serviceId, appDate, timeSlot, symptoms, lmp);
+            Integer scheduleId = (scheduleIdStr != null && !scheduleIdStr.isEmpty()) ? Integer.parseInt(scheduleIdStr) : null;
+            staffReceptionService.updateAppointment(id, doctorId, serviceId, appDate, timeSlot, scheduleId, symptoms, lmp);
             req.getSession().setAttribute("queueSuccess", "Đã cập nhật lịch hẹn #" + id + " thành công.");
             resp.sendRedirect(req.getContextPath() + "/admin/reception");
 

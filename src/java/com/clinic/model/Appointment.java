@@ -25,6 +25,7 @@ public class Appointment {
     private String preExamPaymentStatus;
     private String gestationalAge; // E.g. "10 tuần 2 ngày"
     private Integer slotId; // nullable
+    private LocalDateTime createdAt;
 
     // Complex object associations (for receptionist / HEAD)
     private Patient patient;
@@ -200,6 +201,14 @@ public class Appointment {
 
     public Integer getSlotId() { return slotId; }
     public void setSlotId(Integer slotId) { this.slotId = slotId; }
+
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    
+    public String getCreatedAtText() {
+        return createdAt == null ? "" :
+                createdAt.format(DateTimeFormatter.ofPattern("HH:mm - dd/MM/yyyy"));
+    }
 
     public boolean isPreExamPaid() {
         return "Paid".equalsIgnoreCase(preExamPaymentStatus);

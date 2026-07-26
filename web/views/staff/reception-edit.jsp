@@ -198,9 +198,10 @@
                         </div>
                         <div class="col-md-4 cams-form-group">
                             <label class="cams-form-label">Khung giờ còn trống <span class="text-danger">*</span></label>
+                            <input type="hidden" name="scheduleId" id="scheduleId" value="${apt.scheduleId}">
                             <select name="timeSlot" id="timeSlot" class="cams-form-input" required onchange="onSlotChanged()">
                                 <c:if test="${not empty apt.timeSlot}">
-                                    <option value="${apt.timeSlot}" selected>${apt.timeSlot} (đã đặt)</option>
+                                    <option value="${apt.timeSlot}" data-schedule-id="${apt.scheduleId}" selected>${apt.timeSlot} (đã đặt)</option>
                                 </c:if>
                                 <option value="">-- Chọn khung giờ --</option>
                             </select>
@@ -361,6 +362,17 @@
         document.getElementById("total-price-box").innerText = srvPrice.toLocaleString('vi-VN') + "đ";
     }
 
+    function onSlotChanged() {
+        var select = document.getElementById("timeSlot");
+        var option = select.options[select.selectedIndex];
+        if (option && option.dataset.scheduleId) {
+            document.getElementById("scheduleId").value = option.dataset.scheduleId;
+        } else {
+            document.getElementById("scheduleId").value = "";
+        }
+        updatePriceDisplay();
+    }
+
     function onDoctorOrDateChanged() {
         updatePriceDisplay();
         loadAvailableSlots();
@@ -384,7 +396,7 @@
                 if (slots && slots.length > 0) {
                     slots.forEach(function (s) {
                         availableLabels.add(s.label);
-                        html += '<option value="' + s.label + '">' + s.time + ' - ' + s.label.split(' - ')[1] + '</option>';
+                        html += '<option value="' + s.label + '" data-schedule-id="' + s.id + '">' + s.time + ' - ' + s.label.split(' - ')[1] + '</option>';
                     });
                 } else {
                     html += '<option value="" disabled>Không có khung giờ trống</option>';
@@ -392,7 +404,7 @@
 
                 let currentSlot = "${apt.timeSlot}";
                 if (currentSlot && !availableLabels.has(currentSlot)) {
-                    html += '<option value="' + currentSlot + '" selected>' + currentSlot + ' (đã đặt)</option>';
+                    html += '<option value="' + currentSlot + '" data-schedule-id="${apt.scheduleId}" selected>' + currentSlot + ' (đã đặt)</option>';
                 }
 
                 slotSelect.innerHTML = html;
