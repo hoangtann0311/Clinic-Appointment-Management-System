@@ -2,8 +2,10 @@ package com.clinic.controller;
 
 import com.clinic.config.AppConfig;
 import com.clinic.dao.DoctorDAO;
+import com.clinic.dao.DoctorScheduleDAO;
 import com.clinic.dao.UserDAO;
 import com.clinic.model.Doctor;
+import com.clinic.model.DoctorSchedule;
 import com.clinic.model.User;
 
 import jakarta.servlet.ServletException;
@@ -14,6 +16,9 @@ import jakarta.servlet.http.*;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.sql.Date;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -44,6 +49,7 @@ public class DoctorProfileServlet extends HttpServlet {
 
     private final DoctorDAO doctorDAO = new DoctorDAO();
     private final UserDAO userDAO = new UserDAO();
+    private final DoctorScheduleDAO scheduleDAO = new DoctorScheduleDAO();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
@@ -62,6 +68,11 @@ public class DoctorProfileServlet extends HttpServlet {
 
             req.setAttribute("doctor",     doctor);
             req.setAttribute("doctorName", user.getFullName());
+
+            // Get upcoming schedules
+            List<DoctorSchedule> doctorSchedules = scheduleDAO.findAll(
+                    0, 5, "APPROVED", doctor.getId(), Date.valueOf(LocalDate.now()), null);
+            req.setAttribute("doctorSchedules", doctorSchedules);
             req.setAttribute("saved",      req.getParameter("saved"));
             req.getRequestDispatcher("/views/doctors/doctor_profile.jsp").forward(req, resp);
         } catch (Exception ex) {

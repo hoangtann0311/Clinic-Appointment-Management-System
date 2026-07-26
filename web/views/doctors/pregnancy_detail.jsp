@@ -59,7 +59,7 @@
     </div>
 </c:if>
 <c:if test="${not empty errorMessage}">
-    <div class="alert alert-danger rounded-3 mb-4">
+    <div class="alert alert-danger rounded-3 mb-4" data-cams-toast="true">
         <i class="bi bi-exclamation-triangle me-2"></i>${errorMessage}
     </div>
 </c:if>

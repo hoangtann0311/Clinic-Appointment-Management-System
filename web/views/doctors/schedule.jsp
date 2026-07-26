@@ -47,7 +47,7 @@
     </div>
 </c:if>
 <c:if test="${not empty errorMessage}">
-    <div class="alert alert-warning rounded-3 mb-3">
+    <div class="alert alert-warning rounded-3 mb-3" data-cams-toast="true">
         <i class="bi bi-person-x me-2"></i>${errorMessage}
     </div>
 </c:if>
@@ -238,9 +238,14 @@
                                     <td>
                                         <span class="badge bg-light text-dark border px-2 py-1">
                                             <i class="bi bi-clock me-1"></i>
-                                            <fmt:formatDate value="${s.startTime}" pattern="HH:mm"/>
-                                            &ndash;
-                                            <fmt:formatDate value="${s.endTime}" pattern="HH:mm"/>
+                                            <c:choose>
+                                                <c:when test="${not empty s.shiftName}">${s.shiftName}</c:when>
+                                                <c:otherwise>
+                                                    <fmt:formatDate value="${s.startTime}" pattern="HH:mm"/>
+                                                    &ndash;
+                                                    <fmt:formatDate value="${s.endTime}" pattern="HH:mm"/>
+                                                </c:otherwise>
+                                            </c:choose>
                                         </span>
                                     </td>
 
@@ -386,6 +391,7 @@
                   id="createForm" novalidate>
                 <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                 <input type="hidden" name="action" value="create">
+                <input type="hidden" name="shiftId" id="shiftIdInput" value="${formShiftId}">
 
                 <div class="modal-body p-4">
 
@@ -437,24 +443,29 @@
                         </div>
                     </div>
 
-                    <%-- Quick-fill ca mẫu --%>
+                    <%-- Chọn ca làm việc từ danh sách có sẵn --%>
+                    <c:if test="${not empty activeShifts}">
                     <div class="mb-3">
-                        <label class="form-label small fw-medium text-muted">Ca mẫu nhanh</label>
-                        <div class="d-flex gap-2 flex-wrap">
-                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill"
-                                    onclick="fillShift('07:00','11:30')">
-                                <i class="bi bi-sunrise me-1"></i>Ca Sáng 07:00–11:30
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-warning rounded-pill"
-                                    onclick="fillShift('13:00','17:00')">
-                                <i class="bi bi-sun me-1"></i>Ca Chiều 13:00–17:00
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill"
-                                    onclick="fillShift('17:00','20:00')">
-                                <i class="bi bi-moon-stars me-1"></i>Ca Tối 17:00–20:00
-                            </button>
+                        <label for="shiftSelect" class="form-label fw-medium">
+                            <i class="bi bi-list-check me-1"></i>Chọn Ca Làm Việc
+                        </label>
+                        <select id="shiftSelect" class="form-select rounded-3"
+                                onchange="onShiftSelected(this)">
+                            <option value="">-- Chọn ca làm việc có sẵn --</option>
+                            <c:forEach var="shift" items="${activeShifts}">
+                                <option value="${shift.id}|${shift.startTime}|${shift.endTime}"
+                                        ${formShiftId == shift.id ? 'selected' : ''}>
+                                    <fmt:formatDate value="${shift.startTime}" pattern="HH:mm"/> - <fmt:formatDate value="${shift.endTime}" pattern="HH:mm"/> — ${shift.name}
+                                </option>
+                            </c:forEach>
+                        </select>
+                        <div class="form-text">
+                            Chọn ca có sẵn hoặc nhập giờ thủ công bên dưới.
                         </div>
                     </div>
+                    </c:if>
+
+                    <%-- Hoặc nhập giờ thủ công --%>
 
                     <%-- Số bệnh nhân tối đa / slot --%>
                     <div class="mb-3">
@@ -544,10 +555,38 @@
         new bootstrap.Modal(document.getElementById('cancelModal')).show();
     }
 
-    // Điền nhanh giờ ca
+    // Chọn ca từ dropdown (load từ DB) — value format: "shiftId|startTime|endTime"
+    function onShiftSelected(selectEl) {
+        var value = selectEl.value;
+        if (!value) {
+            document.getElementById('shiftIdInput').value = '';
+            return;
+        }
+        var parts = value.split('|');
+        if (parts.length === 3) {
+            document.getElementById('shiftIdInput').value = parts[0];
+            document.getElementById('startTime').value = parts[1].substring(0,5);
+            document.getElementById('endTime').value   = parts[2].substring(0,5);
+        }
+    }
+
+    // Điền nhanh giờ ca (tương thích ngược)
     function fillShift(start, end) {
         document.getElementById('startTime').value = start;
         document.getElementById('endTime').value   = end;
+        // Đồng bộ dropdown nếu khớp
+        var sel = document.getElementById('shiftSelect');
+        if (sel) {
+            for (var i = 0; i < sel.options.length; i++) {
+                if (sel.options[i].value.indexOf(start + ':00|' + end + ':00') > 0) {
+                    sel.selectedIndex = i;
+                    onShiftSelected(sel);
+                    return;
+                }
+            }
+            sel.selectedIndex = 0;
+            document.getElementById('shiftIdInput').value = '';
+        }
     }
 
     // Client-side validation trước khi submit
@@ -634,7 +673,8 @@
             end:    "${s.endTime}",
             status: "${s.status}",
             slots:  ${s.maxSlots},
-            notes:  "${fn:escapeXml(s.notes != null ? s.notes : '')}"
+            notes:  "${fn:escapeXml(s.notes != null ? s.notes : '')}",
+            shift:  "${not empty s.shiftName ? fn:escapeXml(s.shiftName) : ''}"
         }<c:if test="${!st.last}">,</c:if>
         </c:forEach>
     ];

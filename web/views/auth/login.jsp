@@ -70,7 +70,7 @@
 
             <%-- ========== Success Message ========== --%>
             <c:if test="${not empty sessionScope.successMessage}">
-                <div class="login-alert login-alert-success" role="alert">
+                <div class="login-alert login-alert-success" role="alert" data-cams-toast="true">
                     <i class="bi bi-check-circle-fill"></i>
                     <div>${sessionScope.successMessage}</div>
                 </div>
@@ -79,13 +79,13 @@
 
             <%-- ========== Error Messages ========== --%>
             <c:if test="${not empty errorMessage}">
-                <div class="login-alert login-alert-danger" role="alert">
+                <div class="login-alert login-alert-danger" role="alert" data-cams-toast="true">
                     <i class="bi bi-exclamation-triangle-fill"></i>
                     <div>${errorMessage}</div>
                 </div>
             </c:if>
             <c:if test="${not empty sessionScope.errorMessage}">
-                <div class="login-alert login-alert-danger" role="alert">
+                <div class="login-alert login-alert-danger" role="alert" data-cams-toast="true">
                     <i class="bi bi-exclamation-triangle-fill"></i>
                     <div>${sessionScope.errorMessage}</div>
                 </div>

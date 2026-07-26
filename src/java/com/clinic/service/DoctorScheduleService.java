@@ -6,7 +6,6 @@ import com.clinic.dao.DoctorScheduleDAO.ApproveResult;
 import com.clinic.dao.DoctorScheduleDAO.CancelScheduleResult;
 import com.clinic.model.Doctor;
 import com.clinic.model.DoctorSchedule;
-import com.clinic.model.TimeSlot;
 import com.clinic.model.enums.ScheduleStatus;
 
 import java.sql.Date;
@@ -39,12 +38,10 @@ public class DoctorScheduleService {
 
     private final DoctorScheduleDAO scheduleDAO;
     private final DoctorDAO doctorDAO;
-    private final TimeSlotService timeSlotService;
 
     public DoctorScheduleService() {
         this.scheduleDAO = new DoctorScheduleDAO();
         this.doctorDAO = new DoctorDAO();
-        this.timeSlotService = new TimeSlotService();
     }
 
     // ──────────────────────────────────────────────
@@ -135,7 +132,7 @@ public class DoctorScheduleService {
             return false;
         }
 
-        // 2. Kiểm tra trùng lịch APPROVED của cùng bác sĩ
+        // 2. Kiểm tra trùng lịch APPROVED của cùng bác sĩ (theo shift)
         boolean conflict = scheduleDAO.hasApprovedConflict(
             schedule.getDoctorId(),
             schedule.getWorkDate(),
@@ -150,13 +147,12 @@ public class DoctorScheduleService {
             return false;
         }
 
-        // 3. Kiểm tra giới hạn max_slots của ca
+        // 3. Kiểm tra giới hạn max_slots của ca (theo shift_id)
         int maxSlots = schedule.getMaxSlots();
         if (maxSlots > 0) {
             int currentCount = scheduleDAO.countApprovedInSameShift(
                 schedule.getWorkDate(),
-                schedule.getStartTime(),
-                schedule.getEndTime()
+                schedule.getShiftId()
             );
             if (currentCount >= maxSlots) {
                 errors.put("full_slots", "Ca trực này đã đủ số lượng bác sĩ tối đa ("
@@ -282,20 +278,17 @@ public class DoctorScheduleService {
             return ScheduleCancelResult.validationFailed();
         }
 
-        // 3. Kiểm tra booked slots — ĐÂY LÀ BƯỚC QUAN TRỌNG
-        int bookedSlots = timeSlotService.countBookedSlots(scheduleId);
+        // 3. Kiểm tra booked slots — dùng booked_count từ DB
+        int bookedSlots = schedule.getBookedCount();
 
         if (bookedSlots > 0) {
-            // Có bệnh nhân đã đặt lịch → không cho hủy trực tiếp
-            List<TimeSlot> bookedSlotList = timeSlotService.getBookedSlotsBySchedule(scheduleId);
-
             errors.put("hasBookedSlots",
                     "Lịch làm việc #" + scheduleId + " của bác sĩ " + schedule.getDoctorName()
                     + " hiện có " + bookedSlots + " bệnh nhân đã đặt lịch. "
                     + "Bạn không thể hủy trực tiếp. Vui lòng xử lý chuyển bác sĩ hoặc "
                     + "đổi lịch cho từng bệnh nhân trước.");
 
-            return ScheduleCancelResult.hasBookedSlots(scheduleId, bookedSlots, bookedSlotList);
+            return ScheduleCancelResult.hasBookedSlots(scheduleId, bookedSlots);
         }
 
         // 4. Không có booked slots → thực hiện hủy atomic
@@ -303,9 +296,6 @@ public class DoctorScheduleService {
                 scheduleId, cancelledBy, reason.trim(), 0);
 
         if (result.isSuccess()) {
-            // Xóa các time slots (vì không có booked nên xóa an toàn)
-            timeSlotService.deleteSlotsBySchedule(scheduleId, new java.util.HashMap<>());
-
             System.out.println("[DoctorScheduleService] cancelSchedule SUCCESS: scheduleId="
                     + scheduleId + ", cancelledBy=" + cancelledBy);
             return ScheduleCancelResult.success(scheduleId);
@@ -323,21 +313,20 @@ public class DoctorScheduleService {
     public ScheduleCancelResult cancelScheduleAfterReassignment(int scheduleId, int cancelledBy,
                                                                   String reason,
                                                                   Map<String, String> errors) {
-        // Kiểm tra lại lần cuối: còn booked slots nào không?
-        int bookedSlots = timeSlotService.countBookedSlots(scheduleId);
+        // Kiểm tra lại: còn booked slots không?
+        DoctorSchedule schedule = scheduleDAO.findById(scheduleId);
+        int bookedSlots = schedule != null ? schedule.getBookedCount() : 0;
         if (bookedSlots > 0) {
             errors.put("hasBookedSlots",
                     "Vẫn còn " + bookedSlots + " bệnh nhân chưa được chuyển lịch. "
                     + "Vui lòng xử lý tất cả trước khi hủy.");
-            return ScheduleCancelResult.hasBookedSlots(scheduleId, bookedSlots,
-                    timeSlotService.getBookedSlotsBySchedule(scheduleId));
+            return ScheduleCancelResult.hasBookedSlots(scheduleId, bookedSlots);
         }
 
         CancelScheduleResult result = scheduleDAO.cancelAtomic(
                 scheduleId, cancelledBy, reason.trim(), 0);
 
         if (result.isSuccess()) {
-            timeSlotService.deleteSlotsBySchedule(scheduleId, new java.util.HashMap<>());
             return ScheduleCancelResult.success(scheduleId);
         }
 
@@ -371,7 +360,7 @@ public class DoctorScheduleService {
 
         // APPROVED thì kiểm tra booked slots
         if (schedule.getStatus() == ScheduleStatus.APPROVED) {
-            int bookedSlots = timeSlotService.countBookedSlots(scheduleId);
+            int bookedSlots = schedule.getBookedCount();
             if (bookedSlots > 0) {
                 errors.put("hasBookedSlots",
                         "Lịch làm việc này có " + bookedSlots + " bệnh nhân đã đặt lịch. "
@@ -413,8 +402,7 @@ public class DoctorScheduleService {
         if (maxSlots > 0) {
             int currentCount = scheduleDAO.countApprovedInSameShift(
                 schedule.getWorkDate(),
-                schedule.getStartTime(),
-                schedule.getEndTime()
+                schedule.getShiftId()
             );
             if (currentCount >= maxSlots) {
                 warnings.add("Cảnh báo: Ca trực này đã đủ " + maxSlots + " bác sĩ.");
@@ -434,38 +422,33 @@ public class DoctorScheduleService {
      */
     public static class ScheduleCancelResult {
         private final boolean success;
-        private final boolean needsReassignment; // Cần chuyển bệnh nhân trước khi hủy
+        private final boolean needsReassignment;
         private final int scheduleId;
         private final int bookedSlotCount;
-        private final List<TimeSlot> bookedSlots; // Danh sách slot cần xử lý
 
         private ScheduleCancelResult(boolean success, boolean needsReassignment,
-                                      int scheduleId, int bookedSlotCount,
-                                      List<TimeSlot> bookedSlots) {
+                                      int scheduleId, int bookedSlotCount) {
             this.success = success;
             this.needsReassignment = needsReassignment;
             this.scheduleId = scheduleId;
             this.bookedSlotCount = bookedSlotCount;
-            this.bookedSlots = bookedSlots;
         }
 
         public static ScheduleCancelResult success(int scheduleId) {
-            return new ScheduleCancelResult(true, false, scheduleId, 0, null);
+            return new ScheduleCancelResult(true, false, scheduleId, 0);
         }
 
-        public static ScheduleCancelResult hasBookedSlots(int scheduleId, int count,
-                                                           List<TimeSlot> slots) {
-            return new ScheduleCancelResult(false, true, scheduleId, count, slots);
+        public static ScheduleCancelResult hasBookedSlots(int scheduleId, int count) {
+            return new ScheduleCancelResult(false, true, scheduleId, count);
         }
 
         public static ScheduleCancelResult validationFailed() {
-            return new ScheduleCancelResult(false, false, 0, 0, null);
+            return new ScheduleCancelResult(false, false, 0, 0);
         }
 
         public boolean isSuccess() { return success; }
         public boolean needsReassignment() { return needsReassignment; }
         public int getScheduleId() { return scheduleId; }
         public int getBookedSlotCount() { return bookedSlotCount; }
-        public List<TimeSlot> getBookedSlots() { return bookedSlots; }
     }
 }

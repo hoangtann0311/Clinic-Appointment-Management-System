@@ -22,10 +22,10 @@ import java.util.List;
 public class DoctorScheduleDAO {
 
     private static final String BASE_COLUMNS =
-        "ds.id, ds.doctor_id, ds.work_date, ds.start_time, ds.end_time, "
+        "ds.id, ds.doctor_id, ds.shift_id, ds.work_date, "
         + "ds.max_slots, ds.status, ds.rejection_reason, "
         + "ds.approved_by, ds.approved_at, ds.created_by, ds.created_at, ds.updated_at, "
-        + "ds.notes, ds.is_approved";
+        + "ds.notes, ds.is_approved, ds.booked_count";
 
     /**
      * Lấy danh sách lịch trực có phân trang + lọc.
@@ -44,7 +44,9 @@ public class DoctorScheduleDAO {
             .append(BASE_COLUMNS)
             .append(", d.full_name AS doctor_name, d.specialization AS doctor_specialization ")
             .append(", u.full_name AS approved_by_name ")
+            .append(", s.name AS shift_name, s.start_time, s.end_time ")
             .append("FROM doctor_schedules ds ")
+            .append("INNER JOIN shifts s ON ds.shift_id = s.id ")
             .append("LEFT JOIN doctors d ON ds.doctor_id = d.id ")
             .append("LEFT JOIN users u ON ds.approved_by = u.id ")
             .append("WHERE 1=1 ");
@@ -68,7 +70,7 @@ public class DoctorScheduleDAO {
             params.add(dateTo);
         }
 
-        sql.append("ORDER BY ds.work_date DESC, ds.start_time ASC ")
+        sql.append("ORDER BY ds.work_date DESC, s.start_time ASC ")
            .append("OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
         params.add(offset);
         params.add(pageSize);
@@ -163,7 +165,9 @@ public class DoctorScheduleDAO {
         String sql = "SELECT " + BASE_COLUMNS
             + ", d.full_name AS doctor_name, d.specialization AS doctor_specialization "
             + ", u.full_name AS approved_by_name "
+            + ", s.name AS shift_name, s.start_time, s.end_time "
             + "FROM doctor_schedules ds "
+            + "INNER JOIN shifts s ON ds.shift_id = s.id "
             + "LEFT JOIN doctors d ON ds.doctor_id = d.id "
             + "LEFT JOIN users u ON ds.approved_by = u.id "
             + "WHERE ds.id = ?";
@@ -267,11 +271,12 @@ public class DoctorScheduleDAO {
                                         Integer excludeId) {
         StringBuilder sql = new StringBuilder("SELECT COUNT(*) AS total ")
             .append("FROM doctor_schedules ds ")
+            .append("INNER JOIN shifts s ON ds.shift_id = s.id ")
             .append("WHERE ds.doctor_id = ? ")
             .append("AND ds.work_date = ? ")
             .append("AND ds.status = 'APPROVED' ")
-            // Kiểm tra trùng khung giờ: start_time < new_end AND end_time > new_start
-            .append("AND ds.start_time < CAST(? AS time) AND ds.end_time > CAST(? AS time) ");
+            // So sánh khung giờ qua bảng shifts
+            .append("AND s.start_time < CAST(? AS time) AND s.end_time > CAST(? AS time) ");
 
         if (excludeId != null) {
             sql.append("AND ds.id <> ? ");
@@ -306,9 +311,9 @@ public class DoctorScheduleDAO {
      * Đếm số bác sĩ đã được APPROVED trong cùng ca trực (cùng ngày + cùng khung giờ).
      * Dùng để kiểm tra giới hạn max_slots.
      */
-    public int countApprovedInSameShift(Date workDate, Time startTime, Time endTime) {
+    public int countApprovedInSameShift(Date workDate, int shiftId) {
         String sql = "SELECT COUNT(*) AS total FROM doctor_schedules "
-                   + "WHERE work_date = ? AND start_time = CAST(? AS time) AND end_time = CAST(? AS time) "
+                   + "WHERE work_date = ? AND shift_id = ? "
                    + "AND status = 'APPROVED'";
 
         Connection conn = null;
@@ -318,8 +323,7 @@ public class DoctorScheduleDAO {
             conn = DatabaseConfig.getConnection();
             ps = conn.prepareStatement(sql);
             ps.setDate(1, workDate);
-            ps.setTime(2, startTime);
-            ps.setTime(3, endTime);
+            ps.setInt(2, shiftId);
             rs = ps.executeQuery();
             if (rs.next()) return rs.getInt("total");
         } catch (SQLException e) {
@@ -368,9 +372,8 @@ public class DoctorScheduleDAO {
         DoctorSchedule ds = new DoctorSchedule();
         ds.setId(rs.getInt("id"));
         ds.setDoctorId(rs.getInt("doctor_id"));
+        ds.setShiftId(rs.getInt("shift_id"));
         ds.setWorkDate(rs.getDate("work_date"));
-        ds.setStartTime(rs.getTime("start_time"));
-        ds.setEndTime(rs.getTime("end_time"));
         ds.setMaxSlots(rs.getInt("max_slots"));
 
         String statusStr = rs.getString("status");
@@ -392,16 +395,28 @@ public class DoctorScheduleDAO {
         ds.setUpdatedAt(rs.getTimestamp("updated_at"));
         ds.setNotes(rs.getString("notes"));
         ds.setApproved(rs.getBoolean("is_approved"));
+        ds.setBookedCount(rs.getInt("booked_count"));
 
-        // Join fields
+        // Join fields — shifts
+        try { ds.setShiftName(rs.getString("shift_name")); } catch (SQLException e) { }
+        Time startTime = null, endTime = null;
+        try { startTime = rs.getTime("start_time"); } catch (SQLException e) { }
+        try { endTime = rs.getTime("end_time"); } catch (SQLException e) { }
+        ds.setStartTime(startTime);
+        ds.setEndTime(endTime);
+
+        // Join fields — doctors & users
         try { ds.setDoctorName(rs.getString("doctor_name")); } catch (SQLException e) { }
         try { ds.setDoctorSpecialization(rs.getString("doctor_specialization")); } catch (SQLException e) { }
         try { ds.setApprovedByName(rs.getString("approved_by_name")); } catch (SQLException e) { }
 
         // Shift label tiện hiển thị
-        if (ds.getStartTime() != null && ds.getEndTime() != null) {
+        if (startTime != null && endTime != null) {
             ds.setShiftLabel(DoctorSchedule.buildShiftLabel(
-                ds.getStartTime().toString(), ds.getEndTime().toString()));
+                startTime.toString(), endTime.toString()));
+        }
+        if (ds.getShiftName() != null && ds.getShiftName().isEmpty()) {
+            ds.setShiftName(null);
         }
 
         return ds;
@@ -424,9 +439,9 @@ public class DoctorScheduleDAO {
      */
     public boolean insert(DoctorSchedule schedule) {
         String sql = "INSERT INTO doctor_schedules "
-                   + "(doctor_id, work_date, start_time, end_time, max_slots, "
-                   + " status, notes, created_by, created_at, updated_at, is_approved) "
-                   + "VALUES (?, ?, ?, ?, ?, 'PENDING', ?, ?, GETDATE(), GETDATE(), 0)";
+                   + "(doctor_id, shift_id, work_date, max_slots, "
+                   + " status, notes, created_by, created_at, updated_at, is_approved, booked_count) "
+                   + "VALUES (?, ?, ?, ?, 'PENDING', ?, ?, GETDATE(), GETDATE(), 0, 0)";
 
         Connection conn = null;
         PreparedStatement ps = null;
@@ -434,15 +449,14 @@ public class DoctorScheduleDAO {
             conn = DatabaseConfig.getConnection();
             ps = conn.prepareStatement(sql);
             ps.setInt(1, schedule.getDoctorId());
-            ps.setDate(2, schedule.getWorkDate());
-            ps.setTime(3, schedule.getStartTime());
-            ps.setTime(4, schedule.getEndTime());
-            ps.setInt(5, schedule.getMaxSlots());
-            ps.setString(6, schedule.getNotes());
+            ps.setInt(2, schedule.getShiftId());
+            ps.setDate(3, schedule.getWorkDate());
+            ps.setInt(4, schedule.getMaxSlots());
+            ps.setString(5, schedule.getNotes());
             if (schedule.getCreatedBy() != null) {
-                ps.setInt(7, schedule.getCreatedBy());
+                ps.setInt(6, schedule.getCreatedBy());
             } else {
-                ps.setNull(7, java.sql.Types.INTEGER);
+                ps.setNull(6, java.sql.Types.INTEGER);
             }
             int rows = ps.executeUpdate();
             return rows > 0;
@@ -494,17 +508,15 @@ public class DoctorScheduleDAO {
      * @return true nếu có xung đột
      */
     public boolean hasConflictForDoctor(int doctorId, Date workDate,
-                                         Time startTime, Time endTime,
-                                         Integer excludeId) {
-        StringBuilder sql = new StringBuilder(
-                "SELECT COUNT(*) AS total FROM doctor_schedules "
+                                         int shiftId, Integer excludeId) {
+        String sql = "SELECT COUNT(*) AS total FROM doctor_schedules "
               + "WHERE doctor_id = ? "
               + "AND work_date = ? "
-              + "AND status IN ('PENDING', 'APPROVED') "
-              + "AND start_time < CAST(? AS time) AND end_time > CAST(? AS time) ");
+              + "AND shift_id = ? "
+              + "AND status IN ('PENDING', 'APPROVED') ";
 
         if (excludeId != null) {
-            sql.append("AND id <> ? ");
+            sql += "AND id <> ? ";
         }
 
         Connection conn = null;
@@ -512,13 +524,12 @@ public class DoctorScheduleDAO {
         ResultSet rs = null;
         try {
             conn = DatabaseConfig.getConnection();
-            ps = conn.prepareStatement(sql.toString());
+            ps = conn.prepareStatement(sql);
             ps.setInt(1, doctorId);
             ps.setDate(2, workDate);
-            ps.setTime(3, endTime);   // start_time < new_end
-            ps.setTime(4, startTime); // end_time   > new_start
+            ps.setInt(3, shiftId);
             if (excludeId != null) {
-                ps.setInt(5, excludeId);
+                ps.setInt(4, excludeId);
             }
             rs = ps.executeQuery();
             if (rs.next()) {
@@ -613,8 +624,9 @@ public class DoctorScheduleDAO {
 
             int doctorId;
             Date workDate;
+            int shiftId;
             try (PreparedStatement seedPs = conn.prepareStatement(
-                    "SELECT doctor_id, work_date FROM doctor_schedules WHERE id = ?")) {
+                    "SELECT doctor_id, work_date, shift_id FROM doctor_schedules WHERE id = ?")) {
                 seedPs.setInt(1, scheduleId);
                 try (ResultSet rs = seedPs.executeQuery()) {
                     if (!rs.next()) {
@@ -623,6 +635,7 @@ public class DoctorScheduleDAO {
                     }
                     doctorId = rs.getInt("doctor_id");
                     workDate = rs.getDate("work_date");
+                    shiftId = rs.getInt("shift_id");
                 }
             }
 
@@ -636,12 +649,16 @@ public class DoctorScheduleDAO {
                 }
             }
 
+            // Lấy max_slots, status + shift info (start_time, end_time qua JOIN)
             Time startTime;
             Time endTime;
             int maxSlots;
             try (PreparedStatement schedulePs = conn.prepareStatement(
-                    "SELECT doctor_id, work_date, start_time, end_time, max_slots, status "
-                            + "FROM doctor_schedules WITH (UPDLOCK, HOLDLOCK) WHERE id = ?")) {
+                    "SELECT ds.doctor_id, ds.work_date, ds.max_slots, ds.status, "
+                            + "s.start_time, s.end_time "
+                            + "FROM doctor_schedules ds WITH (UPDLOCK, HOLDLOCK) "
+                            + "INNER JOIN shifts s ON ds.shift_id = s.id "
+                            + "WHERE ds.id = ?")) {
                 schedulePs.setInt(1, scheduleId);
                 try (ResultSet rs = schedulePs.executeQuery()) {
                     if (!rs.next()) {
@@ -660,10 +677,13 @@ public class DoctorScheduleDAO {
                 }
             }
 
+            // Conflict check qua shifts join
             try (PreparedStatement conflictPs = conn.prepareStatement(
-                    "SELECT TOP 1 id FROM doctor_schedules WITH (UPDLOCK, HOLDLOCK) "
-                            + "WHERE doctor_id = ? AND work_date = ? AND status = 'APPROVED' "
-                            + "AND start_time < CAST(? AS time) AND end_time > CAST(? AS time) AND id <> ?")) {
+                    "SELECT TOP 1 ds.id FROM doctor_schedules ds WITH (UPDLOCK, HOLDLOCK) "
+                            + "INNER JOIN shifts s ON ds.shift_id = s.id "
+                            + "WHERE ds.doctor_id = ? AND ds.work_date = ? AND ds.status = 'APPROVED' "
+                            + "AND s.start_time < CAST(? AS time) AND s.end_time > CAST(? AS time) "
+                            + "AND ds.id <> ?")) {
                 conflictPs.setInt(1, doctorId);
                 conflictPs.setDate(2, workDate);
                 conflictPs.setTime(3, endTime);
@@ -680,10 +700,9 @@ public class DoctorScheduleDAO {
             if (maxSlots > 0) {
                 try (PreparedStatement capacityPs = conn.prepareStatement(
                         "SELECT COUNT(*) FROM doctor_schedules WITH (UPDLOCK, HOLDLOCK) "
-                                + "WHERE work_date = ? AND start_time = CAST(? AS time) AND end_time = CAST(? AS time) AND status = 'APPROVED'")) {
+                                + "WHERE work_date = ? AND shift_id = ? AND status = 'APPROVED'")) {
                     capacityPs.setDate(1, workDate);
-                    capacityPs.setTime(2, startTime);
-                    capacityPs.setTime(3, endTime);
+                    capacityPs.setInt(2, shiftId);
                     try (ResultSet rs = capacityPs.executeQuery()) {
                         if (rs.next() && rs.getInt(1) >= maxSlots) {
                             conn.rollback();
@@ -704,14 +723,9 @@ public class DoctorScheduleDAO {
                 }
             }
 
-            int slotsGenerated = new TimeSlotDAO().generateSlots(
-                    scheduleId, doctorId, workDate, startTime, endTime, conn);
-            if (slotsGenerated <= 0) {
-                conn.rollback();
-                return new ApproveResult(false, 0, "SYSTEM_ERROR", "Không thể tạo khung giờ cho lịch làm việc.");
-            }
+            // Không còn time_slots — approve là đủ, booked_count đã được khởi tạo = 0
             conn.commit();
-            return new ApproveResult(true, slotsGenerated, null, null);
+            return new ApproveResult(true, 0, null, null);
         } catch (SQLException e) {
             if (conn != null) {
                 try { conn.rollback(); } catch (SQLException ex) {}

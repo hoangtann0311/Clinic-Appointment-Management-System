@@ -36,8 +36,29 @@ public class PatientInvoicesServlet extends HttpServlet {
 
         try {
             int patientId = patientDAO.getPatientIdByUserId(user.getId());
-            List<Invoice> invoices = invoiceDAO.getInvoicesByPatientUserId(user.getId());
+            
+            int page = 1;
+            int pageSize = 10;
+            String keyword = request.getParameter("keyword");
+
+            if (request.getParameter("page") != null) {
+                try {
+                    page = Integer.parseInt(request.getParameter("page"));
+                } catch (NumberFormatException e) {
+                    page = 1;
+                }
+            }
+            
+            int offset = (page - 1) * pageSize;
+            List<Invoice> invoices = invoiceDAO.getInvoicesByPatientUserIdPaginated(user.getId(), keyword, offset, pageSize);
+            int totalInvoices = invoiceDAO.countInvoicesByPatientUserId(user.getId(), keyword);
+            int totalPages = (int) Math.ceil((double) totalInvoices / pageSize);
+
             request.setAttribute("invoices", invoices);
+            request.setAttribute("currentPage", page);
+            request.setAttribute("totalPages", totalPages);
+            request.setAttribute("keyword", keyword);
+            
             request.getRequestDispatcher("/views/patient/invoices.jsp").forward(request, response);
         } catch (Exception e) {
             System.err.println("[PatientInvoicesServlet] doGet ERROR: " + e.getMessage());

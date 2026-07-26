@@ -1,7 +1,6 @@
 package com.clinic.controller;
 
 import com.clinic.model.DoctorSchedule;
-import com.clinic.model.TimeSlot;
 import com.clinic.model.User;
 import com.clinic.service.StaffReceptionService;
 import jakarta.servlet.ServletException;
@@ -59,17 +58,25 @@ public class StaffDoctorScheduleServlet extends HttpServlet {
 
         try {
             LocalDate date = parseDate(request.getParameter("date"));
+            String search = request.getParameter("search");
+            String statusFilter = request.getParameter("status");
+            int page = parsePage(request.getParameter("page"));
+            int pageSize = 10;
+
             request.setAttribute("selectedDate", date.toString());
             request.setAttribute("displayDate", date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
             request.setAttribute("currentDisplayDate", LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+            request.setAttribute("search", search != null ? search : "");
+            request.setAttribute("statusFilter", statusFilter != null ? statusFilter : "");
 
-            // 1. Danh sach ca truc (tong quan theo bac si)
+            // 1. Danh sach ca truc (tong quan theo bac si) — vẫn giữ để tham khảo nhanh
             List<DoctorSchedule> schedules = receptionService.getApprovedDoctorSchedules(date);
             request.setAttribute("schedules", schedules);
 
-            // 2. Chi tiet tung slot trong ngay (co ten benh nhan, trang thai)
-            List<TimeSlot> slots = receptionService.getDoctorSlotsForReception(date);
-            request.setAttribute("slots", slots);
+            // 2. Danh sach slot phan trang + tim kiem + loc
+            StaffReceptionService.SlotPageResult slotPage =
+                    receptionService.getDoctorSlotsPage(date, search, statusFilter, page, pageSize);
+            request.setAttribute("slotPage", slotPage);
 
             request.getRequestDispatcher("/views/staff/doctor-schedules.jsp").forward(request, response);
         } catch (Exception ex) {
@@ -85,6 +92,15 @@ public class StaffDoctorScheduleServlet extends HttpServlet {
             return value != null && !value.isBlank() ? LocalDate.parse(value) : LocalDate.now();
         } catch (Exception ignored) {
             return LocalDate.now();
+        }
+    }
+
+    private int parsePage(String value) {
+        try {
+            int p = Integer.parseInt(value);
+            return p > 0 ? p : 1;
+        } catch (Exception ignored) {
+            return 1;
         }
     }
 }

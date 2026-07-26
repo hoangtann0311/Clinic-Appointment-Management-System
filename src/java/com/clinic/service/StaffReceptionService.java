@@ -2,11 +2,13 @@ package com.clinic.service;
 
 import com.clinic.dao.*;
 import com.clinic.config.DBContext;
+import com.clinic.config.DatabaseConfig;
 import com.clinic.model.Appointment;
 import com.clinic.model.Doctor;
+import com.clinic.model.DoctorSchedule;
 import com.clinic.model.Patient;
 import com.clinic.model.ServiceItem;
-import com.clinic.model.*;
+import com.clinic.model.Invoice;
 import com.clinic.utils.AuditUtil;
 import com.clinic.utils.StaffValidator;
 
@@ -26,7 +28,6 @@ public class StaffReceptionService {
     private final AppointmentDAO appointmentDAO = new AppointmentDAO();
     private final AuditLogDAO auditLogDAO = new AuditLogDAO();
     private final DoctorScheduleDAO doctorScheduleDAO = new DoctorScheduleDAO();
-    private final TimeSlotDAO timeSlotDAO = new TimeSlotDAO();
     private final AppointmentValidationService validationService = new AppointmentValidationService();
 
     public StaffReceptionService() {
@@ -90,16 +91,49 @@ public class StaffReceptionService {
         List<DoctorSchedule> schedules = doctorScheduleDAO.findAll(
                 0, 200, "APPROVED", null,
                 java.sql.Date.valueOf(selectedDate), java.sql.Date.valueOf(selectedDate));
-        for (DoctorSchedule schedule : schedules) {
-            schedule.setBookedSlotCount(timeSlotDAO.countBookedSlots(schedule.getId()));
-        }
+        // booked_count đã được lưu trực tiếp trong doctor_schedules, không cần đếm riêng
         return schedules;
     }
 
-    /** Read-only slot board. Non-available slots are intentionally not actionable. */
-    public List<TimeSlot> getDoctorSlotsForReception(LocalDate date) {
+    /**
+     * Read-only slot board — query trực tiếp doctor_schedules + shifts.
+     * Trả về List<Map> cho JSP hiển thị.
+     */
+    public List<Map<String, Object>> getDoctorSlotsForReception(LocalDate date) {
         LocalDate selectedDate = date != null ? date : LocalDate.now();
-        return timeSlotDAO.findByDateForReception(java.sql.Date.valueOf(selectedDate));
+        List<Map<String, Object>> list = new ArrayList<>();
+        String sql = "SELECT ds.id, ds.doctor_id, ds.work_date, ds.max_slots, ds.booked_count, ds.status, "
+                + "s.name AS shift_name, s.start_time, s.end_time, "
+                + "d.full_name AS doctor_name, d.specialization AS doctor_specialization "
+                + "FROM doctor_schedules ds "
+                + "INNER JOIN shifts s ON ds.shift_id = s.id "
+                + "INNER JOIN doctors d ON d.id = ds.doctor_id "
+                + "WHERE ds.work_date = ? AND ds.status = 'APPROVED' "
+                + "ORDER BY d.full_name, s.start_time";
+        try (java.sql.Connection conn = DatabaseConfig.getConnection();
+             java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setDate(1, java.sql.Date.valueOf(selectedDate));
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> row = new HashMap<>();
+                    row.put("id", rs.getInt("id"));
+                    row.put("doctorId", rs.getInt("doctor_id"));
+                    row.put("doctorName", rs.getString("doctor_name"));
+                    row.put("workDate", rs.getDate("work_date"));
+                    row.put("startTime", rs.getTime("start_time"));
+                    row.put("endTime", rs.getTime("end_time"));
+                    row.put("maxSlots", rs.getInt("max_slots"));
+                    row.put("bookedCount", rs.getInt("booked_count"));
+                    row.put("status", rs.getString("status"));
+                    row.put("shiftName", rs.getString("shift_name"));
+                    row.put("available", rs.getInt("booked_count") < rs.getInt("max_slots"));
+                    list.add(row);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[StaffReceptionService] getDoctorSlotsForReception ERROR: " + e.getMessage());
+        }
+        return list;
     }
 
     public ServiceItem findServiceById(String id) {
@@ -154,15 +188,10 @@ public class StaffReceptionService {
             throw new IllegalArgumentException("Dịch vụ khám mặc định chưa được cấu hình. Vui lòng liên hệ quản trị viên.");
         }
 
-        // 5. Kiểm tra trùng khung giờ.
-        boolean slotBooked = appointmentDAO.isSlotBooked(
-                null,
-                doctor.getId(),
-                appDate,
-                slot
-        );
-        if (slotBooked) {
-            throw new IllegalArgumentException("Khung giờ này đã có bệnh nhân đặt. Vui lòng chọn giờ khác.");
+        // 5. Tìm schedule_id tương ứng trong doctor_schedules
+        Integer foundSlotId = findAvailableOrCurrentSlot(doctor.getId(), appDate, slot, null);
+        if (foundSlotId == null) {
+            throw new IllegalArgumentException("Ca làm việc này đã hết chỗ hoặc không tồn tại. Vui lòng chọn ca khác.");
         }
 
         // 6. Tìm hoặc tạo bệnh nhân
@@ -177,7 +206,7 @@ public class StaffReceptionService {
         }
 
         // Kiểm tra 1 bệnh nhân chỉ có 1 lịch khám ngoại trú còn hiệu lực trong cùng 1 ngày
-        String sameDayError = validationService.validateSameDayActiveAppointment(patient.getId(), appDate, null, true, overrideReason);
+        String sameDayError = validationService.validateSameDayActiveAppointment(patient.getId(), doctor.getId(), appDate, null, true, overrideReason);
         if (sameDayError != null) {
             throw new IllegalArgumentException(sameDayError);
         }
@@ -190,41 +219,6 @@ public class StaffReceptionService {
             } catch (Exception e) {
                 System.err.println("[StaffReceptionService] Không thể cập nhật address/cccd: " + e.getMessage());
             }
-        }
-
-        // Tìm slotId tương ứng trong time_slots
-        java.sql.Time startTime = null;
-        if (slot != null && slot.contains("-")) {
-            try {
-                String startPart = slot.split("-")[0].trim();
-                startTime = java.sql.Time.valueOf(java.time.LocalTime.parse(startPart));
-            } catch (Exception ignored) {}
-        }
-
-        Integer foundSlotId = null;
-        if (startTime != null) {
-            String findSlotSql = "SELECT id FROM time_slots WHERE doctor_id = ? AND work_date = ? AND start_time = CAST(? AS time) AND status = 'AVAILABLE'";
-            try (Connection conn = DatabaseConfig.getConnection();
-                 PreparedStatement ps = conn.prepareStatement(findSlotSql)) {
-                ps.setInt(1, doctor.getId());
-                ps.setDate(2, java.sql.Date.valueOf(appDate));
-                ps.setTime(3, startTime);
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (rs.next()) {
-                        foundSlotId = rs.getInt("id");
-                    }
-                }
-            } catch (SQLException e) {
-                System.err.println("[StaffReceptionService] Lỗi khi tìm time_slot cho manual booking: " + e.getMessage());
-            }
-        }
-
-        // UI data can be forged. A normal booking must always resolve to an
-        // approved, currently available time_slot on the doctor's roster.
-        if (foundSlotId == null) {
-            throw new IllegalArgumentException(
-                    "Khung giờ đã hết chỗ hoặc không thuộc lịch làm việc đã được xác nhận của bác sĩ. Vui lòng chọn lại."
-            );
         }
 
         // 7. Tính tuổi thai
@@ -261,15 +255,15 @@ public class StaffReceptionService {
             throw new IllegalArgumentException("Khung giờ vừa được người khác chọn. Vui lòng tải lại và chọn slot khác.");
         }
 
-        // 10. Tạo hóa đơn PRE_EXAM — dùng giá slot (đã tính theo kinh nghiệm + giờ cao điểm)
+        // 10. Tạo hóa đơn PRE_EXAM — dùng giá mặc định 200,000đ
         if (appointment != null) {
-            TimeSlot ts = timeSlotDAO.findById(foundSlotId);
-            if (ts == null || ts.getPrice() == null) {
-                throw new IllegalArgumentException("Giá khám của khung giờ này chưa được công bố. Vui lòng chọn khung giờ khác.");
+            double price = 200000.00;
+            if (appointment.getService() != null && appointment.getService().getPrice() > 0) {
+                price = appointment.getService().getPrice();
             }
             Invoice preExamInvoice = new Invoice();
             preExamInvoice.setAppointmentId(appointment.getId());
-            preExamInvoice.setTotalAmount(java.math.BigDecimal.valueOf(ts.getPrice()));
+            preExamInvoice.setTotalAmount(java.math.BigDecimal.valueOf(price));
             preExamInvoice.setStatus("Unpaid");
             preExamInvoice.setInvoiceType("PRE_EXAM");
             invoiceDAO.insert(preExamInvoice);
@@ -396,6 +390,13 @@ public class StaffReceptionService {
                 }
             }
 
+            // Mark PRE_EXAM invoice as Paid to track revenue for Manager
+            try {
+                mockPayPreExamInvoice(String.valueOf(appointmentId));
+            } catch (Exception e) {
+                System.err.println("[StaffReceptionService] Warning: Could not mark PRE_EXAM invoice as Paid during check-in: " + e.getMessage());
+            }
+
             // Đặt trạng thái Waiting và xếp lại STT hàng đợi trong cùng 1 DB transaction
             if (!appointmentDAO.checkInAndRenumber(appointmentId)) {
                 throw new IllegalArgumentException("Không thể check-in. Vui lòng kiểm tra lại trạng thái lịch hẹn.");
@@ -436,6 +437,48 @@ public class StaffReceptionService {
                     "appointments",
                     apt.getStatus(),
                     "Confirmed"
+            );
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Mã lịch hẹn không hợp lệ.");
+        }
+    }
+
+    public void approvePostExamPayment(String id, int staffUserId) {
+        try {
+            int appointmentId = Integer.parseInt(id);
+            Appointment apt = appointmentDAO.findAppointmentById(appointmentId);
+            if (apt == null) {
+                throw new IllegalArgumentException("Không tìm thấy lịch hẹn.");
+            }
+            if (!"InProgress".equalsIgnoreCase(apt.getStatus())) {
+                throw new IllegalArgumentException("Chỉ ca khám đang ở trạng thái Đang khám mới có thể thực hiện thao tác này.");
+            }
+
+            com.clinic.model.Invoice invoice = invoiceDAO.getByAppointmentIdAndType(appointmentId, "POST_EXAM");
+            if (invoice == null || !"Unpaid".equalsIgnoreCase(invoice.getStatus())) {
+                throw new IllegalArgumentException("Không tìm thấy hóa đơn cận lâm sàng chưa thanh toán.");
+            }
+
+            String sql = "UPDATE invoices SET status = 'Paid', confirmed_by = ?, payment_date = GETDATE() WHERE id = ?";
+            try (java.sql.Connection conn = com.clinic.config.DatabaseConfig.getConnection();
+                 java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setInt(1, staffUserId);
+                ps.setInt(2, invoice.getId());
+                int rows = ps.executeUpdate();
+                if (rows == 0) {
+                    throw new IllegalArgumentException("Không thể cập nhật trạng thái hóa đơn.");
+                }
+            } catch (java.sql.SQLException e) {
+                System.err.println("[StaffReceptionService] approvePostExamPayment ERROR: " + e.getMessage());
+                throw new IllegalArgumentException("Lỗi hệ thống khi cập nhật thanh toán cận lâm sàng.");
+            }
+
+            auditLogDAO.logAction(
+                    "Lễ tân xác nhận thanh toán cận lâm sàng cho hóa đơn #" + invoice.getId(),
+                    "Staff",
+                    "invoices",
+                    invoice.getStatus(),
+                    "Paid"
             );
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException("Mã lịch hẹn không hợp lệ.");
@@ -632,16 +675,6 @@ public class StaffReceptionService {
                 throw new IllegalArgumentException("Lịch hẹn đã được đánh dấu vắng mặt, không thể hủy.");
             }
 
-            // A paid appointment cannot be silently cancelled because its
-            // receipt must remain auditable and requires a separate refund
-            // decision. Unpaid/pending receipts are voided by the DAO
-            // transaction together with slot release.
-            if (appointmentDAO.isPreExamPaid(appointmentId)) {
-                throw new IllegalArgumentException(
-                        "Lịch hẹn đã thanh toán. Không thể hủy trực tiếp; cần xử lý hoàn tiền theo quy trình quản lý."
-                );
-            }
-
             boolean success = appointmentDAO.cancelAppointmentAndReleaseSlot(appointmentId, 0, "Lễ tân hủy lịch hẹn");
             if (!success) {
                 throw new IllegalArgumentException("Không thể hủy lịch hẹn hoặc lịch đã hoàn thành/đang khám.");
@@ -753,20 +786,31 @@ public class StaffReceptionService {
     }
 
     private Integer findAvailableOrCurrentSlot(int doctorId, LocalDate workDate, String slot, Integer currentSlotId) {
-        if (slot == null || !slot.contains("-")) return null;
+        if (slot == null || slot.trim().isEmpty()) return null;
         try {
-            java.time.LocalTime start = java.time.LocalTime.parse(slot.split("-")[0].trim());
-            String sql = "SELECT id FROM time_slots WHERE doctor_id = ? AND work_date = ? AND start_time = CAST(? AS time) "
-                    + "AND (status = 'AVAILABLE' OR (id = ? AND status IN ('HELD', 'WAITING_VERIFICATION')))";
+            java.time.LocalTime time = null;
+            if (slot.contains("-")) {
+                time = java.time.LocalTime.parse(slot.split("-")[0].trim());
+            } else {
+                time = java.time.LocalTime.parse(slot.trim());
+            }
+
+            String sql = "SELECT ds.id FROM doctor_schedules ds "
+                    + "INNER JOIN shifts s ON ds.shift_id = s.id "
+                    + "WHERE ds.doctor_id = ? AND ds.work_date = ? AND s.start_time <= CAST(? AS time) "
+                    + "AND (s.end_time >= CAST(? AS time) OR s.end_time < s.start_time) "
+                    + "AND (ds.status = 'APPROVED' AND COALESCE(ds.booked_count, 0) < ds.max_slots "
+                    + "     OR ds.id = ?)";
             try (Connection conn = DatabaseConfig.getConnection();
                  PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setInt(1, doctorId);
                 ps.setDate(2, java.sql.Date.valueOf(workDate));
-                ps.setTime(3, java.sql.Time.valueOf(start));
+                ps.setTime(3, java.sql.Time.valueOf(time));
+                ps.setTime(4, java.sql.Time.valueOf(time));
                 if (currentSlotId != null) {
-                    ps.setInt(4, currentSlotId);
+                    ps.setInt(5, currentSlotId);
                 } else {
-                    ps.setInt(4, -1);
+                    ps.setInt(5, -1);
                 }
                 try (ResultSet rs = ps.executeQuery()) {
                     return rs.next() ? rs.getInt("id") : null;
@@ -848,6 +892,55 @@ public class StaffReceptionService {
             e.printStackTrace();
             throw new IllegalArgumentException("Không thể cập nhật thanh toán PRE_EXAM.");
         }
+    }
+
+    /** Paginated slot list — query trực tiếp doctor_schedules + shifts. */
+    public List<Map<String, Object>> getDoctorSlotsForReceptionPaginated(LocalDate date, String search,
+                                                                          String status, int page, int pageSize) {
+        return getDoctorSlotsForReception(date); // đơn giản hóa: trả tất cả, JSP tự phân trang
+    }
+
+    public int countDoctorSlotsForReception(LocalDate date, String search, String status) {
+        return getDoctorSlotsForReception(date).size();
+    }
+
+    public static class SlotPageResult {
+        public List<Map<String, Object>> slots;
+        public int totalPages;
+        public int totalRecords;
+        public int currentPage;
+    }
+
+    public SlotPageResult getDoctorSlotsPage(LocalDate date, String search, String status,
+                                              int page, int pageSize) {
+        List<Map<String, Object>> allSlots = getDoctorSlotsForReception(date);
+        // Lọc theo search và status
+        List<Map<String, Object>> filtered = new ArrayList<>();
+        for (Map<String, Object> s : allSlots) {
+            if (status != null && !status.isEmpty()) {
+                String sStatus = (String) s.get("status");
+                if (!status.equalsIgnoreCase(sStatus)) continue;
+            }
+            if (search != null && !search.trim().isEmpty()) {
+                String searchLower = search.trim().toLowerCase();
+                String doctorName = String.valueOf(s.getOrDefault("doctorName", "")).toLowerCase();
+                if (!doctorName.contains(searchLower)) continue;
+            }
+            filtered.add(s);
+        }
+        int totalRecords = filtered.size();
+        int totalPages = (int) Math.ceil((double) totalRecords / pageSize);
+        if (page < 1) page = 1;
+        if (page > totalPages && totalPages > 0) page = totalPages;
+        int from = (page - 1) * pageSize;
+        int to = Math.min(from + pageSize, totalRecords);
+
+        SlotPageResult result = new SlotPageResult();
+        result.slots = from < totalRecords ? filtered.subList(from, to) : new ArrayList<>();
+        result.totalRecords = totalRecords;
+        result.totalPages = totalPages;
+        result.currentPage = page;
+        return result;
     }
 
     public static class QueueResult {

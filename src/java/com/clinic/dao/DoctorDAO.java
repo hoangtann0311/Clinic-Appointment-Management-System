@@ -64,11 +64,74 @@ public class DoctorDAO {
         return list;
     }
 
+    public List<Doctor> getDoctorsPaginated(String keyword, int offset, int limit) {
+        List<Doctor> list = new ArrayList<>();
+        String sql = "SELECT d.id, d.full_name, d.specialization, d.phone_number, d.degree, d.experience_years, d.avatar_url "
+                   + "FROM doctors d "
+                   + "INNER JOIN users u ON d.user_id = u.id "
+                   + "WHERE u.status = 'Active' AND ISNULL(u.is_deleted, 0) = 0 ";
+        
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            sql += "AND (d.full_name LIKE ? OR d.specialization LIKE ?) ";
+        }
+        
+        sql += "ORDER BY d.full_name OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            
+            int paramIndex = 1;
+            if (keyword != null && !keyword.trim().isEmpty()) {
+                String like = "%" + keyword.trim() + "%";
+                ps.setString(paramIndex++, like);
+                ps.setString(paramIndex++, like);
+            }
+            ps.setInt(paramIndex++, offset);
+            ps.setInt(paramIndex, limit);
+            
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapRowToDoctor(rs));
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[DoctorDAO] getDoctorsPaginated ERROR: " + e.getMessage());
+        }
+        return list;
+    }
+
+    public int countDoctors(String keyword) {
+        String sql = "SELECT COUNT(*) FROM doctors d "
+                   + "INNER JOIN users u ON d.user_id = u.id "
+                   + "WHERE u.status = 'Active' AND ISNULL(u.is_deleted, 0) = 0 ";
+        
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            sql += "AND (d.full_name LIKE ? OR d.specialization LIKE ?) ";
+        }
+        
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            
+            if (keyword != null && !keyword.trim().isEmpty()) {
+                String like = "%" + keyword.trim() + "%";
+                ps.setString(1, like);
+                ps.setString(2, like);
+            }
+            
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt(1);
+            }
+        } catch (Exception e) {
+            System.err.println("[DoctorDAO] countDoctors ERROR: " + e.getMessage());
+        }
+        return 0;
+    }
+
     /**
      * Tìm bác sĩ theo id (Bác sĩ dashboard / manager)
      */
     public Doctor findById(int id) {
-        String sql = "SELECT d.id, d.user_id, d.full_name, d.specialization, d.phone_number "
+        String sql = "SELECT d.id, d.user_id, d.full_name, d.specialization, d.phone_number, d.degree, d.experience_years, d.bio, d.avatar_url "
                    + "FROM doctors d WHERE d.id = ?";
 
         try (Connection conn = DatabaseConfig.getConnection();

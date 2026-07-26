@@ -249,7 +249,6 @@ public class ManagerScheduleServlet extends HttpServlet {
                 } else if (result.needsReassignment()) {
                     req.setAttribute("showCancelWarning", true);
                     req.setAttribute("hasBookedSlotsError", errors.get("hasBookedSlots"));
-                    req.setAttribute("bookedSlots", result.getBookedSlots());
                     req.setAttribute("bookedSlotCount", result.getBookedSlotCount());
                     req.setAttribute("cancelSchedule", scheduleService.getScheduleById(scheduleId));
                     req.setAttribute("tab", "schedules");

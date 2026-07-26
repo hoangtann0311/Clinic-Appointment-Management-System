@@ -19,6 +19,7 @@ import java.io.IOException;
         "/admin/reception",
         "/admin/reception/checkin",
         "/admin/reception/approve-payment-request",
+        "/admin/reception/approve-post-exam",
         "/admin/reception/cancel",
         "/admin/reception/priority"
 })
@@ -43,6 +44,7 @@ public class StaffQueueServlet extends HttpServlet {
 
         if ("/admin/reception/checkin".equals(path)
                 || "/admin/reception/approve-payment-request".equals(path)
+                || "/admin/reception/approve-post-exam".equals(path)
                 || "/admin/reception/cancel".equals(path)
                 || "/admin/reception/priority".equals(path)) {
             resp.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED,
@@ -131,7 +133,18 @@ public class StaffQueueServlet extends HttpServlet {
             return;
         }
 
-
+        if ("/admin/reception/approve-post-exam".equals(path)) {
+            String id = req.getParameter("id");
+            try {
+                staffReceptionService.approvePostExamPayment(id, user.getId());
+                req.getSession().setAttribute("queueSuccess", "Đã xác nhận thanh toán dịch vụ cận lâm sàng thành công!");
+                resp.sendRedirect(req.getContextPath() + "/admin/reception");
+            } catch (IllegalArgumentException e) {
+                req.getSession().setAttribute("queueError", e.getMessage());
+                resp.sendRedirect(req.getContextPath() + "/admin/reception");
+            }
+            return;
+        }
 
         resp.sendRedirect(req.getContextPath() + "/admin/reception");
     }
@@ -184,6 +197,7 @@ public class StaffQueueServlet extends HttpServlet {
 
             req.setAttribute("todayAppointments", staffReceptionService.getWidgetAppointmentsByDate(selectedDate));
             req.setAttribute("waitingQueue", staffReceptionService.getWidgetWaitingQueueByDate(selectedDate));
+            req.setAttribute("unpaidPostExamAptIds", new InvoiceDAO().getUnpaidPostExamAppointmentIds(selectedDate));
             // Đánh dấu bệnh nhân đến muộn (>60 phút sau giờ hẹn)
             req.setAttribute("lateAppointments", staffReceptionService.getLateAppointmentIds(selectedDate));
             Object queueSuccess = req.getSession().getAttribute("queueSuccess");

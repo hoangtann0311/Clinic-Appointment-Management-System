@@ -47,7 +47,7 @@ public final class DatabaseConfig {
             getSetting("DB_USER", "sa");
 
     private static final String DB_PASSWORD =
-            getSetting("DB_PASSWORD", "123");
+            getSetting("DB_PASSWORD", "sa");
 
     /**
      * Bốn URL đầu sử dụng Windows Authentication.

@@ -39,8 +39,26 @@ public class PatientAppointmentServlet extends HttpServlet {
         if (user == null) return;
 
         try {
-            List<Appointment> appointments = bookingService.getMyAppointments(user.getId());
+            int page = 1;
+            int pageSize = 10;
+            String keyword = request.getParameter("keyword");
+
+            if (request.getParameter("page") != null) {
+                try {
+                    page = Integer.parseInt(request.getParameter("page"));
+                } catch (NumberFormatException e) {
+                    page = 1;
+                }
+            }
+
+            List<Appointment> appointments = bookingService.getMyAppointmentsPaginated(user.getId(), keyword, page, pageSize);
+            int totalAppointments = bookingService.countMyAppointments(user.getId(), keyword);
+            int totalPages = (int) Math.ceil((double) totalAppointments / pageSize);
+
             request.setAttribute("appointments", appointments);
+            request.setAttribute("currentPage", page);
+            request.setAttribute("totalPages", totalPages);
+            request.setAttribute("keyword", keyword);
 
             // Batch load invoices + prescription status — 2 queries thay vì N*3 queries
             com.clinic.dao.InvoiceDAO invoiceDAO = new com.clinic.dao.InvoiceDAO();

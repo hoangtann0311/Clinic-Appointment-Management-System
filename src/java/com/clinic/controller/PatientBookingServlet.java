@@ -44,8 +44,26 @@ public class PatientBookingServlet extends HttpServlet {
                 request.setAttribute("rescheduleId", rescheduleId);
             }
 
-            List<Doctor> doctors = bookingService.getAllDoctors();
+            int page = 1;
+            int pageSize = 10;
+            String keyword = request.getParameter("keyword");
+
+            if (request.getParameter("page") != null) {
+                try {
+                    page = Integer.parseInt(request.getParameter("page"));
+                } catch (NumberFormatException e) {
+                    page = 1;
+                }
+            }
+
+            List<Doctor> doctors = bookingService.getDoctorsPaginated(keyword, page, pageSize);
+            int totalDoctors = bookingService.countDoctors(keyword);
+            int totalPages = (int) Math.ceil((double) totalDoctors / pageSize);
+
             request.setAttribute("doctors", doctors);
+            request.setAttribute("currentPage", page);
+            request.setAttribute("totalPages", totalPages);
+            request.setAttribute("keyword", keyword);
             request.setAttribute("today", LocalDate.now().toString());
 
             request.getRequestDispatcher("/views/patient/booking.jsp").forward(request, response);
@@ -67,6 +85,7 @@ public class PatientBookingServlet extends HttpServlet {
         if (user == null) return;
 
         String slotIdParam = request.getParameter("slotId");
+        String timeSlotParam = request.getParameter("timeSlot");
         String symptoms = request.getParameter("symptoms");
         String lmp = request.getParameter("lastMenstrualPeriod");
         String rescheduleIdParam = request.getParameter("rescheduleId");
@@ -85,7 +104,7 @@ public class PatientBookingServlet extends HttpServlet {
             if (isReschedule) {
                 try {
                     int rescheduleId = Integer.parseInt(rescheduleIdParam);
-                    boolean ok = bookingService.rescheduleAppointment(user.getId(), rescheduleId, slotId, errors);
+                    boolean ok = bookingService.rescheduleAppointment(user.getId(), rescheduleId, slotId, timeSlotParam, errors);
                     if (ok) {
                         HttpSession session = request.getSession();
                         session.setAttribute("bookingSuccess", "Đổi lịch khám thành công! Lịch hẹn mới đã được ghi nhận.");
@@ -99,7 +118,7 @@ public class PatientBookingServlet extends HttpServlet {
                 // serviceId = 0: bệnh nhân không chọn dịch vụ khi đặt lịch.
                 // Dịch vụ cụ thể (siêu âm, xét nghiệm...) do bác sĩ chỉ định sau khi khám.
                 appointment = bookingService.bookAppointment(
-                        user.getId(), slotId, 0, symptoms, lmp, errors
+                        user.getId(), slotId, timeSlotParam, 0, symptoms, lmp, errors
                 );
                 if (appointment != null) {
                     HttpSession session = request.getSession();
