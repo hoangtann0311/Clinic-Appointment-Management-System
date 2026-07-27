@@ -30,10 +30,6 @@ public class ValidationUtil {
     private static final int MAX_NAME_LENGTH = 100;
     private static final int MIN_NAME_LENGTH = 2;
 
-    // Mật khẩu: ít nhất 6 ký tự, phải có ít nhất 1 chữ cái, 1 chữ số và 1 ký tự đặc biệt
-    private static final String PASSWORD_REGEX =
-            "^(?=.*[A-Za-z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?`~])[A-Za-z\\d!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?`~]{6,}$";
-
     /**
      * Validate email định dạng.
      */
@@ -52,10 +48,51 @@ public class ValidationUtil {
      * - Phải có ít nhất 1 ký tự đặc biệt
      */
     public static boolean isValidPassword(String password) {
+        return validatePassword(password) == null;
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // LUẬT MẬT KHẨU DUY NHẤT CỦA TOÀN HỆ THỐNG
+    // ══════════════════════════════════════════════════════════
+
+    /** Ký tự đặc biệt được chấp nhận. */
+    private static final String PASSWORD_SPECIAL_CHARS =
+            ".*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?`~].*";
+
+    /**
+     * Luật mật khẩu áp dụng cho MỌI nơi trong hệ thống: đổi mật khẩu, đặt lại mật khẩu
+     * qua email, quản trị viên tạo/sửa tài khoản, và trang hồ sơ cá nhân của mọi vai trò.
+     *
+     * <p>Yêu cầu: tối thiểu {@value #MIN_PASSWORD_LENGTH} ký tự, có ít nhất 1 chữ cái,
+     * 1 chữ số và 1 ký tự đặc biệt. KHÔNG giới hạn tập ký tự — mật khẩu có chữ có dấu
+     * hay dấu cách vẫn hợp lệ miễn là đủ ba loại trên.
+     *
+     * <p><b>Vì sao gom về một chỗ:</b> trước đây hệ thống có 3 luật khác nhau ở 5 nơi —
+     * {@code PasswordService} (2 nơi) và {@code AdminUserServlet} dùng luật này,
+     * {@code AdminProfileServlet} lại đòi ≥8 ký tự có chữ HOA nhưng không cần ký tự đặc
+     * biệt, còn {@code UserService} khi tạo tài khoản chỉ kiểm tra độ dài. Hệ quả là một
+     * mật khẩu đặt được ở màn này lại bị màn khác từ chối.
+     *
+     * @param password mật khẩu cần kiểm tra
+     * @return {@code null} nếu hợp lệ, ngược lại là thông báo lỗi hiển thị cho người dùng
+     */
+    public static String validatePassword(String password) {
         if (password == null || password.isEmpty()) {
-            return false;
+            return "Mật khẩu không được để trống.";
         }
-        return password.matches(PASSWORD_REGEX);
+        if (password.length() < MIN_PASSWORD_LENGTH) {
+            return "Mật khẩu phải có ít nhất " + MIN_PASSWORD_LENGTH + " ký tự.";
+        }
+        if (!password.matches(".*[A-Za-z].*")) {
+            return "Mật khẩu phải chứa ít nhất 1 chữ cái.";
+        }
+        if (!password.matches(".*\\d.*")) {
+            return "Mật khẩu phải chứa ít nhất 1 chữ số.";
+        }
+        if (!password.matches(PASSWORD_SPECIAL_CHARS)) {
+            return "Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt (VD: !@#$%).";
+        }
+        return null;
     }
 
     /**

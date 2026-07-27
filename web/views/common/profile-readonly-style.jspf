@@ -1,0 +1,21 @@
+<%--
+    Kiểu hiển thị của ô chỉ-xem. Include đúng MỘT lần trên mỗi trang, trước khi
+    include profile-readonly-field.jspf lần đầu.
+
+    Chép đúng khai báo đang dùng ở views/admin/profile/index.jsp để ba vai trò mới
+    nhìn giống hệt ô Vai trò của trang hồ sơ Quản trị viên. Không sửa admin.css —
+    làm vậy sẽ ảnh hưởng tới các trang đang chạy đúng.
+
+    Selector phải là ".admin-body .pf-readonly-box" (không chỉ ".pf-readonly-box")
+    để thắng ".admin-body .form-control" ở admin.css:926 — rule đó có độ ưu tiên 0,2,0.
+--%>
+<style>
+    .admin-body .pf-readonly-box {
+        background-color: #f1f5f9;
+        color: var(--c-muted, #64748b);
+        border-color: transparent;
+        box-shadow: none;
+        cursor: not-allowed;
+        user-select: none;
+    }
+</style>

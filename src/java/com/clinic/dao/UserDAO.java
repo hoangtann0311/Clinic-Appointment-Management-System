@@ -364,6 +364,11 @@ public class UserDAO {
             user.setRoleName(rs.getString("role_name"));
         }
 
+        // Bộ phận / chức danh — chỉ map khi câu SELECT có lấy (mapRow này dùng chung
+        // cho rất nhiều truy vấn với tập cột khác nhau).
+        if (cols.contains("department")) user.setDepartment(rs.getString("department"));
+        if (cols.contains("job_title")) user.setJobTitle(rs.getString("job_title"));
+
         return user;
     }
 
@@ -683,6 +688,9 @@ public class UserDAO {
         }
         // Luôn select is_deleted để JSP biết user nào đã bị xoá mềm
         columns += ", u.is_deleted";
+        // Bộ phận / chức danh — màn Quản Lý Người Dùng cần để đổ sẵn vào form sửa.
+        // Không có hai cột này thì mỗi lần sửa tài khoản sẽ xoá mất giá trị đã gán.
+        columns += ", u.department, u.job_title";
 
         // WHERE clause: mặc định chỉ hiện user chưa xoá (is_deleted=0),
         // khi includeDeleted=true → chỉ hiện user đã xoá (is_deleted=1)

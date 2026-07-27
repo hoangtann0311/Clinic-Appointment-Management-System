@@ -161,8 +161,10 @@ public class UserService {
             errors.put("email", "Email không hợp lệ.");
             return false;
         }
-        if (password == null || password.length() < 6) {
-            errors.put("password", "Mật khẩu ít nhất 6 ký tự.");
+        // Luật mật khẩu chung của toàn hệ thống
+        String pwError = com.clinic.utils.ValidationUtil.validatePassword(password);
+        if (pwError != null) {
+            errors.put("password", pwError);
             return false;
         }
         // ── Validate số điện thoại ──
@@ -337,8 +339,10 @@ public class UserService {
             return false;
         }
 
-        if (password == null || password.length() < 6) {
-            errors.put("password", "Mật khẩu phải từ 6 ký tự trở lên.");
+        // Luật mật khẩu chung của toàn hệ thống
+        String pwError = com.clinic.utils.ValidationUtil.validatePassword(password);
+        if (pwError != null) {
+            errors.put("password", pwError);
             return false;
         }
 

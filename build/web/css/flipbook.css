@@ -1,0 +1,176 @@
+/* Book Container */
+.book-container {
+    width: 100%;
+    max-width: 1000px;
+    margin: 0 auto;
+    position: relative;
+    perspective: 1200px; /* For 3D effect if needed */
+    display: flex;
+    justify-content: center;
+}
+
+.book {
+    display: flex;
+    width: 100%;
+    background-color: #f3f3f3;
+    border-radius: 4px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2), inset 0 0 15px rgba(0,0,0,0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.book-spine {
+    width: 40px;
+    background: linear-gradient(to right, #4a4a4a, #2c2c2c, #4a4a4a);
+    box-shadow: inset 5px 0 10px rgba(0,0,0,0.5);
+    z-index: 10;
+}
+
+.book-pages-wrapper {
+    flex-grow: 1;
+    position: relative;
+    background-color: #fff;
+    display: flex;
+    min-height: 600px;
+}
+
+/* Page styles */
+.book-page {
+    flex: 1;
+    padding: 30px;
+    background-color: #fff;
+    background-image: linear-gradient(to right, transparent 95%, rgba(0,0,0,0.02) 100%);
+    display: none; /* hidden by default */
+    flex-direction: column;
+}
+
+.book-page.active {
+    display: flex;
+}
+
+.book-page.left-page {
+    border-right: 1px solid #ddd;
+    box-shadow: inset -5px 0 10px rgba(0,0,0,0.03);
+}
+
+.book-page.right-page {
+    box-shadow: inset 5px 0 10px rgba(0,0,0,0.03);
+}
+
+.page-number {
+    text-align: center;
+    font-size: 0.8rem;
+    color: #999;
+    margin-top: auto;
+    padding-top: 20px;
+}
+
+/* Cover Style */
+.book-cover {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #1a6b3c;
+    background-image: linear-gradient(135deg, #1a6b3c 0%, #28a745 100%);
+    color: white;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 40px;
+    transition: transform 0.8s cubic-bezier(0.645, 0.045, 0.355, 1);
+    transform-origin: left center;
+}
+
+.book-cover.open {
+    transform: rotateY(-180deg);
+    pointer-events: none;
+    opacity: 0;
+}
+
+.book-cover h1 {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.book-cover .hospital-name {
+    font-size: 1.2rem;
+    opacity: 0.8;
+    margin-bottom: 40px;
+}
+
+.book-cover .patient-info-card {
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 12px;
+    padding: 20px 40px;
+    margin-bottom: 40px;
+}
+
+/* Controls */
+.book-controls {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+    width: 100%;
+}
+
+.book-controls button {
+    background: #0d6efd;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+    box-shadow: 0 4px 6px rgba(13, 110, 253, 0.2);
+}
+
+.book-controls button:hover {
+    background: #0b5ed7;
+    transform: translateY(-2px);
+}
+
+.book-controls button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .book {
+        flex-direction: column;
+    }
+    .book-spine {
+        display: none;
+    }
+    .book-page.left-page {
+        border-right: none;
+        border-bottom: 1px dashed #ddd;
+    }
+    .book-pages-wrapper {
+        flex-direction: column;
+    }
+    .book-page {
+        padding: 20px;
+    }
+}
+
+/* Paper lined background for notes */
+.paper-notes {
+    background-image: linear-gradient(#e5e5e5 1px, transparent 1px);
+    background-size: 100% 1.5rem;
+    line-height: 1.5rem;
+    padding: 0 10px;
+    border-left: 2px solid #ffcccc;
+    font-family: 'Kalam', 'Comic Sans MS', cursive, sans-serif;
+    color: #333;
+}

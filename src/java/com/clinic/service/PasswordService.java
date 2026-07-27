@@ -102,25 +102,10 @@ public class PasswordService {
             return null;
         }
 
-        // Bước 2: Validate mật khẩu mới
-        if (newPassword == null || newPassword.isEmpty()) {
-            errors.put("newPassword", "Mật khẩu mới không được để trống.");
-            return null;
-        }
-        if (newPassword.length() < 6) {
-            errors.put("newPassword", "Mật khẩu phải có ít nhất 6 ký tự.");
-            return null;
-        }
-        if (!newPassword.matches(".*[A-Za-z].*")) {
-            errors.put("newPassword", "Mật khẩu phải chứa ít nhất 1 chữ cái.");
-            return null;
-        }
-        if (!newPassword.matches(".*\\d.*")) {
-            errors.put("newPassword", "Mật khẩu phải chứa ít nhất 1 chữ số.");
-            return null;
-        }
-        if (!newPassword.matches(".*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?`~].*")) {
-            errors.put("newPassword", "Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt (VD: !@#$%).");
+        // Bước 2: Validate mật khẩu mới — dùng luật chung của toàn hệ thống
+        String pwError = com.clinic.utils.ValidationUtil.validatePassword(newPassword);
+        if (pwError != null) {
+            errors.put("newPassword", pwError);
             return null;
         }
 
@@ -211,25 +196,10 @@ public class PasswordService {
             return false;
         }
 
-        // Bước 4: Validate mật khẩu mới
-        if (newPassword == null || newPassword.isEmpty()) {
-            errors.put("newPassword", "Mật khẩu mới không được để trống.");
-            return false;
-        }
-        if (newPassword.length() < 6) {
-            errors.put("newPassword", "Mật khẩu phải có ít nhất 6 ký tự.");
-            return false;
-        }
-        if (!newPassword.matches(".*[A-Za-z].*")) {
-            errors.put("newPassword", "Mật khẩu phải chứa ít nhất 1 chữ cái.");
-            return false;
-        }
-        if (!newPassword.matches(".*\\d.*")) {
-            errors.put("newPassword", "Mật khẩu phải chứa ít nhất 1 chữ số.");
-            return false;
-        }
-        if (!newPassword.matches(".*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?`~].*")) {
-            errors.put("newPassword", "Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt (VD: !@#$%).");
+        // Bước 4: Validate mật khẩu mới — dùng luật chung của toàn hệ thống
+        String pwError = com.clinic.utils.ValidationUtil.validatePassword(newPassword);
+        if (pwError != null) {
+            errors.put("newPassword", pwError);
             return false;
         }
 

@@ -29,6 +29,11 @@ public class User implements Serializable {
     private String avatarUrl;
     // Soft delete flag
     private boolean deleted;
+    // Bộ phận và chức danh — do quản trị viên phân công ở màn Quản Lý Người Dùng.
+    // Trang hồ sơ cá nhân của Nhân viên và Quản lý hiển thị ở dạng CHỈ-XEM.
+    // Chỉ được nạp khi câu SELECT có lấy hai cột này, ngược lại là null.
+    private String department;
+    private String jobTitle;
 
     public User() {
     }
@@ -186,6 +191,22 @@ public class User implements Serializable {
 
     public void setAvatarUrl(String avatarUrl) {
         this.avatarUrl = avatarUrl;
+    }
+
+    public String getDepartment() {
+        return department;
+    }
+
+    public void setDepartment(String department) {
+        this.department = department;
+    }
+
+    public String getJobTitle() {
+        return jobTitle;
+    }
+
+    public void setJobTitle(String jobTitle) {
+        this.jobTitle = jobTitle;
     }
 
     public boolean isDeleted() {
