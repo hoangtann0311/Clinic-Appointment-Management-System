@@ -24,6 +24,10 @@ public class Doctor implements Serializable {
     private String avatarUrl;   // cột thật trong DB
     private String bio;
 
+    // Transient fields từ bảng users (dùng cho Manager xem chi tiết)
+    private String userStatus;
+    private String userPhone;
+
     public Doctor() {
     }
 
@@ -135,6 +139,12 @@ public class Doctor implements Serializable {
 
     public String getBio() { return bio; }
     public void setBio(String bio) { this.bio = bio; }
+
+    public String getUserStatus() { return userStatus; }
+    public void setUserStatus(String userStatus) { this.userStatus = userStatus; }
+
+    public String getUserPhone() { return userPhone; }
+    public void setUserPhone(String userPhone) { this.userPhone = userPhone; }
 
     @Override
     public String toString() {
