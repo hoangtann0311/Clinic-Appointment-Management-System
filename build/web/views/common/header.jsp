@@ -321,7 +321,7 @@
                         </li>
                         <li class="nav-item">
                             <a class="nav-link patient-nav-link" href="${pageContext.request.contextPath}/patient/invoices">
-                                <i class="bi bi-file-earmark-text me-1"></i>Yêu Cầu Thanh Toán
+                                <i class="bi bi-clock-history me-1"></i>Lịch Sử Thanh Toán
                             </a>
                         </li>
 

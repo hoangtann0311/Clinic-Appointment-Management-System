@@ -1,6 +1,7 @@
 package com.clinic.dao;
 
 import com.clinic.config.DatabaseConfig;
+import com.clinic.utils.EncryptionUtil;
 
 import com.clinic.model.Doctor;
 
@@ -375,5 +376,139 @@ public class DoctorDAO {
             System.err.println("[DoctorDAO] insert ERROR: " + e.getMessage());
         }
         return -1;
+    }
+
+    /**
+     * Lấy danh sách tất cả bác sĩ (không lọc Active) kèm thông tin user
+     * cho Manager xem danh sách (chỉ xem, không sửa/xóa).
+     */
+    public List<Doctor> findAllWithUserInfo(String keyword, int offset, int limit) {
+        List<Doctor> list = new ArrayList<>();
+        String decryptEmail = EncryptionUtil.decryptEmailSql("u.email");
+        String decryptPhone = EncryptionUtil.decryptPhoneSql("u.phone");
+        StringBuilder sql = new StringBuilder(
+            "SELECT d.id, d.user_id, d.full_name, d.specialization, d.phone_number, "
+            + "d.degree, d.experience_years, d.bio, d.avatar_url, "
+            + decryptEmail + " AS user_email, u.username, u.status AS user_status, "
+            + decryptPhone + " AS user_phone "
+            + "FROM doctors d "
+            + "LEFT JOIN users u ON d.user_id = u.id "
+            + "WHERE 1=1 ");
+
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            sql.append("AND (d.full_name LIKE ? OR d.specialization LIKE ? "
+                     + "OR u.email LIKE ? OR d.phone_number LIKE ?) ");
+        }
+
+        sql.append("ORDER BY d.full_name OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
+
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+
+            int paramIndex = 1;
+            if (keyword != null && !keyword.trim().isEmpty()) {
+                String like = "%" + keyword.trim() + "%";
+                ps.setString(paramIndex++, like);
+                ps.setString(paramIndex++, like);
+                ps.setString(paramIndex++, like);
+                ps.setString(paramIndex++, like);
+            }
+            ps.setInt(paramIndex++, offset);
+            ps.setInt(paramIndex, limit);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapRowWithUser(rs));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[DoctorDAO] findAllWithUserInfo ERROR: " + e.getMessage());
+        }
+        return list;
+    }
+
+    /**
+     * Đếm tổng số bác sĩ (cho phân trang Manager).
+     */
+    public int countAllDoctors(String keyword) {
+        StringBuilder sql = new StringBuilder(
+            "SELECT COUNT(*) FROM doctors d "
+            + "LEFT JOIN users u ON d.user_id = u.id WHERE 1=1 ");
+
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            sql.append("AND (d.full_name LIKE ? OR d.specialization LIKE ? "
+                     + "OR u.email LIKE ? OR d.phone_number LIKE ?) ");
+        }
+
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+
+            if (keyword != null && !keyword.trim().isEmpty()) {
+                String like = "%" + keyword.trim() + "%";
+                ps.setString(1, like);
+                ps.setString(2, like);
+                ps.setString(3, like);
+                ps.setString(4, like);
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            System.err.println("[DoctorDAO] countAllDoctors ERROR: " + e.getMessage());
+        }
+        return 0;
+    }
+
+    /**
+     * Lấy chi tiết bác sĩ kèm thông tin user (email, status, phone)
+     * cho Manager xem chi tiết (chỉ xem).
+     */
+    public Doctor findByIdWithUserInfo(int id) {
+        String decryptEmail = EncryptionUtil.decryptEmailSql("u.email");
+        String decryptPhone = EncryptionUtil.decryptPhoneSql("u.phone");
+        String sql = "SELECT d.id, d.user_id, d.full_name, d.specialization, d.phone_number, "
+                   + "d.degree, d.experience_years, d.bio, d.avatar_url, "
+                   + decryptEmail + " AS user_email, u.username, u.status AS user_status, "
+                   + decryptPhone + " AS user_phone "
+                   + "FROM doctors d "
+                   + "LEFT JOIN users u ON d.user_id = u.id "
+                   + "WHERE d.id = ?";
+
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapRowWithUser(rs);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[DoctorDAO] findByIdWithUserInfo ERROR: " + e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * Ánh xạ ResultSet → Doctor kèm thông tin user (email, trạng thái).
+     */
+    private Doctor mapRowWithUser(ResultSet rs) throws SQLException {
+        Doctor d = new Doctor();
+        d.setId(rs.getInt("id"));
+        d.setUserId(rs.getInt("user_id"));
+        d.setFullName(rs.getString("full_name"));
+        d.setSpecialization(rs.getString("specialization"));
+        d.setPhoneNumber(rs.getString("phone_number"));
+        try { d.setDegree(rs.getString("degree")); } catch (SQLException ignored) {}
+        try { d.setExperienceYears(rs.getInt("experience_years")); } catch (SQLException ignored) {}
+        try { d.setBio(rs.getString("bio")); } catch (SQLException ignored) {}
+        try { d.setAvatarUrl(rs.getString("avatar_url")); } catch (SQLException ignored) {}
+        d.setEmail(rs.getString("user_email"));
+        try { d.setUsername(rs.getString("username")); } catch (SQLException ignored) {}
+        String userStatus = rs.getString("user_status");
+        d.setUserStatus(userStatus != null ? userStatus : "");
+        String userPhone = rs.getString("user_phone");
+        d.setUserPhone(userPhone != null ? userPhone : "");
+        return d;
     }
 }

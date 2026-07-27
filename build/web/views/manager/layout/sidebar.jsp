@@ -46,9 +46,23 @@
                 <span>Dịch Vụ Y Tế</span>
             </a>
         </li>
+        <li>
+            <a href="${pageContext.request.contextPath}/manager/revenue/"
+               class="${fn:contains(requestURI, '/manager/revenue') ? 'active' : ''}">
+                <i class="bi bi-cash-stack"></i>
+                <span>Báo Cáo Doanh Thu</span>
+            </a>
+        </li>
 
-        <!-- QUẢN LÝ LỊCH LÀM VIỆC -->
+        <!-- QUẢN LÝ NHÂN SỰ -->
         <li class="admin-sidebar-section">Quản Lý Nhân Sự</li>
+        <li>
+            <a href="${pageContext.request.contextPath}/manager/doctors/"
+               class="${fn:contains(requestURI, '/manager/doctors') ? 'active' : ''}">
+                <i class="bi bi-person-badge-fill"></i>
+                <span>Quản Lý Bác Sĩ</span>
+            </a>
+        </li>
         <li>
             <a href="${pageContext.request.contextPath}/manager/schedules/"
                class="${fn:contains(requestURI, '/manager/schedules') ? 'active' : ''}">

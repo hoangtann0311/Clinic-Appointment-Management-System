@@ -665,16 +665,10 @@ public class DashboardService {
     // ──────────────────────────────────────────────
 
     /**
-     * Format số tiền sang chuỗi VNĐ.
+     * Format số tiền sang chuỗi VNĐ hiển thị chính xác (không làm tròn).
+     * Ví dụ: 8710000 → "8,710,000 VNĐ"
      */
     public static String formatCurrency(double amount) {
-        if (amount >= 1_000_000_000) {
-            return String.format("%.2f Tỷ VNĐ", amount / 1_000_000_000);
-        } else if (amount >= 1_000_000) {
-            return String.format("%.0f Triệu VNĐ", amount / 1_000_000);
-        } else if (amount >= 1_000) {
-            return String.format("%,.0f VNĐ", amount);
-        }
         return String.format("%,.0f VNĐ", amount);
     }
 }

@@ -131,6 +131,12 @@ public final class AuthorizationConfig {
         Map.entry("/manager/statistics/",   "report.view_dashboard"),
         Map.entry("/manager/pricing",       "service.view"),
         Map.entry("/manager/pricing/",      "service.view"),
+        // Báo cáo doanh thu — Manager xem danh sách giao dịch và doanh thu
+        Map.entry("/manager/revenue",       "report.view_dashboard"),
+        Map.entry("/manager/revenue/",      "report.view_dashboard"),
+        // Quản lý bác sĩ — Manager CHỈ XEM, không thêm/sửa/xóa
+        Map.entry("/manager/doctors",       "user.view"),
+        Map.entry("/manager/doctors/",      "user.view"),
         // Hồ Sơ Cá Nhân của Quản lý — cùng permission key với các trang hồ sơ
         // vai trò khác. Vai trò 3 đã có sẵn "user.view" trong role_permissions.
         Map.entry("/manager/profile",       "user.view"),

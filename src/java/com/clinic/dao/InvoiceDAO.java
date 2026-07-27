@@ -667,6 +667,224 @@ public class InvoiceDAO {
         return inv;
     }
 
+    // ═══════════════════════════════════════════════════════════
+    // REVENUE REPORT METHODS (Manager)
+    // Đồng bộ với Dashboard: lọc theo a.appointment_date + i.status = 'Paid'
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Lấy danh sách hóa đơn cho báo cáo doanh thu,
+     * hỗ trợ tìm kiếm, lọc trạng thái và khoảng ngày (theo appointment_date).
+     * Mặc định chỉ lấy hóa đơn Paid để tính doanh thu.
+     */
+    public List<Invoice> getRevenueInvoices(int offset, int pageSize,
+            String search, String status, String dateFrom, String dateTo) {
+        StringBuilder sql = new StringBuilder(BASE_SELECT);
+        sql.append(" WHERE 1=1 ");
+
+        List<Object> params = new ArrayList<>();
+
+        // Mặc định chỉ lấy hóa đơn Paid nếu không có filter status khác
+        if (status != null && !status.trim().isEmpty()) {
+            sql.append(" AND i.status = ? ");
+            params.add(status.trim());
+        } else {
+            sql.append(" AND UPPER(LTRIM(RTRIM(i.status))) = 'PAID' ");
+        }
+
+        if (search != null && !search.trim().isEmpty()) {
+            sql.append(" AND (COALESCE(u_pat.full_name, pt.full_name) LIKE ? "
+                     + "OR pt.phone_number LIKE ? OR i.transaction_code LIKE ? "
+                     + "OR doc.full_name LIKE ?) ");
+            String like = "%" + search.trim() + "%";
+            params.add(like); params.add(like); params.add(like); params.add(like);
+        }
+
+        // Đồng bộ với Dashboard: lọc theo appointment_date (ngày khám)
+        if (dateFrom != null && !dateFrom.trim().isEmpty()) {
+            sql.append(" AND a.appointment_date >= ? ");
+            try {
+                params.add(java.sql.Date.valueOf(dateFrom.trim()));
+            } catch (IllegalArgumentException e) { }
+        }
+
+        if (dateTo != null && !dateTo.trim().isEmpty()) {
+            sql.append(" AND a.appointment_date <= ? ");
+            try {
+                params.add(java.sql.Date.valueOf(dateTo.trim()));
+            } catch (IllegalArgumentException e) { }
+        }
+
+        sql.append(" ORDER BY i.id DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY ");
+        params.add(offset);
+        params.add(pageSize);
+
+        List<Invoice> list = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql.toString());
+            for (int i = 0; i < params.size(); i++) {
+                Object p = params.get(i);
+                if (p instanceof Integer) {
+                    ps.setInt(i + 1, (Integer) p);
+                } else if (p instanceof String) {
+                    ps.setString(i + 1, (String) p);
+                } else if (p instanceof java.sql.Date) {
+                    ps.setDate(i + 1, (java.sql.Date) p);
+                } else if (p instanceof java.sql.Timestamp) {
+                    ps.setTimestamp(i + 1, (java.sql.Timestamp) p);
+                }
+            }
+            rs = ps.executeQuery();
+            while (rs.next()) {
+                list.add(mapRow(rs));
+            }
+        } catch (SQLException e) {
+            System.err.println("[InvoiceDAO] getRevenueInvoices ERROR: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return list;
+    }
+
+    /**
+     * Đếm tổng số hóa đơn cho báo cáo doanh thu (cùng bộ lọc).
+     */
+    public int countRevenueInvoices(String search, String status,
+            String dateFrom, String dateTo) {
+        StringBuilder sql = new StringBuilder(
+            "SELECT COUNT(*) FROM invoices i "
+            + "LEFT JOIN appointments a ON i.appointment_id = a.id "
+            + "LEFT JOIN patients pt ON a.patient_id = pt.id "
+            + "LEFT JOIN users u_pat ON pt.user_id = u_pat.id "
+            + "LEFT JOIN doctors doc ON a.doctor_id = doc.id "
+            + "WHERE 1=1 ");
+
+        List<Object> params = new ArrayList<>();
+
+        if (status != null && !status.trim().isEmpty()) {
+            sql.append(" AND i.status = ? ");
+            params.add(status.trim());
+        } else {
+            sql.append(" AND UPPER(LTRIM(RTRIM(i.status))) = 'PAID' ");
+        }
+
+        if (search != null && !search.trim().isEmpty()) {
+            sql.append(" AND (COALESCE(u_pat.full_name, pt.full_name) LIKE ? "
+                     + "OR pt.phone_number LIKE ? OR i.transaction_code LIKE ? "
+                     + "OR doc.full_name LIKE ?) ");
+            String like = "%" + search.trim() + "%";
+            params.add(like); params.add(like); params.add(like); params.add(like);
+        }
+
+        if (dateFrom != null && !dateFrom.trim().isEmpty()) {
+            sql.append(" AND a.appointment_date >= ? ");
+            try {
+                params.add(java.sql.Date.valueOf(dateFrom.trim()));
+            } catch (IllegalArgumentException e) { }
+        }
+
+        if (dateTo != null && !dateTo.trim().isEmpty()) {
+            sql.append(" AND a.appointment_date <= ? ");
+            try {
+                params.add(java.sql.Date.valueOf(dateTo.trim()));
+            } catch (IllegalArgumentException e) { }
+        }
+
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql.toString());
+            for (int i = 0; i < params.size(); i++) {
+                Object p = params.get(i);
+                if (p instanceof String) {
+                    ps.setString(i + 1, (String) p);
+                } else if (p instanceof java.sql.Date) {
+                    ps.setDate(i + 1, (java.sql.Date) p);
+                }
+            }
+            rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            System.err.println("[InvoiceDAO] countRevenueInvoices ERROR: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return 0;
+    }
+
+    /**
+     * Lấy tổng quan doanh thu: số giao dịch Paid và tổng số tiền.
+     * Đồng bộ với DashboardDAO.sumRevenue(): lọc theo appointment_date + status = 'Paid'.
+     * Trả về mảng [count, totalAmount] hoặc null nếu lỗi.
+     */
+    public Object[] getRevenueSummary(String dateFrom, String dateTo) {
+        StringBuilder sql = new StringBuilder(
+            "SELECT COUNT(*), ISNULL(SUM(i.total_amount), 0) "
+            + "FROM invoices i "
+            + "INNER JOIN appointments a ON i.appointment_id = a.id "
+            + "WHERE UPPER(LTRIM(RTRIM(i.status))) = 'PAID' ");
+
+        List<Object> params = new ArrayList<>();
+
+        if (dateFrom != null && !dateFrom.trim().isEmpty()) {
+            sql.append(" AND a.appointment_date >= ? ");
+            try {
+                params.add(java.sql.Date.valueOf(dateFrom.trim()));
+            } catch (IllegalArgumentException e) { }
+        }
+
+        if (dateTo != null && !dateTo.trim().isEmpty()) {
+            sql.append(" AND a.appointment_date <= ? ");
+            try {
+                params.add(java.sql.Date.valueOf(dateTo.trim()));
+            } catch (IllegalArgumentException e) { }
+        }
+
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            ps = conn.prepareStatement(sql.toString());
+            for (int i = 0; i < params.size(); i++) {
+                ps.setDate(i + 1, (java.sql.Date) params.get(i));
+            }
+            rs = ps.executeQuery();
+            if (rs.next()) {
+                return new Object[] { rs.getInt(1), rs.getDouble(2) };
+            }
+        } catch (SQLException e) {
+            System.err.println("[InvoiceDAO] getRevenueSummary ERROR: " + e.getMessage());
+        } finally {
+            closeResources(conn, ps, rs);
+        }
+        return null;
+    }
+
+    /**
+     * Lấy tổng doanh thu chỉ từ các hóa đơn Paid.
+     */
+    public double getTotalPaidRevenue(String dateFrom, String dateTo) {
+        Object[] summary = getRevenueSummary(dateFrom, dateTo);
+        return summary != null ? (Double) summary[1] : 0.0;
+    }
+
+    /**
+     * Đếm số giao dịch Paid.
+     */
+    public int countPaidTransactions(String dateFrom, String dateTo) {
+        Object[] summary = getRevenueSummary(dateFrom, dateTo);
+        return summary != null ? (Integer) summary[0] : 0;
+    }
+
     private void closeResources(Connection conn, PreparedStatement ps, ResultSet rs) {
         if (rs != null) { try { rs.close(); } catch (SQLException e) { } }
         if (ps != null) { try { ps.close(); } catch (SQLException e) { } }
