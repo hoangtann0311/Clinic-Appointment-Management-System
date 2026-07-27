@@ -87,14 +87,6 @@
             </a>
         </li>
 
-        <li class="admin-sidebar-section">Tài Khoản</li>
-        <li>
-            <a href="${pageContext.request.contextPath}/manager/profile"
-               class="${fn:contains(requestURI, '/manager/profile') ? 'active' : ''}">
-                <i class="bi bi-person-circle"></i>
-                <span>Hồ Sơ Cá Nhân</span>
-            </a>
-        </li>
     </ul>
 </aside>
 

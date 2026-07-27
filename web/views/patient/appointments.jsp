@@ -229,28 +229,17 @@
                                         <c:otherwise><span class="text-muted">—</span></c:otherwise>
                                     </c:choose>
                                 </td>
-                                <%-- Thanh toán --%>
+                                <%-- Thanh toán — thực tế giữa Staff và BN tại quầy --%>
                                 <td>
                                     <c:choose>
                                         <c:when test="${st == 'cancelled' || st == 'noshow'}">
                                             <span class="pay-na">—</span>
                                         </c:when>
                                         <c:when test="${preExamPaymentStatuses[a.id] == 'Paid' || st == 'waiting' || st == 'inprogress' || st == 'success' || st == 'completed'}">
-                                            <c:set var="payMethod" value="${preExamPaymentMethods[a.id]}"/>
-                                            <c:choose>
-                                                <c:when test="${payMethod == 'Cash'}">
-                                                    <span class="pay-paid"><i class="bi bi-cash-stack me-1"></i>Tiền mặt</span>
-                                                </c:when>
-                                                <c:when test="${payMethod == 'BankTransfer'}">
-                                                    <span class="pay-paid"><i class="bi bi-bank me-1"></i>Chuyển khoản</span>
-                                                </c:when>
-                                                <c:otherwise>
-                                                    <span class="pay-paid"><i class="bi bi-check-circle me-1"></i>Đã thanh toán</span>
-                                                </c:otherwise>
-                                            </c:choose>
+                                            <span class="pay-paid"><i class="bi bi-check-circle me-1"></i>Đã thanh toán</span>
                                         </c:when>
                                         <c:otherwise>
-                                            <span class="pay-unpaid"><i class="bi bi-exclamation-circle me-1"></i>Chưa thanh toán</span>
+                                            <span class="pay-na">—</span>
                                         </c:otherwise>
                                     </c:choose>
                                 </td>

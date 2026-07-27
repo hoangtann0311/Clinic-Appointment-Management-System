@@ -163,12 +163,25 @@ public class ServiceStatisticsDAO {
             + "FROM services s "
             + "LEFT JOIN service_categories sc ON sc.id = s.category_id "
             + "LEFT JOIN ("
-            + "  SELECT a.service_id, COUNT(*) AS cnt, ISNULL(SUM(ii.subtotal), 0) AS rev "
-            + "  FROM appointments a "
-            + "  LEFT JOIN invoices i ON i.appointment_id = a.id AND i.status = 'paid' "
-            + "  LEFT JOIN invoice_items ii ON ii.invoice_id = i.id AND ii.item_type = 'service' AND ii.item_id = a.service_id "
-            + "  WHERE a.appointment_date >= ? AND a.appointment_date <= ? "
-            + "  GROUP BY a.service_id "
+            + "  SELECT svc.service_id, SUM(svc.cnt) AS cnt, ISNULL(SUM(svc.rev), 0) AS rev FROM ("
+            // Đếm lượt sử dụng + doanh thu từ appointment.service_id (khám lâm sàng)
+            + "    SELECT a.service_id, COUNT(*) AS cnt, ISNULL(SUM(ii.subtotal), 0) AS rev "
+            + "    FROM appointments a "
+            + "    LEFT JOIN invoices i ON i.appointment_id = a.id AND i.status = 'paid' "
+            + "    LEFT JOIN invoice_items ii ON ii.invoice_id = i.id AND ii.item_type = 'service' AND ii.item_id = a.service_id "
+            + "    WHERE a.appointment_date >= ? AND a.appointment_date <= ? "
+            + "    GROUP BY a.service_id "
+            + "    UNION ALL "
+            // Đếm lượt sử dụng + doanh thu từ test_orders (dịch vụ siêu âm phát sinh)
+            + "    SELECT o.service_id, COUNT(*) AS cnt, ISNULL(SUM(ii.subtotal), 0) AS rev "
+            + "    FROM test_orders o "
+            + "    JOIN medical_records mr ON o.medical_record_id = mr.id "
+            + "    JOIN appointments a ON mr.appointment_id = a.id "
+            + "    LEFT JOIN invoices i ON i.appointment_id = a.id AND i.status = 'paid' AND UPPER(i.invoice_type) = 'POST_EXAM' "
+            + "    LEFT JOIN invoice_items ii ON ii.invoice_id = i.id AND ii.item_type = 'service' AND ii.item_id = o.service_id "
+            + "    WHERE a.appointment_date >= ? AND a.appointment_date <= ? "
+            + "    GROUP BY o.service_id "
+            + "  ) svc GROUP BY svc.service_id "
             + ") usage_stats ON usage_stats.service_id = s.id "
             + "WHERE s.is_active = 1 "
             + "ORDER BY usage_today DESC"
@@ -184,6 +197,8 @@ public class ServiceStatisticsDAO {
             ps.setInt(1, limit);
             ps.setDate(2, java.sql.Date.valueOf(from));
             ps.setDate(3, java.sql.Date.valueOf(to));
+            ps.setDate(4, java.sql.Date.valueOf(from));
+            ps.setDate(5, java.sql.Date.valueOf(to));
             rs = ps.executeQuery();
             while (rs.next()) {
                 ServiceStatDetail d = new ServiceStatDetail();
@@ -890,14 +905,23 @@ public class ServiceStatisticsDAO {
             + "FROM services s "
             + "LEFT JOIN service_categories sc ON sc.id = s.category_id "
             + "LEFT JOIN ("
-            + "  SELECT a.service_id, "
-            + "    COUNT(DISTINCT a.id) AS total_bookings, "
-            + "    ISNULL(SUM(ii.subtotal), 0) AS total_revenue "
-            + "  FROM appointments a "
-            + "  INNER JOIN invoices i ON i.appointment_id = a.id AND i.status = 'paid' "
-            + "  INNER JOIN invoice_items ii ON ii.invoice_id = i.id AND ii.item_type = 'service' AND ii.item_id = a.service_id "
-            + "  WHERE a.appointment_date >= ? AND a.appointment_date <= ? "
-            + "  GROUP BY a.service_id "
+            + "  SELECT svc.service_id, SUM(svc.total_bookings) AS total_bookings, ISNULL(SUM(svc.total_revenue), 0) AS total_revenue FROM ("
+            + "    SELECT a.service_id, COUNT(DISTINCT a.id) AS total_bookings, ISNULL(SUM(ii.subtotal), 0) AS total_revenue "
+            + "    FROM appointments a "
+            + "    INNER JOIN invoices i ON i.appointment_id = a.id AND i.status = 'paid' "
+            + "    INNER JOIN invoice_items ii ON ii.invoice_id = i.id AND ii.item_type = 'service' AND ii.item_id = a.service_id "
+            + "    WHERE a.appointment_date >= ? AND a.appointment_date <= ? "
+            + "    GROUP BY a.service_id "
+            + "    UNION ALL "
+            + "    SELECT o.service_id, COUNT(DISTINCT o.id) AS total_bookings, ISNULL(SUM(ii.subtotal), 0) AS total_revenue "
+            + "    FROM test_orders o "
+            + "    JOIN medical_records mr ON o.medical_record_id = mr.id "
+            + "    JOIN appointments a ON mr.appointment_id = a.id "
+            + "    INNER JOIN invoices i ON i.appointment_id = a.id AND i.status = 'paid' AND UPPER(i.invoice_type) = 'POST_EXAM' "
+            + "    INNER JOIN invoice_items ii ON ii.invoice_id = i.id AND ii.item_type = 'service' AND ii.item_id = o.service_id "
+            + "    WHERE a.appointment_date >= ? AND a.appointment_date <= ? "
+            + "    GROUP BY o.service_id "
+            + "  ) svc GROUP BY svc.service_id "
             + ") rev ON rev.service_id = s.id "
             + "WHERE s.is_active = 1 "
             + "ORDER BY total_revenue DESC"
@@ -913,6 +937,8 @@ public class ServiceStatisticsDAO {
             ps.setInt(1, limit);
             ps.setDate(2, java.sql.Date.valueOf(from));
             ps.setDate(3, java.sql.Date.valueOf(to));
+            ps.setDate(4, java.sql.Date.valueOf(from));
+            ps.setDate(5, java.sql.Date.valueOf(to));
             rs = ps.executeQuery();
             while (rs.next()) {
                 ServiceStatDetail d = new ServiceStatDetail();

@@ -97,7 +97,7 @@
             <%-- 2. Kết quả siêu âm chính thức được Bác sĩ siêu âm duyệt --%>
             <div class="col-md-6">
               <c:choose>
-                <c:when test="${r.review_status == 'Rejected'}">
+                <c:when test="${r.review_status == 'Rejected' || r.review_status == 'Corrected'}">
                   <div class="small fw-semibold mb-2"><i class="bi bi-pencil-square text-primary me-1"></i>2. Kết quả khoanh vùng thủ công (BS Siêu Âm vẽ)</div>
                   <c:choose>
                     <c:when test="${not empty r.raw_image_id}">
@@ -141,8 +141,8 @@
               <section class="official-report rounded p-4 mb-4">
                 <div class="d-flex justify-content-between align-items-start gap-2 mb-3"><div><h6 class="fw-bold mb-1">Phiếu kết quả của Bác sĩ siêu âm</h6>
                   <div class="small text-muted">Ký bởi <strong><c:out value="${r.signed_name}" /></strong> lúc <c:out value="${r.signed_at}" /></div></div>
-                  <span class="badge bg-primary-subtle text-primary">Vùng: <c:out value="${r.review_status}" /></span></div>
-                <c:if test="${r.review_status == 'Rejected'}"><div class="alert alert-warning py-2 small">Lý do từ chối AI: <c:out value="${r.rejection_reason}" /></div></c:if>
+                  <span class="badge bg-primary-subtle text-primary">Vùng: <c:choose><c:when test="${r.review_status == 'Accepted'}">Chấp nhận AI</c:when><c:when test="${r.review_status == 'Rejected' || r.review_status == 'Corrected'}">Vẽ thủ công</c:when><c:otherwise><c:out value="${r.review_status}"/></c:otherwise></c:choose></span></div>
+                <c:if test="${r.review_status == 'Rejected' || r.review_status == 'Corrected'}"><div class="alert alert-warning py-2 small">Lý do từ chối AI: <c:out value="${r.rejection_reason}" /></div></c:if>
                 <div class="mb-3"><div class="small text-muted">Mô tả hình ảnh</div><div class="clinical-value"><c:out value="${r.image_description}" /></div></div>
                 <div class="mb-3"><div class="small text-muted">Nhận xét chuyên môn</div><div class="clinical-value"><c:out value="${r.professional_findings}" /></div></div>
                 <div><div class="small text-muted">Kết luận siêu âm</div><div class="clinical-value fw-semibold"><c:out value="${r.sonographer_conclusion}" /></div></div>

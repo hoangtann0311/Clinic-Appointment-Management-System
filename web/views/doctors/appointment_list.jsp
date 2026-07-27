@@ -13,8 +13,9 @@
 .col-idx { width: 3%; }
 .col-patient { width: 16%; }
 .col-date { width: 10%; }
-.col-time { width: 10%; }
-.col-symptoms { width: 18%; }
+.col-time { width: 9%; }
+.col-booked { width: 10%; }
+.col-symptoms { width: 16%; }
 .col-source { width: 9%; }
 .col-status { width: 10%; }
 .col-stage { width: 12%; }
@@ -74,7 +75,7 @@
             <c:otherwise>
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0" style="min-width: 950px; width: 100%;">
-                    <thead><tr><th class="col-idx ps-3">#</th><th class="col-patient">Bệnh nhân</th><th class="col-date">Ngày</th><th class="col-time">Giờ</th><th class="col-symptoms">Triệu chứng</th><th class="col-source">Nguồn</th><th class="col-status">Trạng thái</th><th class="col-stage" style="width:12%;">Giai đoạn</th><th class="col-action pe-3">Thao tác</th></tr></thead>
+                    <thead><tr><th class="col-idx ps-3">#</th><th class="col-patient">Bệnh nhân</th><th class="col-date">Ngày</th><th class="col-time">Giờ</th><th class="col-booked">Đặt lúc</th><th class="col-symptoms">Triệu chứng</th><th class="col-source">Nguồn</th><th class="col-status">Trạng thái</th><th class="col-stage" style="width:12%;">Giai đoạn</th><th class="col-action pe-3">Thao tác</th></tr></thead>
                     <tbody>
                     <c:forEach var="a" items="${appointments}" varStatus="loop">
                     <c:set var="st" value="${fn:toLowerCase(a.status)}"/>
@@ -94,6 +95,12 @@
                         </td>
                         <td class="col-date text-nowrap">${a.appointmentDate}</td>
                         <td class="col-time text-nowrap">${not empty a.shiftLabel ? a.shiftLabel : (not empty a.timeSlot ? a.timeSlot : '—')}</td>
+                        <td class="col-booked text-nowrap small text-muted">
+                            <c:choose>
+                                <c:when test="${not empty a.createdAtText}"><i class="bi bi-clock-history me-1"></i>${a.createdAtText}</c:when>
+                                <c:otherwise>—</c:otherwise>
+                            </c:choose>
+                        </td>
                         <td class="col-symptoms text-truncate" title="${a.symptoms}" style="max-width:0;">${not empty a.symptoms ? a.symptoms : '—'}</td>
                         <td class="col-source"><c:choose><c:when test="${a.bookingSource == 'WEB'}"><span class="badge bg-info bg-opacity-75 text-dark rounded-pill">Trực tuyến</span></c:when><c:when test="${a.bookingSource == 'Staff'}"><span class="badge bg-secondary rounded-pill">Tại quầy</span></c:when><c:otherwise><span class="text-muted small">—</span></c:otherwise></c:choose></td>
                         <td class="col-status">

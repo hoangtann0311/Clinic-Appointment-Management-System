@@ -67,7 +67,6 @@
 
         <!-- HỆ THỐNG -->
         <li class="admin-sidebar-section">Hệ Thống</li>
-        <li><a href="${pageContext.request.contextPath}/admin/users/profile" class="${fn:contains(requestURI, '/admin/profile') ? 'active' : ''}"><i class="bi bi-person-circle"></i><span>Hồ Sơ Cá Nhân</span></a></li>
         <li>
             <a href="${pageContext.request.contextPath}/admin/audit-logs/"
                class="${fn:contains(requestURI, '/admin/audit-logs') ? 'active' : ''}">

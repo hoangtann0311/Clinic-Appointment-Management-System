@@ -196,7 +196,7 @@
         <div class="info-item"><span class="info-label">Điện thoại</span><span class="info-value">${not empty patientPhone?patientPhone:'—'}</span></div>
         <div class="info-item"><span class="info-label">Ngày sinh</span><span class="info-value">${not empty patientDob?patientDob:'—'}</span></div>
         <div class="info-item"><span class="info-label">Ngày khám</span><span class="info-value"><i class="bi bi-calendar3 text-success me-1"></i>${record.appointmentDate}</span></div>
-        <div class="info-item"><span class="info-label">Giờ khám</span><span class="info-value"><i class="bi bi-clock text-success me-1"></i>${not empty record.timeSlot?record.timeSlot:'—'}</span></div>
+        <div class="info-item"><span class="info-label">Ca làm việc</span><span class="info-value"><i class="bi bi-clock text-success me-1"></i>${not empty record.shiftLabel?record.shiftLabel:(not empty record.timeSlot?record.timeSlot:'—')}</span></div>
         <div class="info-item"><span class="info-label">Nguồn đặt</span><span class="info-value">
           <c:choose>
             <c:when test="${fn:toLowerCase(bookingSource) == 'staff' || fn:toLowerCase(bookingSource) == 'reception' || fn:toLowerCase(bookingSource) == 'counter'}">

@@ -101,17 +101,9 @@ public class ManagerTimeSlotServlet extends HttpServlet {
 
         List<DoctorSchedule> approvedSchedules = scheduleDAO.findAllApproved(0, 100);
 
-        // slotCounts = số appointment đã đặt cho từng schedule
-        Map<Integer, Integer> slotCounts = new HashMap<>();
-        for (DoctorSchedule sched : approvedSchedules) {
-            slotCounts.put(sched.getId(), scheduleDAO.countBookedBySchedule(sched.getId()));
-        }
-
         req.setAttribute("overviewMode", true);
         req.setAttribute("approvedSchedules", approvedSchedules);
-        req.setAttribute("slotCounts", slotCounts);
 
-        req.setAttribute("success", req.getParameter("success"));
         req.setAttribute("error", req.getParameter("error"));
 
         req.getRequestDispatcher("/views/manager/slots/index.jsp").forward(req, resp);
@@ -132,7 +124,7 @@ public class ManagerTimeSlotServlet extends HttpServlet {
             return;
         }
 
-        // Lấy danh sách appointment đã đặt cho schedule này
+        // Lấy danh sách bệnh nhân đã đặt cho ca này
         List<Map<String, Object>> appointments = getAppointmentsForSchedule(scheduleId);
         int bookedCount = 0;
         for (Map<String, Object> appt : appointments) {
@@ -142,18 +134,12 @@ public class ManagerTimeSlotServlet extends HttpServlet {
             }
         }
 
-        boolean hasSlots = !appointments.isEmpty();
-
         req.setAttribute("overviewMode", false);
         req.setAttribute("schedule", schedule);
-        req.setAttribute("hasSlots", hasSlots);
         req.setAttribute("appointments", appointments);
-        req.setAttribute("totalSlots", appointments.size());
         req.setAttribute("bookedCount", bookedCount);
 
-        req.setAttribute("success", req.getParameter("success"));
         req.setAttribute("error", req.getParameter("error"));
-        req.setAttribute("warning", req.getParameter("warning"));
 
         req.getRequestDispatcher("/views/manager/slots/index.jsp").forward(req, resp);
     }

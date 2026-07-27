@@ -171,20 +171,21 @@ public class UltrasoundOrderService {
             type = "Polygon";
             data = annotationData.trim();
         } else {
-            // "Rejected": KHÔNG được là trạng thái kết thúc (P9).
-            // Bác sĩ siêu âm phải chọn "Corrected" (vẽ tay) hoặc "Accepted" (đồng ý AI) mới được ký.
-            // Nếu chọn "Rejected" — chỉ lưu nháp, không cho ký.
-            if (sign) {
-                System.err.println("[UltrasoundOrderService] Chặn ký với reviewStatus=Rejected cho orderId=" + orderId);
-                return false;
-            }
+            // "Rejected" = từ chối AI. Nếu bác sĩ vẽ tay + điền đủ thông tin → được ký.
+            // Nếu chưa vẽ tay → chỉ lưu nháp, không cho ký.
             if (reason.length() < 5) return false;
             source = "Sonographer";
             if (annotationData != null && !annotationData.isBlank()) {
+                // Có vẽ tay → cho phép ký (tương tự Corrected)
                 if (!isValidNormalizedPolygon(annotationData)) return false;
                 type = "Polygon";
                 data = annotationData.trim();
             } else {
+                // Chưa vẽ tay → chỉ lưu nháp
+                if (sign) {
+                    System.err.println("[UltrasoundOrderService] Chặn ký: reviewStatus=Rejected, chưa vẽ vùng thủ công cho orderId=" + orderId);
+                    return false;
+                }
                 type = "None";
                 data = null;
             }

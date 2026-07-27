@@ -556,6 +556,27 @@ public class StaffReceptionService {
                 throw new IllegalArgumentException("Lỗi hệ thống khi cập nhật thanh toán cận lâm sàng.");
             }
 
+            // Backfill invoice_items nếu POST_EXAM chưa có (dữ liệu cũ trước khi có ensureInvoiceItem)
+            if ("POST_EXAM".equalsIgnoreCase(invoice.getInvoiceType())) {
+                try {
+                    // Tìm service_id từ test_orders liên kết với appointment này
+                    String findSvcSql = "SELECT TOP 1 o.service_id, o.id FROM test_orders o "
+                            + "JOIN medical_records mr ON o.medical_record_id = mr.id "
+                            + "WHERE mr.appointment_id = ? AND o.status != 'Cancelled' ORDER BY o.id";
+                    try (java.sql.Connection c2 = com.clinic.config.DatabaseConfig.getConnection();
+                         java.sql.PreparedStatement ps2 = c2.prepareStatement(findSvcSql)) {
+                        ps2.setInt(1, appointmentId);
+                        try (java.sql.ResultSet rs2 = ps2.executeQuery()) {
+                            if (rs2.next()) {
+                                int svcId = rs2.getInt("service_id");
+                                double price = invoice.getTotalAmount() != null ? invoice.getTotalAmount().doubleValue() : 0;
+                                new com.clinic.dao.InvoiceDAO().ensureInvoiceItem(invoice.getId(), svcId, "service", price, 1);
+                            }
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+
             auditLogDAO.logAction(
                     "Lễ tân xác nhận thanh toán cận lâm sàng cho hóa đơn #" + invoice.getId(),
                     "Staff",
@@ -1122,6 +1143,35 @@ public class StaffReceptionService {
                         ps.executeUpdate();
                     }
                     conn.commit();
+
+                    // Backfill invoice_items cho PRE_EXAM (nếu invoice vừa được insert mới)
+                    try {
+                        int newInvId = -1;
+                        try (java.sql.Connection c3 = com.clinic.config.DatabaseConfig.getConnection();
+                             java.sql.PreparedStatement ps3 = c3.prepareStatement(
+                                     "SELECT TOP 1 id FROM invoices WHERE appointment_id = ? AND invoice_type = 'PRE_EXAM' ORDER BY id DESC")) {
+                            ps3.setInt(1, appointmentId);
+                            try (java.sql.ResultSet rs3 = ps3.executeQuery()) {
+                                if (rs3.next()) newInvId = rs3.getInt(1);
+                            }
+                        }
+                        if (newInvId > 0) {
+                            String readSvcSql = "SELECT ISNULL(service_id, 0) FROM appointments WHERE id = ?";
+                            try (java.sql.Connection c4 = com.clinic.config.DatabaseConfig.getConnection();
+                                 java.sql.PreparedStatement ps4 = c4.prepareStatement(readSvcSql)) {
+                                ps4.setInt(1, appointmentId);
+                                try (java.sql.ResultSet rs4 = ps4.executeQuery()) {
+                                    if (rs4.next()) {
+                                        int svcId = rs4.getInt(1);
+                                        if (svcId > 0) {
+                                            new com.clinic.dao.InvoiceDAO().ensureInvoiceItem(newInvId, svcId, "service", amount, 1);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } catch (Exception ignored) {}
+
                 } catch (SQLException e) {
                     conn.rollback();
                     throw e;
@@ -1198,6 +1248,41 @@ public class StaffReceptionService {
                 "Paid",
                 "Refunded"
         );
+
+        // Nếu là hoàn tiền POST_EXAM → huỷ test_order liên quan
+        if ("POST_EXAM".equalsIgnoreCase(invoice.getInvoiceType())) {
+            try {
+                int apptId = invoice.getAppointmentId();
+                // Tìm test_order active của appointment này và cancel
+                String cancelOrderSql = "UPDATE test_orders SET status = 'Cancelled' "
+                        + "WHERE id IN (SELECT TOP 1 o.id FROM test_orders o "
+                        + "JOIN medical_records mr ON o.medical_record_id = mr.id "
+                        + "WHERE mr.appointment_id = ? AND o.status IN ('Pending', 'Ordered')) "
+                        + "AND status IN ('Pending', 'Ordered')";
+                try (Connection c = DatabaseConfig.getConnection();
+                     PreparedStatement ps = c.prepareStatement(cancelOrderSql)) {
+                    ps.setInt(1, apptId);
+                    int rows = ps.executeUpdate();
+                    if (rows > 0) {
+                        auditLogDAO.logAction(
+                                "Tự động huỷ chỉ định siêu âm do hoàn tiền POST_EXAM #" + invoiceId,
+                                "System", "test_orders", "Pending", "Cancelled");
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("[StaffReceptionService] Huỷ test_order khi hoàn tiền POST_EXAM thất bại: " + e.getMessage());
+            }
+        }
+
+        // Gửi thông báo hoàn tiền cho bệnh nhân
+        try {
+            double amount = invoice.getTotalAmount() != null ? invoice.getTotalAmount().doubleValue() : 0;
+            String invoiceType = invoice.getInvoiceType() != null ? invoice.getInvoiceType() : "";
+            int apptId = invoice.getAppointmentId();
+            NotificationHelper.paymentRefunded(apptId, invoiceType, amount, reason.trim());
+        } catch (Exception e) {
+            System.err.println("[StaffReceptionService] Gửi TB hoàn tiền thất bại: " + e.getMessage());
+        }
     }
 
     /** Paginated slot list — query trực tiếp doctor_schedules + shifts. */
@@ -1312,6 +1397,10 @@ public class StaffReceptionService {
             int score2 = getStatusPriorityScore(a2.getStatus());
             if (score1 != score2) return Integer.compare(score1, score2);
             if (a1.isPriority() != a2.isPriority()) return a1.isPriority() ? -1 : 1;
+            // Ưu tiên bệnh nhân đặt lịch trước (created_at ASC)
+            if (a1.getCreatedAt() != null && a2.getCreatedAt() != null) {
+                return a1.getCreatedAt().compareTo(a2.getCreatedAt());
+            }
             return Integer.compare(a1.getId(), a2.getId());
         });
 

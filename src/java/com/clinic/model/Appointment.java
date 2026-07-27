@@ -56,7 +56,7 @@ public class Appointment {
         this.symptoms = symptoms;
         this.status = status;
         this.appointmentDate = LocalDate.now();
-        this.timeSlot = "08:00 - 08:20";
+        this.timeSlot = null; // sẽ được set từ schedule/shift khi lưu
     }
 
     public Appointment(int id, Patient patient, Doctor doctor, ServiceItem service, LocalDate appointmentDate, 

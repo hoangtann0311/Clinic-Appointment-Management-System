@@ -175,14 +175,6 @@
                                 <span>Lịch Làm Việc</span>
                             </a>
                         </li>
-                        <li class="admin-sidebar-section">Tài Khoản</li>
-                        <li>
-                            <a href="${pageContext.request.contextPath}/doctor/profile"
-                               class="${fn:contains(pageContext.request.requestURI, '/doctor/profile') ? 'active' : ''}">
-                                <i class="bi bi-person-circle"></i>
-                                <span>Hồ Sơ Cá Nhân</span>
-                            </a>
-                        </li>
                     </c:when>
                     <c:when test="${sessionScope.user.roleId == 6}">
                         <li class="admin-sidebar-section">Chức Năng Siêu Âm</li>
@@ -227,14 +219,6 @@
                                class="${fn:contains(pageContext.request.requestURI, '/ai-model') ? 'active' : ''}">
                                 <i class="bi bi-cpu-fill"></i>
                                 <span>Hồ Sơ Mô Hình AI</span>
-                            </a>
-                        </li>
-                        <li class="admin-sidebar-section">Tài Khoản</li>
-                        <li>
-                            <a href="${pageContext.request.contextPath}/sonographer/profile"
-                               class="${fn:contains(pageContext.request.requestURI, '/sonographer/profile') ? 'active' : ''}">
-                                <i class="bi bi-person-circle"></i>
-                                <span>Hồ Sơ Cá Nhân</span>
                             </a>
                         </li>
                     </c:when>

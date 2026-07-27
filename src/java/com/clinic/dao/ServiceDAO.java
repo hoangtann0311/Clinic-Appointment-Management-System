@@ -716,7 +716,7 @@ public class ServiceDAO {
 
         // Chưa có → tạo mới
         String insertSql = "INSERT INTO services (service_code, service_name, description, price, duration_mins, is_active) "
-                + "VALUES (N'KLS', N'Khám lâm sàng', N'Khám tổng quát với bác sĩ chuyên khoa', 0, 20, 1)";
+                + "VALUES (N'KLS', N'Khám lâm sàng', N'Khám tổng quát với bác sĩ chuyên khoa', 200000, 20, 1)";
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS)) {
             ps.executeUpdate();

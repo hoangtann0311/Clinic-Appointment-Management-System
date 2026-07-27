@@ -55,6 +55,7 @@ public class MedicalRecord {
     private String  patientName;
     private String  appointmentDate;
     private String  timeSlot;
+    private String  shiftLabel;  // "Ca sáng (07:00–11:00)" — hiển thị ca làm việc
     private String  symptoms;
     private String  lastMenstrualPeriod;
     private Integer pregnancyId;
@@ -204,6 +205,8 @@ public class MedicalRecord {
         return ts;
     }
     public void setTimeSlot(String v) { this.timeSlot = v; }
+    public String getShiftLabel() { return shiftLabel; }
+    public void setShiftLabel(String v) { this.shiftLabel = v; }
 
     public String getSymptoms() { return symptoms; }
     public void setSymptoms(String v) { this.symptoms = v; }

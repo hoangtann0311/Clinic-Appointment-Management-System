@@ -98,14 +98,6 @@
                     <dt class="col-5 text-muted mb-3">Triệu chứng / Lý do</dt>
                     <dd class="col-7 mb-3 text-dark fw-medium"><c:out value="${empty order.symptoms ? 'Không ghi nhận' : order.symptoms}" /></dd>
 
-                    <dt class="col-5 text-muted mb-3">Chẩn đoán sơ bộ</dt>
-                    <dd class="col-7 mb-3 text-danger fw-semibold">
-                        <c:choose>
-                            <c:when test="${not empty medicalRecord && not empty medicalRecord.finalDiagnosis}"><c:out value="${medicalRecord.finalDiagnosis}" /></c:when>
-                            <c:otherwise><c:out value="${empty order.symptoms ? 'Chưa có chẩn đoán' : order.symptoms}" /></c:otherwise>
-                        </c:choose>
-                    </dd>
-
                     <dt class="col-5 text-muted mb-3">Ghi chú BS khám</dt>
                     <dd class="col-7 mb-3 text-dark">
                         <c:choose>
@@ -356,7 +348,7 @@
                             <strong class="ms-1">Chấp nhận AI</strong><div class="small text-muted mt-1">Vùng và nhận định AI phù hợp.</div></label></div>
                         <div class="col-md-6"><label class="review-choice d-block"><input type="radio" name="reviewStatus" value="Rejected"
                             ${currentAnnotation.reviewStatus == 'Rejected' ? 'checked' : ''}>
-                            <strong class="ms-1">Từ chối gợi ý</strong><div class="small text-muted mt-1">Nêu lý do; có thể vẽ vùng thủ công.</div></label></div>
+                            <strong class="ms-1">Từ chối AI — Vẽ thủ công</strong><div class="small text-muted mt-1">Nêu lý do, vẽ vùng và điền kết luận để ký.</div></label></div>
                     </div>
                     <div class="mb-4" id="rejectionReasonGroup">
                         <label class="form-label">Lý do từ chối <span class="text-danger">*</span></label>
@@ -521,13 +513,13 @@
         const p=position(e), threshold=12/Math.max(canvas.width,1);
         dragIndex=points.findIndex(q => Math.hypot(q.x-p.x,q.y-p.y)<threshold); saveHistory();
         if (dragIndex < 0) { points.push(p); dragIndex=points.length-1; }
-        canvas.setPointerCapture(e.pointerId); syncData(); draw();
+        canvas.setPointerCapture(e.pointerId); syncData(); draw(); updateReviewUi();
     });
     canvas.addEventListener('pointermove', e => { if(panStart){viewX=panStart.viewX+e.clientX-panStart.x;viewY=panStart.viewY+e.clientY-panStart.y;applyView();return;} if (dragIndex<0) return; points[dragIndex]=position(e); syncData(); draw(); });
     canvas.addEventListener('pointerup', () => { dragIndex=-1; panStart=null; });
     document.getElementById('undoButton').onclick=()=>{ if(!undoStack.length)return;redoStack.push(clone(points));points=undoStack.pop();syncData();draw(); };
     document.getElementById('redoButton').onclick=()=>{ if(!redoStack.length)return;undoStack.push(clone(points));points=redoStack.pop();syncData();draw(); };
-    document.getElementById('clearButton').onclick=()=>{saveHistory();points=[];syncData();draw();};
+    document.getElementById('clearButton').onclick=()=>{saveHistory();points=[];syncData();draw();updateReviewUi();};
     document.getElementById('resetAiButton').onclick=()=>{ if(aiBox.x1===null||!raw.naturalWidth)return;saveHistory();points=[
         {x:aiBox.x1/raw.naturalWidth,y:aiBox.y1/raw.naturalHeight},{x:aiBox.x2/raw.naturalWidth,y:aiBox.y1/raw.naturalHeight},
         {x:aiBox.x2/raw.naturalWidth,y:aiBox.y2/raw.naturalHeight},{x:aiBox.x1/raw.naturalWidth,y:aiBox.y2/raw.naturalHeight}];syncData();draw();};
@@ -550,11 +542,9 @@
     document.getElementById('zoomOutButton').onclick=()=>{viewScale=Math.max(.5,viewScale-.25);applyView();};
     document.getElementById('panButton').onclick=e=>{panMode=!panMode;e.currentTarget.classList.toggle('btn-primary',panMode);e.currentTarget.classList.toggle('btn-outline-secondary',!panMode);canvas.style.cursor=panMode?'grab':'crosshair';};
     document.getElementById('resetViewButton').onclick=()=>{viewScale=1;viewX=0;viewY=0;applyView();};
-    function updateReviewUi(){const review=selectedReview(),rejected=review==='Rejected';document.getElementById('rejectionReasonGroup').style.display=rejected?'block':'none';if(review)setImageView('review');else draw();}
+    function updateReviewUi(){const review=selectedReview(),rejected=review==='Rejected';document.getElementById('rejectionReasonGroup').style.display=rejected?'block':'none';const signBtn=document.getElementById('signButton');if(signBtn){if(rejected){const hasPolygon=points.length>=3;signBtn.innerHTML=hasPolygon?'<i class=\"bi bi-patch-check me-1\"></i>Ký và hoàn thành kết quả':'<i class=\"bi bi-pencil me-1\"></i>Vẽ vùng thủ công trước khi ký';signBtn.className=hasPolygon?'btn btn-success':'btn btn-outline-secondary';signBtn.disabled=!hasPolygon;signBtn.onclick=()=>{clickedAction=hasPolygon?'sign':'save';};}else if(review==='Accepted'){signBtn.innerHTML='<i class=\"bi bi-patch-check me-1\"></i>Ký và hoàn thành kết quả';signBtn.className='btn btn-success';signBtn.disabled=false;signBtn.onclick=()=>{clickedAction='sign';};}}if(review)setImageView('review');else draw();}
     form.querySelectorAll('[name="reviewStatus"]').forEach(x=>x.addEventListener('change',updateReviewUi));
     let clickedAction = 'sign';
-    const signBtn = document.getElementById('signButton');
-    if (signBtn) signBtn.addEventListener('click', () => { clickedAction = 'sign'; });
 
     function notifyValidation(message) {
         if (window.CAMS?.notify) window.CAMS.notify(message, 'warning');

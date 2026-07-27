@@ -251,4 +251,27 @@ public class NotificationHelper {
             dao.create(userId, title, message);
         }
     }
+
+    /** Thông báo hoàn tiền cho bệnh nhân */
+    public static void paymentRefunded(int appointmentId, String invoiceType, double amount, String reason) {
+        String sql = "SELECT p.user_id FROM appointments a " +
+                     "JOIN patients p ON p.id = a.patient_id WHERE a.id=?";
+        try (Connection c = DatabaseConfig.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, appointmentId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    int patientUserId = rs.getInt("user_id");
+                    if (patientUserId > 0) {
+                        String typeLabel = "PRE_EXAM".equalsIgnoreCase(invoiceType) ? "Phí khám" : "Phí dịch vụ siêu âm";
+                        String formattedAmount = new java.text.DecimalFormat("#,###").format(amount);
+                        dao.create(patientUserId,
+                            "↩️ Hoàn tiền " + typeLabel,
+                            "Hóa đơn " + typeLabel + " trị giá " + formattedAmount + "đ của bạn đã được hoàn tiền."
+                            + (reason != null && !reason.isBlank() ? " Lý do: " + reason : ""));
+                    }
+                }
+            }
+        } catch (Exception e) { e.printStackTrace(); }
+    }
 }
