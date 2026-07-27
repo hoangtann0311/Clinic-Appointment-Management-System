@@ -1,0 +1,38 @@
+# ==========================================
+# 1. BẢO VỆ FILE CẤU HÌNH CÁ NHÂN CỦA IDE
+# ==========================================
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# NetBeans
+nbproject/
+nbproject/private/
+build.xml
+nb-configuration.xml
+
+# Eclipse
+.settings/
+.project
+.classpath
+
+# ==========================================
+# 2. BỎ QUA FILE VÀ THƯ MỤC BIÊN DỊCH (BUILD)
+# ==========================================
+build/
+dist/
+target/
+*.class
+*.war
+*.ear
+*.jar
+
+# ==========================================
+# 3. FILE HỆ THỐNG VÀ BẢO MẬT (LOG, TEMP, PROPERTIES CÁ NHÂN)
+# ==========================================
+*.log
+.DS_Store
+Thumbs.db
