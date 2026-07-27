@@ -261,6 +261,9 @@ public class AdminUserServlet extends HttpServlet {
                     Map<String, String> errors = new HashMap<>();
                     if (userService.createUser(fullName, email, password, phone, roleId, status, errors)) {
                         logAudit(req, "CREATE_USER", "Tạo người dùng: " + fullName + " (role=" + roleId + ")");
+                        // Bộ phận / chức danh — chỉ áp cho Quản lý (3) và Nhân viên (4).
+                        // createUser không trả về id nên tra lại theo email vừa tạo.
+                        saveOrgInfo(req, findNewUserId(email), roleId);
                         resp.sendRedirect(redirectUrl + "?success=created" + querySuffix);
                     } else {
                         req.setAttribute("formFullName", fullName);
@@ -309,6 +312,9 @@ public class AdminUserServlet extends HttpServlet {
                         if (beforeUpdate != null && !status.equals(beforeUpdate.getStatus())) {
                             com.clinic.filter.AuthorizationFilter.bumpPermissionsVersion();
                         }
+
+                        // Bộ phận / chức danh — chỉ áp cho Quản lý (3) và Nhân viên (4)
+                        saveOrgInfo(req, userId, roleId);
 
                         resp.sendRedirect(redirectUrl + "?success=updated" + querySuffix);
                     } else {
@@ -375,29 +381,17 @@ public class AdminUserServlet extends HttpServlet {
                     } else {
                         newPassword = newPassword.trim();
 
-                        // 2. Độ dài tối thiểu
-                        if (newPassword.length() < 6) {
-                            pwdErrors.add("Mật khẩu phải có ít nhất 6 ký tự.");
+                        // 2. Luật mật khẩu chung của toàn hệ thống
+                        //    (độ dài tối thiểu, chữ cái, chữ số, ký tự đặc biệt)
+                        String sharedPwError =
+                                com.clinic.utils.ValidationUtil.validatePassword(newPassword);
+                        if (sharedPwError != null) {
+                            pwdErrors.add(sharedPwError);
                         }
 
-                        // 3. Độ dài tối đa
+                        // 3. Độ dài tối đa — ràng buộc riêng của màn quản trị, giữ nguyên
                         if (newPassword.length() > 50) {
                             pwdErrors.add("Mật khẩu không được vượt quá 50 ký tự.");
-                        }
-
-                        // 4. Phải có ít nhất 1 chữ cái
-                        if (!newPassword.matches(".*[a-zA-Z].*")) {
-                            pwdErrors.add("Mật khẩu phải có ít nhất 1 chữ cái.");
-                        }
-
-                        // 5. Phải có ít nhất 1 chữ số
-                        if (!newPassword.matches(".*[0-9].*")) {
-                            pwdErrors.add("Mật khẩu phải có ít nhất 1 chữ số.");
-                        }
-
-                        // 6. Phải có ít nhất 1 ký tự đặc biệt
-                        if (!newPassword.matches(".*[^a-zA-Z0-9].*")) {
-                            pwdErrors.add("Mật khẩu phải có ít nhất 1 ký tự đặc biệt.");
                         }
                     }
 
@@ -530,5 +524,72 @@ public class AdminUserServlet extends HttpServlet {
     private Integer parseInteger(String s) {
         if (s == null || s.isEmpty()) return null;
         try { return Integer.parseInt(s); } catch (NumberFormatException e) { return null; }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // Bộ phận / Chức danh (users.department, users.job_title)
+    // ═══════════════════════════════════════════════════════════
+
+    /** Vai trò có hiển thị Bộ phận trên trang hồ sơ cá nhân. */
+    private static final int ROLE_MANAGER_ID = 3;
+    private static final int ROLE_STAFF_ID   = 4;
+
+    /** Giới hạn theo độ rộng cột NVARCHAR(100). */
+    private static final int MAX_ORG_FIELD_LENGTH = 100;
+
+    private final com.clinic.dao.UserProfileDAO userProfileDAO = new com.clinic.dao.UserProfileDAO();
+
+    /**
+     * Lưu bộ phận và chức danh cho tài khoản vừa tạo/sửa.
+     *
+     * <p>Chỉ áp cho Quản lý (3) và Nhân viên (4) — hai vai trò duy nhất hiển thị hai
+     * trường này trên trang hồ sơ. Vai trò khác thì bỏ qua hoàn toàn, không ghi gì.
+     * Chức danh chỉ dành cho Nhân viên; trang hồ sơ Quản lý không hiển thị nó.
+     *
+     * <p>Không làm hỏng luồng chính: tạo/sửa tài khoản đã thành công rồi, nếu bước này
+     * lỗi thì chỉ ghi ra stderr.
+     */
+    private void saveOrgInfo(HttpServletRequest req, int userId, int roleId) {
+        if (userId <= 0) {
+            return;
+        }
+        if (roleId != ROLE_MANAGER_ID && roleId != ROLE_STAFF_ID) {
+            return;
+        }
+
+        String department = trimOrgField(req.getParameter("department"));
+        String jobTitle = (roleId == ROLE_STAFF_ID)
+                ? trimOrgField(req.getParameter("jobTitle"))
+                : null;
+
+        try {
+            userProfileDAO.updateOrgInfo(userId, department, jobTitle);
+        } catch (Exception e) {
+            System.err.println("[AdminUserServlet] saveOrgInfo ERROR userId=" + userId
+                    + ": " + e.getMessage());
+        }
+    }
+
+    /** Cắt khoảng trắng, rỗng thành null, chặn theo độ rộng cột. */
+    private String trimOrgField(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        return trimmed.length() > MAX_ORG_FIELD_LENGTH
+                ? trimmed.substring(0, MAX_ORG_FIELD_LENGTH)
+                : trimmed;
+    }
+
+    /** Tra id của tài khoản vừa tạo — createUser() chỉ trả về boolean. */
+    private int findNewUserId(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            return -1;
+        }
+        User created = new com.clinic.dao.UserDAO().findByEmail(email.trim().toLowerCase());
+        return created != null ? created.getId() : -1;
     }
 }

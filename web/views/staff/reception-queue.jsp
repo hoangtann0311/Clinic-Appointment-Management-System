@@ -44,15 +44,14 @@
                 <li class="dropdown-header">
                     <h6 class="text-dark mb-0 fw-bold">${sessionScope.user.fullName}</h6>
                     <small class="text-muted">
-                        <c:choose>
-                            <c:when test="${sessionScope.user.roleId == 1}">Quản Lý</c:when>
-                            <c:when test="${sessionScope.user.roleId == 2}">Bác Sĩ Lâm Sàng</c:when>
-                            <c:when test="${sessionScope.user.roleId == 3}">Admin</c:when>
-                            <c:when test="${sessionScope.user.roleId == 4}">Lễ Tân</c:when>
-                            <c:when test="${sessionScope.user.roleId == 6}">Bác Sĩ Siêu Âm</c:when>
-                            <c:otherwise>Nhân viên</c:otherwise>
-                        </c:choose>
+                        <c:out value="${sessionScope.user.roleNameDisplay}" />
                     </small>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a class="dropdown-item" href="${pageContext.request.contextPath}/staff/profile">
+                        <i class="bi bi-person-circle me-2 text-muted"></i>Hồ Sơ Cá Nhân
+                    </a>
                 </li>
                 <li><hr class="dropdown-divider"></li>
                 <li>
@@ -104,6 +103,15 @@
                    class="${fn:contains(requestURI, 'doctor-schedules') ? 'active' : ''}">
                     <i class="bi bi-calendar-week"></i>
                     <span>Lịch Trực Bác Sĩ</span>
+                </a>
+            </li>
+
+            <li class="admin-sidebar-section">Tài khoản</li>
+            <li>
+                <a href="${pageContext.request.contextPath}/staff/profile"
+                   class="${fn:contains(requestURI, '/staff/profile') ? 'active' : ''}">
+                    <i class="bi bi-person-circle"></i>
+                    <span>Hồ Sơ Cá Nhân</span>
                 </a>
             </li>
 

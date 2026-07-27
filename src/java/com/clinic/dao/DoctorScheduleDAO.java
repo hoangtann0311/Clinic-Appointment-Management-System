@@ -6,7 +6,9 @@ import com.clinic.model.enums.ScheduleStatus;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Data Access Object cho bảng doctor_schedules — quản lý lịch trực bác sĩ.
@@ -740,6 +742,104 @@ public class DoctorScheduleDAO {
         }
     }
 
+
+    // ═══════════════════════════════════════════════════════════
+    //  TIME SLOT SUPPORT METHODS
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Lấy tất cả lịch trực đã APPROVED (có phân trang).
+     */
+    public List<DoctorSchedule> findAllApproved(int offset, int pageSize) {
+        StringBuilder sql = new StringBuilder("SELECT ")
+            .append(BASE_COLUMNS)
+            .append(", d.full_name AS doctor_name, d.specialization AS doctor_specialization ")
+            .append(", u.full_name AS approved_by_name ")
+            .append(", s.name AS shift_name, s.start_time, s.end_time ")
+            .append("FROM doctor_schedules ds ")
+            .append("INNER JOIN shifts s ON ds.shift_id = s.id ")
+            .append("LEFT JOIN doctors d ON ds.doctor_id = d.id ")
+            .append("LEFT JOIN users u ON ds.approved_by = u.id ")
+            .append("WHERE ds.status = 'APPROVED' ")
+            .append("ORDER BY ds.work_date DESC, s.start_time ASC ")
+            .append("OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
+
+        List<DoctorSchedule> list = new ArrayList<>();
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            ps.setInt(1, offset);
+            ps.setInt(2, pageSize);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapRowWithJoin(rs));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[DoctorScheduleDAO] findAllApproved ERROR: " + e.getMessage());
+        }
+        return list;
+    }
+
+    /**
+     * Đếm tổng số lịch trực APPROVED.
+     */
+    public int countAllApproved() {
+        String sql = "SELECT COUNT(*) AS total FROM doctor_schedules WHERE status = 'APPROVED'";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) return rs.getInt("total");
+        } catch (SQLException e) {
+            System.err.println("[DoctorScheduleDAO] countAllApproved ERROR: " + e.getMessage());
+        }
+        return 0;
+    }
+
+    /**
+     * Lấy danh sách appointment BOOKED cho 1 schedule, dùng để map slot status.
+     * Trả về Map: key = "HH:mm" (giờ bắt đầu), value = tên bệnh nhân.
+     */
+    public Map<String, String> findBookedSlotsBySchedule(int scheduleId) {
+        String sql = "SELECT a.time_slot, p.full_name AS patient_name "
+                   + "FROM appointments a "
+                   + "LEFT JOIN patients p ON a.patient_id = p.id "
+                   + "WHERE a.schedule_id = ? AND a.status NOT IN ('CANCELLED')";
+        Map<String, String> map = new LinkedHashMap<>();
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, scheduleId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String timeSlot = rs.getString("time_slot");
+                    String patientName = rs.getString("patient_name");
+                    if (timeSlot != null && !timeSlot.isEmpty()) {
+                        map.put(timeSlot, patientName != null ? patientName : "Ẩn danh");
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[DoctorScheduleDAO] findBookedSlotsBySchedule ERROR: " + e.getMessage());
+        }
+        return map;
+    }
+
+    /**
+     * Đếm số appointment BOOKED cho 1 schedule.
+     */
+    public int countBookedBySchedule(int scheduleId) {
+        String sql = "SELECT COUNT(*) AS total FROM appointments "
+                   + "WHERE schedule_id = ? AND status NOT IN ('CANCELLED')";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, scheduleId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt("total");
+            }
+        } catch (SQLException e) {
+            System.err.println("[DoctorScheduleDAO] countBookedBySchedule ERROR: " + e.getMessage());
+        }
+        return 0;
+    }
 
     public CancelScheduleResult cancelAtomic(int scheduleId, int cancelledBy, String reason, int something) {
         String sql = "UPDATE doctor_schedules SET status = 'CANCELLED', is_approved = 0, updated_at = GETDATE(), rejection_reason = ? WHERE id = ? AND status IN ('PENDING', 'APPROVED')";

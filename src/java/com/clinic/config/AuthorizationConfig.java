@@ -131,6 +131,16 @@ public final class AuthorizationConfig {
         Map.entry("/manager/statistics/",   "report.view_dashboard"),
         Map.entry("/manager/pricing",       "service.view"),
         Map.entry("/manager/pricing/",      "service.view"),
+        // Báo cáo doanh thu — Manager xem danh sách giao dịch và doanh thu
+        Map.entry("/manager/revenue",       "report.view_dashboard"),
+        Map.entry("/manager/revenue/",      "report.view_dashboard"),
+        // Quản lý bác sĩ — Manager CHỈ XEM, không thêm/sửa/xóa
+        Map.entry("/manager/doctors",       "user.view"),
+        Map.entry("/manager/doctors/",      "user.view"),
+        // Hồ Sơ Cá Nhân của Quản lý — cùng permission key với các trang hồ sơ
+        // vai trò khác. Vai trò 3 đã có sẵn "user.view" trong role_permissions.
+        Map.entry("/manager/profile",       "user.view"),
+        Map.entry("/manager/profile/",      "user.view"),
 
         // ──────────── DOCTOR ZONE (/doctor/*) ────────────
         Map.entry("/doctor/dashboard",         "report.view_dashboard"),
@@ -156,6 +166,10 @@ public final class AuthorizationConfig {
 
         // ──────────── STAFF ZONE (/staff/*) ────────────
         Map.entry("/staff/dashboard",      "report.view_dashboard"),
+        // Hồ Sơ Cá Nhân của Nhân viên lễ tân — cùng permission key với
+        // /doctor/profile và /sonographer/profile. Vai trò 4 đã có sẵn "user.view".
+        Map.entry("/staff/profile",        "user.view"),
+        Map.entry("/staff/profile/",       "user.view"),
         // STAFF dùng namespace legacy /admin/reception nhưng vẫn bị khóa
         // chặt trong zone Staff. Exact route được ưu tiên trước prefix.
         Map.entry("/admin/reception",                  "appointment.view"),
@@ -184,6 +198,10 @@ public final class AuthorizationConfig {
         Map.entry("/sonographer/upload/", "ultrasound.upload_image"),
         Map.entry("/sonographer/analyze", "ultrasound.perform"),
         Map.entry("/sonographer/ai-model", "ultrasound.view"),
+        // Hồ Sơ Cá Nhân của Bác sĩ siêu âm — dùng cùng permission key với
+        // /doctor/profile. Vai trò 6 đã có sẵn key "user.view" trong role_permissions.
+        Map.entry("/sonographer/profile", "user.view"),
+        Map.entry("/sonographer/profile/", "user.view"),
 
         // ──────────── PATIENT ZONE (/home, /patient/*) ────────────
         Map.entry("/home",                   "appointment.view"),

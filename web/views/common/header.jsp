@@ -90,19 +90,16 @@
                 <li class="dropdown-header">
                     <h6 class="text-dark mb-0 fw-bold">${sessionScope.user.fullName}</h6>
                     <small class="text-muted">
-                        <c:choose>
-                            <c:when test="${sessionScope.user.roleId == 1}">Quản Lý</c:when>
-                            <c:when test="${sessionScope.user.roleId == 2}">Bác Sĩ Lâm Sàng</c:when>
-                            <c:when test="${sessionScope.user.roleId == 3}">Admin</c:when>
-                            <c:when test="${sessionScope.user.roleId == 4}">Lễ Tân</c:when>
-                            <c:when test="${sessionScope.user.roleId == 6}">Bác Sĩ Siêu Âm</c:when>
-                            <c:otherwise>Nhân viên</c:otherwise>
-                        </c:choose>
+                        <c:out value="${sessionScope.user.roleNameDisplay}" />
                     </small>
                 </li>
                 <li><hr class="dropdown-divider"></li>
                 <li>
-                    <a class="dropdown-item" href="${pageContext.request.contextPath}/doctor/profile">
+                    <c:set var="pfProfileHref" value="${pageContext.request.contextPath}/doctor/profile" />
+                    <c:if test="${sessionScope.user.roleId == 6}">
+                        <c:set var="pfProfileHref" value="${pageContext.request.contextPath}/sonographer/profile" />
+                    </c:if>
+                    <a class="dropdown-item" href="${pfProfileHref}">
                         <i class="bi bi-person-circle me-2 text-muted"></i>Hồ Sơ Cá Nhân
                     </a>
                 </li>
@@ -178,6 +175,14 @@
                                 <span>Lịch Làm Việc</span>
                             </a>
                         </li>
+                        <li class="admin-sidebar-section">Tài Khoản</li>
+                        <li>
+                            <a href="${pageContext.request.contextPath}/doctor/profile"
+                               class="${fn:contains(pageContext.request.requestURI, '/doctor/profile') ? 'active' : ''}">
+                                <i class="bi bi-person-circle"></i>
+                                <span>Hồ Sơ Cá Nhân</span>
+                            </a>
+                        </li>
                     </c:when>
                     <c:when test="${sessionScope.user.roleId == 6}">
                         <li class="admin-sidebar-section">Chức Năng Siêu Âm</li>
@@ -222,6 +227,14 @@
                                class="${fn:contains(pageContext.request.requestURI, '/ai-model') ? 'active' : ''}">
                                 <i class="bi bi-cpu-fill"></i>
                                 <span>Hồ Sơ Mô Hình AI</span>
+                            </a>
+                        </li>
+                        <li class="admin-sidebar-section">Tài Khoản</li>
+                        <li>
+                            <a href="${pageContext.request.contextPath}/sonographer/profile"
+                               class="${fn:contains(pageContext.request.requestURI, '/sonographer/profile') ? 'active' : ''}">
+                                <i class="bi bi-person-circle"></i>
+                                <span>Hồ Sơ Cá Nhân</span>
                             </a>
                         </li>
                     </c:when>

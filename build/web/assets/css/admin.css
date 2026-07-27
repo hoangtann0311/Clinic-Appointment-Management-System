@@ -1,0 +1,1756 @@
+/* ============================================================
+   CAMS Admin — Clinical Dashboard Stylesheet
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800;900&family=Nunito:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('app-ui.css');
+
+:root {
+    --sidebar-w: 270px;
+    --topbar-h: 66px;
+
+    /* === CAMS ROSE PALETTE === */
+    --pink-50:  #E0EFFF;
+    --pink-100: #BFDBFE;
+    --pink-200: #93C5FD;
+    --pink-300: #60A5FA;
+    --pink-400: #60A5FA;
+    --pink-500: #2563EB;
+    --pink-600: #1D4ED8;
+    --pink-700: #2563EB;
+    --pink-800: #1D4ED8;
+    --pink-900: #1E40AF;
+
+    --rose-400: #60A5FA;
+    --rose-500: #3B82F6;
+    --rose-600: #2563EB;
+
+    /* === SURFACES === */
+    --c-bg:              #F0F7FF;
+    --c-surface:         #ffffff;
+    --c-surface-variant: #f1f5f9;
+    --c-surface-container: #eaf0f7;
+
+    /* === PRIMARY === */
+    --c-primary:         var(--pink-600);
+    --c-primary-light:   var(--pink-400);
+    --c-primary-dark:    var(--pink-700);
+    --c-primary-container: var(--pink-100);
+
+    /* === TEXT === */
+    --c-on-bg:           #1f2937;
+    --c-on-surface:      #1f2937;
+    --c-on-surface-var:  #475569;
+    --c-muted:           #64748b;
+    --c-outline:         #cbd5e1;
+    --c-outline-variant: #e2e8f0;
+
+    /* === SIDEBAR === */
+    --sb-bg:         #DBEAFE;
+    --sb-bg-mid:     #DBEAFE;
+    --sb-bg-deep:    #BFDBFE;
+    --sb-hover:      #F5F9FF;
+    --sb-active-bg:  rgba(59,130,246,0.15);
+    --sb-active-border: #3B82F6;
+    --sb-text:       #e2e8f0;
+    --sb-text-muted: #94a3b8;
+    --sb-border:     rgba(255,255,255,0.07);
+    --sb-accent:     #93c5fd;
+
+    /* === STATUS === */
+    --status-active-bg:   #e8f5e9;
+    --status-active-fg:   #2e7d32;
+    --status-inactive-bg: #f5f5f5;
+    --status-inactive-fg: #757575;
+    --status-locked-bg:   #ffebee;
+    --status-locked-fg:   #c62828;
+    --status-pending-bg:  #fff8e1;
+    --status-pending-fg:  #f57f17;
+
+    /* === SHADOWS === */
+    --shadow-xs: 0 1px 3px rgba(15,23,42,0.06);
+    --shadow-sm: 0 2px 8px rgba(15,23,42,0.08);
+    --shadow-md: 0 4px 20px rgba(15,23,42,0.10);
+    --shadow-lg: 0 8px 32px rgba(15,23,42,0.12);
+    --shadow-xl: 0 16px 56px rgba(15,23,42,0.14);
+    --shadow-pink: 0 4px 24px rgba(37,99,235,0.18);
+
+    /* === RADIUS === */
+    --r-sm:   8px;
+    --r-md:   12px;
+    --r-lg:   16px;
+    --r-xl:   22px;
+    --r-pill: 999px;
+
+    /* === TRANSITIONS === */
+    --t-fast:   0.15s ease;
+    --t-normal: 0.25s ease;
+    --t-slow:   0.35s cubic-bezier(0.4,0,0.2,1);
+
+    /* === FONTS === */
+    --font-display: 'Be Vietnam Pro', 'Nunito', 'Segoe UI', system-ui, -apple-system, Arial, sans-serif;
+    --font-body:    'Be Vietnam Pro', 'Inter', 'Segoe UI', system-ui, -apple-system, Arial, sans-serif;
+}
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+html {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+body.admin-body {
+    font-family: var(--font-body);
+    background: var(--c-bg);
+    color: var(--c-on-bg);
+    margin: 0; padding: 0;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+/* ============================================================
+   TOP BAR
+   ============================================================ */
+.admin-topbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: var(--topbar-h);
+    background: var(--c-surface);
+    border-bottom: 1px solid var(--c-outline-variant);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1.5rem;
+    z-index: 1030;
+    box-shadow: var(--shadow-xs);
+}
+
+.admin-topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+}
+
+.admin-topbar-brand {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 1.25rem;
+    color: var(--c-primary);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    letter-spacing: -0.03em;
+}
+
+.admin-topbar-brand i {
+    color: var(--pink-500);
+    font-size: 1.5rem;
+    filter: drop-shadow(0 0 6px rgba(37,99,235,0.4));
+}
+
+.admin-topbar-brand .brand-badge {
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 0.65rem;
+    color: var(--c-primary);
+    background: var(--pink-100);
+    padding: 3px 10px;
+    border-radius: var(--r-pill);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border: 1px solid var(--pink-200);
+}
+
+.admin-sidebar-toggle {
+    background: none;
+    border: none;
+    color: var(--c-on-surface-var);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 6px 8px;
+    border-radius: var(--r-sm);
+    display: none;
+    transition: background var(--t-fast), color var(--t-fast);
+    line-height: 1;
+}
+.admin-sidebar-toggle:hover {
+    background: var(--pink-100);
+    color: var(--c-primary);
+}
+
+.admin-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.admin-topbar-user {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.375rem 0.875rem;
+    background: var(--pink-50);
+    border-radius: var(--r-pill);
+    border: 1px solid var(--pink-200);
+}
+
+.admin-topbar-user span {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--c-primary-dark);
+}
+
+.admin-avatar-sm {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--pink-500), var(--rose-400));
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.35);
+}
+
+.admin-topbar-role {
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: var(--r-pill);
+    background: linear-gradient(135deg, var(--pink-500), var(--rose-500));
+    color: #fff;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.admin-topbar-logout {
+    color: var(--c-on-surface-var);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.875rem;
+    border-radius: var(--r-sm);
+    transition: all var(--t-fast);
+    border: 1px solid transparent;
+}
+.admin-topbar-logout:hover {
+    background: var(--pink-50);
+    color: var(--rose-600);
+    border-color: var(--pink-200);
+}
+
+.admin-topbar-dropdown .dropdown-toggle {
+    padding: 0.375rem 0.875rem 0.375rem 0.375rem;
+    background: var(--pink-50);
+    border-radius: var(--r-pill);
+    border: 1px solid var(--pink-200);
+    transition: all var(--t-fast);
+}
+.admin-topbar-dropdown .dropdown-toggle:hover, .admin-topbar-dropdown .dropdown-toggle[aria-expanded="true"] {
+    background: var(--pink-100);
+    border-color: var(--pink-300);
+}
+.admin-topbar-dropdown .dropdown-toggle::after {
+    margin-left: 0.5rem;
+    color: var(--c-primary-dark);
+}
+.admin-topbar-dropdown .dropdown-menu {
+    border: 1px solid var(--c-outline-variant);
+    padding: 0.5rem 0;
+    min-width: 200px;
+    margin-top: 0.5rem !important;
+}
+.admin-topbar-dropdown .dropdown-item {
+    font-size: 0.875rem;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    transition: all var(--t-fast);
+}
+.admin-topbar-dropdown .dropdown-item:hover {
+    background-color: var(--pink-50);
+    color: var(--c-primary);
+}
+/* ============================================================
+   SIDEBAR
+   ============================================================ */
+.admin-sidebar {
+    position: fixed;
+    top: var(--topbar-h); left: 0; bottom: 0;
+    width: var(--sidebar-w);
+    background: linear-gradient(180deg, var(--sb-bg) 0%, var(--sb-bg-mid) 50%, var(--sb-bg-deep) 100%);
+    overflow-y: auto; overflow-x: hidden;
+    z-index: 1020;
+    transition: transform var(--t-slow);
+    border-right: 1px solid var(--sb-border);
+}
+
+.admin-sidebar::-webkit-scrollbar { width: 3px; }
+.admin-sidebar::-webkit-scrollbar-track { background: transparent; }
+.admin-sidebar::-webkit-scrollbar-thumb { background: rgba(59,130,246,0.25); border-radius: 3px; }
+
+.admin-sidebar::before {
+    content: '';
+    display: block;
+    height: 3px;
+    background: linear-gradient(90deg, var(--pink-500), var(--rose-400), transparent);
+    flex-shrink: 0;
+}
+
+/* Sidebar User Block */
+.admin-sidebar-user {
+    padding: 1.5rem 1.25rem 1.25rem;
+    text-align: center;
+    border-bottom: 1px solid var(--sb-border);
+    background: linear-gradient(180deg, rgba(37,99,235,0.08) 0%, transparent 100%);
+}
+
+.admin-sidebar-avatar {
+    width: 62px; height: 62px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--pink-400), var(--pink-600));
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 1.4rem;
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+    margin-left: auto;
+    margin-right: auto;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.2), var(--shadow-pink);
+}
+
+/* Keep both uploaded images and the initial-letter fallback centered. */
+img.admin-sidebar-avatar {
+    display: block;
+    object-fit: cover;
+}
+
+.cams-app-footer {
+    margin-top: 2rem;
+    padding: 1.35rem 1rem 1.45rem;
+    background: #F0F7FF;
+    border-top: 1px solid var(--c-outline-variant, #BFDBFE);
+    color: #64748B;
+    font-family: var(--font-body, "Be Vietnam Pro", sans-serif);
+    font-size: 0.76rem;
+    text-align: center;
+}
+
+.cams-app-footer p {
+    margin: 0;
+    line-height: 1.55;
+}
+
+.cams-app-footer-copyright {
+    color: #64748B;
+    font-weight: 400;
+}
+
+.cams-app-footer-tagline {
+    color: #1D4ED8;
+    font-weight: 500;
+    margin-top: 0.25rem !important;
+}
+
+/* The sidebar overlays the left side of the shared footer. Align its content
+   with the functional area instead of the full browser viewport. */
+.admin-body .cams-app-footer {
+    margin-left: var(--sidebar-w, 338px);
+    width: calc(100% - var(--sidebar-w, 338px));
+}
+
+.admin-body .cams-app-footer .container {
+    max-width: none;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+}
+
+@media (max-width: 991.98px) {
+    .admin-body .cams-app-footer {
+        margin-left: 0;
+        width: 100%;
+    }
+}
+
+.admin-sidebar-name {
+    font-family: var(--font-display);
+    color: #E0EFFF;
+    font-weight: 700;
+    font-size: 0.9rem;
+    margin-bottom: 0.4rem;
+}
+
+.admin-sidebar-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.63rem;
+    font-weight: 700;
+    padding: 3px 12px;
+    border-radius: var(--r-pill);
+    background: linear-gradient(135deg, var(--pink-600), var(--pink-500));
+    color: #fff;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+/* Sidebar Menu */
+.admin-sidebar-menu {
+    list-style: none;
+    padding: 0.75rem 0 1rem;
+    margin: 0;
+}
+
+.admin-sidebar-section {
+    font-family: var(--font-body);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--sb-text-muted);
+    padding: 1rem 1.25rem 0.4rem;
+    margin-top: 0.25rem;
+}
+
+.admin-sidebar-menu li a {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 1.25rem;
+    color: var(--sb-text);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-left: 3px solid transparent;
+    transition: all var(--t-fast);
+    margin: 1px 0;
+}
+
+.admin-sidebar-menu li a i {
+    font-size: 1rem;
+    width: 20px;
+    text-align: center;
+    color: var(--sb-text-muted);
+    transition: color var(--t-fast);
+    flex-shrink: 0;
+}
+
+.admin-sidebar-menu li a:hover {
+    background: var(--sb-hover);
+    color: #fff;
+    border-left-color: var(--pink-400);
+    padding-left: 1.5rem;
+}
+.admin-sidebar-menu li a:hover i { color: var(--sb-accent); }
+
+.admin-sidebar-menu li a.active {
+    background: var(--sb-active-bg);
+    color: var(--sb-accent);
+    border-left-color: var(--pink-500);
+    font-weight: 700;
+}
+.admin-sidebar-menu li a.active i { color: var(--pink-300); }
+
+.admin-sidebar-menu li a.disabled {
+    opacity: 0.4;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+/* ============================================================
+   MAIN CONTENT
+   ============================================================ */
+.admin-main {
+    margin-left: var(--sidebar-w);
+    margin-top: var(--topbar-h);
+    padding: 2rem 2.25rem;
+    min-height: calc(100vh - var(--topbar-h));
+    flex-grow: 1;
+    width: calc(100% - var(--sidebar-w));
+    max-width: 100%;
+}
+
+/* ── Page Header ── */
+.admin-page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.admin-page-title {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    font-weight: 900;
+    color: var(--c-on-bg);
+    margin: 0 0 0.25rem;
+    letter-spacing: -0.03em;
+}
+
+.admin-page-subtitle {
+    font-size: 0.85rem;
+    color: var(--c-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.btn-refresh {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.55rem 1.1rem;
+    border-radius: var(--r-sm);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--c-primary);
+    background: var(--pink-50);
+    border: 1px solid var(--pink-200);
+    cursor: pointer;
+    transition: all var(--t-fast);
+    font-family: var(--font-body);
+}
+.btn-refresh:hover {
+    background: var(--pink-100);
+    border-color: var(--pink-300);
+    transform: translateY(-1px);
+}
+.btn-refresh i { transition: transform 0.4s ease; }
+.btn-refresh:hover i { transform: rotate(180deg); }
+
+/* ── Welcome Banner ── */
+.admin-welcome-banner {
+    background: linear-gradient(135deg, var(--pink-600) 0%, var(--pink-500) 50%, var(--rose-400) 100%);
+    border-radius: var(--r-lg);
+    padding: 1.5rem 2rem;
+    margin-bottom: 1.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-pink);
+}
+
+.admin-welcome-banner::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 180px; height: 180px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.07);
+    pointer-events: none;
+}
+
+.admin-welcome-banner::after {
+    content: '';
+    position: absolute;
+    bottom: -60px; right: 80px;
+    width: 220px; height: 220px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.05);
+    pointer-events: none;
+}
+
+.admin-welcome-banner h2 {
+    font-family: var(--font-display);
+    color: #fff;
+    font-size: 1.3rem;
+    font-weight: 800;
+    margin: 0 0 0.4rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    position: relative;
+}
+
+.admin-welcome-banner p {
+    color: rgba(255,255,255,0.85);
+    margin: 0;
+    font-size: 0.875rem;
+    position: relative;
+}
+
+.badge-role {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 1rem;
+    border-radius: var(--r-pill);
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 700;
+    border: 1px solid rgba(255,255,255,0.3);
+    backdrop-filter: blur(4px);
+}
+
+/* ── Stat Cards ── */
+.stat-card {
+    border-radius: var(--r-lg) !important;
+    border: none !important;
+    box-shadow: var(--shadow-sm) !important;
+    overflow: hidden;
+    transition: transform var(--t-normal), box-shadow var(--t-normal);
+}
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md) !important;
+}
+
+.stat-card .card-body {
+    background: var(--c-surface) !important;
+    padding: 1.4rem 1.35rem !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 1rem !important;
+}
+
+.stat-card-icon {
+    width: 52px; height: 52px;
+    border-radius: var(--r-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    flex-shrink: 0;
+}
+
+/* Icon variants */
+.stat-card-icon.users   { background: var(--pink-100); color: var(--pink-600); }
+.stat-card-icon.doctors { background: #E0EFFF; color: #2563EB; }
+.stat-card-icon.appts   { background: #DBEAFE; color: #2563EB; }
+.stat-card-icon.revenue { background: var(--pink-50); color: var(--pink-700); }
+
+.stat-card-content { flex: 1; min-width: 0; }
+
+.stat-card-value {
+    font-family: var(--font-display);
+    font-size: 1.8rem;
+    font-weight: 900;
+    color: var(--c-on-surface);
+    line-height: 1.1;
+    letter-spacing: -0.04em;
+}
+
+.stat-card-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--c-on-surface-var);
+    margin-top: 0.15rem;
+}
+
+.stat-card-trend {
+    font-size: 0.73rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-top: 0.3rem;
+}
+.stat-card-trend.up      { color: #2e7d32; }
+.stat-card-trend.down    { color: var(--rose-600); }
+.stat-card-trend.neutral { color: var(--c-muted); }
+
+/* Top border accent per stat card */
+.stat-card.users   .card-body { border-top: 3px solid var(--pink-400) !important; }
+.stat-card.doctors .card-body { border-top: 3px solid #60A5FA !important; }
+.stat-card.appts   .card-body { border-top: 3px solid var(--rose-500) !important; }
+.stat-card.revenue .card-body { border-top: 3px solid var(--pink-600) !important; }
+
+/* ── Admin Card (general) ── */
+.admin-card {
+    background: var(--c-surface) !important;
+    border: 1px solid var(--c-outline-variant) !important;
+    border-radius: var(--r-lg) !important;
+    box-shadow: var(--shadow-xs) !important;
+    overflow: hidden;
+}
+
+.admin-card .card-header {
+    background: var(--c-surface-variant) !important;
+    border-bottom: 1px solid var(--c-outline-variant) !important;
+    padding: 1rem 1.25rem !important;
+}
+
+.admin-card .card-header h5 {
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--c-primary-dark);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.admin-card .card-header h5 i { color: var(--pink-500); }
+
+.admin-card .card-body {
+    background: var(--c-surface) !important;
+    padding: 1.25rem !important;
+}
+
+/* ── Table ── */
+.admin-table-wrapper { overflow-x: auto; }
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.admin-table thead th {
+    font-family: var(--font-display);
+    font-size: 0.73rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--c-primary);
+    padding: 0.875rem 1rem;
+    background: var(--pink-50);
+    border-bottom: 2px solid var(--pink-200);
+    white-space: nowrap;
+}
+
+.admin-table tbody tr {
+    border-bottom: 1px solid var(--c-outline-variant);
+    transition: background var(--t-fast);
+}
+.admin-table tbody tr:hover { background: var(--pink-50); }
+.admin-table tbody td {
+    padding: 0.75rem 1rem;
+    color: var(--c-on-surface);
+    vertical-align: middle;
+}
+
+/* ── Quick Actions ── */
+.quick-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 0.75rem 1rem;
+    border-radius: var(--r-md);
+    text-decoration: none;
+    color: var(--c-on-surface);
+    transition: all var(--t-fast);
+    border: 1px solid transparent;
+    margin-bottom: 0.5rem;
+}
+.quick-action-btn:hover {
+    background: var(--pink-50);
+    border-color: var(--pink-200);
+    transform: translateX(4px);
+    color: var(--c-primary-dark);
+}
+
+.quick-action-icon {
+    width: 40px; height: 40px;
+    border-radius: var(--r-sm);
+    background: var(--pink-100);
+    color: var(--pink-600);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    transition: all var(--t-fast);
+}
+.quick-action-btn:hover .quick-action-icon {
+    background: linear-gradient(135deg, var(--pink-500), var(--rose-400));
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+}
+
+.quick-action-text {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+.quick-action-text span {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--c-on-surface);
+}
+.quick-action-text small {
+    font-size: 0.75rem;
+    color: var(--c-muted);
+}
+
+/* ── System Info List ── */
+.admin-info-list {
+    list-style: none;
+    padding: 0; margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.admin-info-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--c-outline-variant);
+    font-size: 0.85rem;
+}
+.admin-info-list li:last-child { border-bottom: none; }
+
+.info-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--c-on-surface-var);
+}
+.info-label i { color: var(--pink-400); }
+
+.info-value {
+    font-weight: 600;
+    color: var(--c-on-surface);
+}
+.info-value.good { color: #2e7d32; }
+
+/* ── Badges ── */
+.badge-role-tag {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: var(--r-pill);
+    font-size: 0.7rem;
+    font-weight: 700;
+    background: var(--pink-100);
+    color: var(--pink-700);
+    border: 1px solid var(--pink-200);
+}
+
+.badge-status {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: var(--r-pill);
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+.badge-status-active    { background: var(--status-active-bg);   color: var(--status-active-fg); }
+.badge-status-inactive  { background: var(--status-inactive-bg); color: var(--status-inactive-fg); }
+.badge-status-locked    { background: var(--status-locked-bg);   color: var(--status-locked-fg); }
+.badge-status-pending   { background: var(--status-pending-bg);  color: var(--status-pending-fg); }
+
+/* ── Empty State ── */
+.admin-empty-state {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    color: var(--c-muted);
+}
+.admin-empty-state i {
+    font-size: 2.5rem;
+    color: var(--pink-200);
+    display: block;
+    margin-bottom: 0.75rem;
+}
+.admin-empty-state h6 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--c-on-surface-var);
+    margin-bottom: 0.25rem;
+}
+.admin-empty-state p {
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+/* ── Section link header ── */
+.admin-card-header-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.admin-card-header-link a {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--pink-500);
+    text-decoration: none;
+    transition: color var(--t-fast);
+}
+.admin-card-header-link a:hover { color: var(--pink-700); }
+
+/* ============================================================
+   SIDEBAR BACKDROP
+   ============================================================ */
+.admin-sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(26,10,18,0.5);
+    z-index: 1015;
+    backdrop-filter: blur(3px);
+    animation: fadeBackdrop 0.2s ease;
+}
+@keyframes fadeBackdrop { from { opacity: 0; } to { opacity: 1; } }
+.admin-sidebar-backdrop.show { display: block; }
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in-up { animation: fadeInUp 0.4s ease forwards; }
+.fade-in-up:nth-child(1) { animation-delay: 0.00s; }
+.fade-in-up:nth-child(2) { animation-delay: 0.06s; }
+.fade-in-up:nth-child(3) { animation-delay: 0.12s; }
+.fade-in-up:nth-child(4) { animation-delay: 0.18s; }
+
+/* ============================================================
+   FORM CONTROLS (Admin / Doctor / Sonographer Theme)
+   Đồng bộ form inputs với pink rose palette
+   ============================================================ */
+.admin-body .form-control,
+.admin-body .form-select {
+    border-radius: var(--r-sm);
+    border: 1px solid var(--c-outline);
+    padding: 0.625rem 0.875rem;
+    font-size: 0.9375rem;
+    color: var(--c-on-surface);
+    background-color: var(--c-surface);
+    transition: border-color var(--t-fast), box-shadow var(--t-fast);
+}
+
+.admin-body .form-control:focus,
+.admin-body .form-select:focus {
+    border-color: var(--c-primary-light);
+    box-shadow: 0 0 0 0.2rem rgba(37,99,235, 0.12);
+    outline: none;
+}
+
+.admin-body .form-control::placeholder {
+    color: var(--c-muted);
+    font-size: 0.875rem;
+}
+
+.admin-body .form-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--c-on-surface-var);
+    margin-bottom: 0.375rem;
+}
+
+.admin-body textarea.form-control {
+    line-height: 1.6;
+    resize: vertical;
+}
+
+.admin-body .form-check-input:checked {
+    background-color: var(--c-primary);
+    border-color: var(--c-primary);
+}
+
+.admin-body .form-check-input:focus {
+    box-shadow: 0 0 0 0.2rem rgba(37,99,235, 0.15);
+    border-color: var(--c-primary-light);
+}
+
+.admin-body .form-check-label {
+    font-size: 0.875rem;
+}
+
+.admin-body .form-switch .form-check-input:checked {
+    background-color: var(--c-primary);
+}
+
+/* Section labels trong form (vd: "Sinh hiệu mẹ") */
+.admin-body .section-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--c-muted);
+    margin-bottom: 0.5rem;
+}
+
+.admin-body .field-unit {
+    font-size: 0.8rem;
+    color: var(--c-muted);
+    font-weight: 400;
+}
+
+/* Table headers trong form */
+.admin-body .table th {
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--c-muted);
+    text-transform: uppercase;
+}
+
+/* Input group suffix (vd: "viên", "mg") */
+.admin-body .input-group-text {
+    border-radius: 0 var(--r-sm) var(--r-sm) 0;
+    border: 1px solid var(--c-outline);
+    background: var(--c-surface-variant);
+    font-size: 0.8rem;
+    color: var(--c-on-surface-var);
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 991.98px) {
+    .admin-sidebar-toggle { display: inline-flex; }
+    .admin-sidebar { transform: translateX(-100%); box-shadow: none; }
+    .admin-sidebar.show { transform: translateX(0); box-shadow: var(--shadow-xl); }
+    .admin-main { margin-left: 0; width: 100%; }
+}
+
+@media (max-width: 767.98px) {
+    .admin-main { padding: 1rem 1rem; }
+    .admin-page-title { font-size: 1.4rem; }
+    .admin-welcome-banner { padding: 1.25rem 1.5rem; }
+    .stat-card .card-body { padding: 1rem !important; gap: 0.75rem !important; }
+    .stat-card-value { font-size: 1.5rem; }
+}
+
+@media (max-width: 575.98px) {
+    .admin-topbar { padding: 0 0.875rem; }
+    .admin-topbar-brand .brand-badge { display: none; }
+    .admin-main { padding: 0.75rem; }
+}
+
+/* ============================================================
+   LOGIN PAGE
+   ============================================================ */
+body.admin-login-page {
+    background: var(--c-primary-container);
+    font-family: var(--font-body);
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    margin: 0;
+    position: relative;
+    overflow: hidden;
+    background-image: radial-gradient(rgba(37,99,235,0.12) 1px, transparent 1px);
+    background-size: 22px 22px;
+}
+
+.admin-login-card {
+    background: rgba(255,255,255,0.9);
+    backdrop-filter: blur(24px);
+    border-radius: var(--r-xl);
+    box-shadow: var(--shadow-xl);
+    border: 1px solid rgba(255,255,255,0.6);
+    padding: 2.5rem 2.25rem;
+    width: 100%;
+    max-width: 420px;
+    animation: fadeInUp 0.5s ease forwards;
+}
+
+.btn-admin-login {
+    width: 100%;
+    padding: 0.85rem 1rem;
+    border: none;
+    border-radius: var(--r-md);
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #fff;
+    background: linear-gradient(135deg, var(--pink-600), var(--pink-500));
+    cursor: pointer;
+    box-shadow: var(--shadow-pink);
+    transition: all var(--t-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+.btn-admin-login:hover {
+    background: linear-gradient(135deg, var(--pink-700), var(--pink-600));
+    transform: translateY(-1px);
+    box-shadow: 0 8px 28px rgba(37,99,235,0.4);
+}
+
+/* ============================================================
+   BOOTSTRAP OVERRIDES FOR BRAND HARMONY (ROSE PINK THEME)
+   ============================================================ */
+
+/* Primary Button Override */
+.btn-primary {
+    background: linear-gradient(135deg, var(--pink-600) 0%, var(--pink-500) 100%) !important;
+    border: none !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(37,99,235, 0.2) !important;
+    transition: all 0.2s ease !important;
+}
+.btn-primary:hover, .btn-primary:focus, .btn-primary:active {
+    background: linear-gradient(135deg, var(--pink-700) 0%, var(--pink-600) 100%) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(37,99,235, 0.35) !important;
+    color: #ffffff !important;
+}
+
+/* Outline Primary Button Override */
+.btn-outline-primary {
+    color: var(--pink-600) !important;
+    border-color: var(--pink-600) !important;
+    background: transparent !important;
+    transition: all 0.2s ease !important;
+}
+.btn-outline-primary:hover, .btn-outline-primary:focus, .btn-outline-primary:active {
+    background-color: var(--pink-600) !important;
+    border-color: var(--pink-600) !important;
+    color: #ffffff !important;
+}
+
+/* Text Primary Override */
+.text-primary {
+    color: var(--pink-600) !important;
+}
+
+/* Background Primary Override */
+.bg-primary {
+    background-color: var(--pink-600) !important;
+}
+.bg-primary-subtle {
+    background-color: var(--pink-50) !important;
+    color: var(--pink-800) !important;
+}
+
+/* Border Primary Override */
+.border-primary {
+    border-color: var(--pink-300) !important;
+}
+
+/* Tab Overrides (nav-pills and nav-tabs) */
+.nav-pills .nav-link.active {
+    background: linear-gradient(135deg, var(--pink-600) 0%, var(--pink-500) 100%) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(37,99,235, 0.25) !important;
+}
+.nav-tabs .nav-link.active {
+    border-color: var(--pink-300) var(--pink-300) #ffffff !important;
+    color: var(--pink-700) !important;
+    font-weight: 700;
+}
+
+/* Form Input Focus Overrides */
+.form-control:focus, .form-select:focus {
+    border-color: var(--pink-300) !important;
+    box-shadow: 0 0 0 0.25rem rgba(37,99,235, 0.15) !important;
+}
+
+/* Alert Overrides */
+.alert-primary {
+    background-color: var(--pink-50) !important;
+    border-color: var(--pink-200) !important;
+    color: var(--pink-800) !important;
+}
+.alert-info {
+    background-color: #f0fdfa !important; /* Mảnh xanh teal mát dịu */
+    border-color: #ccfbf1 !important;
+    color: #0f766e !important;
+}
+
+/* Badge primary override */
+.badge.bg-primary {
+    background-color: var(--pink-600) !important;
+    color: #ffffff !important;
+}
+
+/* Pagination Overrides */
+.page-item.active .page-link {
+    background-color: var(--pink-600) !important;
+    border-color: var(--pink-600) !important;
+    color: #ffffff !important;
+}
+.page-link {
+    color: var(--pink-600) !important;
+}
+.page-link:hover {
+    background-color: var(--pink-50) !important;
+}
+
+/* Medical Record / Ultrasound Orders detail cards border override */
+.card-accent-primary {
+    border-left: 4px solid var(--pink-600) !important;
+}
+
+/* ============================================================
+   DOCTOR WORKSPACE
+   A restrained clinical layer over the shared dashboard theme.
+   ============================================================ */
+.doctor-theme .admin-main {
+    background: #F0F7FF;
+}
+
+.doctor-theme .admin-main .card {
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, .06) !important;
+}
+
+.doctor-theme .admin-main .card:hover {
+    box-shadow: 0 8px 22px rgba(15, 23, 42, .08) !important;
+}
+
+.doctor-theme .admin-main .table > :not(caption) > * > * {
+    border-color: #e2e8f0;
+}
+
+.doctor-theme .admin-main .table thead th {
+    color: #334155;
+    background: #f8fafc;
+    font-size: .76rem;
+    font-weight: 800;
+    letter-spacing: .035em;
+    text-transform: uppercase;
+}
+
+.doctor-theme .admin-main .table tbody tr {
+    transition: background-color .18s ease;
+}
+
+.doctor-theme .admin-main .table tbody tr:hover {
+    background: #f8fafc;
+}
+
+.doctor-theme .admin-main .form-label {
+    color: #334155;
+    font-weight: 700;
+}
+
+.doctor-theme .admin-main .form-control,
+.doctor-theme .admin-main .form-select {
+    min-height: 42px;
+    border-color: #cbd5e1;
+    background-color: #ffffff;
+}
+
+.doctor-theme .admin-main .form-control::placeholder {
+    color: #94a3b8;
+}
+
+.doctor-theme .admin-main .btn {
+    border-radius: .7rem;
+    font-weight: 700;
+}
+
+.doctor-theme .admin-main .alert {
+    border-width: 1px;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, .05);
+}
+
+.doctor-theme .doctor-record-hero {
+    background: #0d6efd !important;
+    box-shadow: 0 8px 20px rgba(13, 110, 253, .16) !important;
+}
+
+.doctor-theme .admin-main .quick-link-card {
+    background: #fff;
+    border-color: #dbeafe !important;
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+
+.doctor-theme .admin-main .quick-link-card:hover {
+    transform: translateY(-3px);
+    border-color: #93c5fd !important;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, .08);
+}
+
+/* Keep Doctor page banners in one calm clinical palette. Semantic status badges
+   are intentionally excluded so warning, pending and completed states stay clear. */
+.doctor-theme .admin-main .card.bg-primary.bg-gradient,
+.doctor-theme .admin-main .card.bg-success.bg-gradient,
+.doctor-theme .admin-main .card.bg-info.bg-gradient,
+.doctor-theme .admin-main .card.bg-danger.bg-gradient {
+    background: #0d6efd !important;
+    box-shadow: 0 .5rem 1rem rgba(13, 110, 253, .14) !important;
+    border-color: transparent !important;
+}
+
+.doctor-theme .admin-main .obs-nav .nav-link.active {
+    color: #0d6efd;
+    border-bottom-color: #0d6efd;
+    background: #fff;
+}
+
+.doctor-theme .admin-main .obs-nav .nav-link:hover:not(.active) {
+    color: #0d6efd;
+    background: #eff6ff;
+}
+
+.doctor-theme .admin-main .form-control:focus,
+.doctor-theme .admin-main .form-select:focus {
+    border-color: #60a5fa !important;
+    box-shadow: 0 0 0 .22rem rgba(59, 130, 246, .16) !important;
+}
+
+/* ============================================================
+   SHARED CLINICAL WORKSPACE
+   Both clinical doctors and sonographers use these neutral components.
+   Role-specific screens may differ in content, never in visual language.
+   ============================================================ */
+.doctor-theme .admin-main,
+.sonographer-theme .admin-main {
+    background: var(--c-bg);
+}
+
+.doctor-theme .admin-main .admin-page-header,
+.sonographer-theme .admin-main .admin-page-header {
+    align-items: center;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--c-outline-variant);
+}
+
+.doctor-theme .admin-main .admin-page-title,
+.sonographer-theme .admin-main .admin-page-title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #172033;
+}
+
+.doctor-theme .admin-main .admin-page-subtitle,
+.sonographer-theme .admin-main .admin-page-subtitle {
+    color: var(--c-muted);
+}
+
+.clinical-kpi {
+    height: 100%;
+    background: var(--c-surface) !important;
+    border: 1px solid var(--c-outline-variant) !important;
+    border-left: 4px solid var(--c-primary) !important;
+    border-radius: var(--r-md) !important;
+    box-shadow: var(--shadow-xs) !important;
+    overflow: hidden;
+    transition: border-color var(--t-fast), box-shadow var(--t-fast), transform var(--t-fast);
+}
+
+.clinical-kpi:hover {
+    border-color: var(--pink-300) !important;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm) !important;
+}
+
+.clinical-kpi .card-body {
+    min-height: 104px;
+    padding: 1rem 1.1rem !important;
+}
+
+.clinical-kpi__value {
+    color: #172033;
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    font-weight: 800;
+    line-height: 1.1;
+}
+
+.clinical-kpi .fs-1 {
+    color: #172033 !important;
+    font-family: var(--font-display);
+    font-weight: 800 !important;
+}
+
+.clinical-kpi__label {
+    margin-top: .45rem;
+    color: #475569;
+    font-size: .82rem;
+    font-weight: 700;
+}
+
+.clinical-kpi--success { border-left-color: #15803d !important; }
+.clinical-kpi--warning { border-left-color: #b45309 !important; }
+.clinical-kpi--danger  { border-left-color: #b91c1c !important; }
+.clinical-kpi--muted   { border-left-color: #64748b !important; }
+.clinical-kpi--success .fs-1 { color: #15803d !important; }
+.clinical-kpi--warning .fs-1 { color: #b45309 !important; }
+.clinical-kpi--danger .fs-1  { color: #b91c1c !important; }
+.clinical-kpi--muted .fs-1   { color: #475569 !important; }
+
+.clinical-kpi.kpi-card .card-body {
+    min-height: 0;
+}
+
+.clinical-panel,
+.doctor-theme .admin-main > .card,
+.sonographer-theme .admin-main > .card {
+    border-color: var(--c-outline-variant) !important;
+    border-radius: var(--r-md) !important;
+    box-shadow: var(--shadow-xs) !important;
+}
+
+/* Older doctor pages use coloured Bootstrap banners.  Render those banners as
+   the same calm workspace heading used by the sonographer pages. */
+.doctor-theme .admin-main .card.bg-primary.bg-gradient.text-white {
+    background: var(--c-surface) !important;
+    color: #172033 !important;
+    border: 1px solid var(--c-outline-variant) !important;
+    box-shadow: var(--shadow-xs) !important;
+}
+
+.doctor-theme .admin-main .card.bg-primary.bg-gradient.text-white h1,
+.doctor-theme .admin-main .card.bg-primary.bg-gradient.text-white h2,
+.doctor-theme .admin-main .card.bg-primary.bg-gradient.text-white h3,
+.doctor-theme .admin-main .card.bg-primary.bg-gradient.text-white p {
+    color: inherit !important;
+}
+
+.doctor-theme .admin-main .card.bg-primary.bg-gradient.text-white p {
+    opacity: 1 !important;
+    color: var(--c-muted) !important;
+    font-size: .9rem !important;
+}
+
+.doctor-theme .admin-main .card.bg-primary.bg-gradient.text-white .badge {
+    border: 1px solid var(--pink-200);
+    font-size: .75rem !important;
+}
+
+.doctor-theme .admin-main .card.bg-primary.bg-gradient.text-white .btn-light {
+    color: var(--c-primary) !important;
+    background: var(--pink-50) !important;
+    border: 1px solid var(--pink-200) !important;
+    box-shadow: none !important;
+}
+
+.doctor-theme .admin-main .card.bg-primary.bg-gradient.text-white .btn-light:hover {
+    background: var(--pink-100) !important;
+    transform: none;
+}
+
+/* Components built before the clinical workspace used different table/card
+   classes.  This compatibility layer makes them read as one system. */
+.doctor-theme .admin-main .card-header,
+.sonographer-theme .admin-main .card-header {
+    border-bottom-color: var(--c-outline-variant);
+}
+
+.doctor-theme .admin-main .table thead th,
+.sonographer-theme .admin-main .table thead th {
+    background: #f8fafc;
+    color: #334155;
+}
+
+.doctor-theme .admin-main .badge,
+.sonographer-theme .admin-main .badge {
+    font-weight: 700;
+}
+
+.doctor-theme .admin-main .alert,
+.sonographer-theme .admin-main .alert {
+    border-radius: var(--r-sm);
+    box-shadow: none;
+}
+
+.sonographer-theme .table-danger-subtle {
+    background-color: #fff7f7 !important;
+}
+
+
+
+@media (max-width: 767.98px) {
+    .doctor-theme .admin-main { padding: 1rem; }
+    .doctor-theme .admin-main .table { font-size: .84rem; }
+
+    .clinical-kpi .card-body { min-height: auto; }
+}
+
+/* Admin identity: shared palette and the same sidebar used by User Management. */
+.admin-body { background: #EFF6FF !important; }
+.admin-body .admin-topbar {
+    background: rgba(255,255,255,.97) !important;
+    border-bottom-color: #93C5FD !important;
+}
+.admin-body .admin-topbar-brand { color: #1D4ED8 !important; }
+.admin-body .admin-topbar-brand .brand-badge {
+    color: #1D4ED8 !important;
+    background: #F0F7FF !important;
+    border-color: #93C5FD !important;
+    text-transform: none;
+    letter-spacing: .02em;
+}
+.admin-body .admin-topbar-user {
+    background: #F0F7FF !important;
+    border-color: #BFDBFE !important;
+}
+.admin-body .admin-avatar-sm {
+    background: linear-gradient(135deg,#3B82F6,#93C5FD) !important;
+}
+.admin-body .admin-topbar-user .admin-topbar-role {
+    background: linear-gradient(135deg,#3B82F6,#60A5FA) !important;
+    color: #fff !important;
+}
+.admin-body .admin-sidebar {
+    background: linear-gradient(180deg,#EFF6FF 0%,#DBEAFE 52%,#BFDBFE 100%) !important;
+    border-right: 1px solid rgba(255,255,255,.07) !important;
+    box-shadow: 8px 0 28px rgba(45,16,32,.12);
+}
+.admin-body .admin-sidebar::before {
+    background: linear-gradient(90deg,#3B82F6,#93C5FD,transparent) !important;
+}
+.admin-body .admin-sidebar-user {
+    background: linear-gradient(180deg,rgba(37,99,235,.08),transparent) !important;
+    border-bottom-color: rgba(255,255,255,.07) !important;
+}
+.admin-body .admin-sidebar-name { color: #E0EFFF !important; }
+.admin-body .admin-sidebar-section { color: #94A3B8 !important; }
+.admin-body .admin-sidebar-menu li a { color: #DBEAFE !important; }
+.admin-body .admin-sidebar-menu li a i { color: #94A3B8 !important; }
+.admin-body .admin-sidebar-menu li a:hover {
+    color: #fff !important;
+    background: #F5F9FF !important;
+}
+.admin-body .admin-sidebar-menu li a.active {
+    color: #60A5FA !important;
+    background: rgba(37,99,235,.18) !important;
+    border-left-color: #3B82F6 !important;
+    box-shadow: none;
+}
+.admin-body .admin-sidebar-menu li a.active i { color: #93C5FD !important; }
+.admin-body .admin-sidebar-badge {
+    background: linear-gradient(135deg,#2563EB,#3B82F6) !important;
+    box-shadow: 0 4px 12px rgba(37,99,235,.18);
+}
+
+/* ============================================================
+   CAMS Unified Soft-Pink Theme
+   A calm palette shared by Admin, Manager, Doctor and Sonographer.
+   ============================================================ */
+:root {
+    --pink-50: #F0F7FF !important;
+    --pink-100: #E0EFFF !important;
+    --pink-200: #BFDBFE !important;
+    --pink-300: #93C5FD !important;
+    --pink-400: #60A5FA !important;
+    --pink-500: #3B82F6 !important;
+    --pink-600: #2563EB !important;
+    --pink-700: #1D4ED8 !important;
+    --pink-800: #1E40AF !important;
+    --pink-900: #754b5d !important;
+    --rose-400: #60A5FA !important;
+    --rose-500: #3B82F6 !important;
+    --rose-600: #2563EB !important;
+    --c-bg: #F0F7FF !important;
+    --c-surface: #ffffff !important;
+    --c-surface-variant: #EFF6FF !important;
+    --c-surface-container: #E0EFFF !important;
+    --c-primary: #2563EB !important;
+    --c-primary-light: #60A5FA !important;
+    --c-primary-dark: #8b596d !important;
+    --c-primary-container: #BFDBFE !important;
+    --c-on-bg: #1E293B !important;
+    --c-on-surface: #1E293B !important;
+    --c-on-surface-var: #64748B !important;
+    --c-muted: #94A3B8 !important;
+    --c-outline: #BFDBFE !important;
+    --c-outline-variant: #DBEAFE !important;
+    --sb-bg: #ffffff !important;
+    --sb-bg-mid: #ffffff !important;
+    --sb-bg-deep: #ffffff !important;
+    --sb-hover: #F0F7FF !important;
+    --sb-active-bg: #E0EFFF !important;
+    --sb-active-border: #3B82F6 !important;
+    --sb-text: #1E293B !important;
+    --sb-text-muted: #94A3B8 !important;
+    --sb-border: #E5E7EB !important;
+    --sb-accent: #2563EB !important;
+    --shadow-pink: 0 8px 24px rgba(37,99,235,.16) !important;
+}
+
+.admin-body {
+    background: #F0F7FF !important;
+    color: #1E293B !important;
+}
+.admin-body .admin-topbar {
+    background: rgba(255,255,255,.97) !important;
+    border-bottom: 1px solid #BFDBFE !important;
+    box-shadow: 0 2px 12px rgba(109,75,91,.05) !important;
+}
+.admin-body .admin-topbar-brand,
+.admin-body .admin-topbar-brand i {
+    color: #2563EB !important;
+    filter: none !important;
+}
+.admin-body .admin-topbar-brand .brand-badge,
+.admin-body .admin-topbar-user {
+    color: #475569 !important;
+    background: #EFF6FF !important;
+    border-color: #BFDBFE !important;
+}
+.admin-body .admin-avatar-sm,
+.admin-body .admin-topbar-user .admin-topbar-role,
+.admin-body .admin-sidebar-avatar,
+.admin-body .admin-sidebar-badge {
+    background: linear-gradient(135deg,#3B82F6,#3B82F6) !important;
+    color: #fff !important;
+    box-shadow: 0 4px 14px rgba(37,99,235,.17) !important;
+}
+.admin-body .admin-sidebar {
+    background: #ffffff !important;
+    border-right: 1px solid #E5E7EB !important;
+    box-shadow: 2px 0 12px rgba(0,0,0,.04) !important;
+}
+.admin-body .admin-sidebar::before {
+    background: linear-gradient(90deg,#3B82F6,#60A5FA,transparent) !important;
+}
+.admin-body .admin-sidebar-user {
+    background: #F8FAFC !important;
+    border-bottom-color: #E5E7EB !important;
+}
+.admin-body .admin-sidebar-name { color: #1E293B !important; }
+.admin-body .admin-sidebar-section { color: #94A3B8 !important; }
+.admin-body .admin-sidebar-menu li a { color: #475569 !important; }
+.admin-body .admin-sidebar-menu li a i { color: #94A3B8 !important; }
+.admin-body .admin-sidebar-menu li a:hover {
+    color: #1E293B !important;
+    background: #F0F7FF !important;
+}
+.admin-body .admin-sidebar-menu li a.active {
+    color: #1E293B !important;
+    background: #E0EFFF !important;
+    border-left-color: #3B82F6 !important;
+    box-shadow: inset 0 0 0 1px rgba(59,130,246,.11) !important;
+}
+.admin-body .admin-sidebar-menu li a.active i { color: #2563EB !important; }
+
+.admin-body .admin-page-title,
+.admin-body .admin-card h1,
+.admin-body .admin-card h2,
+.admin-body .admin-card h3,
+.admin-body .admin-card h4,
+.admin-body .admin-card h5,
+.admin-body .card h1,
+.admin-body .card h2,
+.admin-body .card h3,
+.admin-body .card h4,
+.admin-body .card h5 {
+    color: #1E293B;
+}
+.admin-body .card-header,
+.admin-body .admin-card .card-header,
+.admin-body .table thead th,
+.admin-body .admin-table thead th {
+    background: #EFF6FF !important;
+    border-color: #DBEAFE !important;
+}
+.admin-body .text-primary,
+.admin-body a:not(.btn):not(.admin-sidebar-menu a),
+.admin-body .admin-page-subtitle i {
+    color: #2563EB !important;
+}
+.admin-body .btn-primary,
+.admin-body .btn-primary-pink,
+.admin-body .btn-admin-primary,
+.admin-body .page-item.active .page-link {
+    background: #3B82F6 !important;
+    border-color: #3B82F6 !important;
+    color: #fff !important;
+    box-shadow: 0 4px 12px rgba(37,99,235,.16) !important;
+}
+.admin-body .btn-primary:hover,
+.admin-body .btn-primary:focus,
+.admin-body .btn-primary-pink:hover,
+.admin-body .btn-admin-primary:hover {
+    background: #2563EB !important;
+    border-color: #2563EB !important;
+    color: #fff !important;
+}
+.admin-body .btn-outline-primary,
+.admin-body .btn-outline-pink {
+    color: #1D4ED8 !important;
+    border-color: #60A5FA !important;
+    background: #fff !important;
+}
+.admin-body .btn-outline-primary:hover,
+.admin-body .btn-outline-pink:hover {
+    color: #475569 !important;
+    border-color: #3B82F6 !important;
+    background: #E0EFFF !important;
+}
+.admin-body .form-control:focus,
+.admin-body .form-select:focus {
+    border-color: #60A5FA !important;
+    box-shadow: 0 0 0 .2rem rgba(59,130,246,.14) !important;
+}
+/* KPI & stat icons: cho phép mỗi dashboard tự định nghĩa màu riêng */
+.admin-body .stat-icon,
+.admin-body .quick-link-icon,
+.admin-body .clinical-kpi__icon {
+    background: #E0EFFF !important;
+    color: #2563EB !important;
+}
+.admin-body .welcome-banner,
+.admin-body .role-info-card,
+.admin-body .doctor-record-hero,
+.admin-body .card.bg-primary.bg-gradient {
+    background: linear-gradient(135deg,#1E40AF,#2563EB) !important;
+}
+.admin-body [class*="sc-icon-"],
+.admin-body .audit-stat-icon,
+.admin-body .kpi-mini-icon,
+.admin-body .kmi-icon,
+.admin-body .info-icon,
+.admin-body .service-icon,
+.admin-body .medicine-icon,
+.admin-body .role-tab-icon {
+    background: linear-gradient(135deg,#60A5FA,#3B82F6) !important;
+    color: #fff !important;
+}
+.admin-body .kpi-card::after,
+.admin-body .stat-card::after {
+    background: #60A5FA !important;
+}
+.admin-body .kpi-card .card-body,
+.admin-body .stat-card .card-body {
+    border-top-color: #60A5FA !important;
+}
+.admin-body [class*="badge-role-"] {
+    background: #E0EFFF !important;
+    color: #475569 !important;
+    border-color: #93C5FD !important;
+}
+.admin-body .audit-stat-icon {
+    background: #E0EFFF !important;
+    color: #2563EB !important;
+}
+.doctor-theme .admin-main .card.text-white[style*="background"],
+.sonographer-theme .admin-main .card.text-white[style*="background"],
+.doctor-theme .admin-main [style*="background:linear-gradient"][class*="card"],
+.sonographer-theme .admin-main [style*="background:linear-gradient"][class*="card"] {
+    background: linear-gradient(135deg,#3B82F6,#3B82F6) !important;
+}
+.doctor-theme .obs-nav .nav-link.active,
+.doctor-theme .nav-pills .nav-link.active,
+.sonographer-theme .nav-pills .nav-link.active {
+    background: #3B82F6 !important;
+    color: #fff !important;
+}
+.doctor-theme .obs-nav .nav-link:hover:not(.active),
+.sonographer-theme .nav-pills .nav-link:hover:not(.active) {
+    background: #E0EFFF !important;
+    color: #64748B !important;
+}
+.sonographer-theme .us-step.is-current {
+    color: #2563EB !important;
+}
+.sonographer-theme .review-choice:has(input:checked) {
+    border-color: #3B82F6 !important;
+    background: #E0EFFF !important;
+}
+

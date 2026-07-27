@@ -1,0 +1,500 @@
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAMS - Hệ thống quản lý lịch khám</title>
+    <!-- Bootstrap 5 CSS CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+          crossorigin="anonymous">
+    <!-- Bootstrap Icons CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+          rel="stylesheet">
+    <!-- Google Fonts: Be Vietnam Pro (thiết kế riêng cho tiếng Việt) -->
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800;900&display=swap"
+          rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="${pageContext.request.contextPath}/assets/css/style.css?v=202"
+          rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/app-ui.css?v=202"
+          rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #b86689;
+            --success-color: #198754;
+            /* Ghi đè font mặc định của Bootstrap 5 bằng font hỗ trợ tiếng Việt */
+            --bs-body-font-family: 'Be Vietnam Pro', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background-color: #fff7fa;
+            font-family: var(--bs-body-font-family);
+        }
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.25rem;
+        }
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+        }
+        .btn-primary {
+            border-radius: 8px;
+            padding: 10px 24px;
+            font-weight: 500;
+        }
+        .form-control {
+            border-radius: 8px;
+            padding: 10px 14px;
+            border: 1px solid #dee2e6;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(184, 102, 137, 0.18);
+        }
+    </style>
+</head>
+<c:choose>
+    <c:when test="${not empty sessionScope.user && (sessionScope.user.roleId == 2 || sessionScope.user.roleId == 6)}">
+        <!-- Rose Pink Theme Header/Sidebar for Doctor (2) and Sonographer (6) -->
+        <link href="${pageContext.request.contextPath}/assets/css/admin.css?v=202" rel="stylesheet">
+        <body class="admin-body ${sessionScope.user.roleId == 2 ? 'doctor-theme' : 'sonographer-theme'}">
+
+        <%-- TOP BAR --%>
+        <nav class="admin-topbar">
+            <div class="admin-topbar-left">
+                <button class="admin-sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar" onclick="toggleSidebar()">
+                    <i class="bi bi-list"></i>
+                </button>
+                <a href="${pageContext.request.contextPath}/home" class="admin-topbar-brand">
+                    <i class="bi bi-hospital-fill"></i>
+                    CAMS
+                    <span class="brand-badge">${sessionScope.user.roleId == 2 ? 'Bác sĩ lâm sàng' : 'Bác sĩ siêu âm'}</span>
+                </a>
+            </div>
+            <div class="admin-topbar-right">
+        <div class="dropdown admin-topbar-dropdown">
+            <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="adminUserDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <div class="admin-avatar-sm me-2">
+                    ${not empty sessionScope.user.fullName ? fn:substring(sessionScope.user.fullName, 0, 1) : '?'}
+                </div>
+                <span class="d-none d-md-inline fw-semibold text-dark">${sessionScope.user.fullName}</span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg rounded-3" aria-labelledby="adminUserDropdown">
+                <li class="dropdown-header">
+                    <h6 class="text-dark mb-0 fw-bold">${sessionScope.user.fullName}</h6>
+                    <small class="text-muted">
+                        <c:out value="${sessionScope.user.roleNameDisplay}" />
+                    </small>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <c:set var="pfProfileHref" value="${pageContext.request.contextPath}/doctor/profile" />
+                    <c:if test="${sessionScope.user.roleId == 6}">
+                        <c:set var="pfProfileHref" value="${pageContext.request.contextPath}/sonographer/profile" />
+                    </c:if>
+                    <a class="dropdown-item" href="${pfProfileHref}">
+                        <i class="bi bi-person-circle me-2 text-muted"></i>Hồ Sơ Cá Nhân
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a class="dropdown-item text-danger" href="${pageContext.request.contextPath}/logout">
+                        <i class="bi bi-box-arrow-right me-2"></i>Đăng Xuất
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+        <!-- Sidebar Backdrop (mobile) -->
+        <div class="admin-sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+
+        <!-- Sidebar -->
+        <aside class="admin-sidebar" id="adminSidebar">
+            <div class="admin-sidebar-user">
+                <c:choose>
+                    <c:when test="${not empty sessionScope.user.avatarUrl}">
+                        <img src="${sessionScope.user.avatarUrl}" alt="Avatar" class="admin-sidebar-avatar"
+                             style="object-fit:cover;"
+                             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                        <div class="admin-sidebar-avatar" style="display:none;">
+                            ${not empty sessionScope.user.fullName ? fn:substring(sessionScope.user.fullName, 0, 1) : '?'}
+                        </div>
+                    </c:when>
+                    <c:otherwise>
+                        <div class="admin-sidebar-avatar">
+                            ${not empty sessionScope.user.fullName ? fn:substring(sessionScope.user.fullName, 0, 1) : '?'}
+                        </div>
+                    </c:otherwise>
+                </c:choose>
+                <div class="admin-sidebar-name">${sessionScope.user.fullName}</div>
+                <span class="admin-sidebar-badge">
+                    <i class="bi bi-person-badge-fill"></i>${sessionScope.user.roleId == 2 ? 'Bác sĩ lâm sàng' : 'Bác sĩ siêu âm'}
+                </span>
+            </div>
+
+            <ul class="admin-sidebar-menu">
+                <c:choose>
+                    <c:when test="${sessionScope.user.roleId == 2}">
+                        <li class="admin-sidebar-section">Chức Năng Bác Sĩ lâm sàng</li>
+                        <li>
+                            <a href="${pageContext.request.contextPath}/doctor/dashboard">
+                                <i class="bi bi-speedometer2"></i>
+                                <span>Tổng Quan</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="${pageContext.request.contextPath}/doctor/appointments">
+                                <i class="bi bi-calendar2-week"></i>
+                                <span>Lịch Hẹn Hôm Nay</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="${pageContext.request.contextPath}/doctor/medical-records">
+                                <i class="bi bi-journal-medical"></i>
+                                <span>Quản Lý Bệnh Án</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="${pageContext.request.contextPath}/doctor/prescriptions-list">
+                                <i class="bi bi-prescription2"></i>
+                                <span>Đơn Thuốc</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="${pageContext.request.contextPath}/doctor/patients">
+                                <i class="bi bi-people"></i>
+                                <span>Danh Sách Bệnh Nhân</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="${pageContext.request.contextPath}/doctor/schedules">
+                                <i class="bi bi-calendar2-check"></i>
+                                <span>Lịch Làm Việc</span>
+                            </a>
+                        </li>
+                        <li class="admin-sidebar-section">Tài Khoản</li>
+                        <li>
+                            <a href="${pageContext.request.contextPath}/doctor/profile"
+                               class="${fn:contains(pageContext.request.requestURI, '/doctor/profile') ? 'active' : ''}">
+                                <i class="bi bi-person-circle"></i>
+                                <span>Hồ Sơ Cá Nhân</span>
+                            </a>
+                        </li>
+                    </c:when>
+                    <c:when test="${sessionScope.user.roleId == 6}">
+                        <li class="admin-sidebar-section">Chức Năng Siêu Âm</li>
+                        <li>
+                            <a href="${pageContext.request.contextPath}/sonographer/dashboard"
+                               class="${fn:contains(pageContext.request.requestURI, '/dashboard') ? 'active' : ''}">
+                                <i class="bi bi-speedometer2"></i>
+                                <span>Tổng Quan Siêu Âm</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="${pageContext.request.contextPath}/sonographer/waiting-list"
+                               class="${fn:contains(pageContext.request.requestURI, '/waiting-list') && empty param.status ? 'active' : ''}">
+                                <i class="bi bi-hourglass-split"></i>
+                                <span>Yêu Cầu Chờ Siêu Âm</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="${pageContext.request.contextPath}/sonographer/waiting-list?status=InProgress"
+                               class="${param.status == 'InProgress' ? 'active' : ''}">
+                                <i class="bi bi-play-circle"></i>
+                                <span>Đang Thực Hiện</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="${pageContext.request.contextPath}/sonographer/waiting-list?status=Uploaded"
+                               class="${param.status == 'Uploaded' ? 'active' : ''}">
+                                <i class="bi bi-cloud-upload"></i>
+                                <span>Đã Tải Ảnh (Chờ AI)</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="${pageContext.request.contextPath}/sonographer/waiting-list?status=Completed"
+                               class="${param.status == 'Completed' ? 'active' : ''}">
+                                <i class="bi bi-check-circle"></i>
+                                <span>Đã Hoàn Thành</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="${pageContext.request.contextPath}/sonographer/waiting-list?status=confirmed"
+                               class="${param.status == 'confirmed' ? 'active' : ''}">
+                                <i class="bi bi-patch-check"></i>
+                                <span>Đã Xác Nhận</span>
+                            </a>
+                        </li>
+                        <li class="admin-sidebar-section">Minh Chứng AI</li>
+                        <li>
+                            <a href="${pageContext.request.contextPath}/sonographer/ai-model"
+                               class="${fn:contains(pageContext.request.requestURI, '/ai-model') ? 'active' : ''}">
+                                <i class="bi bi-cpu-fill"></i>
+                                <span>Hồ Sơ Mô Hình AI</span>
+                            </a>
+                        </li>
+                        <li class="admin-sidebar-section">Tài Khoản</li>
+                        <li>
+                            <a href="${pageContext.request.contextPath}/sonographer/profile"
+                               class="${fn:contains(pageContext.request.requestURI, '/sonographer/profile') ? 'active' : ''}">
+                                <i class="bi bi-person-circle"></i>
+                                <span>Hồ Sơ Cá Nhân</span>
+                            </a>
+                        </li>
+                    </c:when>
+                </c:choose>
+            </ul>
+        </aside>
+
+        <!-- Main Content Wrapper -->
+        <main class="admin-main" id="adminMain">
+
+        <%-- JS: Auto active sidebar link based on current URL --%>
+        <script>
+        (function() {
+            var path = window.location.pathname;
+            var links = document.querySelectorAll('.admin-sidebar-menu li a');
+            var bestMatch = null, bestLen = 0;
+            links.forEach(function(a) {
+                var href = a.getAttribute('href');
+                if (!href) return;
+                // Strip context path prefix if needed
+                var rel = href.split('?')[0];
+                if (path.endsWith(rel) || path.includes(rel)) {
+                    if (rel.length > bestLen) {
+                        bestLen = rel.length;
+                        bestMatch = a;
+                    }
+                }
+            });
+            if (bestMatch) bestMatch.classList.add('active');
+        })();
+        </script>
+
+    </c:when>
+    <c:when test="${not empty sessionScope.user && sessionScope.user.roleId == 5}">
+        <!-- Rose-Pink Theme Header/Top Navbar for Patient (5) - Premium Client Portal -->
+        <link href="${pageContext.request.contextPath}/assets/css/patient.css?v=202" rel="stylesheet">
+        <body class="patient-body">
+
+        <%-- TOP NAVIGATION BAR --%>
+        <nav class="navbar navbar-expand-lg patient-navbar sticky-top">
+            <div class="container">
+                <!-- Brand / Logo -->
+                <a href="${pageContext.request.contextPath}/home" class="patient-navbar-brand">
+                    <i class="bi bi-heart-pulse-fill"></i>
+                    <span>CAMS</span>
+                    <span class="pt-brand-badge">Bệnh Nhân</span>
+                </a>
+
+                <!-- Mobile Menu Toggle Button -->
+                <button class="navbar-toggler patient-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#patientNavbarCollapse" aria-controls="patientNavbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <i class="bi bi-list fs-3"></i>
+                </button>
+
+                <!-- Navigation Links -->
+                <div class="collapse navbar-collapse" id="patientNavbarCollapse">
+                    <ul class="navbar-nav mx-auto patient-nav-list">
+                        <li class="nav-item">
+                            <a class="nav-link patient-nav-link" href="${pageContext.request.contextPath}/home">
+                                <i class="bi bi-speedometer2 me-1"></i>Trang Chủ
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link patient-nav-link" href="${pageContext.request.contextPath}/patient/booking">
+                                <i class="bi bi-calendar-plus me-1"></i>Đặt Lịch Khám
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link patient-nav-link" href="${pageContext.request.contextPath}/patient/appointments">
+                                <i class="bi bi-calendar2-week me-1"></i>Lịch Hẹn Của Tôi
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link patient-nav-link" href="${pageContext.request.contextPath}/patient/invoices">
+                                <i class="bi bi-clock-history me-1"></i>Lịch Sử Thanh Toán
+                            </a>
+                        </li>
+
+                        <li class="nav-item">
+                            <a class="nav-link patient-nav-link" href="${pageContext.request.contextPath}/patient/medical-records">
+                                <i class="bi bi-journal-medical me-1"></i>Hồ Sơ Bệnh Án
+                            </a>
+                        </li>
+
+                    </ul>
+
+                    <!-- User Actions / Profile Dropdown -->
+                    <div class="d-flex align-items-center gap-3 patient-user-actions pt-2 pt-lg-0">
+                        <div class="dropdown">
+                            <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle patient-profile-toggle" id="patientUserDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <div class="patient-avatar-sm me-2">
+                                    ${not empty sessionScope.user.fullName ? fn:substring(sessionScope.user.fullName, 0, 1) : '?'}
+                                </div>
+                                <span class="d-none d-lg-inline text-dark fw-semibold small">${sessionScope.user.fullName}</span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg rounded-3" aria-labelledby="patientUserDropdown">
+                                <li class="dropdown-header">
+                                    <h6 class="text-dark mb-0 fw-bold">${sessionScope.user.fullName}</h6>
+                                    <small class="text-muted">Bệnh nhân</small>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item" href="${pageContext.request.contextPath}/patient/profile">
+                                        <i class="bi bi-person-circle me-2 text-muted"></i>Hồ Sơ Cá Nhân
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item text-danger" href="${pageContext.request.contextPath}/logout">
+                                        <i class="bi bi-box-arrow-right me-2"></i>Đăng Xuất
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content Wrapper (Centered Container) -->
+        <main class="patient-main-container py-4">
+
+        <%-- JS: Auto active top navigation links --%>
+        <script>
+        (function() {
+            var path = window.location.pathname;
+            var links = document.querySelectorAll('.patient-nav-link');
+            var bestMatch = null, bestLen = 0;
+            links.forEach(function(a) {
+                var href = a.getAttribute('href');
+                if (!href) return;
+                var rel = href.split('?')[0];
+                if (path === rel || path.startsWith(rel + '/') || path.startsWith(rel + '?')) {
+                    if (rel.length > bestLen && rel.length > 1) {
+                        bestLen = rel.length;
+                        bestMatch = a;
+                    }
+                }
+            });
+            if (!bestMatch) {
+                // fallback to dashboard if matches home context path
+                links.forEach(function(a) {
+                    if (a.getAttribute('href').endsWith('/home') && path.endsWith('/home')) {
+                        bestMatch = a;
+                    }
+                });
+            }
+            if (bestMatch) bestMatch.classList.add('active');
+        })();
+        </script>
+
+    </c:when>
+    <c:otherwise>
+        <body>
+        <!-- Navbar -->
+        <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+            <div class="container">
+                <a class="navbar-brand" href="${pageContext.request.contextPath}/">
+                    <i class="bi bi-hospital me-2"></i>CAMS
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto align-items-lg-center">
+
+                        <%-- ========== Khi chưa đăng nhập ========== --%>
+                        <c:if test="${empty sessionScope.user}">
+                            <li class="nav-item">
+                                <a class="nav-link" href="${pageContext.request.contextPath}/login">
+                                    <i class="bi bi-box-arrow-in-right me-1"></i>Đăng nhập
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="${pageContext.request.contextPath}/register">
+                                    <i class="bi bi-person-plus me-1"></i>Đăng ký
+                                </a>
+                            </li>
+                        </c:if>
+
+                        <%-- ========== Khi đã đăng nhập ========== --%>
+                        <c:if test="${not empty sessionScope.user}">
+                            <%-- Link về Dashboard --%>
+                            <li class="nav-item">
+                                <a class="nav-link" href="${pageContext.request.contextPath}/home">
+                                    <i class="bi bi-speedometer2 me-1"></i>Tổng Quan
+                                </a>
+                            </li>
+
+                            <%-- Menu riêng cho Patient (roleId == 5) --%>
+                            <c:if test="${sessionScope.user.roleId == 5}">
+                                <li class="nav-item">
+                                    <a class="nav-link" href="${pageContext.request.contextPath}/patient/booking">
+                                        <i class="bi bi-calendar-plus me-1"></i>Đặt Lịch Khám
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="${pageContext.request.contextPath}/patient/appointments">
+                                        <i class="bi bi-calendar2-week me-1"></i>Lịch Hẹn Của Tôi
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="${pageContext.request.contextPath}/patient/medical-records">
+                                        <i class="bi bi-journal-medical me-1"></i>Hồ Sơ Khám Bệnh
+                                    </a>
+                                </li>
+
+                            </c:if>
+
+                            <%-- Dropdown tài khoản --%>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle d-flex align-items-center" href="#"
+                                   id="userDropdown" role="button" data-bs-toggle="dropdown"
+                                   aria-expanded="false">
+                                    <span class="avatar-circle me-2">
+                                        ${not empty sessionScope.user.fullName ? fn:substring(sessionScope.user.fullName, 0, 1) : '?'}
+                                    </span>
+                                    ${sessionScope.user.fullName}
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3"
+                                    aria-labelledby="userDropdown">
+                                    <li>
+                                        <div class="dropdown-header">
+                                            <small class="text-muted">${sessionScope.user.email}</small>
+                                        </div>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item" href="${sessionScope.user.roleId == 5 ? pageContext.request.contextPath.concat('/patient/profile') : pageContext.request.contextPath.concat('/profile')}">
+                                            <i class="bi bi-person me-2"></i>Hồ sơ cá nhân
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item text-danger" href="${pageContext.request.contextPath}/logout">
+                                            <i class="bi bi-box-arrow-right me-2"></i>Đăng xuất
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                        </c:if>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content Container -->
+        <main class="container my-4">
+    </c:otherwise>
+</c:choose>
