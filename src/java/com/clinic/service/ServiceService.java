@@ -149,16 +149,19 @@ public class ServiceService {
             return false;
         }
 
-        // ── 3. Validate nhóm dịch vụ (bắt buộc) ──
-        String catErr = ValidationUtil.validateCategoryRequired(categoryIdStr);
-        if (catErr != null) {
-            errors.put("categoryId", catErr);
-            return false;
-        }
-        int categoryId = Integer.parseInt(categoryIdStr.trim());
-        if (categoryDAO.findById(categoryId) == null) {
-            errors.put("categoryId", "Nhóm dịch vụ đã chọn không tồn tại trong hệ thống.");
-            return false;
+        // ── 3. Nhóm dịch vụ (tuỳ chọn) ──
+        Integer categoryId = null;
+        if (categoryIdStr != null && !categoryIdStr.trim().isEmpty()) {
+            try {
+                categoryId = Integer.parseInt(categoryIdStr.trim());
+                if (categoryDAO.findById(categoryId) == null) {
+                    errors.put("categoryId", "Nhóm dịch vụ đã chọn không tồn tại trong hệ thống.");
+                    return false;
+                }
+            } catch (NumberFormatException e) {
+                errors.put("categoryId", "Nhóm dịch vụ không hợp lệ.");
+                return false;
+            }
         }
 
         // ── 4. Validate đơn giá (bắt buộc, số nguyên dương, trong khoảng) ──
@@ -330,17 +333,21 @@ public class ServiceService {
         }
 
         // ── 7. Validate phòng thực hiện (optional) ──
-        String roomErr = ValidationUtil.validateRoomType(requiredRoomType);
-        if (roomErr != null) {
-            errors.put("requiredRoomType", roomErr);
-            return false;
+        if (requiredRoomType != null) {
+            String roomErr = ValidationUtil.validateRoomType(requiredRoomType);
+            if (roomErr != null) {
+                errors.put("requiredRoomType", roomErr);
+                return false;
+            }
         }
 
         // ── 8. Validate chuyên khoa (optional) ──
-        String specErr = ValidationUtil.validateAllowedSpecialties(allowedSpecialties);
-        if (specErr != null) {
-            errors.put("allowedSpecialties", specErr);
-            return false;
+        if (allowedSpecialties != null) {
+            String specErr = ValidationUtil.validateAllowedSpecialties(allowedSpecialties);
+            if (specErr != null) {
+                errors.put("allowedSpecialties", specErr);
+                return false;
+            }
         }
 
         // ── 9. Cập nhật entity (giữ nguyên serviceCode gốc) ──
@@ -353,8 +360,13 @@ public class ServiceService {
         svc.setDurationMins(durationMins);
         svc.setRequiresFasting(requiresFasting);
         svc.setRequiresFullBladder(requiresFullBladder);
-        svc.setRequiredRoomType(requiredRoomType != null && !requiredRoomType.trim().isEmpty() ? requiredRoomType.trim() : null);
-        svc.setAllowedSpecialties(allowedSpecialties != null && !allowedSpecialties.trim().isEmpty() ? allowedSpecialties.trim() : null);
+        // Chỉ cập nhật room/specialties nếu được gửi lên, nếu không giữ nguyên giá trị cũ
+        if (requiredRoomType != null) {
+            svc.setRequiredRoomType(!requiredRoomType.trim().isEmpty() ? requiredRoomType.trim() : null);
+        }
+        if (allowedSpecialties != null) {
+            svc.setAllowedSpecialties(!allowedSpecialties.trim().isEmpty() ? allowedSpecialties.trim() : null);
+        }
         svc.setCategoryId(categoryId);
         svc.setActive(isActive);
 

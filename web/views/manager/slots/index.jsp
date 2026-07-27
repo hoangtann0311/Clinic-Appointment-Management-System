@@ -26,6 +26,18 @@
         .badge-status-approved { background: #d1fae5; color: #065f46; padding: 0.3rem 0.7rem; border-radius: 6px; font-weight: 600; }
         .empty-state { text-align: center; padding: 3rem 1.5rem; color: #6b7280; }
         .empty-state i { font-size: 3rem; display: block; margin-bottom: 1rem; opacity: 0.3; }
+
+        .admin-pagination { display: flex; justify-content: center; gap: 0.25rem; margin: 1.25rem 0; }
+        .admin-pagination a, .admin-pagination span {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-width: 38px; height: 38px; padding: 0 0.5rem; border-radius: 6px;
+            font-size: 0.85rem; font-weight: 600; text-decoration: none;
+            border: 1px solid #e5e7eb; color: #4b5563;
+            transition: all 0.15s;
+        }
+        .admin-pagination a:hover { background: #fdf2f8; border-color: #f0c6dc; color: #b86689; }
+        .admin-pagination .active { background: #b86689; color: #fff; border-color: #b86689; }
+        .admin-pagination .disabled { opacity: 0.4; pointer-events: none; }
     </style>
 </head>
 <body class="admin-body">
@@ -77,7 +89,10 @@
         <div class="admin-card mb-3">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5><i class="bi bi-list-check me-2" style="color:#b86689;"></i>Lịch Làm Việc Đã Xác Nhận</h5>
-                <span class="badge bg-white text-dark border">${fn:length(approvedSchedules)} lịch làm việc</span>
+                <span class="badge bg-white text-dark border">
+                    <i class="bi bi-database me-1"></i>${totalSchedules} lịch làm việc
+                    <c:if test="${totalPages > 1}">— Trang ${currentPage}/${totalPages}</c:if>
+                </span>
             </div>
             <div class="card-body p-0">
                 <c:choose>
@@ -88,7 +103,7 @@
                                 <tbody>
                                     <c:forEach var="sched" items="${approvedSchedules}" varStatus="row">
                                         <tr>
-                                            <td class="text-muted small">${row.count}</td>
+                                            <td class="text-muted small">${(currentPage - 1) * pageSize + row.count}</td>
                                             <td><strong><i class="bi bi-person-badge me-1" style="color:#b86689;"></i>${fn:escapeXml(sched.doctorName)}</strong></td>
                                             <td><fmt:formatDate value="${sched.workDate}" pattern="dd/MM/yyyy"/></td>
                                             <td>
@@ -106,6 +121,24 @@
                                 </tbody>
                             </table>
                         </div>
+
+                        <%-- ═══ PAGINATION ═══ --%>
+                        <c:if test="${totalPages > 1}">
+                            <div class="admin-pagination">
+                                <c:if test="${currentPage > 1}">
+                                    <a href="?page=${currentPage - 1}"><i class="bi bi-chevron-left"></i></a>
+                                </c:if>
+                                <c:forEach begin="1" end="${totalPages}" var="p">
+                                    <c:choose>
+                                        <c:when test="${p eq currentPage}"><span class="active">${p}</span></c:when>
+                                        <c:otherwise><a href="?page=${p}">${p}</a></c:otherwise>
+                                    </c:choose>
+                                </c:forEach>
+                                <c:if test="${currentPage < totalPages}">
+                                    <a href="?page=${currentPage + 1}"><i class="bi bi-chevron-right"></i></a>
+                                </c:if>
+                            </div>
+                        </c:if>
                     </c:when>
                     <c:otherwise>
                         <div class="empty-state"><i class="bi bi-calendar-x"></i><h5>Chưa Có Lịch Làm Việc Được Xác Nhận</h5><p>Vui lòng xác nhận lịch làm việc trước.</p><a href="${pageContext.request.contextPath}/manager/schedules/?status=PENDING" class="btn btn-primary">Đi Đến Lịch Làm Việc</a></div>

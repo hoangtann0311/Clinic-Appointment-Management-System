@@ -17,7 +17,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.Date;
 import java.sql.Time;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -68,12 +70,17 @@ public class ManagerScheduleServlet extends HttpServlet {
         Date dateTo = parseDate(dateToStr);
 
         // ── Tab: Quản lý ca làm việc ──
-        List<Shift> shifts = shiftService.getAllShifts();
-        int[] shiftStats = shiftService.getShiftStats();
+        List<Shift> shifts = shiftService.getStandardShifts();
+        int standardShiftCount = shifts.size();
+        int activeCount = 0;
+        for (Shift s : shifts) {
+            if (s.isActive()) activeCount++;
+        }
         req.setAttribute("shifts", shifts);
-        req.setAttribute("activeShiftCount", shiftStats[0]);
-        req.setAttribute("inactiveShiftCount", shiftStats[1]);
-        req.setAttribute("totalShiftCount", shiftStats[0] + shiftStats[1]);
+        req.setAttribute("standardShiftCount", standardShiftCount);
+        req.setAttribute("activeShiftCount", activeCount);
+        req.setAttribute("inactiveShiftCount", standardShiftCount - activeCount);
+        req.setAttribute("totalShiftCount", standardShiftCount);
 
         // ── Tab: Duyệt đăng ký lịch ──
         if ("detail".equals(view)) {
@@ -94,6 +101,9 @@ public class ManagerScheduleServlet extends HttpServlet {
         int totalSchedules = scheduleService.getTotalSchedules(status, doctorId, dateFrom, dateTo);
         int totalPages = (int) Math.ceil((double) totalSchedules / PAGE_SIZE);
 
+        // Nhóm lịch trực theo 3 ca chuẩn (sáng/chiều/tối)
+        Map<String, List<DoctorSchedule>> groupedSchedules = groupSchedulesByShift(schedules);
+
         // Lấy danh sách bác sĩ cho dropdown filter
         List<Doctor> doctors = scheduleService.getAllDoctors();
 
@@ -106,6 +116,7 @@ public class ManagerScheduleServlet extends HttpServlet {
         // Set attributes cho JSP
         req.setAttribute("tab", tab);
         req.setAttribute("schedules", schedules);
+        req.setAttribute("groupedSchedules", groupedSchedules);
         req.setAttribute("doctors", doctors);
         req.setAttribute("currentPage", page);
         req.setAttribute("totalPages", totalPages);
@@ -412,6 +423,44 @@ public class ManagerScheduleServlet extends HttpServlet {
     }
 
     // ── Private helpers ──
+
+    /**
+     * Nhóm danh sách lịch trực theo 3 ca chuẩn: Ca sáng, Ca chiều, Ca tối.
+     * Key là tên ca (Ca sáng / Ca chiều / Ca tối), value là danh sách schedules thuộc ca đó.
+     * Đảm bảo thứ tự: sáng → chiều → tối.
+     */
+    private Map<String, List<DoctorSchedule>> groupSchedulesByShift(List<DoctorSchedule> schedules) {
+        Map<String, List<DoctorSchedule>> grouped = new LinkedHashMap<>();
+        grouped.put("Ca sáng", new ArrayList<>());
+        grouped.put("Ca chiều", new ArrayList<>());
+        grouped.put("Ca tối", new ArrayList<>());
+
+        for (DoctorSchedule sched : schedules) {
+            String key = categorizeShift(sched);
+            grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(sched);
+        }
+        return grouped;
+    }
+
+    /**
+     * Phân loại một DoctorSchedule vào nhóm ca dựa trên startTime hoặc shiftName.
+     */
+    private String categorizeShift(DoctorSchedule sched) {
+        if (sched.getStartTime() != null) {
+            String start = sched.getStartTime().toString().substring(0, 5);
+            if ("07:00".equals(start)) return "Ca sáng";
+            if ("13:00".equals(start)) return "Ca chiều";
+            if ("19:00".equals(start)) return "Ca tối";
+        }
+        // Fallback: dùng tên ca từ shift
+        if (sched.getShiftName() != null) {
+            String name = sched.getShiftName().toLowerCase();
+            if (name.contains("sáng")) return "Ca sáng";
+            if (name.contains("chiều")) return "Ca chiều";
+            if (name.contains("tối")) return "Ca tối";
+        }
+        return "Khác";
+    }
 
     private int parseInt(String s, int defaultVal) {
         if (s == null || s.isEmpty()) return defaultVal;
