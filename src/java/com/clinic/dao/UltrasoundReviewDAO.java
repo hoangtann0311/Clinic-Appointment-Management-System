@@ -178,61 +178,6 @@ public class UltrasoundReviewDAO {
         }
     }
 
-    /** Doctor confirmation is allowed only for a signed current report on a Completed order. */
-    public boolean confirmSignedReport(int orderId, int doctorUserId, String doctorNotes) {
-        if (!isSchemaSupported()) return false;
-        Connection conn = null;
-        try {
-            conn = DatabaseConfig.getConnection();
-            conn.setAutoCommit(false);
-
-            String lockSql = "SELECT o.status FROM test_orders o WITH (UPDLOCK, ROWLOCK) "
-                    + "JOIN doctors d ON d.id = o.doctor_id WHERE o.id = ? AND d.user_id = ?";
-            String status = null;
-            try (PreparedStatement ps = conn.prepareStatement(lockSql)) {
-                ps.setInt(1, orderId);
-                ps.setInt(2, doctorUserId);
-                try (ResultSet rs = ps.executeQuery()) { if (rs.next()) status = rs.getString(1); }
-            }
-            if (!"Completed".equalsIgnoreCase(status)) {
-                conn.rollback();
-                return false;
-            }
-
-            String reportSql = "UPDATE ultrasound_reports SET doctor_confirmed_by = ?, "
-                    + "doctor_confirmed_at = SYSUTCDATETIME(), doctor_review_notes = ? "
-                    + "WHERE test_order_id = ? AND is_current = 1 AND report_status = 'Signed' "
-                    + "AND doctor_confirmed_at IS NULL";
-            try (PreparedStatement ps = conn.prepareStatement(reportSql)) {
-                ps.setInt(1, doctorUserId);
-                ps.setString(2, doctorNotes);
-                ps.setInt(3, orderId);
-                if (ps.executeUpdate() != 1) {
-                    conn.rollback();
-                    return false;
-                }
-            }
-
-            try (PreparedStatement ps = conn.prepareStatement(
-                    "UPDATE test_orders SET status = 'Confirmed' WHERE id = ? "
-                            + "AND UPPER(LTRIM(RTRIM(ISNULL(status, '')))) = 'COMPLETED'")) {
-                ps.setInt(1, orderId);
-                if (ps.executeUpdate() != 1) {
-                    conn.rollback();
-                    return false;
-                }
-            }
-            conn.commit();
-            return true;
-        } catch (SQLException e) {
-            if (conn != null) try { conn.rollback(); } catch (SQLException ignored) { }
-            System.err.println("[UltrasoundReviewDAO] Không thể xác nhận phiếu siêu âm: " + e.getMessage());
-            return false;
-        } finally {
-            if (conn != null) try { conn.setAutoCommit(true); } catch (SQLException ignored) { }
-            DatabaseConfig.closeConnection(conn);
-        }
-    }
 
     private String lockOwnedOrder(Connection conn, int orderId, int actorUserId) throws SQLException {
         String sql = "SELECT status FROM test_orders WITH (UPDLOCK, ROWLOCK) WHERE id = ? AND sonographer_user_id = ?";
@@ -261,7 +206,7 @@ public class UltrasoundReviewDAO {
     }
 
     private boolean hasValidBoundingBox(AiAnalysisResult ai, int width, int height) {
-        Integer x1 = ai.getXmin(), y1 = ai.getYmin(), x2 = ai.getXmax(), y2 = ai.getymax();
+        Integer x1 = ai.getXmin(), y1 = ai.getYmin(), x2 = ai.getXmax(), y2 = ai.getYmax();
         return ai.isDetected() && x1 != null && y1 != null && x2 != null && y2 != null
                 && x1 >= 0 && y1 >= 0 && x2 > x1 && y2 > y1
                 && x2 <= width && y2 <= height;
@@ -271,7 +216,7 @@ public class UltrasoundReviewDAO {
         return String.format(java.util.Locale.ROOT,
                 "{\"xMin\":%.6f,\"yMin\":%.6f,\"xMax\":%.6f,\"yMax\":%.6f}",
                 ai.getXmin() / (double) width, ai.getYmin() / (double) height,
-                ai.getXmax() / (double) width, ai.getymax() / (double) height);
+                ai.getXmax() / (double) width, ai.getYmax() / (double) height);
     }
 
     private static final class StoredImageBinding {

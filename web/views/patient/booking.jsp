@@ -60,24 +60,18 @@
 </style>
 
 <c:if test="${not empty existingAppointments}">
-    <div class="alert alert-warning alert-dismissible fade show d-flex align-items-start gap-3 mb-4" role="alert" style="background: #fff8e1; border: 1.5px solid #ffcc02; border-radius: 12px;">
-        <div style="font-size: 1.5rem; flex-shrink: 0;">
-            <i class="bi bi-exclamation-triangle-fill"></i>
-        </div>
-        <div class="flex-grow-1">
-            <strong class="d-block mb-2">Bạn đã có lịch hẹn đang chờ xử lý</strong>
-            <c:forEach var="ea" items="${existingAppointments}">
-                <div class="d-flex align-items-center gap-2 py-1">
-                    <span class="badge bg-secondary">#APT-${ea.id}</span>
-                    <span>BS. ${ea.doctorName} — Ngày ${ea.appointmentDate} — <strong>${ea.timeSlot}</strong></span>
-                    <span class="badge ${ea.status == 'Pending' ? 'bg-info' : (ea.status == 'Confirmed' ? 'bg-primary' : (ea.status == 'Waiting' ? 'bg-warning' : 'bg-success'))}">${ea.status}</span>
-                </div>
+    <div class="alert border-0 shadow-sm d-flex align-items-center gap-3 mb-4 rounded-3" role="alert"
+         style="background: #f0f4ff; color: #3730a3; border-left: 4px solid #6366f1;">
+        <i class="bi bi-info-circle fs-5 flex-shrink-0"></i>
+        <div class="small">
+            <strong>Bạn đã có lịch hôm nay:</strong>
+            <c:forEach var="ea" items="${existingAppointments}" varStatus="est">
+                <span class="badge bg-primary bg-opacity-75 me-1">#APT-${ea.id}</span>
+                BS. ${ea.doctorName} — ${ea.displayStatus}
+                <c:if test="${!est.last}"> &middot; </c:if>
             </c:forEach>
-            <div class="mt-2 small text-muted">
-                <i class="bi bi-info-circle me-1"></i>Mỗi bệnh nhân chỉ được <strong>1 lịch khám/ngày</strong>. Nếu bạn muốn đổi sang bác sĩ hoặc khung giờ khác, vui lòng <a href="${pageContext.request.contextPath}/patient/appointments" class="fw-bold">vào danh sách lịch hẹn</a> để đổi lịch (nếu còn trong thời gian cho phép).
-            </div>
+            &mdash; Có thể <a href="${pageContext.request.contextPath}/patient/appointments" class="fw-bold" style="color:#3730a3;">đổi lịch</a> hoặc chọn ngày khác bên dưới.
         </div>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 </c:if>
 
@@ -220,12 +214,32 @@
             <div class="card-body">
                 <h5 class="card-title mb-3"><i class="bi bi-clipboard-check me-2"></i>Tóm Tắt Lịch Khám</h5>
 
+                <c:choose>
+                    <c:when test="${not empty existingAppointments && empty rescheduleId}">
+                        <%-- Block booking: đã có lịch hôm nay --%>
+                        <div id="summaryBlocked" class="text-center py-4">
+                            <i class="bi bi-calendar-check d-block mb-2" style="font-size:2.5rem;color:#6366f1;"></i>
+                            <p class="fw-semibold mb-2">Bạn đã có lịch khám hôm nay</p>
+                            <p class="text-muted small mb-3">Mỗi bệnh nhân chỉ được <strong>1 lịch khám/ngày</strong>.</p>
+                            <div class="d-flex flex-column gap-2">
+                                <a href="${pageContext.request.contextPath}/patient/appointments"
+                                   class="btn btn-primary btn-sm rounded-pill">
+                                    <i class="bi bi-arrow-repeat me-1"></i>Đổi lịch hiện tại
+                                </a>
+                                <span class="text-muted small">hoặc chọn <strong>ngày khác</strong> ở bộ lọc bên trái</span>
+                            </div>
+                        </div>
+                        <form method="post" action="${pageContext.request.contextPath}/patient/booking" id="bookingForm" style="display:none;">
+                    </c:when>
+                    <c:otherwise>
                 <div id="summaryEmpty" class="text-center text-muted py-4">
                     <i class="bi bi-calendar3 d-block mb-2" style="font-size:2rem;opacity:.3;"></i>
                     Vui lòng chọn Bác sĩ lâm sàng và giờ khám để xem chi tiết.
                 </div>
 
                 <form method="post" action="${pageContext.request.contextPath}/patient/booking" id="bookingForm" style="display:none;">
+                    </c:otherwise>
+                </c:choose>
                     <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                     <input type="hidden" name="slotId" id="hiddenSlotId" required>
                     <input type="hidden" name="timeSlot" id="hiddenTimeSlot" required>
@@ -282,6 +296,9 @@
                             </button>
                         </c:when>
                         <c:otherwise>
+                            <div class="p-2 mb-2 rounded-2 small text-center" style="background:#fef3c7;color:#92400e;">
+                                <i class="bi bi-cash-stack me-1"></i>Thanh toán <strong>tiền mặt</strong> tại quầy Lễ tân trước giờ khám
+                            </div>
                             <button type="submit" class="btn btn-success w-100">
                                 <i class="bi bi-check-circle me-1"></i>Xác Nhận Đặt Lịch
                             </button>
@@ -300,9 +317,9 @@
                         <i class="bi bi-arrow-repeat me-1 text-primary"></i>
                         <strong>Chính sách huỷ / đổi lịch:</strong>
                         <ul class="mb-0 mt-1 ps-3">
-                            <li>Có thể huỷ hoặc đổi lịch khi lịch đang ở trạng thái <em>Chờ duyệt</em> hoặc <em>Đã xác nhận</em>.</li>
+                            <li>Có thể huỷ hoặc đổi lịch khi lịch đang ở trạng thái <em>Chờ duyệt</em> hoặc <em>Đã xác nhận</em> và <strong>còn ít nhất 2 giờ</strong> trước giờ khám.</li>
                             <li>Không thể tự huỷ/đổi lịch sau khi đã nộp tiền khám tại quầy — vui lòng liên hệ Lễ tân.</li>
-                            <li>Không thể tự huỷ/đổi lịch đã qua giờ hẹn.</li>
+                            <li>Trong vòng 2 giờ trước giờ khám, vui lòng liên hệ trực tiếp Lễ tân để được hỗ trợ.</li>
                         </ul>
                     </div>
                 </form>
@@ -403,7 +420,7 @@
         const isToday = (date === todayStr);
         const nowTimeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
 
-        let html = '<div class="d-flex flex-wrap gap-2 mb-3">';
+        let html = '<div class="d-grid gap-2 mb-3" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">';
         slots.forEach(s => {
             html += slotButtonHtml(s, isToday, nowTimeStr);
         });
@@ -506,7 +523,7 @@
                  + s.shiftName + ' (' + s.label + ')'
                  + '</button>';
         }
-        return '<button type="button" class="btn btn-outline-primary btn-sm slot-btn" '
+        return '<button type="button" class="btn btn-outline-primary btn-sm slot-btn w-100" '
              + 'data-slot-id="' + s.id + '" data-label="' + s.label + '" data-price="' + (s.price !== null ? s.price : '') + '">'
              + s.shiftName + ' (' + s.label + ')'
              + '</button>';
@@ -514,8 +531,12 @@
 
     // ── Cập nhật tóm tắt bên phải khi chọn 1 khung giờ ──
     function selectSlot(slotId, label, doctorName, date, basePrice) {
-        document.getElementById('summaryEmpty').style.display = 'none';
-        document.getElementById('bookingForm').style.display = 'block';
+        var emptyEl = document.getElementById('summaryEmpty');
+        if (emptyEl) emptyEl.style.display = 'none';
+        var blockedEl = document.getElementById('summaryBlocked');
+        if (blockedEl) blockedEl.style.display = 'none';
+        var formEl = document.getElementById('bookingForm');
+        if (formEl) formEl.style.display = 'block';
         document.getElementById('hiddenSlotId').value = slotId;
         document.getElementById('hiddenTimeSlot').value = label;
         document.getElementById('summaryDoctorName').textContent = doctorName;

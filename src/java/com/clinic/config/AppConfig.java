@@ -75,7 +75,7 @@ public class AppConfig {
 
     // AI Engine settings
     public static String getAiBaseUrl() {
-        return get("ai.engine.baseUrl", "http://localhost:8080/ClinicAppointmentManagementSystem/mock-ai-engine");
+        return get("ai.engine.baseUrl", "http://localhost:8080/Clinic_Appointment_Management_System/mock-ai-engine");
     }
 
     public static String getAiAnalyzePath() {

@@ -170,12 +170,6 @@
                             </a>
                         </li>
                         <li>
-                            <a href="${pageContext.request.contextPath}/doctor/patients">
-                                <i class="bi bi-people"></i>
-                                <span>Danh Sách Bệnh Nhân</span>
-                            </a>
-                        </li>
-                        <li>
                             <a href="${pageContext.request.contextPath}/doctor/schedules">
                                 <i class="bi bi-calendar2-check"></i>
                                 <span>Lịch Làm Việc</span>
@@ -225,13 +219,6 @@
                                class="${param.status == 'Completed' ? 'active' : ''}">
                                 <i class="bi bi-check-circle"></i>
                                 <span>Đã Hoàn Thành</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="${pageContext.request.contextPath}/sonographer/waiting-list?status=confirmed"
-                               class="${param.status == 'confirmed' ? 'active' : ''}">
-                                <i class="bi bi-patch-check"></i>
-                                <span>Đã Xác Nhận</span>
                             </a>
                         </li>
                         <li class="admin-sidebar-section">Minh Chứng AI</li>

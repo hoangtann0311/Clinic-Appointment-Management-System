@@ -3,803 +3,331 @@
 <%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
 <jsp:include page="../common/header.jsp" />
 
-<style>
-    .ai-page {
-        --ai-950: #493840;
-        --ai-900: #754b5d;
-        --ai-700: #a9607e;
-        --ai-600: #b86689;
-        --ai-500: #c8759a;
-        --ai-200: #f7dce7;
-        --ai-100: #fff1f6;
-        --ai-50: #fff9fc;
-        --ai-ink: #21181d;
-        --ai-muted: #70656b;
-        --ai-line: #eee2e6;
-        --ai-surface: #ffffff;
-    }
-    .ai-page *,
-    .ai-page *::before,
-    .ai-page *::after { min-width: 0; box-sizing: border-box; }
-    .ai-hero {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 1.25rem;
-        padding: 1.45rem 1.55rem;
-        margin-bottom: 1rem;
-        border: 1px solid var(--ai-200);
-        border-radius: 18px;
-        background: linear-gradient(135deg, #fff 0%, var(--ai-50) 100%);
-        box-shadow: 0 8px 24px rgba(184, 102, 137, .08);
-    }
-    .ai-hero h1 {
-        margin: 0 0 .4rem;
-        color: var(--ai-ink);
-        font-size: clamp(1.45rem, 3vw, 2rem);
-        font-weight: 850;
-    }
-    .ai-hero p {
-        max-width: 820px;
-        margin: 0;
-        color: var(--ai-muted);
-        line-height: 1.6;
-    }
-    .ai-current {
-        flex: 0 0 auto;
-        display: inline-flex;
-        align-items: center;
-        gap: .5rem;
-        max-width: 100%;
-        padding: .7rem .95rem;
-        border-radius: 999px;
-        background: var(--ai-600);
-        color: #fff;
-        font-weight: 800;
-        overflow-wrap: anywhere;
-    }
-    .ai-scope-note {
-        display: flex;
-        align-items: flex-start;
-        gap: .7rem;
-        padding: .85rem 1rem;
-        margin-bottom: 1.5rem;
-        border-left: 4px solid var(--ai-600);
-        border-radius: 10px;
-        background: var(--ai-50);
-        color: var(--ai-900);
-        font-size: .87rem;
-        line-height: 1.55;
-    }
-    .ai-section-heading {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-end;
-        gap: 1rem;
-        margin: 1.65rem 0 .85rem;
-    }
-    .ai-section-heading h2 {
-        margin: 0;
-        color: var(--ai-ink);
-        font-size: 1.18rem;
-        font-weight: 850;
-    }
-    .ai-section-heading p {
-        margin: .25rem 0 0;
-        color: var(--ai-muted);
-        font-size: .84rem;
-    }
-    .ai-section-tag {
-        flex: 0 0 auto;
-        padding: .35rem .65rem;
-        border: 1px solid var(--ai-200);
-        border-radius: 999px;
-        background: var(--ai-50);
-        color: var(--ai-900);
-        font-size: .72rem;
-        font-weight: 750;
-    }
-    .ai-card {
-        height: 100%;
-        border: 1px solid var(--ai-line);
-        border-radius: 16px;
-        background: var(--ai-surface);
-        box-shadow: 0 5px 18px rgba(47, 27, 37, .055);
-        overflow: hidden;
-    }
-    .ai-card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: .8rem;
-        padding: .95rem 1.1rem;
-        border-bottom: 1px solid var(--ai-line);
-        background: #fffbfc;
-    }
-    .ai-card-title {
-        display: flex;
-        align-items: center;
-        gap: .6rem;
-    }
-    .ai-card-title i { color: var(--ai-600); font-size: 1.1rem; }
-    .ai-card-title h3 {
-        margin: 0;
-        color: var(--ai-ink);
-        font-size: .98rem;
-        font-weight: 825;
-    }
-    .ai-card-body { padding: 1.1rem; }
-
-    /* Nhận dạng model */
-    .model-summary {
-        display: grid;
-        grid-template-columns: 1.4fr repeat(3, minmax(0, 1fr));
-        gap: .8rem;
-    }
-    .model-summary-item {
-        padding: .9rem;
-        border: 1px solid #f3dbe2;
-        border-radius: 12px;
-        background: #fff9fb;
-    }
-    .model-summary-item small {
-        display: block;
-        margin-bottom: .3rem;
-        color: var(--ai-muted);
-        font-size: .73rem;
-        font-weight: 700;
-    }
-    .model-summary-item strong {
-        display: block;
-        color: var(--ai-ink);
-        font-size: .9rem;
-        overflow-wrap: anywhere;
-    }
-    .model-summary-item.primary {
-        border-color: var(--ai-200);
-        background: var(--ai-50);
-    }
-    .model-summary-item.primary strong { color: var(--ai-900); font-size: 1rem; }
-    .runtime-row {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        gap: .8rem;
-        align-items: center;
-        margin-top: .9rem;
-        padding: .85rem .95rem;
-        border: 1px solid #eee2e6;
-        border-radius: 12px;
-        background: #fff;
-    }
-    .runtime-main {
-        display: flex;
-        align-items: flex-start;
-        gap: .65rem;
-        color: var(--ai-ink);
-    }
-    .runtime-main > i { margin-top: .12rem; color: var(--ai-600); }
-    .runtime-main strong { display: block; font-size: .86rem; }
-    .runtime-main small { color: var(--ai-muted); line-height: 1.45; }
-    .runtime-chip {
-        padding: .38rem .65rem;
-        border-radius: 999px;
-        font-size: .72rem;
-        font-weight: 800;
-        white-space: nowrap;
-    }
-    .runtime-chip.ready { background: var(--ai-50); color: var(--ai-900); border: 1px solid var(--ai-200); }
-    .runtime-chip.pending { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
-
-    /* Metrics */
-    .training-metric-grid {
-        display: flex;
-        flex-wrap: wrap;
-        gap: .75rem;
-    }
-    .training-metric {
-        flex: 1 1 220px;
-        padding: .9rem;
-        border: 1px solid var(--ai-line);
-        border-top: 3px solid var(--ai-500);
-        border-radius: 13px;
-        background: #fff;
-    }
-    .training-metric-head {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: .5rem;
-        min-height: 36px;
-    }
-    .training-metric-head span:first-child {
-        color: var(--ai-ink);
-        font-size: .78rem;
-        font-weight: 750;
-        line-height: 1.35;
-    }
-    .metric-pass {
-        flex: 0 0 auto;
-        display: inline-flex;
-        align-items: center;
-        gap: .2rem;
-        padding: .2rem .4rem;
-        border-radius: 999px;
-        background: var(--ai-50);
-        color: var(--ai-900);
-        font-size: .65rem;
-        font-weight: 800;
-    }
-    .training-metric-value {
-        margin: .5rem 0 .1rem;
-        color: var(--ai-900);
-        font-size: 1.65rem;
-        font-weight: 900;
-        line-height: 1;
-    }
-    .training-metric-threshold { color: var(--ai-muted); font-size: .7rem; }
-    .metric-track {
-        height: 6px;
-        margin: .65rem 0;
-        border-radius: 999px;
-        background: #f3e7eb;
-        overflow: hidden;
-    }
-    .metric-track > span {
-        display: block;
-        height: 100%;
-        border-radius: inherit;
-        background: linear-gradient(90deg, var(--ai-700), var(--ai-500));
-    }
-    .training-metric-desc {
-        min-height: 34px;
-        color: var(--ai-muted);
-        font-size: .7rem;
-        line-height: 1.4;
-    }
-
-    /* Biểu đồ và cấu hình train */
-    .training-figure { margin: 0; }
-    .training-figure img {
-        display: block;
-        width: 100%;
-        max-height: 520px;
-        margin: 0 auto;
-        object-fit: contain;
-        border: 1px solid var(--ai-line);
-        border-radius: 12px;
-        background: #fff;
-    }
-    .training-figure figcaption {
-        margin-top: .65rem;
-        color: var(--ai-muted);
-        font-size: .76rem;
-        line-height: 1.5;
-    }
-    .train-config-list {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: .65rem;
-        margin-bottom: 1rem;
-    }
-    .train-config {
-        padding: .72rem;
-        border: 1px solid var(--ai-line);
-        border-radius: 10px;
-        background: #fffafb;
-    }
-    .train-config small { display: block; color: var(--ai-muted); font-size: .68rem; }
-    .train-config strong { color: var(--ai-ink); font-size: .82rem; }
-    .subheading {
-        margin: 1rem 0 .55rem;
-        color: var(--ai-ink);
-        font-size: .82rem;
-        font-weight: 825;
-    }
-    .dataset-bar {
-        display: flex;
-        width: 100%;
-        height: 12px;
-        margin-bottom: .75rem;
-        border-radius: 999px;
-        overflow: hidden;
-        background: #f3e7eb;
-    }
-    .dataset-bar .train { width: 80%; background: var(--ai-700); }
-    .dataset-bar .validation { width: 10%; background: var(--ai-500); }
-    .dataset-bar .test { width: 10%; background: var(--ai-200); }
-    .dataset-legend { display: grid; gap: .45rem; }
-    .dataset-row {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        align-items: center;
-        gap: .7rem;
-        font-size: .76rem;
-    }
-    .dataset-label { display: flex; align-items: center; gap: .45rem; color: var(--ai-muted); }
-    .dataset-label i {
-        width: 9px;
-        height: 9px;
-        border-radius: 50%;
-        background: var(--dot);
-    }
-    .dataset-row strong { color: var(--ai-ink); }
-    .augmentation-list { display: flex; flex-wrap: wrap; gap: .4rem; }
-    .augmentation-list span {
-        padding: .3rem .52rem;
-        border: 1px solid var(--ai-200);
-        border-radius: 999px;
-        background: var(--ai-50);
-        color: var(--ai-900);
-        font-size: .68rem;
-        font-weight: 700;
-    }
-
-    /* Usage */
-    .usage-grid {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: .75rem;
-    }
-    .usage-item {
-        display: flex;
-        align-items: center;
-        gap: .75rem;
-        padding: .9rem;
-        border: 1px solid var(--ai-line);
-        border-radius: 12px;
-        background: #fff;
-    }
-    .usage-icon {
-        flex: 0 0 40px;
-        width: 40px;
-        height: 40px;
-        display: grid;
-        place-items: center;
-        border-radius: 11px;
-        background: var(--ai-50);
-        color: var(--ai-700);
-        font-size: 1.05rem;
-    }
-    .usage-value {
-        display: block;
-        color: var(--ai-900);
-        font-size: 1.25rem;
-        font-weight: 900;
-        line-height: 1.2;
-    }
-    .usage-value.date { font-size: .88rem; }
-    .usage-label { color: var(--ai-muted); font-size: .7rem; line-height: 1.35; }
-
-    /* Process */
-    .process-grid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: .75rem;
-    }
-    .process-step {
-        display: flex;
-        align-items: flex-start;
-        gap: .7rem;
-        padding: .9rem;
-        border: 1px solid var(--ai-line);
-        border-radius: 12px;
-        background: #fff;
-    }
-    .process-number {
-        flex: 0 0 31px;
-        width: 31px;
-        height: 31px;
-        display: grid;
-        place-items: center;
-        border-radius: 50%;
-        background: var(--ai-600);
-        color: #fff;
-        font-size: .75rem;
-        font-weight: 850;
-    }
-    .process-step strong { display: block; margin-bottom: .15rem; color: var(--ai-ink); font-size: .8rem; }
-    .process-step span { color: var(--ai-muted); font-size: .72rem; line-height: 1.45; }
-    .pipeline-grid {
-        display: flex;
-        flex-wrap: wrap;
-        gap: .65rem;
-    }
-    .pipeline-step {
-        flex: 1 1 125px;
-        padding: .9rem .65rem;
-        border: 1px solid #f3dbe2;
-        border-radius: 12px;
-        background: #fff9fb;
-        text-align: center;
-    }
-    .pipeline-step i {
-        display: block;
-        margin-bottom: .4rem;
-        color: var(--ai-600);
-        font-size: 1.25rem;
-    }
-    .pipeline-step strong { display: block; color: var(--ai-ink); font-size: .77rem; }
-    .pipeline-step small { color: var(--ai-muted); font-size: .66rem; line-height: 1.35; }
-
-    details.code-proof {
-        border: 1px solid var(--ai-line);
-        border-radius: 11px;
-        overflow: hidden;
-        background: #fff;
-    }
-    details.code-proof + details.code-proof { margin-top: .7rem; }
-    details.code-proof summary {
-        cursor: pointer;
-        padding: .8rem .95rem;
-        background: #fffafb;
-        color: var(--ai-ink);
-        font-size: .8rem;
-        font-weight: 800;
-    }
-    details.code-proof pre {
-        max-height: 340px;
-        margin: 0;
-        padding: 1rem;
-        overflow: auto;
-        background: #211a1e;
-        color: #fce7f3;
-        font-size: .75rem;
-        white-space: pre;
-    }
-    @media (max-width: 1199.98px) {
-        .model-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        .usage-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    }
-    @media (max-width: 991.98px) {
-        .ai-hero { align-items: flex-start; flex-direction: column; }
-        .process-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    }
-    @media (max-width: 767.98px) {
-        .runtime-row { grid-template-columns: 1fr; }
-        .runtime-chip { justify-self: start; }
-    }
-    @media (max-width: 575.98px) {
-        .ai-hero { padding: 1.1rem; }
-        .ai-current { border-radius: 12px; }
-        .ai-section-heading { align-items: flex-start; flex-direction: column; }
-        .model-summary,
-        .usage-grid,
-        .process-grid { grid-template-columns: 1fr; }
-        .training-metric,
-        .pipeline-step { flex-basis: 100%; }
-        .training-metric-desc { min-height: 0; }
-    }
-</style>
-
-<div class="ai-page">
-    <header class="ai-hero">
-        <div>
-            <h1><i class="bi bi-cpu-fill me-2"></i>Hồ Sơ Mô Hình AI</h1>
-            <p>
-                Thông tin minh chứng cho model hỗ trợ phân tích ảnh siêu âm:
-                model hiện hành, dữ liệu huấn luyện, kết quả đánh giá và mức độ sử dụng trong hệ thống.
-            </p>
-        </div>
-        <div class="ai-current">
-            <i class="bi bi-patch-check-fill"></i>
-            <span><c:out value="${modelVersion}" /></span>
-        </div>
-    </header>
-
-    <div class="ai-scope-note">
-        <i class="bi bi-info-circle-fill"></i>
-        <div>
-            Trang này chỉ dùng để xem và đối chiếu hồ sơ kỹ thuật. AI không tự đưa ra kết luận lâm sàng;
-            Bác sĩ siêu âm phải kiểm tra ảnh gốc, ảnh AI, chỉnh vùng khi cần và ký xác nhận kết quả.
-        </div>
+<%-- ── Header ──────────────────────────────────────────────────────────── --%>
+<div class="admin-page-header d-flex justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h1 class="admin-page-title mb-1"><i class="bi bi-cpu me-2 text-primary"></i>Hồ Sơ Mô Hình AI</h1>
+    <div class="admin-page-subtitle">
+      Thông tin về model hỗ trợ phân tích ảnh siêu âm đang được sử dụng trong hệ thống.
     </div>
+  </div>
+  <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-3 fs-6">
+    <i class="bi bi-patch-check-fill me-1"></i><c:out value="${modelVersion}" />
+  </span>
+</div>
 
-    <section class="ai-card">
-        <div class="ai-card-header">
-            <div class="ai-card-title">
-                <i class="bi bi-box-seam-fill"></i>
-                <h3>Model Hiện Hành</h3>
-            </div>
-            <span class="ai-section-tag">Chỉ đọc</span>
-        </div>
-        <div class="ai-card-body">
-            <div class="model-summary">
-                <div class="model-summary-item primary">
-                    <small>Tên mô hình</small>
-                    <strong><c:out value="${modelName}" /></strong>
-                </div>
-                <div class="model-summary-item">
-                    <small>Kiến trúc</small>
-                    <strong>YOLOv3 + U-Net Small</strong>
-                </div>
-                <div class="model-summary-item">
-                    <small>Mã lần huấn luyện</small>
-                    <strong><c:out value="${trainingRunId}" /></strong>
-                </div>
-                <div class="model-summary-item">
-                    <small>Nhiệm vụ</small>
-                    <strong>Phát hiện và phân vùng vùng nghi ngờ u xơ</strong>
-                </div>
-            </div>
+<div class="alert alert-info d-flex gap-2 mb-4">
+  <i class="bi bi-info-circle-fill flex-shrink-0 mt-1"></i>
+  <div>
+    Trang này chỉ dùng để xem và đối chiếu hồ sơ kỹ thuật. AI không tự đưa ra kết luận lâm sàng —
+    bác sĩ siêu âm phải kiểm tra ảnh gốc, ảnh AI và ký xác nhận kết quả.
+  </div>
+</div>
 
-            <div class="runtime-row">
-                <div class="runtime-main">
-                    <i class="bi bi-terminal-fill"></i>
-                    <div>
-                        <strong>
-                            Tệp suy luận: <c:out value="${inferenceScript}" />
-                            · Đầu vào 512 × 512 px · Timeout ${processTimeoutSeconds} giây
-                        </strong>
-                        <small>
-                            Model nhận ảnh siêu âm, tạo bounding box và mask để bác sĩ đối chiếu.
-                        </small>
-                    </div>
-                </div>
-                <c:choose>
-                    <c:when test="${runtimeReady}">
-                        <span class="runtime-chip ready"><i class="bi bi-check-circle me-1"></i>Đã cấu hình thực thi</span>
-                    </c:when>
-                    <c:otherwise>
-                        <span class="runtime-chip pending"><i class="bi bi-exclamation-triangle me-1"></i>Thiếu đường dẫn Python</span>
-                    </c:otherwise>
-                </c:choose>
-            </div>
-            <c:if test="${not runtimeReady}">
-                <div class="text-muted small mt-2">
-                    Máy chủ chưa tìm thấy cấu hình <code>ai.python.script</code>.
-                    Cần trỏ khóa này tới <c:out value="${inferenceScript}" /> khi triển khai model thật.
-                </div>
-            </c:if>
+<%-- ── 1. Model hiện hành ─────────────────────────────────────────────── --%>
+<div class="admin-card mb-4">
+  <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+    <h5 class="mb-0 fw-bold"><i class="bi bi-box-seam me-2 text-primary"></i>1. Model Hiện Hành</h5>
+    <c:choose>
+      <c:when test="${runtimeReady}">
+        <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Đã cấu hình thực thi</span>
+      </c:when>
+      <c:otherwise>
+        <span class="badge bg-warning-subtle text-warning"><i class="bi bi-exclamation-triangle me-1"></i>Thiếu đường dẫn Python</span>
+      </c:otherwise>
+    </c:choose>
+  </div>
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-md-3 col-6">
+        <div class="text-muted small mb-1">Tên mô hình</div>
+        <div class="fw-semibold"><c:out value="${modelName}" /></div>
+      </div>
+      <div class="col-md-3 col-6">
+        <div class="text-muted small mb-1">Kiến trúc</div>
+        <div class="fw-semibold">YOLOv3 + U-Net Small</div>
+      </div>
+      <div class="col-md-3 col-6">
+        <div class="text-muted small mb-1">Mã lần huấn luyện</div>
+        <div class="fw-semibold font-monospace"><c:out value="${trainingRunId}" /></div>
+      </div>
+      <div class="col-md-3 col-6">
+        <div class="text-muted small mb-1">Nhiệm vụ</div>
+        <div class="fw-semibold">Phát hiện & phân vùng u xơ</div>
+      </div>
+      <div class="col-12 pt-2 border-top">
+        <div class="text-muted small mb-1"><i class="bi bi-terminal me-1"></i>Tệp suy luận</div>
+        <code class="text-dark"><c:out value="${inferenceScript}" /></code>
+        <span class="text-muted ms-3">· Đầu vào 512 × 512 px · Timeout ${processTimeoutSeconds}s</span>
+      </div>
+      <c:if test="${not runtimeReady}">
+        <div class="col-12">
+          <div class="alert alert-warning py-2 mb-0 small">
+            Máy chủ chưa tìm thấy cấu hình <code>ai.python.script</code>. Cần trỏ khóa này tới
+            <c:out value="${inferenceScript}" /> khi triển khai model thật.
+          </div>
         </div>
-    </section>
-
-    <div class="ai-section-heading">
-        <div>
-            <h2>1. Kết Quả Đánh Giá Model</h2>
-            <p>Các chỉ số trên tập đánh giá của hồ sơ <c:out value="${trainingRunId}" />.</p>
-        </div>
-        <span class="ai-section-tag">5/5 chỉ số đạt ngưỡng</span>
+      </c:if>
     </div>
+  </div>
+</div>
 
-    <div class="training-metric-grid">
-        <article class="training-metric">
-            <div class="training-metric-head">
-                <span>YOLO Precision</span>
-                <span class="metric-pass"><i class="bi bi-check"></i>Đạt</span>
-            </div>
-            <div class="training-metric-value">90,28%</div>
-            <div class="training-metric-threshold">Ngưỡng chấp nhận &gt; 80%</div>
-            <div class="metric-track"><span style="width:90.28%"></span></div>
-            <div class="training-metric-desc">Tỷ lệ vùng AI định vị chính xác trên tổng dự đoán.</div>
-        </article>
-        <article class="training-metric">
-            <div class="training-metric-head">
-                <span>YOLO Recall</span>
-                <span class="metric-pass"><i class="bi bi-check"></i>Đạt</span>
-            </div>
-            <div class="training-metric-value">83,33%</div>
-            <div class="training-metric-threshold">Ngưỡng chấp nhận &gt; 80%</div>
-            <div class="metric-track"><span style="width:83.33%"></span></div>
-            <div class="training-metric-desc">Khả năng phát hiện, hạn chế bỏ sót tổn thương.</div>
-        </article>
-        <article class="training-metric">
-            <div class="training-metric-head">
-                <span>YOLO F1-Score</span>
-                <span class="metric-pass"><i class="bi bi-check"></i>Đạt</span>
-            </div>
-            <div class="training-metric-value">86,67%</div>
-            <div class="training-metric-threshold">Ngưỡng chấp nhận &gt; 80%</div>
-            <div class="metric-track"><span style="width:86.67%"></span></div>
-            <div class="training-metric-desc">Cân bằng giữa Precision và Recall của YOLOv3.</div>
-        </article>
-        <article class="training-metric">
-            <div class="training-metric-head">
-                <span>U-Net Val Dice</span>
-                <span class="metric-pass"><i class="bi bi-check"></i>Đạt</span>
-            </div>
-            <div class="training-metric-value">0,7073</div>
-            <div class="training-metric-threshold">Epoch 70 (Approved37)</div>
-            <div class="metric-track"><span style="width:70.73%"></span></div>
-            <div class="training-metric-desc">Độ tương đồng phân vùng mask U-Net trên tập val.</div>
-        </article>
-        <article class="training-metric">
-            <div class="training-metric-head">
-                <span>Giảm báo động giả</span>
-                <span class="metric-pass"><i class="bi bi-check"></i>Đạt</span>
-            </div>
-            <div class="training-metric-value">&gt; 84%</div>
-            <div class="training-metric-threshold">So với baseline detector</div>
-            <div class="metric-track"><span style="width:84.6%"></span></div>
-            <div class="training-metric-desc">Giảm tối đa False Positive trên ảnh siêu âm âm tính.</div>
-        </article>
+<%-- ── 2. Kết quả đánh giá ────────────────────────────────────────────── --%>
+<div class="admin-card mb-4">
+  <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+    <h5 class="mb-0 fw-bold"><i class="bi bi-bar-chart me-2 text-primary"></i>2. Kết Quả Đánh Giá Model</h5>
+    <span class="badge bg-success-subtle text-success">5/5 chỉ số đạt ngưỡng</span>
+  </div>
+  <div class="card-body">
+    <p class="text-muted small mb-3">Các chỉ số trên tập đánh giá của hồ sơ <strong><c:out value="${trainingRunId}" /></strong>.</p>
+    <div class="table-responsive">
+      <table class="table table-bordered align-middle mb-0" style="font-size:.9rem">
+        <thead class="table-light">
+          <tr>
+            <th>Chỉ số</th>
+            <th class="text-center">Giá trị</th>
+            <th class="text-center">Ngưỡng</th>
+            <th class="text-center">Kết quả</th>
+            <th>Ý nghĩa</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="fw-semibold">YOLO Precision</td>
+            <td class="text-center fw-bold text-primary">90,28%</td>
+            <td class="text-center text-muted">&gt; 80%</td>
+            <td class="text-center"><span class="badge bg-success">Đạt</span></td>
+            <td class="text-muted small">Tỷ lệ vùng AI định vị chính xác trên tổng dự đoán.</td>
+          </tr>
+          <tr>
+            <td class="fw-semibold">YOLO Recall</td>
+            <td class="text-center fw-bold text-primary">83,33%</td>
+            <td class="text-center text-muted">&gt; 80%</td>
+            <td class="text-center"><span class="badge bg-success">Đạt</span></td>
+            <td class="text-muted small">Khả năng phát hiện, hạn chế bỏ sót tổn thương.</td>
+          </tr>
+          <tr>
+            <td class="fw-semibold">YOLO F1-Score</td>
+            <td class="text-center fw-bold text-primary">86,67%</td>
+            <td class="text-center text-muted">&gt; 80%</td>
+            <td class="text-center"><span class="badge bg-success">Đạt</span></td>
+            <td class="text-muted small">Cân bằng giữa Precision và Recall của YOLOv3.</td>
+          </tr>
+          <tr>
+            <td class="fw-semibold">U-Net Val Dice</td>
+            <td class="text-center fw-bold text-primary">0,7073</td>
+            <td class="text-center text-muted">Epoch 70 (Approved37)</td>
+            <td class="text-center"><span class="badge bg-success">Đạt</span></td>
+            <td class="text-muted small">Độ tương đồng phân vùng mask U-Net trên tập validation.</td>
+          </tr>
+          <tr>
+            <td class="fw-semibold">Giảm báo động giả</td>
+            <td class="text-center fw-bold text-primary">&gt; 84%</td>
+            <td class="text-center text-muted">So với baseline</td>
+            <td class="text-center"><span class="badge bg-success">Đạt</span></td>
+            <td class="text-muted small">Giảm False Positive trên ảnh siêu âm âm tính.</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
+  </div>
+</div>
 
-    <div class="ai-section-heading">
-        <div>
-            <h2>2. Dữ Liệu Và Quá Trình Huấn Luyện</h2>
-            <p>Biểu đồ được đặt cạnh cấu hình để dễ đối chiếu loss, metrics và dữ liệu đầu vào.</p>
-        </div>
-        <span class="ai-section-tag">80 epoch</span>
+<%-- ── 3. Dữ liệu & quá trình huấn luyện ─────────────────────────────── --%>
+<div class="row g-4 mb-4">
+  <%-- Biểu đồ đường học --%>
+  <div class="col-xl-8">
+    <div class="admin-card h-100">
+      <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold"><i class="bi bi-graph-up me-2 text-primary"></i>3. Đường Học Của Model</h5>
+        <span class="badge bg-secondary-subtle text-secondary">80 epoch</span>
+      </div>
+      <div class="card-body text-center">
+        <img src="${pageContext.request.contextPath}/assets/images/ai-metrics/training_curves.png"
+             alt="Biểu đồ Training Loss, Validation Loss, Dice và IoU qua 80 epoch"
+             class="img-fluid rounded-3 border"
+             style="max-height:340px;object-fit:contain;">
+        <p class="text-muted small mt-2 mb-0">
+          Trái: Training Loss và Validation Loss giảm ổn định qua 80 epoch.
+          Phải: Validation Dice đạt đỉnh <strong>0,7073</strong> ở epoch 70 (Approved37).
+          Khoảng cách train–validation nhỏ cho thấy mô hình tổng quát hóa tốt.
+        </p>
+      </div>
     </div>
+  </div>
 
-    <div class="row g-4">
-        <div class="col-xl-8">
-            <section class="ai-card">
-                <div class="ai-card-header">
-                    <div class="ai-card-title">
-                        <i class="bi bi-graph-up-arrow"></i>
-                        <h3>Đường Học Của Model</h3>
-                    </div>
-                    <span class="ai-section-tag">Train vs Validation</span>
-                </div>
-                <div class="ai-card-body">
-                    <figure class="training-figure">
-                        <img src="${pageContext.request.contextPath}/assets/images/ai-metrics/training_curves.png"
-                             alt="Biểu đồ Training Loss, Validation Loss, Dice và IoU qua 80 epoch">
-                        <figcaption>
-                            Trái: Training Loss và Validation Loss giảm ổn định qua 80 epoch.
-                            Phải: Validation Dice đạt đỉnh 0,7073 ở epoch 70 (Approved37).
-                            Khoảng cách train–validation nhỏ cho thấy mô hình tổng quát hóa tốt.
-                        </figcaption>
-                    </figure>
-                </div>
-            </section>
+  <%-- Cấu hình & Dataset --%>
+  <div class="col-xl-4">
+    <div class="admin-card h-100">
+      <div class="card-header bg-white py-3 border-bottom">
+        <h5 class="mb-0 fw-bold"><i class="bi bi-sliders me-2 text-primary"></i>Cấu Hình Huấn Luyện</h5>
+      </div>
+      <div class="card-body">
+        <table class="table table-sm mb-3">
+          <tbody>
+            <tr><td class="text-muted">Mã lần train</td><td class="fw-semibold font-monospace"><c:out value="${trainingRunId}" /></td></tr>
+            <tr><td class="text-muted">Số epoch</td><td class="fw-semibold">80</td></tr>
+            <tr><td class="text-muted">Kích thước ảnh</td><td class="fw-semibold">512 × 512 px</td></tr>
+            <tr><td class="text-muted">Loss U-Net</td><td class="fw-semibold">BCE + Dice</td></tr>
+            <tr><td class="text-muted">Ngưỡng YOLO</td><td class="fw-semibold">0,20</td></tr>
+            <tr><td class="text-muted">Ngưỡng mask</td><td class="fw-semibold">0,65</td></tr>
+          </tbody>
+        </table>
+
+        <div class="small fw-semibold text-muted mb-2">Phân chia dataset — tổng 1.280 ảnh</div>
+        <div class="progress mb-2" style="height:10px;border-radius:6px">
+          <div class="progress-bar bg-primary" style="width:80%" title="Train 80%"></div>
+          <div class="progress-bar bg-info" style="width:10%" title="Validation 10%"></div>
+          <div class="progress-bar bg-secondary" style="width:10%" title="Test 10%"></div>
+        </div>
+        <div class="d-flex gap-3 small text-muted mb-3">
+          <span><span class="badge bg-primary me-1">●</span>Train 80% — 1.024 ảnh</span>
+          <span><span class="badge bg-info me-1">●</span>Val 10% — 128 ảnh</span>
+          <span><span class="badge bg-secondary me-1">●</span>Test 10% — 128 ảnh</span>
         </div>
 
-        <div class="col-xl-4">
-            <section class="ai-card">
-                <div class="ai-card-header">
-                    <div class="ai-card-title">
-                        <i class="bi bi-sliders"></i>
-                        <h3>Cấu Hình Lần Train</h3>
-                    </div>
-                </div>
-                <div class="ai-card-body">
-                    <div class="train-config-list">
-                        <div class="train-config"><small>Mã lần train</small><strong><c:out value="${trainingRunId}" /></strong></div>
-                        <div class="train-config"><small>Số epoch</small><strong>80</strong></div>
-                        <div class="train-config"><small>Kích thước ảnh</small><strong>512 × 512 px</strong></div>
-                        <div class="train-config"><small>Loss U-Net</small><strong>BCE + Dice</strong></div>
-                        <div class="train-config"><small>Ngưỡng YOLO</small><strong>0,20</strong></div>
-                        <div class="train-config"><small>Ngưỡng mask</small><strong>0,65</strong></div>
-                    </div>
-
-                    <div class="subheading">Phân chia dataset — tổng 1.280 ảnh</div>
-                    <div class="dataset-bar" aria-label="Train 80%, Validation 10%, Test 10%">
-                        <span class="train"></span>
-                        <span class="validation"></span>
-                        <span class="test"></span>
-                    </div>
-                    <div class="dataset-legend">
-                        <div class="dataset-row">
-                            <span class="dataset-label"><i style="--dot:var(--ai-700)"></i>Train — 80%</span>
-                            <strong>1.024 ảnh</strong>
-                        </div>
-                        <div class="dataset-row">
-                            <span class="dataset-label"><i style="--dot:var(--ai-500)"></i>Validation — 10%</span>
-                            <strong>128 ảnh</strong>
-                        </div>
-                        <div class="dataset-row">
-                            <span class="dataset-label"><i style="--dot:var(--ai-200)"></i>Test — 10%</span>
-                            <strong>128 ảnh</strong>
-                        </div>
-                    </div>
-
-                    <div class="subheading">Tăng cường dữ liệu</div>
-                    <div class="augmentation-list">
-                        <span>Lật ngang</span>
-                        <span>Lật dọc</span>
-                        <span>Xoay ngẫu nhiên</span>
-                        <span>Chỉnh độ sáng</span>
-                    </div>
-                </div>
-            </section>
+        <div class="small fw-semibold text-muted mb-2">Tăng cường dữ liệu (Augmentation)</div>
+        <div class="d-flex flex-wrap gap-1">
+          <span class="badge bg-light text-dark border">Lật ngang</span>
+          <span class="badge bg-light text-dark border">Lật dọc</span>
+          <span class="badge bg-light text-dark border">Xoay ngẫu nhiên</span>
+          <span class="badge bg-light text-dark border">Chỉnh độ sáng</span>
         </div>
+      </div>
     </div>
+  </div>
+</div>
 
-    <div class="ai-section-heading">
-        <div>
-            <h2>3. Minh Chứng Sử Dụng Trong Hệ Thống</h2>
-            <p>Số liệu lấy trực tiếp từ bảng kết quả AI, không chứa thông tin định danh bệnh nhân.</p>
-        </div>
-        <span class="ai-section-tag">Dữ liệu thời gian thực</span>
+<%-- ── 4. Quy trình huấn luyện & pipeline suy luận ───────────────────── --%>
+<div class="row g-4 mb-4">
+  <div class="col-xl-7">
+    <div class="admin-card h-100">
+      <div class="card-header bg-white py-3 border-bottom">
+        <h5 class="mb-0 fw-bold"><i class="bi bi-list-ol me-2 text-primary"></i>4. Quy Trình Huấn Luyện Offline</h5>
+      </div>
+      <div class="card-body p-0">
+        <ol class="list-group list-group-flush list-group-numbered">
+          <li class="list-group-item py-3">
+            <div class="fw-semibold">Thu thập và gắn nhãn</div>
+            <div class="text-muted small">Tạo bounding box và mask vùng nghi ngờ trên 1.280 ảnh siêu âm.</div>
+          </li>
+          <li class="list-group-item py-3">
+            <div class="fw-semibold">Chia dataset</div>
+            <div class="text-muted small">Tách Train 80% (1.024 ảnh), Validation 10% (128), Test 10% (128).</div>
+          </li>
+          <li class="list-group-item py-3">
+            <div class="fw-semibold">Augmentation</div>
+            <div class="text-muted small">Lật, xoay và thay đổi độ sáng để tăng khả năng tổng quát hóa.</div>
+          </li>
+          <li class="list-group-item py-3">
+            <div class="fw-semibold">Huấn luyện song song</div>
+            <div class="text-muted small">YOLOv3 học bounding box; U-Net Small học mask phân vùng qua 80 epoch.</div>
+          </li>
+          <li class="list-group-item py-3">
+            <div class="fw-semibold">Đánh giá checkpoint</div>
+            <div class="text-muted small">So sánh loss, Dice, IoU, mAP, Precision và Recall sau mỗi epoch.</div>
+          </li>
+          <li class="list-group-item py-3">
+            <div class="fw-semibold">Đóng gói model</div>
+            <div class="text-muted small">Chọn checkpoint epoch 70 (Approved37) đạt ngưỡng và tích hợp vào pipeline web.</div>
+          </li>
+        </ol>
+      </div>
     </div>
+  </div>
 
-    <section class="ai-card">
-        <div class="ai-card-body">
-            <div class="usage-grid">
-                <div class="usage-item">
-                    <div class="usage-icon"><i class="bi bi-cpu"></i></div>
-                    <div><span class="usage-value">${usageStats.totalRuns}</span><span class="usage-label">Lượt AI đã ghi nhận</span></div>
-                </div>
-                <div class="usage-item">
-                    <div class="usage-icon"><i class="bi bi-check2-circle"></i></div>
-                    <div><span class="usage-value">${usageStats.successfulRuns}</span><span class="usage-label">Lượt phân tích thành công</span></div>
-                </div>
-                <div class="usage-item">
-                    <div class="usage-icon"><i class="bi bi-bounding-box"></i></div>
-                    <div><span class="usage-value">${usageStats.detectedRuns}</span><span class="usage-label">Lượt có vùng nghi ngờ</span></div>
-                </div>
-                <div class="usage-item">
-                    <div class="usage-icon"><i class="bi bi-clock-history"></i></div>
-                    <div>
-                        <span class="usage-value date">
-                            <c:choose>
-                                <c:when test="${not empty usageStats.latestRun}">
-                                    <fmt:formatDate value="${usageStats.latestRun}" pattern="dd/MM/yyyy HH:mm" />
-                                </c:when>
-                                <c:otherwise>Chưa có dữ liệu</c:otherwise>
-                            </c:choose>
-                        </span>
-                        <span class="usage-label">Lần phân tích gần nhất</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <div class="ai-section-heading">
-        <div>
-            <h2>4. Quy Trình Tạo Và Sử Dụng Model</h2>
-            <p>Tách rõ quy trình huấn luyện offline và pipeline suy luận trong nghiệp vụ siêu âm.</p>
-        </div>
+  <div class="col-xl-5">
+    <div class="admin-card h-100">
+      <div class="card-header bg-white py-3 border-bottom">
+        <h5 class="mb-0 fw-bold"><i class="bi bi-diagram-3 me-2 text-primary"></i>Pipeline Suy Luận</h5>
+      </div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          <li class="list-group-item d-flex align-items-start gap-3 py-3">
+            <span class="badge bg-primary-subtle text-primary rounded-3 px-2 py-1 flex-shrink-0 mt-1">1</span>
+            <div><div class="fw-semibold"><i class="bi bi-image me-1"></i>Nhận ảnh đầu vào</div>
+              <div class="text-muted small">Kiểm tra định dạng, resize về 512×512 px.</div></div>
+          </li>
+          <li class="list-group-item d-flex align-items-start gap-3 py-3">
+            <span class="badge bg-primary-subtle text-primary rounded-3 px-2 py-1 flex-shrink-0 mt-1">2</span>
+            <div><div class="fw-semibold"><i class="bi bi-bounding-box me-1"></i>YOLOv3 định vị vùng</div>
+              <div class="text-muted small">Tìm bounding box có confidence ≥ 0,20.</div></div>
+          </li>
+          <li class="list-group-item d-flex align-items-start gap-3 py-3">
+            <span class="badge bg-primary-subtle text-primary rounded-3 px-2 py-1 flex-shrink-0 mt-1">3</span>
+            <div><div class="fw-semibold"><i class="bi bi-grid-3x3-gap me-1"></i>U-Net tạo mask</div>
+              <div class="text-muted small">Phân vùng nghi ngờ trong bounding box, ngưỡng mask 0,65.</div></div>
+          </li>
+          <li class="list-group-item d-flex align-items-start gap-3 py-3">
+            <span class="badge bg-primary-subtle text-primary rounded-3 px-2 py-1 flex-shrink-0 mt-1">4</span>
+            <div><div class="fw-semibold"><i class="bi bi-layers me-1"></i>Hậu xử lý</div>
+              <div class="text-muted small">Lọc nhiễu, loại vùng nhỏ (diện tích &lt; 500 px²), tạo ảnh lớp phủ.</div></div>
+          </li>
+          <li class="list-group-item d-flex align-items-start gap-3 py-3">
+            <span class="badge bg-success-subtle text-success rounded-3 px-2 py-1 flex-shrink-0 mt-1">5</span>
+            <div><div class="fw-semibold"><i class="bi bi-person-check me-1"></i>Bác sĩ kiểm tra và ký</div>
+              <div class="text-muted small">AI chỉ hỗ trợ tham khảo, kết luận chính thức do bác sĩ ký.</div></div>
+          </li>
+        </ul>
+      </div>
     </div>
+  </div>
+</div>
 
-    <div class="row g-4">
-        <div class="col-xl-7">
-            <section class="ai-card">
-                <div class="ai-card-header">
-                    <div class="ai-card-title">
-                        <i class="bi bi-list-check"></i>
-                        <h3>Quy Trình Huấn Luyện Offline</h3>
-                    </div>
-                </div>
-                <div class="ai-card-body">
-                    <div class="process-grid">
-                        <div class="process-step"><span class="process-number">1</span><div><strong>Thu thập và gắn nhãn</strong><span>Tạo bounding box và mask vùng nghi ngờ trên ảnh siêu âm.</span></div></div>
-                        <div class="process-step"><span class="process-number">2</span><div><strong>Chia dataset</strong><span>Tách Train 80%, Validation 10% và Test 10%.</span></div></div>
-                        <div class="process-step"><span class="process-number">3</span><div><strong>Augmentation</strong><span>Lật, xoay và thay đổi độ sáng để tăng khả năng tổng quát hóa.</span></div></div>
-                        <div class="process-step"><span class="process-number">4</span><div><strong>Huấn luyện</strong><span>YOLOv3 học bounding box; U-Net Small học mask phân vùng.</span></div></div>
-                        <div class="process-step"><span class="process-number">5</span><div><strong>Đánh giá checkpoint</strong><span>So sánh loss, Dice, IoU, mAP, Precision và Recall.</span></div></div>
-                        <div class="process-step"><span class="process-number">6</span><div><strong>Đóng gói model</strong><span>Chọn checkpoint đạt ngưỡng và tích hợp vào pipeline web.</span></div></div>
-                    </div>
-                </div>
-            </section>
+<%-- ── 5. Sử dụng trong hệ thống ─────────────────────────────────────── --%>
+<div class="admin-card mb-4">
+  <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+    <h5 class="mb-0 fw-bold"><i class="bi bi-activity me-2 text-primary"></i>5. Sử Dụng Trong Hệ Thống</h5>
+    <span class="badge bg-secondary-subtle text-secondary">Dữ liệu thời gian thực</span>
+  </div>
+  <div class="card-body">
+    <div class="row g-3 text-center">
+      <div class="col-6 col-md-3">
+        <div class="border rounded-3 p-3">
+          <div class="fs-3 fw-bold text-primary">${usageStats.totalRuns}</div>
+          <div class="text-muted small">Lượt AI đã ghi nhận</div>
         </div>
-
-        <div class="col-xl-5">
-            <section class="ai-card">
-                <div class="ai-card-header">
-                    <div class="ai-card-title">
-                        <i class="bi bi-diagram-3-fill"></i>
-                        <h3>Pipeline Khi Phân Tích</h3>
-                    </div>
-                </div>
-                <div class="ai-card-body">
-                    <div class="pipeline-grid">
-                        <div class="pipeline-step"><i class="bi bi-image"></i><strong>Ảnh gốc</strong><small>Kiểm tra đầu vào</small></div>
-                        <div class="pipeline-step"><i class="bi bi-bounding-box"></i><strong>YOLOv3</strong><small>Định vị vùng</small></div>
-                        <div class="pipeline-step"><i class="bi bi-grid-3x3-gap"></i><strong>U-Net</strong><small>Tạo mask</small></div>
-                        <div class="pipeline-step"><i class="bi bi-layers"></i><strong>Hậu xử lý</strong><small>Lọc nhiễu</small></div>
-                        <div class="pipeline-step"><i class="bi bi-person-check-fill"></i><strong>Bác sĩ</strong><small>Kiểm tra và ký</small></div>
-                    </div>
-                </div>
-            </section>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="border rounded-3 p-3">
+          <div class="fs-3 fw-bold text-success">${usageStats.successfulRuns}</div>
+          <div class="text-muted small">Lượt phân tích thành công</div>
         </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="border rounded-3 p-3">
+          <div class="fs-3 fw-bold text-info">${usageStats.detectedRuns}</div>
+          <div class="text-muted small">Lượt có vùng nghi ngờ</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="border rounded-3 p-3">
+          <div class="fw-semibold text-secondary" style="font-size:.95rem">
+            <c:choose>
+              <c:when test="${not empty usageStats.latestRun}">
+                <fmt:formatDate value="${usageStats.latestRun}" pattern="dd/MM/yyyy HH:mm" />
+              </c:when>
+              <c:otherwise>—</c:otherwise>
+            </c:choose>
+          </div>
+          <div class="text-muted small">Lần phân tích gần nhất</div>
+        </div>
+      </div>
     </div>
+  </div>
+</div>
 
-    <div class="ai-section-heading">
-        <div>
-            <h2>5. Mã Nguồn Minh Chứng</h2>
-            <p>Thu gọn mặc định để không làm rối trang; mở khi cần trình bày kỹ thuật.</p>
-        </div>
-    </div>
-
-    <section class="ai-card">
-        <div class="ai-card-body">
-            <details class="code-proof">
-                <summary><i class="bi bi-chevron-right me-2"></i>Kiến trúc U-Net Small dùng khi huấn luyện</summary>
-                <pre><code>class UNetSmall(nn.Module):
+<%-- ── 6. Mã nguồn minh chứng ────────────────────────────────────────── --%>
+<div class="admin-card mb-4">
+  <div class="card-header bg-white py-3 border-bottom">
+    <h5 class="mb-0 fw-bold"><i class="bi bi-code-slash me-2 text-primary"></i>6. Mã Nguồn Minh Chứng</h5>
+  </div>
+  <div class="card-body d-grid gap-2">
+    <details class="border rounded-3 overflow-hidden">
+      <summary class="p-3 bg-light fw-semibold" style="cursor:pointer;list-style:none">
+        <i class="bi bi-chevron-right me-2"></i>Kiến trúc U-Net Small dùng khi huấn luyện
+      </summary>
+      <pre class="p-3 mb-0 bg-dark text-white" style="font-size:.8rem;max-height:300px;overflow:auto"><code>class UNetSmall(nn.Module):
     def __init__(self):
         super().__init__()
         self.down1 = DoubleConv(3, 32)
@@ -814,22 +342,24 @@
     def forward(self, x):
         # Encoder -> bottleneck -> decoder + skip connections
         return self.output(decoded_features)</code></pre>
-            </details>
-            <details class="code-proof">
-                <summary><i class="bi bi-chevron-right me-2"></i>Thông số pipeline suy luận</summary>
-                <pre><code>MIN_DETECTION_CONFIDENCE = 0.20
-BOX_PADDING_RATIO = 0.05
-SEG_THRESHOLD = 0.65
-MIN_SEG_AREA = 500
-IMAGE_SIZE = 512
+    </details>
+
+    <details class="border rounded-3 overflow-hidden">
+      <summary class="p-3 bg-light fw-semibold" style="cursor:pointer;list-style:none">
+        <i class="bi bi-chevron-right me-2"></i>Thông số pipeline suy luận
+      </summary>
+      <pre class="p-3 mb-0 bg-dark text-white" style="font-size:.8rem;max-height:300px;overflow:auto"><code>MIN_DETECTION_CONFIDENCE = 0.20
+BOX_PADDING_RATIO        = 0.05
+SEG_THRESHOLD            = 0.65
+MIN_SEG_AREA             = 500
+IMAGE_SIZE               = 512
 
 # YOLOv3 tìm bounding box có confidence cao nhất.
 # U-Net dự đoán mask trên ảnh chuẩn hóa 512 x 512.
 # Hậu xử lý giữ vùng hợp lệ và tạo ảnh lớp phủ.
 # Bác sĩ siêu âm kiểm tra, chỉnh tay khi cần và ký xác nhận.</code></pre>
-            </details>
-        </div>
-    </section>
+    </details>
+  </div>
 </div>
 
 <jsp:include page="../common/footer.jsp" />

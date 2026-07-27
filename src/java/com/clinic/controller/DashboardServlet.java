@@ -20,6 +20,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Servlet xử lý các trang dashboard theo role.
@@ -341,6 +343,46 @@ public class DashboardServlet extends HttpServlet {
         request.setAttribute("mgrApptChartLabels", new ArrayList<>(apptTrend.keySet()));
         request.setAttribute("mgrApptChartValues", new ArrayList<>(apptTrend.values()));
 
+        // ─── [P13] Ca chưa chốt quá 24h ───
+        loadStuckCases(request);
+
+    }
+
+    /** [P13] Load danh sách ca khám kéo dài >24h chưa chốt */
+    private void loadStuckCases(HttpServletRequest request) {
+        List<Map<String, Object>> stuckCases = new ArrayList<>();
+        com.clinic.service.AppointmentStageService stageSvc = new com.clinic.service.AppointmentStageService();
+        String sql = "SELECT a.id, a.appointment_date, a.time_slot, "
+                + "p.full_name AS patient_name, d.full_name AS doctor_name "
+                + "FROM appointments a "
+                + "JOIN patients p ON a.patient_id = p.id "
+                + "JOIN doctors d ON a.doctor_id = d.id "
+                + "WHERE a.status = 'InProgress' "
+                + "AND a.appointment_date < CAST(GETDATE() AS DATE) "
+                + "ORDER BY a.appointment_date ASC";
+        try (java.sql.Connection c = com.clinic.config.DatabaseConfig.getConnection();
+             java.sql.PreparedStatement ps = c.prepareStatement(sql);
+             java.sql.ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                Map<String, Object> row = new LinkedHashMap<>();
+                int apptId = rs.getInt("id");
+                row.put("id", apptId);
+                row.put("patientName", rs.getString("patient_name"));
+                row.put("doctorName", rs.getString("doctor_name"));
+                row.put("appointmentDate", rs.getDate("appointment_date") != null
+                        ? rs.getDate("appointment_date").toLocalDate().toString() : "");
+                row.put("timeSlot", rs.getString("time_slot"));
+                try {
+                    row.put("stage", stageSvc.getStage(apptId).toDisplayString());
+                } catch (Exception e) {
+                    row.put("stage", "Không xác định");
+                }
+                stuckCases.add(row);
+            }
+        } catch (Exception e) {
+            System.err.println("[DashboardServlet] loadStuckCases ERROR: " + e.getMessage());
+        }
+        request.setAttribute("stuckCases", stuckCases);
     }
 
     /** Tính ngày bắt đầu của khoảng trước đó (so sánh tăng trưởng). */
@@ -515,24 +557,21 @@ public class DashboardServlet extends HttpServlet {
                                 && !appointment.getAppointmentDate().isBefore(today);
                     })
                     .sorted((left, right) -> {
-                        if (left.getAppointmentDate() == null) {
-                            return 1;
-                        }
-                        if (right.getAppointmentDate() == null) {
-                            return -1;
-                        }
+                        if (left.getAppointmentDate() == null) return 1;
+                        if (right.getAppointmentDate() == null) return -1;
                         return left.getAppointmentDate().compareTo(right.getAppointmentDate());
                     })
                     .collect(Collectors.toList());
 
-            // Quick stats for patient dashboard cards
+            // Quick stats
             long completedCount = appointments.stream()
                     .filter(a -> "SUCCESS".equalsIgnoreCase(a.getStatus())
                             || "Completed".equalsIgnoreCase(a.getStatus()))
                     .count();
-            long cancelledCount = appointments.stream()
-                    .filter(a -> "Cancelled".equalsIgnoreCase(a.getStatus()))
-                    .count();
+
+            // [P11] Action-needed block — tính trạng thái cần làm gần nhất cho BN
+            request.setAttribute("patientActionNeeded",
+                    computePatientActionNeeded(userId, appointments, today));
 
             request.setAttribute("upcomingAppts", upcoming);
             request.setAttribute("upcomingAppointment", upcoming.isEmpty() ? null : upcoming.get(0));
@@ -546,6 +585,143 @@ public class DashboardServlet extends HttpServlet {
             request.setAttribute("totalMyUpcoming", 0);
             request.setAttribute("totalMyCompleted", 0);
         }
+    }
+
+    /**
+     * [P11] Tính trạng thái "việc cần làm" cho bệnh nhân.
+     * Ưu tiên từ trên xuống, gặp cái nào khớp thì trả về rồi dừng.
+     * KHÔNG thêm cột DB — suy ra từ dữ liệu gốc mỗi lần gọi.
+     */
+    private Map<String, Object> computePatientActionNeeded(int userId, List<Appointment> appointments,
+                                                           LocalDate today) {
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        com.clinic.dao.InvoiceDAO invDAO = new com.clinic.dao.InvoiceDAO();
+        com.clinic.dao.PatientDAO patDAO = new com.clinic.dao.PatientDAO();
+        int patientId = patDAO.getPatientIdByUserId(userId);
+        if (patientId <= 0) {
+            result.put("type", "profile_incomplete");
+            result.put("message", "Vui lòng cập nhật hồ sơ cá nhân để đặt lịch khám.");
+            return result;
+        }
+
+        for (Appointment a : appointments) {
+            if (a.getAppointmentDate() == null) continue;
+
+            // (a) Hoá đơn dịch vụ siêu âm chưa thanh toán
+            if ("InProgress".equalsIgnoreCase(a.getStatus())) {
+                com.clinic.model.Invoice postInv = invDAO.getByAppointmentIdAndType(a.getId(), "POST_EXAM");
+                if (postInv != null && "Unpaid".equalsIgnoreCase(postInv.getStatus())) {
+                    result.put("type", "unpaid_ultrasound");
+                    result.put("message", "Cần thanh toán dịch vụ siêu âm");
+                    result.put("appointmentId", a.getId());
+                    result.put("amount", postInv.getTotalAmount());
+                    return result;
+                }
+            }
+
+            // (b) Lịch đã duyệt, hoá đơn khám chưa thanh toán
+            if ("Confirmed".equalsIgnoreCase(a.getStatus())) {
+                com.clinic.model.Invoice preInv = invDAO.getByAppointmentIdAndType(a.getId(), "PRE_EXAM");
+                if (preInv != null && "Unpaid".equalsIgnoreCase(preInv.getStatus())) {
+                    result.put("type", "unpaid_preexam");
+                    result.put("message", "Cần thanh toán phí khám");
+                    result.put("appointmentId", a.getId());
+                    result.put("amount", preInv.getTotalAmount());
+                    result.put("appointmentDate", a.getAppointmentDate().toString());
+                    result.put("timeSlot", a.getTimeSlot());
+                    return result;
+                }
+            }
+
+            // (c) Đang chờ khám
+            if ("Waiting".equalsIgnoreCase(a.getStatus()) && a.getAppointmentDate().equals(today)) {
+                result.put("type", "waiting_for_exam");
+                result.put("message", "Đang chờ khám");
+                result.put("queueNumber", a.getQueueNumber());
+                result.put("doctorName", a.getDoctorName());
+                return result;
+            }
+
+            // (d) Đang chờ kết quả siêu âm
+            if ("InProgress".equalsIgnoreCase(a.getStatus())) {
+                // Kiểm tra có test_order nào đang chờ không
+                boolean hasPendingUltrasound = false;
+                try {
+                    com.clinic.dao.MedicalRecordDAO mrDAO = new com.clinic.dao.MedicalRecordDAO();
+                    com.clinic.model.MedicalRecord mr = mrDAO.getByAppointmentId(a.getId());
+                    if (mr != null && mr.getId() > 0
+                            && mrDAO.hasBlockingUltrasoundOrdersForAppointment(a.getId())) {
+                        hasPendingUltrasound = true;
+                    }
+                } catch (Exception ignored) {}
+                if (hasPendingUltrasound) {
+                    result.put("type", "waiting_ultrasound");
+                    result.put("message", "Đang chờ kết quả siêu âm");
+                    result.put("appointmentId", a.getId());
+                    return result;
+                }
+            }
+
+            // (e) Hồ sơ mới chốt chưa xem
+            if ("SUCCESS".equalsIgnoreCase(a.getStatus()) || "Completed".equalsIgnoreCase(a.getStatus())) {
+                try {
+                    com.clinic.dao.MedicalRecordDAO mrDAO = new com.clinic.dao.MedicalRecordDAO();
+                    com.clinic.model.MedicalRecord mr = mrDAO.getByAppointmentId(a.getId());
+                    if (mr != null && "final".equalsIgnoreCase(mr.getStatus())) {
+                        // Kiểm tra xem BN đã xem chưa (đơn giản: luôn hiện nếu final và là hôm nay/gần đây)
+                        if (a.getAppointmentDate().equals(today)
+                                || a.getAppointmentDate().equals(today.minusDays(1))) {
+                            result.put("type", "new_result");
+                            result.put("message", "Kết quả khám đã sẵn sàng");
+                            result.put("appointmentId", a.getId());
+                            result.put("recordId", mr.getId());
+                            return result;
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+
+            // (f) Hoá đơn thuốc chưa thanh toán
+            if ("SUCCESS".equalsIgnoreCase(a.getStatus()) || "Completed".equalsIgnoreCase(a.getStatus())) {
+                try {
+                    List<com.clinic.model.Invoice> invoices = invDAO.getByAppointmentId(a.getId());
+                    if (invoices != null) {
+                        for (com.clinic.model.Invoice inv : invoices) {
+                            if ("PRESCRIPTION".equalsIgnoreCase(inv.getInvoiceType())
+                                    && "Unpaid".equalsIgnoreCase(inv.getStatus())) {
+                                result.put("type", "unpaid_prescription");
+                                result.put("message", "Còn hoá đơn thuốc chưa thanh toán tại quầy");
+                                result.put("invoiceId", inv.getId());
+                                result.put("amount", inv.getTotalAmount());
+                                return result;
+                            }
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+        }
+
+        // (g) Có lịch sắp tới đã xác nhận
+        for (Appointment a : appointments) {
+            if ("Confirmed".equalsIgnoreCase(a.getStatus())
+                    && a.getAppointmentDate() != null
+                    && !a.getAppointmentDate().isBefore(today)) {
+                com.clinic.model.Invoice preInv = invDAO.getByAppointmentIdAndType(a.getId(), "PRE_EXAM");
+                if (preInv != null && "Paid".equalsIgnoreCase(preInv.getStatus())) {
+                    result.put("type", "upcoming_paid");
+                    result.put("message", "Lịch hẹn sắp tới");
+                    result.put("appointmentDate", a.getAppointmentDate().toString());
+                    result.put("timeSlot", a.getTimeSlot());
+                    result.put("doctorName", a.getDoctorName());
+                    return result;
+                }
+            }
+        }
+
+        // (h) Không có gì → nút đặt lịch mới
+        result.put("type", "no_action");
+        result.put("message", "Bạn chưa có lịch hẹn nào. Đặt lịch khám ngay!");
+        return result;
     }
 
     /** Kiểm tra bệnh nhân đã có đủ thông tin cá nhân chưa */

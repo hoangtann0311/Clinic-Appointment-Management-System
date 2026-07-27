@@ -43,39 +43,40 @@ public class PatientMedicalRecordServlet extends HttpServlet {
             if (recordIdParam == null || recordIdParam.trim().isEmpty()) {
                 recordIdParam = request.getParameter("id");
             }
+            String apptIdParam = request.getParameter("apptId");
 
-            if (recordIdParam != null && !recordIdParam.trim().isEmpty()) {
-                // Chi tiết 1 hồ sơ
+            if ((recordIdParam != null && !recordIdParam.trim().isEmpty()) || (apptIdParam != null && !apptIdParam.trim().isEmpty())) {
+                // Chi tiết 1 hồ sơ / theo lịch hẹn
                 if (patientId <= 0) {
                     response.sendError(HttpServletResponse.SC_FORBIDDEN); return;
                 }
-                int recordId;
-                try { recordId = Integer.parseInt(recordIdParam.trim()); }
-                catch (NumberFormatException e) {
-                    response.sendError(HttpServletResponse.SC_BAD_REQUEST, "ID hồ sơ không hợp lệ."); return;
+
+                MedicalRecord record = null;
+                if (recordIdParam != null && !recordIdParam.trim().isEmpty()) {
+                    int recordId = Integer.parseInt(recordIdParam.trim());
+                    record = recordDAO.getById(recordId);
+                } else if (apptIdParam != null && !apptIdParam.trim().isEmpty()) {
+                    int apptId = Integer.parseInt(apptIdParam.trim());
+                    record = recordDAO.getByAppointmentId(apptId);
                 }
 
-                MedicalRecord ownedRecord = recordDAO.getById(recordId);
-                // 1. Không tồn tại hoặc KHÔNG thuộc quyền sở hữu của Patient hiện tại -> trả HTTP 404
-                if (ownedRecord == null || ownedRecord.getPatientId() != patientId) {
-                    response.sendError(HttpServletResponse.SC_NOT_FOUND, "Không tìm thấy hồ sơ bệnh án.");
-                    return;
-                }
-
-                // 2. Chỉ công bố khi cả hồ sơ đã final và ca khám đã hoàn tất.
-                MedicalRecord record = recordDAO.getByIdAndPatientId(recordId, patientId);
+                // 1. Không tồn tại hoặc KHÔNG thuộc quyền sở hữu của Patient hiện tại
                 if (record == null) {
-                    request.setAttribute("unreleasedNotice", "Hồ sơ bệnh án này đang trong quá trình xử lý và chưa được bác sĩ công bố.");
+                    request.setAttribute("unreleasedNotice", "Bác sĩ chưa khởi tạo đơn thuốc hoặc hồ sơ bệnh án cho ca khám này.");
                     request.setAttribute("mode", "unreleased");
                     request.getRequestDispatcher("/views/patient/medical_record_detail.jsp").forward(request, response);
                     return;
                 }
 
+                if (record.getPatientId() != patientId) {
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền xem hồ sơ bệnh án này.");
+                    return;
+                }
+
+                int recordId = record.getId();
                 Prescription prescription = prescriptionDAO.getByMedicalRecordId(recordId);
 
                 // Chỉ công bố chỉ định đã được bác sĩ lâm sàng xác nhận.
-                // Kèm theo annotation source (AI / Sonographer) để JSP hiển thị
-                // đúng loại ảnh: AI nếu được chấp nhận, hoặc ảnh gốc nếu từ chối/sửa.
                 List<com.clinic.model.UltrasoundWaitingPatient> allUsOrders = new com.clinic.dao.UltrasoundOrderDAO().getByMedicalRecordId(recordId);
                 List<com.clinic.model.UltrasoundWaitingPatient> usOrders = new java.util.ArrayList<>();
                 java.util.Map<Integer, List<com.clinic.model.UltrasoundImage>> orderImages = new java.util.HashMap<>();
@@ -87,30 +88,25 @@ public class PatientMedicalRecordServlet extends HttpServlet {
                 com.clinic.dao.AiAnalysisResultDAO aiDAO = new com.clinic.dao.AiAnalysisResultDAO();
 
                 for (com.clinic.model.UltrasoundWaitingPatient order : allUsOrders) {
-                    if (!"Confirmed".equalsIgnoreCase(order.getStatus())) continue;
+                    if (!"Confirmed".equalsIgnoreCase(order.getStatus()) && !"Completed".equalsIgnoreCase(order.getStatus())) continue;
                     com.clinic.model.UltrasoundReport report = reviewDAO.getCurrentReport(order.getOrderId());
-                    if (report == null || report.getDoctorConfirmedAt() == null) continue;
+                    if (report == null || (report.getSignedAt() == null && report.getDoctorConfirmedAt() == null)) continue;
                     usOrders.add(order);
 
-                    // Ảnh gốc
                     List<com.clinic.model.UltrasoundImage> images = imgDAO.getByTestOrderId(order.getOrderId());
                     orderImages.put(order.getOrderId(), images);
 
-                    // Annotation hiện tại → xác định nguồn (AI / Sonographer)
                     com.clinic.model.UltrasoundAnnotation annotation = reviewDAO.getCurrentAnnotation(order.getOrderId());
                     String source = (annotation != null && annotation.getAnnotationSource() != null)
-                            ? annotation.getAnnotationSource() : "None";
+                            ? annotation.getAnnotationSource() : "AI";
+                    if (annotation != null && "Approved".equalsIgnoreCase(annotation.getReviewStatus())) {
+                        source = "AI";
+                    }
                     orderAnnotationSources.put(order.getOrderId(), source);
 
-                    // Ảnh có đánh dấu chẩn đoán:
-                    // - AI accepted → dùng ảnh result_image từ AI (có bounding box overlay)
-                    // - Sonographer corrected/rejected → annotation là polygon, KHÔNG có ảnh riêng.
-                    //   Hiển thị ảnh gốc + ghi chú "Bác sĩ siêu âm đánh dấu thủ công".
-                    if ("AI".equalsIgnoreCase(source)) {
-                        com.clinic.model.AiAnalysisResult aiResult = aiDAO.getByTestOrderId(order.getOrderId());
-                        if (aiResult != null && aiResult.getResultImage() != null) {
-                            orderAiResultImages.put(order.getOrderId(), aiResult.getResultImage());
-                        }
+                    com.clinic.model.AiAnalysisResult aiResult = aiDAO.getByTestOrderId(order.getOrderId());
+                    if (aiResult != null && aiResult.getResultImage() != null) {
+                        orderAiResultImages.put(order.getOrderId(), aiResult.getResultImage());
                     }
 
                     orderReports.put(order.getOrderId(), report);
@@ -128,10 +124,10 @@ public class PatientMedicalRecordServlet extends HttpServlet {
                        .forward(request, response);
 
             } else {
-                // Danh sách tất cả hồ sơ
+                // Danh sách tất cả hồ sơ bệnh án của bệnh nhân
                 List<MedicalRecord> records = java.util.Collections.emptyList();
                 if (patientId > 0) {
-                    records = recordDAO.getReleasedByPatientId(patientId);
+                    records = recordDAO.getByPatientId(patientId);
                 }
                 request.setAttribute("records", records);
                 request.setAttribute("mode",    "list");

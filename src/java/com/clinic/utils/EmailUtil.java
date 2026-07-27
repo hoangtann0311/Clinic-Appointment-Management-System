@@ -221,7 +221,7 @@ public class EmailUtil {
             <td style="background: linear-gradient(135deg, #0d6efd, #6610f2);
                        padding: 30px 20px; text-align: center;">
                 <h1 style="color: #ffffff; margin: 0; font-size: 24px;">
-                    🏥 Phòng Khám Sản
+                    Phòng Khám Sản
                 </h1>
                 <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0; font-size: 14px;">
                     Hệ Thống Quản Lý Lịch Hẹn Khám
@@ -243,7 +243,7 @@ public class EmailUtil {
                        style="display: inline-block; background: #0d6efd; color: #ffffff;
                               text-decoration: none; padding: 14px 40px; border-radius: 6px;
                               font-size: 16px; font-weight: bold;">
-                        ✅ Xác Thực Email
+                        Xác Thực Email
                     </a>
                 </div>
 

@@ -1,7 +1,22 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
-<%@ include file="../common/header.jsp" %>
+<c:choose>
+  <c:when test="${param.embed == 'true'}">
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    </head>
+    <body style="background:#f8fafc;padding:15px;">
+  </c:when>
+  <c:otherwise>
+    <%@ include file="../common/header.jsp" %>
+  </c:otherwise>
+</c:choose>
 
 <%-- Modal phóng to ảnh --%>
 <div class="modal fade" id="imageZoomModal" tabindex="-1" aria-hidden="true">
@@ -25,6 +40,7 @@
   .official-report { border-left:4px solid #2563eb;background:#f8fafc; }
 </style>
 
+<c:if test="${param.embed != 'true'}">
 <div class="admin-page-header d-flex justify-content-between align-items-start gap-3 mb-4">
   <div><h1 class="admin-page-title mb-1">Kết quả cận lâm sàng</h1>
     <div class="admin-page-subtitle">Bệnh nhân: <strong><c:out value="${recordInfo.patientName}" /></strong>
@@ -38,16 +54,14 @@
     </c:otherwise>
   </c:choose>
 </div>
+</c:if>
 
-<c:if test="${not empty param.success}"><div class="alert alert-success alert-dismissible fade show" data-cams-toast role="alert">
-  <i class="bi bi-check-circle-fill me-2"></i>Đã xác nhận kết quả siêu âm. Bệnh nhân có thể xem phiếu chính thức.
-  <button class="btn-close" data-bs-dismiss="alert"></button></div></c:if>
-<c:if test="${not empty param.error}"><div class="alert alert-danger alert-dismissible fade show" data-cams-toast role="alert">
-  <i class="bi bi-exclamation-triangle-fill me-2"></i>
-  <c:choose><c:when test="${param.error == 'incompleteConclusion'}">Ghi chú xác nhận phải có ít nhất 20 ký tự.</c:when>
-    <c:when test="${param.error == 'confirmFailed'}">Chỉ có thể xác nhận phiếu đã được Bác sĩ siêu âm ký và đang ở trạng thái chờ xác nhận.</c:when>
-    <c:otherwise>Không thể hoàn tất thao tác. Vui lòng kiểm tra dữ liệu.</c:otherwise></c:choose>
-  <button class="btn-close" data-bs-dismiss="alert"></button></div></c:if>
+<c:if test="${param.success == 'signed'}">
+  <div class="alert alert-success alert-dismissible fade show" data-cams-toast role="alert">
+    <i class="bi bi-check-circle-fill me-2"></i>Phiếu kết quả đã được Bác sĩ siêu âm ký. Kết quả sẵn sàng cho Bác sĩ lâm sàng.
+    <button class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+</c:if>
 
 <c:if test="${not reviewSchemaSupported}"><div class="alert alert-warning">Chưa áp dụng migration V13. Chức năng xem phiếu đã ký và xác nhận kết quả đang bị khóa an toàn.</div></c:if>
 
@@ -59,30 +73,58 @@
       <article class="admin-card" id="us-order-${r.order_id}">
         <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
           <div><h5 class="mb-1"><c:out value="${r.service_name}" /> #${loop.index + 1}</h5><div class="small text-muted">Chỉ định lúc <c:out value="${r.ordered_at}" /></div></div>
-          <c:choose><c:when test="${orderStatus == 'confirmed'}"><span class="badge bg-success">Đã xác nhận</span></c:when>
-            <c:when test="${orderStatus == 'completed'}"><span class="badge bg-warning text-dark">Chờ bác sĩ lâm sàng xác nhận</span></c:when>
-            <c:otherwise><span class="badge bg-secondary"><c:out value="${r.order_status}" /></span></c:otherwise></c:choose>
+          <c:choose>
+            <c:when test="${orderStatus == 'completed' || orderStatus == 'confirmed'}">
+              <span class="badge bg-success"><i class="bi bi-patch-check-fill me-1"></i>Hoàn thành</span>
+            </c:when>
+            <c:otherwise><span class="badge bg-secondary"><c:out value="${r.order_status}" /></span></c:otherwise>
+          </c:choose>
         </div>
         <div class="card-body p-4">
           <div class="row g-3 mb-4">
-            <div class="col-xl-4"><div class="small fw-semibold mb-2">1. Ảnh siêu âm gốc</div>
-              <c:choose><c:when test="${not empty r.raw_image_id}">
-                <img loading="lazy" class="result-image" src="${pageContext.request.contextPath}/medical/ultrasound-image?id=${r.raw_image_id}" alt="Ảnh siêu âm gốc không có lớp khoanh"
-                     style="cursor:pointer" onclick="zoomImage(this.src)" title="Bấm để phóng to">
-              </c:when><c:otherwise><div class="border rounded p-5 text-center text-muted">Chưa có ảnh</div></c:otherwise></c:choose>
+            <%-- 1. Ảnh siêu âm gốc --%>
+            <div class="col-md-6">
+              <div class="small fw-semibold mb-2"><i class="bi bi-image me-1"></i>1. Ảnh siêu âm gốc</div>
+              <c:choose>
+                <c:when test="${not empty r.raw_image_id}">
+                  <img loading="lazy" class="result-image" src="${pageContext.request.contextPath}/medical/ultrasound-image?id=${r.raw_image_id}" alt="Ảnh siêu âm gốc"
+                       style="cursor:pointer" onclick="zoomImage(this.src)" title="Bấm để phóng to trên màn hình">
+                </c:when>
+                <c:otherwise><div class="border rounded p-5 text-center text-muted">Chưa có ảnh gốc</div></c:otherwise>
+              </c:choose>
             </div>
-            <div class="col-xl-4"><div class="small fw-semibold mb-2">2. Vùng AI phân tích <span class="badge bg-secondary-subtle text-secondary">Tham khảo</span></div>
-              <c:choose><c:when test="${not empty r.ai_processed_image_url && not empty r.raw_image_id}"><img loading="lazy" class="result-image" src="${pageContext.request.contextPath}/medical/ai-image?orderId=${r.order_id}&amp;imageId=${r.raw_image_id}&amp;type=result" alt="Ảnh AI phân tích đúng ảnh gốc"
-                     style="cursor:pointer" onclick="zoomImage(this.src)" title="Bấm để phóng to"></c:when>
-              <c:otherwise><div class="border rounded p-5 text-center text-muted">AI không tạo vùng hợp lệ cho ảnh này</div></c:otherwise></c:choose>
-            </div>
-            <div class="col-xl-4"><div class="small fw-semibold mb-2">3. Vùng Bác sĩ siêu âm xác nhận/chỉnh sửa</div>
-              <c:choose><c:when test="${not empty r.raw_image_id}"><div class="position-relative">
-                <img loading="lazy" id="review-image-${r.order_id}" class="result-image" src="${pageContext.request.contextPath}/medical/ultrasound-image?id=${r.raw_image_id}" alt="Ảnh có vùng Bác sĩ siêu âm xác nhận hoặc chỉnh sửa"
-                     style="cursor:pointer" onclick="zoomImage(this.src)" title="Bấm để phóng to">
-                <canvas id="review-overlay-${r.order_id}" class="position-absolute" style="inset:0;pointer-events:none"></canvas>
-                <textarea id="review-annotation-${r.order_id}" hidden><c:out value="${r.annotation_data}" /></textarea>
-              </div></c:when><c:otherwise><div class="border rounded p-5 text-center text-muted">Chưa có vùng duyệt</div></c:otherwise></c:choose>
+
+            <%-- 2. Kết quả siêu âm chính thức được Bác sĩ siêu âm duyệt --%>
+            <div class="col-md-6">
+              <c:choose>
+                <c:when test="${r.review_status == 'Rejected'}">
+                  <div class="small fw-semibold mb-2"><i class="bi bi-pencil-square text-primary me-1"></i>2. Kết quả khoanh vùng thủ công (BS Siêu Âm vẽ)</div>
+                  <c:choose>
+                    <c:when test="${not empty r.raw_image_id}">
+                      <div class="position-relative">
+                        <img loading="lazy" id="review-image-${r.order_id}" class="result-image" src="${pageContext.request.contextPath}/medical/ultrasound-image?id=${r.raw_image_id}" alt="Ảnh khoanh vùng thủ công"
+                             style="cursor:pointer" onclick="zoomImage(this.src)" title="Bấm để phóng to trên màn hình">
+                        <canvas id="review-overlay-${r.order_id}" class="position-absolute" style="inset:0;pointer-events:none"></canvas>
+                        <textarea id="review-annotation-${r.order_id}" hidden><c:out value="${r.annotation_data}" /></textarea>
+                      </div>
+                    </c:when>
+                    <c:otherwise><div class="border rounded p-5 text-center text-muted">Chưa có dữ liệu vẽ</div></c:otherwise>
+                  </c:choose>
+                </c:when>
+                <c:otherwise>
+                  <div class="small fw-semibold mb-2"><i class="bi bi-cpu text-success me-1"></i>2. Kết quả AI phân tích (BS Siêu Âm chấp nhận)</div>
+                  <c:choose>
+                    <c:when test="${not empty r.ai_processed_image_url && not empty r.raw_image_id}">
+                      <img loading="lazy" class="result-image" src="${pageContext.request.contextPath}/medical/ai-image?orderId=${r.order_id}&amp;imageId=${r.raw_image_id}&amp;type=result" alt="Ảnh AI phân tích đã duyệt"
+                           style="cursor:pointer" onclick="zoomImage(this.src)" title="Bấm để phóng to trên màn hình">
+                    </c:when>
+                    <c:otherwise>
+                      <img loading="lazy" class="result-image" src="${pageContext.request.contextPath}/medical/ultrasound-image?id=${r.raw_image_id}" alt="Ảnh siêu âm gốc"
+                           style="cursor:pointer" onclick="zoomImage(this.src)" title="Bấm để phóng to trên màn hình">
+                    </c:otherwise>
+                  </c:choose>
+                </c:otherwise>
+              </c:choose>
             </div>
           </div>
 
@@ -106,20 +148,20 @@
                 <div><div class="small text-muted">Kết luận siêu âm</div><div class="clinical-value fw-semibold"><c:out value="${r.sonographer_conclusion}" /></div></div>
               </section>
 
-              <c:choose><c:when test="${orderStatus == 'completed' && r.report_status == 'Signed'}">
-                <form method="post" action="${pageContext.request.contextPath}/doctor/results" class="border rounded p-4">
-                  <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}"><input type="hidden" name="orderId" value="${r.order_id}"><input type="hidden" name="recordId" value="${recordId}">
-                  <label for="doctor-notes-${r.order_id}" class="form-label fw-semibold">Ghi chú xác nhận của Bác sĩ lâm sàng <span class="text-danger">*</span></label>
-                  <textarea id="doctor-notes-${r.order_id}" name="doctorMessage" class="form-control" rows="3" minlength="20" maxlength="2000" required
-                    placeholder="Ghi nhận đã đối chiếu kết quả siêu âm với thăm khám lâm sàng và nêu hướng xử trí..."></textarea>
-                  <div class="form-text mb-3">Nội dung này không thay thế hoặc sửa kết luận của Bác sĩ siêu âm.</div>
-                  <div class="d-flex justify-content-end"><button class="btn btn-primary" onclick="return confirm('Xác nhận đã xem phiếu siêu âm và cho phép chốt hồ sơ?')">
-                    <i class="bi bi-patch-check me-1"></i>Xác nhận kết quả</button></div>
-                </form>
-              </c:when><c:when test="${orderStatus == 'confirmed'}"><div class="alert alert-success mb-0">
-                <strong>Đã xác nhận.</strong><div class="clinical-value mt-1"><c:out value="${r.doctor_review_notes}" /></div>
-                <div class="small mt-1">Thời điểm: <c:out value="${r.doctor_confirmed_at}" /></div></div>
-              </c:when><c:otherwise><div class="alert alert-secondary mb-0">Phiếu chưa ở trạng thái hợp lệ để xác nhận.</div></c:otherwise></c:choose>
+              <%-- Kết quả hoàn thành --%>
+              <c:choose>
+                <c:when test="${(orderStatus == 'completed' || orderStatus == 'confirmed') && r.report_status == 'Signed'}">
+                  <div class="d-flex align-items-center justify-content-between p-3 rounded-3 border border-success bg-success bg-opacity-10">
+                    <div>
+                      <div class="fw-semibold text-success"><i class="bi bi-patch-check-fill me-1"></i>Kết quả đã hoàn thành</div>
+                      <div class="small text-muted mt-1">Bác sĩ siêu âm đã ký duyệt và hoàn tất phiếu kết quả cận lâm sàng.</div>
+                    </div>
+                  </div>
+                </c:when>
+                <c:otherwise>
+                  <div class="alert alert-secondary mb-0">Bác sĩ siêu âm chưa ký phiếu kết quả.</div>
+                </c:otherwise>
+              </c:choose>
             </c:otherwise>
           </c:choose>
         </div>
@@ -153,4 +195,12 @@ function zoomImage(src) {
 })();
 </script>
 
-<%@ include file="../common/footer.jsp" %>
+<c:choose>
+  <c:when test="${param.embed == 'true'}">
+    </body>
+    </html>
+  </c:when>
+  <c:otherwise>
+    <%@ include file="../common/footer.jsp" %>
+  </c:otherwise>
+</c:choose>

@@ -7,11 +7,14 @@ import com.clinic.dao.InvoiceDAO;
 import com.clinic.dao.MedicalRecordDAO;
 import com.clinic.dao.PrescriptionDAO;
 import com.clinic.dao.ServiceDAO;
+import com.clinic.model.Appointment;
+import com.clinic.model.ExamStage;
 import com.clinic.model.MedicalRecord;
 import com.clinic.model.Prescription;
 import com.clinic.model.PrescriptionItem;
 import com.clinic.model.Service;
 import com.clinic.model.User;
+import com.clinic.service.AppointmentStageService;
 import com.clinic.utils.NotificationHelper;
 
 import jakarta.servlet.ServletException;
@@ -42,6 +45,8 @@ public class MedicalRecordServlet extends HttpServlet {
     private final PrescriptionDAO prescriptionDAO = new PrescriptionDAO();
     private final ServiceDAO serviceDAO = new ServiceDAO();
     private final InvoiceDAO invoiceDAO = new InvoiceDAO();
+    private final AppointmentDAO appointmentDAO = new AppointmentDAO();
+    private final AppointmentStageService stageService = new AppointmentStageService();
 
     // ── GET ─────────────────────────────────────────────────────────────────
 
@@ -54,12 +59,13 @@ public class MedicalRecordServlet extends HttpServlet {
         if (doctorId == null) { error(req, resp, "Tài khoản chưa liên kết hồ sơ bác sĩ."); return; }
 
         String apptIdParam = req.getParameter("apptId");
+        String patientIdParam = req.getParameter("patientId");
 
         if (apptIdParam != null) {
             // ── Form tạo / sửa ──────────────────────────────────────────────
             int apptId;
             try { apptId = Integer.parseInt(apptIdParam); }
-            catch (NumberFormatException e) { error(req, resp, "apptId không hợp lệ."); return; }
+            catch (NumberFormatException e) { errorWithMode(req, resp, "apptId không hợp lệ.", "patients"); return; }
 
             if (!dao.appointmentBelongsToDoctor(apptId, doctorId)) {
                 resp.sendError(HttpServletResponse.SC_FORBIDDEN); return;
@@ -74,25 +80,114 @@ public class MedicalRecordServlet extends HttpServlet {
             } catch (Exception ex) {
                 System.err.println("[MedicalRecordServlet] doGet ERROR for apptId=" + apptId + ": " + ex.getMessage());
                 ex.printStackTrace();
-                error(req, resp, "Không thể tải hồ sơ bệnh án. Vui lòng thử lại sau.");
+                errorWithMode(req, resp, "Không thể tải hồ sơ bệnh án. Vui lòng thử lại sau.", "patients");
                 return;
             }
             req.getRequestDispatcher("/views/doctors/medical_record_form.jsp").forward(req, resp);
 
-        } else {
-            // ── Danh sách ───────────────────────────────────────────────────
+        } else if (patientIdParam != null && !patientIdParam.isBlank()) {
+            // ── Lịch sử khám của một bệnh nhân ──────────────────────────────
+            int patientId;
+            try { patientId = Integer.parseInt(patientIdParam.trim()); }
+            catch (NumberFormatException e) {
+                errorWithMode(req, resp, "patientId không hợp lệ.", "patients"); return;
+            }
+
+            if (!hasAppointmentWithPatient(patientId, doctorId)) {
+                resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền xem thông tin bệnh nhân này.");
+                return;
+            }
+
             try {
-                String keyword = req.getParameter("keyword");
-                java.util.List<com.clinic.model.PatientMedicalSummary> patientSummaries = dao.getPatientSummariesByDoctorId(doctorId, keyword);
-                req.setAttribute("patientSummaries", patientSummaries);
-                req.setAttribute("keyword",    keyword != null ? keyword : "");
-                req.setAttribute("doctorName", user.getFullName());
-                req.setAttribute("mode",       "list");
+                java.util.List<MedicalRecord> records = dao.getClinicalHistoryForDoctor(patientId, doctorId);
+                String patientName = getPatientNameById(patientId);
+
+                // Load thêm dữ liệu siêu âm & đơn thuốc cho từng record
+                java.util.Map<Integer, Boolean> hasUltrasoundMap = new java.util.HashMap<>();
+                java.util.Map<Integer, Boolean> ultrasoundCompletedMap = new java.util.HashMap<>();
+                java.util.Map<Integer, com.clinic.model.Prescription> rxMap = new java.util.HashMap<>();
+                com.clinic.dao.PrescriptionDAO prescriptionDAO = new com.clinic.dao.PrescriptionDAO();
+
+                for (MedicalRecord rec : records) {
+                    int apptId = rec.getAppointmentId();
+                    boolean hasUs = dao.hasAnyUltrasoundOrderForAppointment(apptId);
+                    hasUltrasoundMap.put(rec.getId(), hasUs);
+                    if (hasUs) {
+                        ultrasoundCompletedMap.put(rec.getId(),
+                                !dao.hasBlockingUltrasoundOrdersForAppointment(apptId));
+                    }
+                    // Load đơn thuốc nếu record có id
+                    if (rec.getId() > 0) {
+                        com.clinic.model.Prescription rx = prescriptionDAO.getByMedicalRecordId(rec.getId());
+                        if (rx != null && rx.getItems() != null && !rx.getItems().isEmpty()) {
+                            rxMap.put(rec.getId(), rx);
+                        }
+                    }
+                }
+
+                req.setAttribute("records",              records);
+                req.setAttribute("hasUltrasoundMap",     hasUltrasoundMap);
+                req.setAttribute("ultrasoundCompletedMap", ultrasoundCompletedMap);
+                req.setAttribute("rxMap",                rxMap);
+                req.setAttribute("patientName", patientName);
+                req.setAttribute("patientId",   patientId);
+                req.setAttribute("doctorName",  user.getFullName());
+                req.setAttribute("mode",        "history");
                 req.getRequestDispatcher("/views/doctors/medical_record_form.jsp").forward(req, resp);
             } catch (Exception ex) {
-                System.err.println("[MedicalRecordServlet] doGet ERROR (list): " + ex.getMessage());
+                System.err.println("[MedicalRecordServlet] doGet ERROR for patientId=" + patientId + ": " + ex.getMessage());
                 ex.printStackTrace();
-                error(req, resp, "Không thể tải danh sách hồ sơ bệnh án. Vui lòng thử lại sau.");
+                errorWithMode(req, resp, "Không thể tải lịch sử bệnh án. Vui lòng thử lại sau.", "patients");
+            }
+
+        } else {
+            // ── Danh sách bệnh nhân ─────────────────────────────────────────
+            try {
+                String keyword = req.getParameter("keyword");
+                String pageParam = req.getParameter("page");
+                String dateFromParam = req.getParameter("dateFrom");
+                String dateToParam = req.getParameter("dateTo");
+
+                int page = 1;
+                int pageSize = 10;
+                if (pageParam != null && !pageParam.isBlank()) {
+                    try { page = Integer.parseInt(pageParam.trim()); if (page < 1) page = 1; }
+                    catch (NumberFormatException ignored) {}
+                }
+
+                java.time.LocalDate dateFrom = null;
+                java.time.LocalDate dateTo = null;
+                if (dateFromParam != null && !dateFromParam.isBlank()) {
+                    try { dateFrom = java.time.LocalDate.parse(dateFromParam.trim()); }
+                    catch (Exception ignored) {}
+                }
+                if (dateToParam != null && !dateToParam.isBlank()) {
+                    try { dateTo = java.time.LocalDate.parse(dateToParam.trim()); }
+                    catch (Exception ignored) {}
+                }
+
+                int offset = (page - 1) * pageSize;
+                java.util.List<com.clinic.model.PatientMedicalSummary> pageSummaries =
+                        dao.getPatientSummariesByDoctorId(doctorId, keyword, dateFrom, dateTo, offset, pageSize);
+                int totalRecords = dao.countPatientSummariesByDoctorId(doctorId, keyword, dateFrom, dateTo);
+                int totalPages = (int) Math.ceil((double) totalRecords / pageSize);
+                if (totalPages < 1) totalPages = 1;
+                if (page > totalPages) page = totalPages;
+
+                req.setAttribute("patientSummaries", pageSummaries);
+                req.setAttribute("keyword",       keyword != null ? keyword : "");
+                req.setAttribute("dateFrom",      dateFromParam != null ? dateFromParam : "");
+                req.setAttribute("dateTo",        dateToParam != null ? dateToParam : "");
+                req.setAttribute("doctorName",    user.getFullName());
+                req.setAttribute("currentPage",   page);
+                req.setAttribute("totalPages",    totalPages);
+                req.setAttribute("totalRecords",  totalRecords);
+                req.setAttribute("mode",          "patients");
+                req.getRequestDispatcher("/views/doctors/medical_record_form.jsp").forward(req, resp);
+            } catch (Exception ex) {
+                System.err.println("[MedicalRecordServlet] doGet ERROR (patients): " + ex.getMessage());
+                ex.printStackTrace();
+                errorWithMode(req, resp, "Không thể tải danh sách bệnh nhân. Vui lòng thử lại sau.", "patients");
             }
         }
     }
@@ -131,6 +226,20 @@ public class MedicalRecordServlet extends HttpServlet {
             return;
         }
 
+        // [P5] Kiểm tra giai đoạn khám — chặn action sai bước
+        ExamStage stage = stageService.getStage(apptId);
+        String submitAction = req.getParameter("submitAction");
+        boolean isDraft = "draft".equals(submitAction);
+        boolean isFinal = "final".equals(submitAction);
+
+        if (isFinal) {
+            String blockMsg = stageService.checkActionAllowed(apptId, doctorId, "finalizeRecord");
+            if (blockMsg != null) {
+                errorOnPost(req, resp, apptId, null, null, blockMsg);
+                return;
+            }
+        }
+
         MedicalRecord existingRecord = dao.getByAppointmentId(apptId);
         if (recordIdStr != null && !recordIdStr.isBlank()) {
             int submittedRecordId;
@@ -140,11 +249,12 @@ public class MedicalRecordServlet extends HttpServlet {
                 resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "recordId không hợp lệ.");
                 return;
             }
-            if (submittedRecordId <= 0 || existingRecord == null
-                    || existingRecord.getId() != submittedRecordId) {
-                resp.sendError(HttpServletResponse.SC_CONFLICT,
-                        "Hồ sơ đã thay đổi hoặc không thuộc lịch hẹn này. Vui lòng tải lại.");
-                return;
+            if (submittedRecordId > 0) {
+                if (existingRecord == null || existingRecord.getId() != submittedRecordId) {
+                    resp.sendError(HttpServletResponse.SC_CONFLICT,
+                            "Hồ sơ đã thay đổi hoặc không thuộc lịch hẹn này. Vui lòng tải lại.");
+                    return;
+                }
             }
         }
 
@@ -162,11 +272,7 @@ public class MedicalRecordServlet extends HttpServlet {
         }
 
         // Đọc action sớm để quyết định validate bắt buộc
-        String submitAction = req.getParameter("submitAction");
-        boolean isDraftEarly = "draft".equals(submitAction);
-        boolean isFinalEarly = "final".equals(submitAction);
-
-        // Đọc thông tin từ form trước để có thể giữ nguyên dữ liệu nếu xảy ra lỗi
+        // (đã khai báo isDraft, isFinal ở trên — dùng lại)
         MedicalRecord mr = new MedicalRecord();
         mr.setAppointmentId(apptId);
         if (existingRecord != null) mr.setId(existingRecord.getId());
@@ -232,8 +338,11 @@ public class MedicalRecordServlet extends HttpServlet {
 
         // ── Đọc danh sách đơn thuốc từ form ─────────────────────────────────
         String[] medicineIds = req.getParameterValues("medicineId[]");
+        if (medicineIds == null) medicineIds = req.getParameterValues("medicineId");
         String[] medQuantities = req.getParameterValues("quantity[]");
+        if (medQuantities == null) medQuantities = req.getParameterValues("quantity");
         String[] medDosages = req.getParameterValues("dosage[]");
+        if (medDosages == null) medDosages = req.getParameterValues("dosage");
         List<PrescriptionItem> prescriptionItems = new ArrayList<>();
 
         if (medicineIds != null) {
@@ -304,14 +413,14 @@ public class MedicalRecordServlet extends HttpServlet {
             }
         }
 
-        if (!isDraftEarly && !isFinalEarly) {
+        if (!isDraft && !isFinal) {
             errorOnPost(req, resp, apptId, mr, prescriptionItems,
                     "Thao tác lưu hồ sơ không hợp lệ. Vui lòng chọn Lưu nháp hoặc Chốt hồ sơ.");
             return;
         }
 
         // Khi chốt hồ sơ: bắt buộc bác sĩ phải ra quyết định về siêu âm
-        if (isFinalEarly) {
+        if (isFinal) {
             boolean ultrasoundSkipped = "true".equals(req.getParameter("ultrasoundSkipped"));
             boolean hasUltrasound = dao.hasAnyUltrasoundOrderForAppointment(apptId);
             if (!hasUltrasound && !ultrasoundSkipped) {
@@ -323,7 +432,7 @@ public class MedicalRecordServlet extends HttpServlet {
         }
 
         // ── Validate backend & Format checks ─────────────────────────────────
-        if (isFinalEarly && (mr.getFinalDiagnosis() == null || mr.getFinalDiagnosis().isBlank())) {
+        if (isFinal && (mr.getFinalDiagnosis() == null || mr.getFinalDiagnosis().isBlank())) {
             errorOnPost(req, resp, apptId, mr, prescriptionItems, "Chẩn đoán không được để trống khi chốt hồ sơ."); return;
         }
         if (mr.getFinalDiagnosis() != null && mr.getFinalDiagnosis().length() > 1000) {
@@ -413,6 +522,7 @@ public class MedicalRecordServlet extends HttpServlet {
                     mr.setGestationalAgeWeeks(gestWeeks);
                     mr.setGestationalAgeDays(gestDays);
                 }
+                mr.setLastMenstrualPeriod(lmpStr.trim());
             } catch (Exception e) {
                 errorOnPost(req, resp, apptId, mr, prescriptionItems, "Ngày kinh cuối (LMP) không đúng định dạng YYYY-MM-DD."); return;
             }
@@ -422,8 +532,6 @@ public class MedicalRecordServlet extends HttpServlet {
         if (enableLaborExam && cervDilationRes.value != null && (cervDilationRes.value < 0 || cervDilationRes.value > 10)) {
             errorOnPost(req, resp, apptId, mr, prescriptionItems, "Độ mở CTC không hợp lệ (phải từ 0–10 cm)."); return;
         }
-
-        boolean isDraft = isDraftEarly;
 
         // Hồ sơ, đơn thuốc, hóa đơn và trạng thái lịch hẹn là một đơn vị nghiệp vụ.
         // Chỉ commit khi toàn bộ các bước đều thành công.
@@ -439,6 +547,14 @@ public class MedicalRecordServlet extends HttpServlet {
             try {
                 if (!appointmentDAO.lockConsultationInProgress(conn, apptId, doctorId)) {
                     throw new SQLException("APPOINTMENT_STATE_CONFLICT");
+                }
+                if (mr.getLastMenstrualPeriod() != null && !mr.getLastMenstrualPeriod().isBlank()) {
+                    try (PreparedStatement updateLmpPs = conn.prepareStatement(
+                            "UPDATE appointments SET last_menstrual_period = ? WHERE id = ?")) {
+                        updateLmpPs.setDate(1, java.sql.Date.valueOf(mr.getLastMenstrualPeriod().trim()));
+                        updateLmpPs.setInt(2, apptId);
+                        updateLmpPs.executeUpdate();
+                    }
                 }
                 if (mr.getId() > 0) {
                     finalRecordId = mr.getId();
@@ -531,7 +647,7 @@ public class MedicalRecordServlet extends HttpServlet {
         if (isDraft) {
             resp.sendRedirect(req.getContextPath() + "/doctor/medical-records?apptId=" + apptId + "&saved=1&draft=1");
         } else {
-            resp.sendRedirect(req.getContextPath() + "/doctor/medical-records?apptId=" + apptId + "&saved=1");
+            resp.sendRedirect(req.getContextPath() + "/doctor/medical-records?apptId=" + apptId + "&finalized=1");
         }
     }
 
@@ -548,9 +664,12 @@ public class MedicalRecordServlet extends HttpServlet {
     private void error(HttpServletRequest req, HttpServletResponse resp, String msg)
             throws ServletException, IOException {
         req.setAttribute("errorMessage", msg);
-        req.setAttribute("mode", "list");
-        req.setAttribute("records", java.util.Collections.emptyList());
+        req.setAttribute("mode", "patients");
+        req.setAttribute("patientSummaries", java.util.Collections.emptyList());
         req.setAttribute("keyword", "");
+        req.setAttribute("currentPage", 1);
+        req.setAttribute("totalPages", 1);
+        req.setAttribute("totalRecords", 0);
         User user = (User) req.getSession().getAttribute("user");
         req.setAttribute("doctorName", user != null ? user.getFullName() : "");
         req.getRequestDispatcher("/views/doctors/medical_record_form.jsp").forward(req, resp);
@@ -560,13 +679,42 @@ public class MedicalRecordServlet extends HttpServlet {
                                String msg, String mode) throws ServletException, IOException {
         req.setAttribute("errorMessage", msg);
         req.setAttribute("mode", mode);
-        if ("list".equals(mode)) {
-            req.setAttribute("records", java.util.Collections.emptyList());
+        if ("patients".equals(mode)) {
+            req.setAttribute("patientSummaries", java.util.Collections.emptyList());
             req.setAttribute("keyword", "");
+            req.setAttribute("currentPage", 1);
+            req.setAttribute("totalPages", 1);
+            req.setAttribute("totalRecords", 0);
             User user = (User) req.getSession().getAttribute("user");
             req.setAttribute("doctorName", user != null ? user.getFullName() : "");
         }
         req.getRequestDispatcher("/views/doctors/medical_record_form.jsp").forward(req, resp);
+    }
+
+    /** Kiểm tra bác sĩ đã từng có lịch hẹn với bệnh nhân này chưa */
+    private boolean hasAppointmentWithPatient(int patientId, int doctorId) {
+        try (Connection c = DatabaseConfig.getConnection();
+             PreparedStatement ps = c.prepareStatement(
+                 "SELECT 1 FROM appointments WHERE patient_id = ? AND doctor_id = ?")) {
+            ps.setInt(1, patientId);
+            ps.setInt(2, doctorId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (Exception e) { e.printStackTrace(); }
+        return false;
+    }
+
+    /** Lấy tên bệnh nhân theo ID */
+    private String getPatientNameById(int patientId) {
+        try (Connection c = DatabaseConfig.getConnection();
+             PreparedStatement ps = c.prepareStatement(
+                 "SELECT full_name FROM patients WHERE id = ?")) {
+            ps.setInt(1, patientId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) return rs.getString("full_name");
+        } catch (Exception e) { e.printStackTrace(); }
+        return "Bệnh nhân #" + patientId;
     }
 
     private void errorOnPost(HttpServletRequest req, HttpServletResponse resp,
@@ -604,7 +752,7 @@ public class MedicalRecordServlet extends HttpServlet {
             record = new MedicalRecord();
             record.setAppointmentId(apptId);
         }
-        AppointmentDAO appointmentDAO = new AppointmentDAO();
+        MedicalRecord baseInfo = loadAppointmentInfo(apptId);
 
         String sysBP = req.getParameter("systolicBP");
         String diaBP = req.getParameter("diastolicBP");
@@ -644,12 +792,24 @@ public class MedicalRecordServlet extends HttpServlet {
         User user = (User) req.getSession().getAttribute("user");
         String doctorName = user != null ? user.getFullName() : "";
 
+        req.setAttribute("patientName", record != null ? record.getPatientName() : "");
         req.setAttribute("patientPhone", record != null ? record.getPatientPhone() : "");
         req.setAttribute("patientDob", record != null ? record.getPatientDob() : "");
+        req.setAttribute("bookingSource", baseInfo != null ? baseInfo.getBookingSource() : "");
         req.setAttribute("record", record);
         req.setAttribute("apptId", apptId);
         req.setAttribute("doctorName", doctorName);
         req.setAttribute("mode", "form");
+        // [P5] Tính stage để hiển thị trạng thái + khoá section
+        try {
+            com.clinic.service.AppointmentStageService stageSvc = new com.clinic.service.AppointmentStageService();
+            com.clinic.model.ExamStage stage = stageSvc.getStage(apptId);
+            req.setAttribute("examStage", stage);
+            req.setAttribute("examStageLabel", stage.toDisplayString());
+        } catch (Exception e) {
+            req.setAttribute("examStageLabel", "Không xác định");
+        }
+
         req.setAttribute("canEditRecord", canEditRecord);
         req.setAttribute("prescription", prescription);
         req.setAttribute("medicines", prescriptionDAO.getAllMedicines());
@@ -671,6 +831,7 @@ public class MedicalRecordServlet extends HttpServlet {
             "  CONVERT(varchar, a.appointment_date, 23) AS appointment_date, " +
             "  a.time_slot AS time_slot, " +
             "  a.symptoms, " +
+            "  a.booking_source, " +
             "  CONVERT(varchar, a.last_menstrual_period, 23) AS last_menstrual_period, " +
             "  a.pregnancy_id, " +
             "  a.patient_id " +
@@ -686,6 +847,7 @@ public class MedicalRecordServlet extends HttpServlet {
                 mr.setAppointmentDate(rs.getString("appointment_date"));
                 mr.setTimeSlot(rs.getString("time_slot"));
                 mr.setSymptoms(rs.getString("symptoms"));
+                mr.setBookingSource(rs.getString("booking_source"));
                 mr.setLastMenstrualPeriod(rs.getString("last_menstrual_period"));
                 int pid = rs.getInt("pregnancy_id"); if (!rs.wasNull()) mr.setPregnancyId(pid);
                 mr.setPatientId(rs.getInt("patient_id"));

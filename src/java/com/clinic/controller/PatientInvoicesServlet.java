@@ -36,7 +36,7 @@ public class PatientInvoicesServlet extends HttpServlet {
 
         try {
             int patientId = patientDAO.getPatientIdByUserId(user.getId());
-            
+
             int page = 1;
             int pageSize = 10;
             String keyword = request.getParameter("keyword");
@@ -49,19 +49,27 @@ public class PatientInvoicesServlet extends HttpServlet {
                     page = 1;
                 }
             }
-            
-            int offset = (page - 1) * pageSize;
-            List<Invoice> invoices = invoiceDAO.getInvoicesByPatientUserIdPaginated(user.getId(), keyword, status, offset, pageSize);
 
-            
-            int totalInvoices = invoiceDAO.countInvoicesByPatientUserId(user.getId(), keyword, status);
+            int offset = (page - 1) * pageSize;
+            List<Invoice> invoices = java.util.Collections.emptyList();
+            int totalInvoices = 0;
+
+            if (patientId > 0) {
+                invoices = invoiceDAO.getInvoicesByPatientUserIdPaginated(user.getId(), keyword, status, offset, pageSize);
+                totalInvoices = invoiceDAO.countInvoicesByPatientUserId(user.getId(), keyword, status);
+            }
+
             int totalPages = (int) Math.ceil((double) totalInvoices / pageSize);
+            if (totalPages < 1) totalPages = 1;
 
             request.setAttribute("invoices", invoices);
             request.setAttribute("currentPage", page);
             request.setAttribute("totalPages", totalPages);
             request.setAttribute("keyword", keyword);
             request.setAttribute("status", status);
+            if (patientId <= 0) {
+                request.setAttribute("infoMessage", "Bạn chưa có hồ sơ bệnh nhân. Lịch sử thanh toán sẽ hiển thị sau khi bạn có lịch khám đầu tiên.");
+            }
             
             request.getRequestDispatcher("/views/patient/invoices.jsp").forward(request, response);
         } catch (Exception e) {

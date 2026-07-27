@@ -24,7 +24,7 @@
             <div class="d-flex gap-2">
                 <a href="${pageContext.request.contextPath}/doctor/appointments" class="btn btn-light btn-sm rounded-pill"><i class="bi bi-calendar2-week me-1"></i>Lịch hẹn</a>
                 <a href="${pageContext.request.contextPath}/doctor/medical-records" class="btn btn-light btn-sm rounded-pill"><i class="bi bi-journal-medical me-1"></i>Hồ sơ bệnh án</a>
-                <a href="${pageContext.request.contextPath}/doctor/patients" class="btn btn-light btn-sm rounded-pill"><i class="bi bi-people me-1"></i>Bệnh nhân</a>
+                <a href="${pageContext.request.contextPath}/doctor/medical-records" class="btn btn-light btn-sm rounded-pill"><i class="bi bi-journal-medical me-1"></i>Hồ sơ bệnh án</a>
             </div>
         </div>
     </div>
@@ -76,10 +76,10 @@
 </div>
 </c:if>
 
-<%-- Lịch hẹn hôm nay --%>
+<%-- Lịch hẹn của bệnh nhân --%>
 <div class="card rounded-4 border-0 shadow-sm">
     <div class="card-header bg-transparent border-0 p-3 d-flex justify-content-between align-items-center">
-        <h6 class="fw-semibold mb-0"><i class="bi bi-calendar-check me-2 text-primary"></i>Lịch Hẹn Hôm Nay <span class="badge bg-primary rounded-pill ms-1">${totalToday}</span></h6>
+        <h6 class="fw-semibold mb-0"><i class="bi bi-calendar-check me-2 text-primary"></i>Lịch hẹn của bệnh nhân <span class="badge bg-primary rounded-pill ms-1">${totalToday}</span></h6>
         <a href="${pageContext.request.contextPath}/doctor/appointments" class="btn btn-sm btn-outline-primary rounded-pill">Xem tất cả <i class="bi bi-arrow-right ms-1"></i></a>
     </div>
     <div class="card-body p-0">
@@ -88,58 +88,103 @@
                 <div class="text-center py-5 text-muted"><i class="bi bi-calendar-x d-block mb-2" style="font-size:2rem;opacity:.3;"></i>Hôm nay chưa có lịch hẹn nào.</div>
             </c:when>
             <c:otherwise>
-                <table class="table table-hover align-middle mb-0" style="table-layout:fixed;width:100%;">
-                    <thead style="background:#fff;"><tr><th class="ps-3" style="width:5%;">#</th><th style="width:24%;">Bệnh nhân</th><th style="width:16%;">Giờ</th><th style="width:18%;">Trạng thái</th><th class="pe-3" style="width:37%;">Thao tác</th></tr></thead>
-                    <tbody>
-                    <c:forEach var="a" items="${todayAppointments}" varStatus="loop">
-                    <c:set var="st" value="${fn:toLowerCase(a.status)}"/>
-                    <tr class="${a.priority ? 'table-warning bg-opacity-10' : ''}" id="${a.priority ? 'prioritySection' : ''}">
-                        <td class="ps-3 text-muted small">${loop.index + 1}</td>
-                        <td class="fw-medium">${a.patientName}
-                            <c:if test="${a.priority}">
-                                <br><span class="badge bg-warning text-dark rounded-pill mt-1" style="font-size:.65rem;">
-                                    <i class="bi bi-star-fill me-1"></i>Ưu tiên tiếp nhận
-                                </span>
-                                <c:if test="${not empty a.priorityReason}">
-                                    <div class="small text-muted mt-1" style="font-size:.7rem;" title="${a.priorityReason}">
-                                        <c:out value="${fn:substring(a.priorityReason, 0, 40)}${fn:length(a.priorityReason) > 40 ? '…' : ''}"/>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" style="min-width: 900px; width: 100%;">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-3 py-3" style="width:7%; min-width: 60px;">STT</th>
+                                <th class="py-3" style="width:30%; min-width: 240px;">Bệnh nhân</th>
+                                <th class="py-3" style="width:26%; min-width: 210px;">Khung giờ &amp; Thời gian đặt</th>
+                                <th class="py-3" style="width:16%; min-width: 130px;">Trạng thái</th>
+                                <th class="pe-3 text-end py-3" style="width:21%; min-width: 160px;">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <c:forEach var="a" items="${todayAppointments}" varStatus="loop">
+                        <c:set var="st" value="${fn:toLowerCase(a.status)}"/>
+                        <tr class="${a.priority ? 'table-warning bg-opacity-10' : ''}" id="${a.priority ? 'prioritySection' : ''}">
+                            <td class="ps-3 fw-semibold text-muted py-3" style="font-size:.85rem;">
+                                ${not empty a.queueNumber ? a.queueNumber : loop.index + 1}
+                            </td>
+                            <td class="py-3">
+                                <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                                    <span class="fw-bold text-dark" style="font-size:.92rem; line-height: 1.3;">${a.patientName}</span>
+                                    <c:choose>
+                                        <c:when test="${fn:toLowerCase(a.bookingSource) == 'staff' || fn:toLowerCase(a.bookingSource) == 'reception' || fn:toLowerCase(a.bookingSource) == 'counter'}">
+                                            <span class="badge rounded-pill px-2 py-1" style="background:#e0e7ff; color:#3730a3; border:1px solid #c7d2fe; font-size:.68rem; font-weight:700;" title="Bệnh nhân đăng ký tiếp đón trực tiếp tại quầy">
+                                                <i class="bi bi-person-workspace me-1"></i>Tại quầy
+                                            </span>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <span class="badge rounded-pill px-2 py-1" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; font-size:.68rem; font-weight:700;" title="Bệnh nhân đặt lịch trực tuyến qua Website/App">
+                                                <i class="bi bi-globe me-1"></i>Đặt Online
+                                            </span>
+                                        </c:otherwise>
+                                    </c:choose>
+                                </div>
+                                <c:if test="${a.priority}">
+                                    <div class="d-inline-flex flex-wrap gap-1 align-items-center mt-1">
+                                        <span class="badge bg-warning text-dark rounded-pill px-2 py-1" style="font-size:.65rem;">
+                                            <i class="bi bi-star-fill me-1"></i>Ưu tiên tiếp nhận
+                                        </span>
+                                        <c:if test="${not empty a.priorityReason}">
+                                            <div class="small text-muted" style="font-size:.72rem; line-height: 1.2;" title="${a.priorityReason}">
+                                                Lý do: <c:out value="${fn:substring(a.priorityReason, 0, 40)}${fn:length(a.priorityReason) > 40 ? '…' : ''}"/>
+                                            </div>
+                                        </c:if>
                                     </div>
                                 </c:if>
-                            </c:if>
-                        </td>
-                        <td>${not empty a.timeSlot ? a.timeSlot : '—'}</td>
-                        <td>
-                            <c:choose>
-                                <c:when test="${st == 'pending'}"><span class="badge bg-warning text-dark rounded-pill">Chờ xác nhận</span></c:when>
-                                <c:when test="${st == 'confirmed'}"><span class="badge bg-success rounded-pill">Đã xác nhận</span></c:when>
-                                <c:when test="${st == 'waiting'}"><span class="badge bg-primary rounded-pill">Chờ khám</span></c:when>
-                                <c:when test="${st == 'inprogress'}"><span class="badge bg-info text-dark rounded-pill">Đang khám</span></c:when>
-                                <c:when test="${st == 'success' || st == 'completed'}"><span class="badge bg-success rounded-pill">Hoàn thành</span></c:when>
-                                <c:when test="${st == 'cancelled'}"><span class="badge bg-secondary rounded-pill">Đã huỷ</span></c:when>
-                                <c:when test="${st == 'noshow'}"><span class="badge bg-dark rounded-pill">Vắng mặt</span></c:when>
-                                <c:otherwise><span class="badge bg-light text-dark rounded-pill">${a.status}</span></c:otherwise>
-                            </c:choose>
-                        </td>
-                        <td class="pe-3">
-                            <c:if test="${st == 'waiting'}">
-                                <form method="post" action="${pageContext.request.contextPath}/doctor/appointments" style="margin:0;display:inline;">
-                                    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
-                                    <input type="hidden" name="action" value="startConsultation">
-                                    <input type="hidden" name="appointmentId" value="${a.id}">
-                                    <button type="submit" class="btn btn-primary btn-sm rounded-pill" style="font-size:.75rem;padding:.3rem .8rem;"><i class="bi bi-play-fill me-1"></i>Bắt đầu khám</button>
-                                </form>
-                            </c:if>
-                            <c:if test="${st == 'inprogress' || st == 'success' || st == 'completed'}">
-                                <a href="${pageContext.request.contextPath}/doctor/medical-records?apptId=${a.id}" class="btn btn-sm btn-outline-success rounded-pill"><i class="bi bi-journal-plus me-1"></i>Hồ sơ bệnh án</a>
-                            </c:if>
-                            <c:if test="${st == 'confirmed'}">
-                                <span class="text-muted small"><i class="bi bi-clock me-1"></i>Chờ lễ tân check-in</span>
-                            </c:if>
-                        </td>
-                    </tr>
-                    </c:forEach>
-                    </tbody>
-                </table>
+                            </td>
+                            <td class="py-3">
+                                <div class="fw-semibold text-primary mb-1" style="font-size:.86rem; line-height: 1.3;">
+                                    <i class="bi bi-clock-history me-1"></i>${not empty a.shiftLabel ? a.shiftLabel : (not empty a.timeSlot ? a.timeSlot : '—')}
+                                </div>
+                                <div class="text-muted" style="font-size:.76rem; line-height: 1.3;">
+                                    <i class="bi bi-calendar2-check me-1"></i>Đặt lúc: 
+                                    <c:choose>
+                                        <c:when test="${not empty a.bookedAtDisplay}">${a.bookedAtDisplay}</c:when>
+                                        <c:when test="${not empty a.createdAtText}">${a.createdAtText}</c:when>
+                                        <c:otherwise>Hôm nay</c:otherwise>
+                                    </c:choose>
+                                </div>
+                            </td>
+                            <td class="py-3">
+                                <c:choose>
+                                    <c:when test="${st == 'pending'}"><span class="badge bg-warning text-dark rounded-pill px-2.5 py-1.5" style="font-size:.78rem;">Chờ xác nhận</span></c:when>
+                                    <c:when test="${st == 'confirmed'}"><span class="badge bg-success rounded-pill px-2.5 py-1.5" style="font-size:.78rem;">Đã xác nhận</span></c:when>
+                                    <c:when test="${st == 'waiting'}"><span class="badge bg-primary rounded-pill px-2.5 py-1.5" style="font-size:.78rem;">Chờ khám</span></c:when>
+                                    <c:when test="${st == 'inprogress'}"><span class="badge bg-info text-dark rounded-pill px-2.5 py-1.5" style="font-size:.78rem;">Đang khám</span></c:when>
+                                    <c:when test="${st == 'success' || st == 'completed'}"><span class="badge bg-success rounded-pill px-2.5 py-1.5" style="font-size:.78rem;">Hoàn thành</span></c:when>
+                                    <c:when test="${st == 'cancelled'}"><span class="badge bg-secondary rounded-pill px-2.5 py-1.5" style="font-size:.78rem;">Đã huỷ</span></c:when>
+                                    <c:when test="${st == 'noshow'}"><span class="badge bg-dark rounded-pill px-2.5 py-1.5" style="font-size:.78rem;">Vắng mặt</span></c:when>
+                                    <c:otherwise><span class="badge bg-light text-dark rounded-pill px-2.5 py-1.5" style="font-size:.78rem;">${a.status}</span></c:otherwise>
+                                </c:choose>
+                            </td>
+                            <td class="pe-3 text-end py-3" style="white-space:nowrap;">
+                                <c:if test="${st == 'waiting'}">
+                                    <form method="post" action="${pageContext.request.contextPath}/doctor/appointments" style="margin:0;display:inline;">
+                                        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                                        <input type="hidden" name="action" value="startConsultation">
+                                        <input type="hidden" name="appointmentId" value="${a.id}">
+                                        <button type="submit" class="btn btn-primary btn-sm rounded-pill shadow-sm" style="font-size:.8rem;padding:.38rem .95rem;">
+                                            <i class="bi bi-play-fill me-1"></i>Bắt đầu khám
+                                        </button>
+                                    </form>
+                                </c:if>
+                                <c:if test="${st == 'inprogress' || st == 'success' || st == 'completed'}">
+                                    <a href="${pageContext.request.contextPath}/doctor/medical-records?apptId=${a.id}" class="btn btn-sm btn-outline-success rounded-pill shadow-sm" style="font-size:.8rem;padding:.38rem .95rem;">
+                                        <i class="bi bi-journal-plus me-1"></i>Hồ sơ bệnh án
+                                    </a>
+                                </c:if>
+                                <c:if test="${st == 'confirmed'}">
+                                    <span class="text-muted small"><i class="bi bi-clock me-1"></i>Chờ check-in</span>
+                                </c:if>
+                            </td>
+                        </tr>
+                        </c:forEach>
+                        </tbody>
+                    </table>
+                </div>
             </c:otherwise>
         </c:choose>
     </div>

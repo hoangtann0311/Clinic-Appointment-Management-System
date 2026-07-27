@@ -26,7 +26,7 @@ import java.nio.charset.StandardCharsets;
 /**
  * Servlet xử lý yêu cầu tạo chỉ định siêu âm của Bác sĩ.
  */
-@WebServlet("/doctor/ultrasound-request/create")
+@WebServlet({"/doctor/ultrasound-request", "/doctor/ultrasound-request/create"})
 public class DoctorUltrasoundRequestServlet extends HttpServlet {
 
     private final UltrasoundOrderService orderService = new UltrasoundOrderService();
@@ -49,6 +49,13 @@ public class DoctorUltrasoundRequestServlet extends HttpServlet {
         User user = (User) request.getSession().getAttribute("user");
         if (user == null || user.getRoleId() != 2) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền thực hiện.");
+            return;
+        }
+
+        // ── Action: Huỷ chỉ định siêu âm ──
+        String action = request.getParameter("action");
+        if ("cancel".equals(action)) {
+            handleCancel(request, response, user);
             return;
         }
 
@@ -129,35 +136,23 @@ public class DoctorUltrasoundRequestServlet extends HttpServlet {
                 response.sendRedirect(redirectBase + "&error=" + URLEncoder.encode("Chỉ được chỉ định siêu âm khi ca khám đang ở trạng thái Đang khám.", StandardCharsets.UTF_8));
                 return;
             }
-            // A service selected during booking belongs to PRE_EXAM and must
-            // not be charged again when the doctor creates its clinical order.
-            boolean includedInBookedAppointment = appointmentDAO.hasBookedService(apptId, serviceId);
-            if (!includedInBookedAppointment) {
-                if (reorderReason.length() < 5) {
-                    response.sendRedirect(redirectBase + "&error=" + URLEncoder.encode("Chỉ định bổ sung cần có lý do lâm sàng (ít nhất 5 ký tự).", StandardCharsets.UTF_8));
-                    return;
-                }
-                if (!"1".equals(request.getParameter("confirmAdditional"))) {
-                    response.sendRedirect(redirectBase + "&error=" + URLEncoder.encode("Cần xác nhận đã giải thích chi phí dịch vụ bổ sung.", StandardCharsets.UTF_8));
-                    return;
-                }
+            if (reorderReason.length() < 5) {
+                response.sendRedirect(redirectBase + "&error=" + URLEncoder.encode("Chỉ định siêu âm cần có lý do lâm sàng (ít nhất 5 ký tự).", StandardCharsets.UTF_8));
+                return;
             }
 
             int recordId = record.getId();
 
-            java.math.BigDecimal price = null;
-            if (!includedInBookedAppointment) {
-                ServiceItem service = serviceDAO.findServiceById(serviceId);
-                if (service == null || service.getPrice() < 0) {
-                    response.sendRedirect(redirectBase + "&error=" + URLEncoder.encode("Không đọc được giá dịch vụ hiện hành. Chỉ định chưa được tạo.", StandardCharsets.UTF_8));
-                    return;
-                }
-                price = java.math.BigDecimal.valueOf(service.getPrice());
+            ServiceItem service = serviceDAO.findServiceById(serviceId);
+            if (service == null || service.getPrice() < 0) {
+                response.sendRedirect(redirectBase + "&error=" + URLEncoder.encode("Không đọc được giá dịch vụ hiện hành. Chỉ định chưa được tạo.", StandardCharsets.UTF_8));
+                return;
             }
+            java.math.BigDecimal price = java.math.BigDecimal.valueOf(service.getPrice());
 
-            // 2 & 3. Tạo chỉ định siêu âm và hóa đơn POST_EXAM trong cùng 1 database Transaction
+            // Tạo chỉ định siêu âm và hóa đơn POST_EXAM trong cùng 1 database Transaction
             int orderId = orderService.createUltrasoundRequestInTransaction(apptId, recordId, doctor.getId(), serviceId,
-                    includedInBookedAppointment, price, reorderReason, force);
+                    false, price, reorderReason, force);
 
             if (orderId == UltrasoundOrderService.ACTIVE_ORDER_EXISTS) {
                 ServiceItem existingService = serviceDAO.findServiceById(serviceId);
@@ -171,18 +166,21 @@ public class DoctorUltrasoundRequestServlet extends HttpServlet {
                 throw new Exception("Không thể tạo yêu cầu siêu âm và hóa đơn.");
             }
 
-            String billing = includedInBookedAppointment ? "covered" : "additional";
-
-            // Send a patient-safe message only after the applicable billing path is known.
+            // Gửi thông báo cho bệnh nhân
             try {
-                com.clinic.utils.NotificationHelper.notifyPatientForUltrasound(
-                        recordId, serviceId, "additional".equals(billing));
+                com.clinic.utils.NotificationHelper.notifyPatientForUltrasound(recordId, serviceId, true);
             } catch (Exception ex) {
                 System.err.println("[DoctorUltrasoundRequestServlet] Gửi thông báo chỉ định siêu âm thất bại: " + ex.getMessage());
             }
 
+            // Audit log
+            com.clinic.utils.AuditUtil.log(user.getId(),
+                    "Tạo chỉ định siêu âm #" + orderId + " cho lịch hẹn #" + apptId
+                    + " — Dịch vụ #" + serviceId + " — Lý do: " + reorderReason,
+                    "test_orders", "", "Pending", request.getRemoteAddr());
+
             response.sendRedirect(request.getContextPath() + "/doctor/medical-records?apptId=" + apptId
-                    + "&success=requested&billing=" + billing);
+                    + "&success=requested");
 
         } catch (Exception e) {
             System.err.println("[DoctorUltrasoundRequestServlet] error: " + e.getClass().getSimpleName() + " - " + e.getMessage());
@@ -191,6 +189,74 @@ public class DoctorUltrasoundRequestServlet extends HttpServlet {
             try { fallbackApptId = Integer.parseInt(request.getParameter("apptId")); } catch (NumberFormatException ignored) {}
             response.sendRedirect(request.getContextPath() + "/doctor/medical-records?apptId=" + fallbackApptId
                     + "&error=" + URLEncoder.encode("Không thể xử lý chỉ định siêu âm. Vui lòng thử lại.", StandardCharsets.UTF_8));
+        }
+    }
+
+    /** P7: Huỷ chỉ định siêu âm khi POST_EXAM chưa thanh toán */
+    private void handleCancel(HttpServletRequest req, HttpServletResponse resp, User user) throws IOException {
+        String orderIdStr = req.getParameter("orderId");
+        String apptIdStr = req.getParameter("apptId");
+        String reason = req.getParameter("reason");
+        try {
+            int orderId = Integer.parseInt(orderIdStr);
+            int apptId = Integer.parseInt(apptIdStr);
+            if (reason == null || reason.trim().length() < 10 || reason.trim().length() > 500) {
+                resp.sendRedirect(req.getContextPath() + "/doctor/medical-records?apptId=" + apptId
+                        + "&error=" + URLEncoder.encode("Lý do huỷ phải từ 10 đến 500 ký tự.", StandardCharsets.UTF_8));
+                return;
+            }
+            Doctor doctor = doctorDAO.findByUserId(user.getId());
+            if (doctor == null || !medicalRecordDAO.appointmentBelongsToDoctor(apptId, doctor.getId())) {
+                resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Không có quyền.");
+                return;
+            }
+            if (!appointmentDAO.isConsultationInProgress(apptId, doctor.getId())) {
+                resp.sendRedirect(req.getContextPath() + "/doctor/medical-records?apptId=" + apptId
+                        + "&error=" + URLEncoder.encode("Chỉ được huỷ chỉ định khi ca khám đang ở trạng thái Đang khám.", StandardCharsets.UTF_8));
+                return;
+            }
+
+            // Kiểm tra hoá đơn POST_EXAM chưa thanh toán
+            com.clinic.model.Invoice inv = invoiceDAO.getByAppointmentIdAndType(apptId, "POST_EXAM");
+            if (inv != null && "Paid".equalsIgnoreCase(inv.getStatus())) {
+                resp.sendRedirect(req.getContextPath() + "/doctor/medical-records?apptId=" + apptId
+                        + "&error=" + URLEncoder.encode("Bệnh nhân đã thanh toán dịch vụ siêu âm. Không thể huỷ chỉ định — liên hệ Lễ tân để xử lý hoàn tiền.", StandardCharsets.UTF_8));
+                return;
+            }
+
+            // Transaction: huỷ order + huỷ hoá đơn chưa thanh toán
+            try (java.sql.Connection conn = com.clinic.config.DatabaseConfig.getConnection()) {
+                conn.setAutoCommit(false);
+                try {
+                    com.clinic.dao.UltrasoundOrderDAO orderDAO = new com.clinic.dao.UltrasoundOrderDAO();
+                    orderDAO.cancelOrder(conn, orderId);
+
+                    if (inv != null && !"Paid".equalsIgnoreCase(inv.getStatus())) {
+                        try (java.sql.PreparedStatement ps = conn.prepareStatement(
+                                "UPDATE invoices SET status = 'Cancelled' WHERE id = ? AND status = 'Unpaid'")) {
+                            ps.setInt(1, inv.getId());
+                            ps.executeUpdate();
+                        }
+                    }
+                    conn.commit();
+                } catch (Exception e) {
+                    conn.rollback();
+                    throw e;
+                }
+            }
+
+            // Audit log
+            com.clinic.utils.AuditUtil.log(user.getId(),
+                    "Huỷ chỉ định siêu âm #" + orderId + " cho lịch hẹn #" + apptId + " — Lý do: " + reason.trim(),
+                    "test_orders", "", "Cancelled", req.getRemoteAddr());
+
+            resp.sendRedirect(req.getContextPath() + "/doctor/medical-records?apptId=" + apptId
+                    + "&success=cancelled");
+        } catch (Exception e) {
+            System.err.println("[DoctorUltrasoundRequestServlet] cancel error: " + e.getMessage());
+            resp.sendRedirect(req.getContextPath() + "/doctor/medical-records?apptId="
+                    + (apptIdStr != null ? apptIdStr : "0")
+                    + "&error=" + URLEncoder.encode("Không thể huỷ chỉ định. Vui lòng thử lại.", StandardCharsets.UTF_8));
         }
     }
 }

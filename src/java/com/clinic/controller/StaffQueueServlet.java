@@ -21,7 +21,10 @@ import java.io.IOException;
         "/admin/reception/approve-payment-request",
         "/admin/reception/approve-post-exam",
         "/admin/reception/cancel",
-        "/admin/reception/priority"
+        "/admin/reception/priority",
+        "/admin/reception/noshow",
+        "/admin/reception/pay-pre-exam",
+        "/admin/reception/refund"
 })
 public class StaffQueueServlet extends HttpServlet {
 
@@ -46,7 +49,8 @@ public class StaffQueueServlet extends HttpServlet {
                 || "/admin/reception/approve-payment-request".equals(path)
                 || "/admin/reception/approve-post-exam".equals(path)
                 || "/admin/reception/cancel".equals(path)
-                || "/admin/reception/priority".equals(path)) {
+                || "/admin/reception/priority".equals(path)
+                || "/admin/reception/noshow".equals(path)) {
             resp.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED,
                     "Các thao tác thay đổi dữ liệu phải dùng POST.");
             return;
@@ -103,12 +107,25 @@ public class StaffQueueServlet extends HttpServlet {
             return;
         }
 
+        if ("/admin/reception/pay-pre-exam".equals(path)) {
+            String id = req.getParameter("id");
+            try {
+                staffReceptionService.confirmCashPayment(id, user.getId());
+                req.getSession().setAttribute("queueSuccess", "Đã xác nhận thanh toán phí khám. Có thể check-in cho bệnh nhân.");
+                resp.sendRedirect(req.getContextPath() + "/admin/reception");
+            } catch (IllegalArgumentException e) {
+                req.getSession().setAttribute("queueError", e.getMessage());
+                resp.sendRedirect(req.getContextPath() + "/admin/reception");
+            }
+            return;
+        }
+
         if ("/admin/reception/checkin".equals(path)) {
             String id = req.getParameter("id");
 
             try {
                 staffReceptionService.checkInPatient(id);
-                req.getSession().setAttribute("queueSuccess", "Thu tiền & Check-in thành công! Bệnh nhân đã được xếp vào hàng đợi chờ Bác sĩ.");
+                req.getSession().setAttribute("queueSuccess", "Check-in thành công! Bệnh nhân đã được xếp vào hàng đợi chờ Bác sĩ.");
                 resp.sendRedirect(req.getContextPath() + "/admin/reception");
             } catch (IllegalArgumentException e) {
                 req.getSession().setAttribute("queueError", e.getMessage());
@@ -122,7 +139,7 @@ public class StaffQueueServlet extends HttpServlet {
             String id = req.getParameter("id");
 
             try {
-                staffReceptionService.cancelAppointment(id);
+                staffReceptionService.cancelAppointment(id, user.getId());
                 req.getSession().setAttribute("queueSuccess", "Đã huỷ lịch hẹn thành công.");
                 resp.sendRedirect(req.getContextPath() + "/admin/reception");
             } catch (IllegalArgumentException e) {
@@ -146,11 +163,45 @@ public class StaffQueueServlet extends HttpServlet {
             return;
         }
 
+        if ("/admin/reception/refund".equals(path)) {
+            String invoiceIdStr = req.getParameter("invoiceId");
+            String reason = req.getParameter("reason");
+            try {
+                int invoiceId = Integer.parseInt(invoiceIdStr);
+                staffReceptionService.refundInvoice(invoiceId, user.getId(), reason);
+                req.getSession().setAttribute("queueSuccess", "Đã hoàn tiền thành công.");
+                resp.sendRedirect(req.getContextPath() + "/admin/reception");
+            } catch (IllegalArgumentException e) {
+                req.getSession().setAttribute("queueError", e.getMessage());
+                resp.sendRedirect(req.getContextPath() + "/admin/reception");
+            }
+            return;
+        }
+
+        if ("/admin/reception/noshow".equals(path)) {
+            String id = req.getParameter("id");
+            try {
+                staffReceptionService.markNoShow(id, user.getId());
+                req.getSession().setAttribute("queueSuccess", "Đã đánh dấu bệnh nhân không đến. Slot đã được trả về.");
+                resp.sendRedirect(req.getContextPath() + "/admin/reception");
+            } catch (IllegalArgumentException e) {
+                req.getSession().setAttribute("queueError", e.getMessage());
+                resp.sendRedirect(req.getContextPath() + "/admin/reception");
+            }
+            return;
+        }
+
         resp.sendRedirect(req.getContextPath() + "/admin/reception");
     }
 
     private void renderQueue(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         try {
+            // Tự động chuyển bệnh nhân đang chờ sang ca tiếp theo khi bác sĩ hết ca
+            int autoMoved = staffReceptionService.autoMovePatientsToNextShift(LocalDate.now());
+            if (autoMoved > 0) {
+                req.setAttribute("autoMovedCount", autoMoved);
+            }
+
             LocalDate selectedDate;
 
             String dateParam = req.getParameter("date");

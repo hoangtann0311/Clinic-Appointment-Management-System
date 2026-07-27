@@ -5,1402 +5,608 @@
 <%@ include file="../common/header.jsp" %>
 
 <style>
-/* ── Tab styling ──────────────────────────────────────────── */
-.obs-nav .nav-link          { color:#6c757d; border-radius:10px 10px 0 0; font-weight:600; padding:.7rem 1.4rem; font-size:.92rem; }
-.obs-nav .nav-link.active   { color:#0d6efd; background:#fff; border-bottom:3px solid #0d6efd; }
-.obs-nav .nav-link:hover:not(.active) { background:#f8f9fa; }
-
-/* ── Section card ──────────────────────────────────────────── */
-.section-label { font-size:.75rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#6c757d; margin-bottom:.75rem; }
-.field-unit    { font-size:.8rem; color:#6c757d; font-weight:normal; }
-.req-star      { color:#dc3545; font-weight:bold; margin-left:2px; }
-
-/* ── Risk box & badges ─────────────────────────────────────── */
-.risk-box { border:2px solid #f8d7da; background:#fff5f5; border-radius:14px; padding:1.25rem; }
-.risk-box.active { border-color:#dc3545; background:#fff0f0; box-shadow:0 4px 12px rgba(220,53,69,.15); }
-
-/* ── Sticky Action Bar ─────────────────────────────────────── */
-.doctor-action-bar {
-  position: sticky; bottom: 0; z-index: 1020;
-  background: #ffffff; border-top: 1px solid #e9ecef;
-  box-shadow: 0 -4px 16px rgba(0,0,0,.08); padding: .9rem 1.5rem;
-  border-bottom-left-radius: 1rem; border-bottom-right-radius: 1rem;
-}
-
-/* ── Info panel ─────────────────────────────────────────────── */
-.info-item { display:flex; flex-direction:column; margin-bottom:.75rem; }
-.info-item .label { font-size:.7rem; text-transform:uppercase; color:#adb5bd; font-weight:600; letter-spacing:.05em; }
-.info-item .value { font-size:.95rem; font-weight:500; color:#212529; }
-
-/* ── Bảng kê thuốc ──────────────────────────────────────────── */
-.rx-table th { font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; color:#6c757d; }
-.rx-table td { vertical-align:middle; }
+.step-card { border-radius:14px; border:1.5px solid #e9ecef; margin-bottom:1rem; overflow:hidden; }
+.step-card .step-header { padding:.85rem 1.2rem; background:#f8f9fa; border-bottom:1px solid #dee2e6; display:flex; align-items:center; gap:.75rem; }
+.step-card .step-body { padding:1.2rem; }
+.step-num { width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.95rem;color:#fff;background:#0d6efd;flex-shrink:0; }
+.step-done .step-num { background:#198754; } .step-done { border-left:4px solid #198754; }
+.step-active .step-num { background:#0d6efd; } .step-active { border-left:4px solid #0d6efd; box-shadow:0 2px 12px rgba(13,110,253,.15); }
+.step-locked .step-num { background:#adb5bd; } .step-locked { border-left:4px solid #adb5bd; opacity:.7; }
+.nav-tabs-custom .nav-link { font-size:.82rem; font-weight:600; color:#6c757d; border:none; padding:.5rem 1rem; }
+.nav-tabs-custom .nav-link.active { color:#0d6efd; border-bottom:2px solid #0d6efd; background:transparent; }
+.info-card { border-radius:14px; border:1.5px solid #e9ecef; position:sticky; top:5rem; }
+.info-item { padding:.5rem 0; border-bottom:1px solid #f1f3f5; }
+.info-item:last-child { border-bottom:0; }
+.info-label { font-size:.7rem; text-transform:uppercase; color:#adb5bd; font-weight:600; letter-spacing:.05em; }
+.info-value { font-size:.88rem; font-weight:500; color:#212529; }
+.vital-row { display:flex; flex-wrap:wrap; gap:.5rem; }
+.vital-chip { background:#f8f9fa; border:1px solid #e9ecef; border-radius:8px; padding:.35rem .65rem; font-size:.78rem; }
+.risk-box { border:2px solid #f8d7da; background:#fff5f5; border-radius:12px; padding:1rem; }
+.risk-box.active { border-color:#dc3545; background:#fff0f0; }
+.doctor-action-bar { position:sticky; bottom:0; z-index:1020; background:#fff; border-top:1px solid #e9ecef; box-shadow:0 -4px 16px rgba(0,0,0,.08); padding:.75rem 1.5rem; border-radius:0 0 14px 14px; }
+.clinical-value { white-space:pre-wrap;line-height:1.65; }
 </style>
 
-<%-- ══════════════════════════════════════════════════════
-     DANH SÁCH HỒ SƠ
-     ══════════════════════════════════════════════════════ --%>
-<c:if test="${mode == 'list'}">
-
-  <%-- Thông báo lỗi --%>
-  <c:if test="${not empty errorMessage}">
-    <div class="alert alert-danger rounded-3 mb-3" data-cams-toast="true"><i class="bi bi-exclamation-triangle-fill me-2"></i>${errorMessage}</div>
-  </c:if>
-
+<%-- ═══════════ MODE: DANH SÁCH BỆNH NHÂN ═══════════ --%>
+<c:if test="${mode == 'patients'}">
   <div class="row mb-4">
-    <div class="col">
-      <div class="card border-0 rounded-4 text-white" style="background:linear-gradient(135deg,#1a6b3c,#28a745);">
-        <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
-          <div>
-            <h2 class="fw-bold mb-1"><i class="bi bi-journal-medical me-2"></i>Hồ Sơ Bệnh Án</h2>
-            <p class="mb-0 opacity-75">BS. ${doctorName} — Phụ Sản Khoa</p>
-          </div>
-          <a href="${pageContext.request.contextPath}/doctor/appointments" class="btn btn-light btn-sm rounded-pill px-3">
-            <i class="bi bi-arrow-left me-1"></i>Lịch hẹn
-          </a>
-        </div>
+    <div class="col"><div class="card border-0 rounded-4 text-white" style="background:linear-gradient(135deg,#1a6b3c,#28a745);">
+      <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div><h2 class="fw-bold mb-1"><i class="bi bi-journal-medical me-2"></i>Quản Lý Bệnh Án</h2><p class="mb-0 opacity-75">BS. ${doctorName} — danh sách bệnh nhân đã từng khám</p></div>
+        <a href="${pageContext.request.contextPath}/doctor/dashboard" class="btn btn-light btn-sm rounded-pill px-3"><i class="bi bi-arrow-left me-1"></i>Tổng Quan</a>
       </div>
-    </div>
+    </div></div>
   </div>
-
   <%-- Tìm kiếm --%>
-  <div class="card rounded-4 border-0 shadow-sm mb-4">
-    <div class="card-body p-3">
-      <form method="get" action="${pageContext.request.contextPath}/doctor/medical-records" class="d-flex gap-2">
-        <input type="text" name="keyword" value="${keyword}" class="form-control rounded-pill"
-               placeholder="Tìm theo tên bệnh nhân hoặc chẩn đoán…" style="max-width:360px;">
-        <button class="btn btn-primary rounded-pill px-4"><i class="bi bi-search me-1"></i>Tìm</button>
-        <c:if test="${not empty keyword}">
-          <a href="${pageContext.request.contextPath}/doctor/medical-records" class="btn btn-outline-secondary rounded-pill">Xoá lọc</a>
-        </c:if>
-      </form>
-    </div>
-  </div>
-
-  <div class="card rounded-4 border-0 shadow-sm">
-    <div class="card-header bg-transparent border-0 p-4 pb-2 d-flex align-items-center gap-2">
-      <i class="bi bi-list-ul text-success"></i>
-      <h6 class="fw-semibold mb-0">Danh sách hồ sơ</h6>
-      <span class="badge bg-success rounded-pill ms-1">${fn:length(records)}</span>
-    </div>
-    <div class="card-body p-0">
-      <c:choose>
-        <c:when test="${empty records}">
-          <div class="text-center py-5">
-            <i class="bi bi-journal-x text-muted" style="font-size:3rem;"></i>
-            <p class="text-muted mt-3">Chưa có hồ sơ bệnh án nào.</p>
-            <a href="${pageContext.request.contextPath}/doctor/appointments"
-               class="btn btn-outline-success rounded-pill px-4">
-              <i class="bi bi-calendar-check me-1"></i>Xem lịch hẹn để tạo bệnh án
-            </a>
-          </div>
-        </c:when>
-        <c:otherwise>
-          <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-              <thead class="table-light">
-                <tr>
-                  <th class="ps-4">#</th>
-                  <th>Bệnh nhân</th>
-                  <th>Ngày khám</th>
-                  <th>Tuổi thai</th>
-                  <th>Nhịp tim thai</th>
-                  <th>Chẩn đoán</th>
-                  <th>Nguy cơ</th>
-                  <th>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                <c:forEach var="rec" items="${records}" varStatus="s">
-                  <tr>
-                    <td class="ps-4 text-muted small">${s.index+1}</td>
-                    <td>
-                      <div class="d-flex align-items-center gap-2">
-                        <div class="rounded-circle bg-success bg-opacity-10 text-success fw-bold d-flex align-items-center justify-content-center"
-                             style="width:36px;height:36px;min-width:36px;font-size:.85rem;">
-                          ${not empty rec.patientName ? fn:toUpperCase(fn:substring(rec.patientName,0,1)) : '?'}
-                        </div>
-                        <span class="fw-medium">${rec.patientName}</span>
-                      </div>
-                    </td>
-                    <td class="text-nowrap">${rec.appointmentDate}</td>
-                    <td>${rec.gestationalAgeDisplay}</td>
-                    <td>
-                      <c:if test="${rec.fetalHeartRate != null}">
-                        <span class="badge bg-light text-dark border">
-                          <i class="bi bi-heart-pulse me-1 text-danger"></i>${rec.fetalHeartRate} bpm
-                        </span>
-                      </c:if>
-                      <c:if test="${rec.fetalHeartRate == null}">—</c:if>
-                    </td>
-                    <td style="max-width:200px;">
-                      <span class="text-truncate d-block" title="${rec.finalDiagnosis}">
-                        ${not empty rec.finalDiagnosis ? rec.finalDiagnosis : '—'}
-                      </span>
-                    </td>
-                    <td>
-                      <c:if test="${rec.hasRisk()}">
-                        <span class="badge bg-danger"><i class="bi bi-exclamation-triangle me-1"></i>Nguy cơ</span>
-                      </c:if>
-                      <c:if test="${!rec.hasRisk()}">
-                        <span class="badge bg-success bg-opacity-10 text-success">Bình thường</span>
-                      </c:if>
-                    </td>
-                    <td>
-                      <a href="${pageContext.request.contextPath}/doctor/medical-records?apptId=${rec.appointmentId}"
-                         class="btn btn-sm btn-outline-success rounded-pill">
-                        <i class="bi bi-pencil me-1"></i>Xem/Sửa
-                      </a>
-                    </td>
-                  </tr>
-                </c:forEach>
-              </tbody>
-            </table>
-          </div>
-        </c:otherwise>
-      </c:choose>
-    </div>
-  </div>
-
+  <div class="card rounded-4 border-0 shadow-sm mb-4"><div class="card-body p-3">
+    <form method="get" class="d-flex gap-2 align-items-end flex-wrap">
+      <div class="flex-grow-1"><label class="form-label fw-semibold small text-muted"><i class="bi bi-search me-1"></i>Tìm kiếm bệnh nhân</label>
+      <input type="text" name="keyword" value="${fn:escapeXml(keyword)}" class="form-control rounded-3" placeholder="Tên hoặc số điện thoại…" style="max-width:300px;"></div>
+      <div><label class="form-label fw-semibold small text-muted">Từ ngày</label>
+      <input type="date" name="dateFrom" value="${dateFrom}" class="form-control rounded-3" style="width:150px;"></div>
+      <div><label class="form-label fw-semibold small text-muted">Đến ngày</label>
+      <input type="date" name="dateTo" value="${dateTo}" class="form-control rounded-3" style="width:150px;"></div>
+      <div class="d-flex gap-2"><button class="btn btn-primary rounded-3"><i class="bi bi-search me-1"></i>Tìm</button><c:if test="${not empty keyword || not empty dateFrom || not empty dateTo}"><a href="${pageContext.request.contextPath}/doctor/medical-records" class="btn btn-outline-secondary rounded-3">Xoá lọc</a></c:if></div>
+    </form>
+  </div></div>
+  <%-- Bảng bệnh nhân --%>
+  <div class="card rounded-4 border-0 shadow-sm"><div class="card-body p-0">
+    <c:choose><c:when test="${empty patientSummaries}"><div class="text-center py-5 text-muted"><i class="bi bi-person-x fs-1 d-block mb-3 opacity-25"></i><c:choose><c:when test="${not empty keyword || not empty dateFrom || not empty dateTo}">Không tìm thấy bệnh nhân nào với bộ lọc hiện tại.</c:when><c:otherwise>Chưa có bệnh nhân nào.</c:otherwise></c:choose></div></c:when><c:otherwise>
+      <div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th class="ps-3">#</th><th>Bệnh Nhân</th><th>SĐT</th><th class="text-center">Số Lần Khám</th><th>Khám Gần Nhất</th><th>Chẩn Đoán Gần Nhất</th><th class="text-end pe-3">Thao Tác</th></tr></thead><tbody>
+        <c:forEach var="p" items="${patientSummaries}" varStatus="lp">
+          <tr>
+            <td class="ps-3 text-muted small">${lp.index + 1 + (currentPage - 1) * 10}</td>
+            <td><div class="d-flex align-items-center gap-2"><div class="rounded-circle bg-success bg-opacity-10 text-success d-flex align-items-center justify-content-center fw-bold" style="width:36px;height:36px;">${fn:toUpperCase(fn:substring(p.patientName, 0, 1))}</div><span class="fw-semibold">${p.patientName}</span></div><c:if test="${p.hasRisk}"><span class="badge bg-danger ms-5" style="font-size:.65rem;"><i class="bi bi-exclamation-triangle"></i> Rủi ro</span></c:if></td>
+            <td class="small">${not empty p.patientPhone?p.patientPhone:'—'}</td>
+            <td class="text-center"><span class="badge bg-primary rounded-pill">${p.totalVisits}</span></td>
+            <td class="small"><fmt:formatDate value="${p.lastVisitDate}" pattern="dd/MM/yyyy"/></td>
+            <td class="text-truncate small" style="max-width:160px;" title="${fn:escapeXml(p.lastDiagnosis)}">${not empty p.lastDiagnosis?p.lastDiagnosis:'—'}</td>
+            <td class="text-end pe-3"><a href="?patientId=${p.patientId}" class="btn btn-sm btn-outline-info rounded-pill"><i class="bi bi-clock-history me-1"></i>Lịch Sử Khám</a></td>
+          </tr>
+        </c:forEach>
+      </tbody></table></div>
+    </c:otherwise></c:choose>
+    <%-- Phân trang --%>
+    <c:if test="${totalPages > 1}">
+      <div class="card-footer bg-white p-3 border-top d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div class="text-muted small">Hiển thị <strong>${fn:length(patientSummaries)}</strong> trên tổng <strong>${totalRecords}</strong> bệnh nhân</div>
+        <nav><ul class="pagination pagination-sm mb-0">
+          <c:set var="kwParam" value="${not empty keyword?'&keyword='.concat(fn:escapeXml(keyword)):''}"/>
+          <li class="page-item ${currentPage==1?'disabled':''}"><a class="page-link" href="?page=${currentPage-1}${kwParam}">Trước</a></li>
+          <c:forEach begin="1" end="${totalPages}" var="i"><li class="page-item ${i==currentPage?'active':''}"><a class="page-link" href="?page=${i}${kwParam}">${i}</a></li></c:forEach>
+          <li class="page-item ${currentPage==totalPages?'disabled':''}"><a class="page-link" href="?page=${currentPage+1}${kwParam}">Sau</a></li>
+        </ul></nav>
+      </div>
+    </c:if>
+  </div></div>
 </c:if>
 
-<%-- ══════════════════════════════════════════════════════
-     FORM TẠO / SỬA HỒ SƠ (4 TAB)
-     ══════════════════════════════════════════════════════ --%>
-<c:if test="${mode == 'form'}">
-
-  <%-- Thông báo lỗi / Thành công --%>
-  <c:if test="${not empty errorMessage}">
-    <div class="alert alert-danger rounded-3 mb-3" data-cams-toast="true"><i class="bi bi-exclamation-triangle-fill me-2"></i>${errorMessage}</div>
-  </c:if>
-  <c:if test="${param.saved == '1'}">
-    <div class="alert alert-success alert-dismissible fade show" data-cams-toast role="alert">
-      <i class="bi bi-check-circle-fill me-2"></i>
-      <c:choose>
-        <c:when test="${param.draft == '1'}">Đã lưu nháp hồ sơ bệnh án.</c:when>
-        <c:otherwise>Đã chốt hồ sơ &amp; hoàn thành khám thành công!</c:otherwise>
-      </c:choose>
-      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-  </c:if>
-
-  <%-- Thông báo trạng thái Draft xuất hiện DUY NHẤT 1 LẦN tại đây --%>
-  <c:if test="${record.id > 0 and record.status == 'draft'}">
-    <div class="alert alert-warning rounded-3 mb-3 d-flex align-items-center gap-2">
-      <i class="bi bi-hourglass-split fs-5"></i>
-      <div>
-        <strong>Hồ sơ đang ở trạng thái nháp.</strong>
-        Vui lòng kiểm tra kết quả cận lâm sàng, cập nhật chẩn đoán và bấm <strong>Chốt hồ sơ &amp; hoàn thành khám</strong> để kết thúc ca.
+<%-- ═══════════ MODE: LỊCH SỬ KHÁM BỆNH NHÂN ═══════════ --%>
+<c:if test="${mode == 'history'}">
+  <div class="row mb-4">
+    <div class="col"><div class="card border-0 rounded-4 text-white" style="background:linear-gradient(135deg,#0d6efd,#0a58ca);">
+      <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div><h2 class="fw-bold mb-1"><i class="bi bi-clock-history me-2"></i>Lịch Sử Khám Bệnh</h2><p class="mb-0 opacity-75">Bệnh nhân: <strong>${patientName}</strong> &mdash; Tổng <strong>${fn:length(records)}</strong> lần khám</p></div>
+        <a href="${pageContext.request.contextPath}/doctor/medical-records" class="btn btn-light btn-sm rounded-pill px-3"><i class="bi bi-arrow-left me-1"></i>Danh sách bệnh nhân</a>
       </div>
-    </div>
-  </c:if>
-
-  <c:if test="${param.success == 'requested'}">
-    <div class="alert alert-success alert-dismissible fade show" data-cams-toast role="alert">
-      <i class="bi bi-check-circle-fill me-2"></i>
-      <c:choose>
-        <c:when test="${param.billing == 'additional'}">
-          Đã tạo chỉ định siêu âm. Hóa đơn sau khám đã được phát sinh; Bác sĩ siêu âm sẽ thực hiện sau khi BN thanh toán.
-        </c:when>
-        <c:otherwise>
-          Đã tạo chỉ định siêu âm (đã bao gồm trong lịch hẹn, không phát sinh phí).
-        </c:otherwise>
-      </c:choose>
-      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-  </c:if>
-
-  <c:if test="${param.reorderConflict == '1'}">
-    <div class="alert alert-warning rounded-3 mb-3" role="alert">
-      <div class="d-flex gap-2 align-items-start">
-        <i class="bi bi-exclamation-triangle-fill fs-5"></i>
-        <div class="flex-grow-1">
-          <strong>Đã có chỉ định siêu âm đang xử lý cho ${param.conflictServiceName}.</strong>
-          <div class="small mb-2">Nếu cần chỉ định lại, vui lòng nhập lý do lâm sàng:</div>
-          <form method="post" action="${pageContext.request.contextPath}/doctor/ultrasound-request/create" class="row g-2 align-items-end">
-            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}"/>
-            <input type="hidden" name="apptId" value="${param.apptId}">
-            <input type="hidden" name="serviceId" value="${param.conflictServiceId}">
-            <input type="hidden" name="force" value="1">
-            <div class="col-md-9">
-              <label class="form-label small mb-1" for="reorderReason">Lý do chỉ định lại <span class="req-star">*</span></label>
-              <input id="reorderReason" class="form-control" name="reorderReason" required maxlength="1000"
-                     placeholder="Ví dụ: Đánh giá lại do triệu chứng biến động">
-            </div>
-            <div class="col-md-3 d-grid">
-              <button type="submit" class="btn btn-warning"><i class="bi bi-arrow-repeat me-1"></i>Chỉ định lại</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  </c:if>
-
-  <%-- Hero Banner --%>
-  <div class="card border-0 rounded-4 text-white mb-4" style="background:linear-gradient(135deg,#0d6efd,#0a58ca);">
-    <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
-      <div>
-        <h3 class="fw-bold mb-1">
-          <i class="bi bi-journal-plus me-2"></i>
-          <c:choose>
-            <c:when test="${record.id > 0}">Hồ Sơ Khám Lâm Sàng #${record.id}</c:when>
-            <c:otherwise>Tạo Hồ Sơ Bệnh Án Mới</c:otherwise>
-          </c:choose>
-        </h3>
-        <p class="mb-0 opacity-75">Bác sĩ lâm sàng: ${doctorName} — Chuyên khoa Phụ Sản</p>
-      </div>
-      <div class="d-flex gap-2">
-        <a href="${pageContext.request.contextPath}/doctor/medical-records" class="btn btn-light btn-sm rounded-pill px-3">
-          <i class="bi bi-list me-1"></i>Danh sách hồ sơ
-        </a>
-        <a href="${pageContext.request.contextPath}/doctor/appointments" class="btn btn-outline-light btn-sm rounded-pill px-3">
-          <i class="bi bi-arrow-left me-1"></i>Danh sách lịch hẹn
-        </a>
-      </div>
-    </div>
+    </div></div>
   </div>
-
-  <div class="row g-4">
-
-    <%-- ════ CỘT TRÁI: THÔNG TIN BỆNH NHÂN & CHỈ ĐỊNH SIÊU ÂM ════ --%>
-    <div class="col-lg-3">
-      <div class="card rounded-4 border-0 shadow-sm mb-4">
-        <div class="card-body p-4">
-                              <div class="text-center mb-3">
-            <div class="rounded-circle bg-success bg-opacity-10 text-success fw-bold d-flex align-items-center justify-content-center mx-auto mb-2"
-                 style="width:56px;height:56px;font-size:1.3rem;">
-              ${not empty record.patientName ? fn:toUpperCase(fn:substring(record.patientName,0,1)) : '?'}
-            </div>
-            <h6 class="fw-bold mb-1">${record.patientName}</h6>
-            <span class="badge bg-secondary-subtle text-secondary small px-2 py-1">Mã BN: ${record.patientId > 0 ? '#P-' : ''}${record.patientId > 0 ? record.patientId : 'Chưa có'}</span>
-          </div>
-          <hr class="my-3 opacity-50">
-
-          <div class="d-flex flex-column gap-2 mb-3">
-            <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light">
-              <span class="text-muted small fw-medium">Số điện thoại</span>
-              <span class="fw-semibold text-dark small">${not empty patientPhone ? patientPhone : '—'}</span>
-            </div>
-            <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light">
-              <span class="text-muted small fw-medium">Ngày sinh</span>
-              <span class="fw-semibold text-dark small">${not empty patientDob ? patientDob : '—'}</span>
-            </div>
-            <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light">
-              <span class="text-muted small fw-medium">Ngày khám</span>
-              <span class="fw-semibold text-dark small"><i class="bi bi-calendar3 me-1 text-success"></i>${record.appointmentDate}</span>
-            </div>
-            <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light">
-              <span class="text-muted small fw-medium">Giờ khám</span>
-              <span class="fw-semibold text-dark small"><i class="bi bi-clock me-1 text-success"></i><c:out value="${not empty record.timeSlot ? record.timeSlot : '—'}"/></span>
-            </div>
-            <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light">
-              <span class="text-muted small fw-medium">Kinh cuối (LMP)</span>
-              <span class="fw-semibold text-dark small" id="lmpDisplay"><c:out value="${not empty record.lastMenstrualPeriod ? record.lastMenstrualPeriod : '—'}"/></span>
-            </div>
-            <div class="py-1 border-bottom border-light">
-              <span class="text-muted small fw-medium d-block mb-1">Triệu chứng lúc đặt lịch</span>
-              <div style="white-space:pre-wrap;line-height:1.5;text-align:left!important;padding:8px 10px;background:#f8f9fa;border-radius:6px;font-size:.82rem;">
-                <c:out value="${not empty record.symptoms ? record.symptoms : '(không ghi nhận)'}"/>
-              </div>
-            </div>
-            <c:if test="${record.id > 0}">
-              <div class="d-flex justify-content-between align-items-center py-1">
-                <span class="text-muted small fw-medium">Ngày tạo hồ sơ</span>
-                <span class="text-muted small">
-                  <c:choose>
-                    <c:when test="${not empty record.createdAt}">
-                      ${fn:substring(record.createdAt, 8, 10)}/${fn:substring(record.createdAt, 5, 7)}/${fn:substring(record.createdAt, 0, 4)} ${fn:substring(record.createdAt, 11, 16)}
-                    </c:when>
-                    <c:otherwise>—</c:otherwise>
-                  </c:choose>
-                </span>
-              </div>
-            </c:if>
-          </div>
-
-          <%-- Khối Chỉ định / Xem kết quả siêu âm — chỉ hiện sau khi đã lưu nháp --%>
-          <c:if test="${record.id > 0}">
-          <hr class="my-3">
-          <div class="d-grid gap-2">
-            <c:choose>
-              <c:when test="${canEditRecord}">
-                <form action="${pageContext.request.contextPath}/doctor/ultrasound-request/create" method="POST" id="ultrasoundRequestForm">
-                    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}"/>
-                    <input type="hidden" name="apptId" value="${apptId}">
-                    <label class="form-label small fw-bold mb-1"><i class="bi bi-soundwave me-1 text-primary"></i>CHỈ ĐỊNH SIÊU ÂM</label>
-                    <select name="serviceId" class="form-select form-select-sm mb-2" required aria-label="Chọn dịch vụ siêu âm">
-                        <option value="">-- Chọn dịch vụ siêu âm --</option>
-                        <c:if test="${not empty bookedUltrasoundServices}">
-                          <optgroup label="Dịch vụ trong lịch hẹn (không phát sinh phí)">
-                            <c:forEach var="u" items="${bookedUltrasoundServices}">
-                              <option value="${u.id}">${u.serviceName}</option>
-                            </c:forEach>
-                          </optgroup>
-                        </c:if>
-                        <c:if test="${not empty additionalUltrasoundServices}">
-                          <optgroup label="Chỉ định bổ sung (phát sinh phí)">
-                            <c:forEach var="u" items="${additionalUltrasoundServices}">
-                              <option value="${u.id}">${u.serviceName} (<fmt:formatNumber value="${u.price}" pattern="#,###"/>đ)</option>
-                            </c:forEach>
-                          </optgroup>
-                        </c:if>
-                    </select>
-                    <div class="mb-2">
-                      <input type="text" name="additionalReason" class="form-control form-control-sm"
-                             placeholder="Lý do chỉ định lâm sàng…" maxlength="500">
-                    </div>
-                    <div class="form-check mb-2 small">
-                      <input class="form-check-input" type="checkbox" name="confirmAdditional" value="1" id="confirmAddCheck" checked>
-                      <label class="form-check-label" for="confirmAddCheck">Đã giải thích chi phí phát sinh (nếu có)</label>
-                    </div>
-                    <button type="submit" class="btn btn-outline-primary w-100 rounded-pill fw-bold btn-sm" onclick="return confirm('Xác nhận tạo phiếu Chỉ định Siêu Âm?');">
-                        <i class="bi bi-file-earmark-medical me-1"></i> Tạo Chỉ định Siêu âm
-                    </button>
-                </form>
-                <%-- Checkbox: bác sĩ xác nhận không cần siêu âm cho ca này --%>
-                <div class="form-check mt-3 p-3 border rounded-3 bg-light" id="skipUltrasoundBox">
-                  <input class="form-check-input" type="checkbox" id="ultrasoundSkipped" name="ultrasoundSkipped"
-                         value="true" ${param.ultrasoundSkipped == 'true' ? 'checked' : ''} onchange="onUltrasoundSkippedChanged()">
-                  <label class="form-check-label small fw-semibold" for="ultrasoundSkipped">
-                    <i class="bi bi-hand-thumbs-up me-1 text-success"></i>Không cần chỉ định siêu âm cho ca khám này
-                  </label>
-                  <div class="form-text small mt-1">Tích chọn nếu sau khi thăm khám lâm sàng, bác sĩ xác định ca này không cần siêu âm.</div>
-                </div>
-              </c:when>
-              <c:otherwise>
-                <div class="alert alert-secondary small mb-0 rounded-3">
-                  <i class="bi bi-lock-fill me-1"></i>Ca khám đã đóng. Hồ sơ ở chế độ Read-Only.
-                </div>
-              </c:otherwise>
-            </c:choose>
-          </div>
-          </c:if><%-- end record.id > 0 (ultrasound section) --%>
-          <c:if test="${record.id == 0 && canEditRecord}">
-          <hr class="my-3">
-          <div class="alert alert-light border small mb-0 rounded-3 text-center py-2">
-            <i class="bi bi-info-circle me-1 text-primary"></i>
-            Lưu nháp thông tin khám lâm sàng trước để ra quyết định siêu âm.
-          </div>
-          </c:if>
-
-        </div>
-      </div>
-
-      <%-- Khối Xem kết quả siêu âm cận lâm sàng duy nhất --%>
-      <c:if test="${record.id > 0}">
-        <div class="card rounded-4 border-0 shadow-sm">
-          <div class="card-body p-3">
-            <div class="fw-semibold small text-uppercase text-muted mb-1"><i class="bi bi-soundwave me-1 text-primary"></i>Kết quả siêu âm</div>
-            <p class="small text-muted mb-2">Xem ảnh siêu âm gốc, ảnh AI hỗ trợ và vùng Bác sĩ siêu âm xác nhận.</p>
-            <a href="${pageContext.request.contextPath}/doctor/results?recordId=${record.id}"
-               class="btn btn-outline-primary btn-sm rounded-pill w-100 fw-medium">
-              <i class="bi bi-clipboard2-pulse me-1"></i>Xem kết quả siêu âm
-            </a>
-          </div>
-        </div>
-      </c:if>
-    </div>
-
-    <%-- ════ CỘT PHẢI: FORM NGHỆP VỤ 4 TAB ════ --%>
-    <div class="col-lg-9">
-      <form method="post" action="${pageContext.request.contextPath}/doctor/medical-records" id="obsForm" novalidate>
-        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}"/>
-        <input type="hidden" name="appointmentId" value="${apptId}"/>
-        <c:if test="${record.id > 0}">
-          <input type="hidden" name="recordId" value="${record.id}"/>
-        </c:if>
-
-        <%-- ════ STEP-BASED PROGRESS INDICATOR ════ --%>
-        <c:set var="draftSaved" value="${record.id > 0}"/>
-        <c:set var="usResolved" value="${!hasBlockingUltrasound}"/>
-        <c:if test="${canEditRecord}">
-        <div class="d-flex align-items-center gap-2 mb-4 flex-wrap" id="stepIndicator">
-          <c:set var="step1Done" value="${draftSaved}"/>
-          <span class="badge rounded-pill px-3 py-2 ${step1Done ? 'bg-success' : 'bg-primary'}">
-            <i class="bi ${step1Done ? 'bi-check-circle-fill' : 'bi-1-circle-fill'} me-1"></i>Khám lâm sàng
-          </span>
-          <i class="bi bi-chevron-right text-muted"></i>
-          <c:set var="step2Active" value="${draftSaved && !usResolved}"/>
-          <span class="badge rounded-pill px-3 py-2 ${usResolved ? 'bg-success' : step2Active ? 'bg-primary' : 'bg-secondary'}">
-            <i class="bi ${usResolved ? 'bi-check-circle-fill' : step2Active ? 'bi-2-circle-fill' : 'bi-2-circle'} me-1"></i>Siêu âm
-          </span>
-          <i class="bi bi-chevron-right text-muted"></i>
-          <span class="badge rounded-pill px-3 py-2 ${usResolved && draftSaved ? 'bg-primary' : 'bg-secondary'}">
-            <i class="bi ${usResolved && draftSaved ? 'bi-3-circle-fill' : 'bi-3-circle'} me-1"></i>Chẩn đoán &amp; Kê đơn
-          </span>
-        </div>
-        </c:if>
-
-        <%-- ════ CLINICAL DATA (STEP 1) — collapse sau khi lưu nháp ════ --%>
-        <c:if test="${canEditRecord}">
-        <div class="card border-0 shadow-sm mb-3">
-          <div class="card-header bg-white d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#clinicalSection" role="button" aria-expanded="${draftSaved ? 'false' : 'true'}" style="cursor:pointer;">
-            <h6 class="mb-0">
-              <i class="bi ${step1Done ? 'bi-check-circle-fill text-success' : 'bi-1-circle-fill text-primary'} me-2"></i>
-              <c:choose>
-                <c:when test="${step1Done}">Thông tin lâm sàng <span class="badge bg-success ms-2 small">Đã lưu</span></c:when>
-                <c:otherwise>Bước 1: Khám lâm sàng</c:otherwise>
-              </c:choose>
-            </h6>
-            <i class="bi bi-chevron-down collapse-icon"></i>
-          </div>
-          <div class="collapse ${draftSaved ? '' : 'show'}" id="clinicalSection">
-          <div class="card-body p-3">
-            <%-- Navigation 4 tab — giữ nguyên cấu trúc cũ --%>
-            <ul class="nav obs-nav border-bottom mb-0 bg-light rounded-top-4" id="obsTabs">
-              <li class="nav-item">
-                <button class="nav-link active" type="button" data-tab="tab1">
-                  <i class="bi bi-heart-pulse me-1"></i>1. Sinh hiệu mẹ &amp; Đánh giá thai
-                </button>
-              </li>
-              <li class="nav-item">
-                <button class="nav-link" type="button" data-tab="tab2">
-                  <i class="bi bi-activity me-1"></i>2. Khám sản khoa
-                </button>
-              </li>
-              <li class="nav-item">
-                <button class="nav-link" type="button" data-tab="tab3">
-                  <i class="bi bi-exclamation-triangle me-1"></i>3. Dấu hiệu nguy hiểm
-                </button>
-              </li>
-              <li class="nav-item">
-                <button class="nav-link" type="button" data-tab="tab4">
-                  <i class="bi bi-clipboard2-pulse me-1"></i>4. Chẩn đoán &amp; Kế hoạch
-                </button>
-              </li>
-            </ul>
-
-        <div class="card rounded-0 rounded-bottom-4 border-0 shadow-sm">
-          <div class="card-body p-4">
-
-            <%-- ═══ TAB 1: SINH HIỆU MẸ & ĐÁNH GIÁ THAI ═══ --%>
-            <div id="tab1">
-
-              <%-- Sinh hiệu mẹ --%>
-              <div class="d-flex align-items-center justify-content-between mb-3">
-                <p class="section-label mb-0"><i class="bi bi-person-heart me-1 text-primary"></i>Sinh hiệu mẹ</p>
-                <div class="small text-muted">
-                  Chỉ số BMI: <span id="bmiDisplay" class="badge bg-light text-dark border">
+  <c:choose>
+    <c:when test="${empty records}"><div class="card border-0 rounded-4"><div class="card-body text-center py-5 text-muted"><i class="bi bi-journal-x fs-1 d-block mb-3 opacity-25"></i><h5>Chưa có hồ sơ bệnh án nào cho bệnh nhân này.</h5></div></div></c:when>
+    <c:otherwise>
+      <div class="position-relative">
+        <div class="position-absolute top-0 start-0 ms-3 h-100 border-start border-2 border-primary opacity-25" style="width:2px;margin-left:20px;"></div>
+        <c:forEach var="rec" items="${records}" varStatus="st">
+          <div class="d-flex gap-3 mb-4 position-relative">
+            <div class="flex-shrink-0" style="width:42px;"><div class="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white ${rec.hasRisk()?'bg-danger':'bg-primary'}" style="width:42px;height:42px;font-size:.85rem;">${st.index+1}</div></div>
+            <div class="card border-0 rounded-4 flex-grow-1 ${rec.hasRisk()?'border-danger border':''}"><div class="card-body p-4">
+              <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+                <div><h6 class="fw-bold mb-0"><i class="bi bi-calendar-event text-primary me-1"></i>${rec.appointmentDate}<c:if test="${not empty rec.timeSlot}"> &mdash; ${rec.timeSlot}</c:if></h6><small class="text-muted">Tạo lúc: ${rec.createdAt}</small></div>
+                <div class="d-flex gap-2 flex-wrap">
+                  <c:if test="${rec.hasRisk()}"><span class="badge bg-danger rounded-pill"><i class="bi bi-exclamation-triangle me-1"></i>Có rủi ro</span></c:if>
+                  <c:if test="${not empty rec.gestationalAgeWeeks}"><span class="badge bg-light text-dark border rounded-pill"><i class="bi bi-clock me-1"></i>${rec.gestationalAgeDisplay}</span></c:if>
+                  <%-- Ultrasound indicator --%>
+                  <c:set var="hasUs" value="${hasUltrasoundMap[rec.id]}"/>
+                  <c:if test="${hasUs}">
                     <c:choose>
-                      <c:when test="${not empty record.weightKg and not empty record.heightCm}">
-                        <fmt:formatNumber value="${record.weightKg / ((record.heightCm/100)*(record.heightCm/100))}" pattern="#0.0"/>
-                      </c:when>
-                      <c:otherwise>—</c:otherwise>
+                      <c:when test="${ultrasoundCompletedMap[rec.id]}"><span class="badge bg-success rounded-pill"><i class="bi bi-soundwave me-1"></i>Siêu âm: Đã có KQ</span></c:when>
+                      <c:otherwise><span class="badge bg-warning text-dark rounded-pill"><i class="bi bi-hourglass-split me-1"></i>Siêu âm: Đang chờ</span></c:otherwise>
                     </c:choose>
-                  </span>
+                  </c:if>
+                  <%-- Prescription indicator --%>
+                  <c:set var="rx" value="${rxMap[rec.id]}"/>
+                  <c:if test="${not empty rx}"><span class="badge bg-info rounded-pill"><i class="bi bi-prescription2 me-1"></i>${fn:length(rx.items)} thuốc</span></c:if>
                 </div>
               </div>
 
-              <div class="row g-3 mb-4">
-                <div class="col-sm-4">
-                  <label class="form-label fw-medium">Cân nặng <span class="field-unit">(kg)</span></label>
-                  <input type="number" name="weightKg" id="weightKg" step="0.1" min="20" max="300" class="form-control"
-                         placeholder="vd: 58.5" value="${record.weightKg}" oninput="calcBMI()">
-                </div>
-                <div class="col-sm-4">
-                  <label class="form-label fw-medium">Chiều cao <span class="field-unit">(cm)</span></label>
-                  <input type="number" name="heightCm" id="heightCm" step="0.1" min="100" max="250" class="form-control"
-                         placeholder="vd: 158.0" value="${record.heightCm}" oninput="calcBMI()">
-                </div>
-                <div class="col-sm-4">
-                  <label class="form-label fw-medium">Mạch <span class="field-unit">(bpm)</span></label>
-                  <input type="number" name="pulseBpm" min="30" max="250" class="form-control"
-                         placeholder="vd: 80" value="${record.pulseBpm}">
-                </div>
-                <div class="col-sm-4">
-                  <label class="form-label fw-medium">Huyết áp tâm thu <span class="field-unit">(mmHg)</span></label>
-                  <input type="number" name="systolicBP" min="50" max="250" class="form-control"
-                         placeholder="vd: 120" value="${systolicBP}">
-                </div>
-                <div class="col-sm-4">
-                  <label class="form-label fw-medium">Huyết áp tâm trương <span class="field-unit">(mmHg)</span></label>
-                  <input type="number" name="diastolicBP" min="30" max="150" class="form-control"
-                         placeholder="vd: 80" value="${diastolicBP}">
-                </div>
-                <div class="col-sm-4">
-                  <label class="form-label fw-medium">Nhiệt độ <span class="field-unit">(°C)</span></label>
-                  <input type="number" name="temperatureC" step="0.1" min="34" max="43" class="form-control"
-                         placeholder="vd: 37.0" value="${record.temperatureC}">
-                </div>
+              <%-- LMP & Clinical Notes --%>
+              <c:if test="${not empty rec.lastMenstrualPeriod || not empty rec.clinicalNotes}">
+              <div class="d-flex flex-wrap gap-2 mb-3">
+                <c:if test="${not empty rec.lastMenstrualPeriod}"><span class="badge bg-light text-dark border"><i class="bi bi-calendar-heart me-1"></i>KCC: ${rec.lastMenstrualPeriod}</span></c:if>
+                <c:if test="${not empty rec.clinicalNotes}"><span class="small text-muted text-truncate d-inline-block" style="max-width:400px;" title="${fn:escapeXml(rec.clinicalNotes)}"><i class="bi bi-journal-text me-1"></i>${fn:substring(rec.clinicalNotes, 0, 80)}${fn:length(rec.clinicalNotes) > 80 ? '…' : ''}</span></c:if>
               </div>
+              </c:if>
 
-              <%-- Đánh giá thai nhi --%>
-              <div class="d-flex align-items-center justify-content-between mb-2">
-                <p class="section-label mb-0"><i class="bi bi-person-standing me-1 text-primary"></i>Đánh giá thai nhi</p>
-                <c:choose>
-                  <c:when test="${not empty record.lastMenstrualPeriod}">
-                    <span class="badge bg-info bg-opacity-10 text-info border">
-                      <i class="bi bi-calendar-check me-1"></i>Nguồn: Tính tự động theo LMP (${record.lastMenstrualPeriod})
-                    </span>
-                  </c:when>
-                  <c:otherwise>
-                    <span class="badge bg-light text-secondary border">
-                      <i class="bi bi-pencil me-1"></i>Nguồn: Bác sĩ lâm sàng nhập thủ công
-                    </span>
-                  </c:otherwise>
-                </c:choose>
-              </div>
-
+              <div class="alert alert-light rounded-3 py-2 px-3 mb-3"><strong><i class="bi bi-stethoscope me-1 text-success"></i>Chẩn đoán:</strong> ${not empty rec.finalDiagnosis?rec.finalDiagnosis:'<span class="text-muted fst-italic">Chưa có chẩn đoán</span>'}</div>
               <div class="row g-3">
-                <div class="col-sm-3">
-                  <label class="form-label fw-medium">Tuổi thai <span class="field-unit">(tuần)</span></label>
-                  <input type="number" name="gestationalAgeWeeks" id="gestWeeks" min="0" max="44" class="form-control"
-                         placeholder="0–44" value="${record.gestationalAgeWeeks}">
-                </div>
-                <div class="col-sm-3">
-                  <label class="form-label fw-medium">Ngày lẻ <span class="field-unit">(ngày)</span></label>
-                  <input type="number" name="gestationalAgeDays" id="gestDays" min="0" max="6" class="form-control"
-                         placeholder="0–6" value="${record.gestationalAgeDays}">
-                </div>
-                <div class="col-sm-3">
-                  <label class="form-label fw-medium">Chiều cao tử cung <span class="field-unit">(cm)</span></label>
-                  <input type="number" name="fundalHeightCm" step="0.1" min="5" max="50" class="form-control"
-                         placeholder="vd: 28.0" value="${record.fundalHeightCm}">
-                </div>
-                <div class="col-sm-3">
-                  <label class="form-label fw-medium">Nhịp tim thai <span class="field-unit">(bpm)</span></label>
-                  <input type="number" name="fetalHeartRate" min="60" max="220" class="form-control"
-                         placeholder="vd: 140" value="${record.fetalHeartRate}">
-                </div>
-                <div class="col-sm-4">
-                  <label class="form-label fw-medium">Ngôi thai</label>
-                  <select name="fetalPresentation" class="form-select">
-                    <option value="">Chưa đánh giá</option>
-                    <option value="Ngôi đầu"      <c:if test="${record.fetalPresentation == 'Ngôi đầu'}">selected</c:if>>Ngôi đầu</option>
-                    <option value="Ngôi mông"      <c:if test="${record.fetalPresentation == 'Ngôi mông'}">selected</c:if>>Ngôi mông</option>
-                    <option value="Ngôi ngang"     <c:if test="${record.fetalPresentation == 'Ngôi ngang'}">selected</c:if>>Ngôi ngang</option>
-                    <option value="Chưa xác định"  <c:if test="${record.fetalPresentation == 'Chưa xác định'}">selected</c:if>>Chưa xác định</option>
-                  </select>
-                </div>
-                <div class="col-sm-4">
-                  <label class="form-label fw-medium">Thế thai</label>
-                  <select name="fetalPosition" class="form-select">
-                    <option value="">Chưa đánh giá</option>
-                    <option value="Trái trước"    <c:if test="${record.fetalPosition == 'Trái trước'}">selected</c:if>>Trái trước</option>
-                    <option value="Trái sau"      <c:if test="${record.fetalPosition == 'Trái sau'}">selected</c:if>>Trái sau</option>
-                    <option value="Phải trước"    <c:if test="${record.fetalPosition == 'Phải trước'}">selected</c:if>>Phải trước</option>
-                    <option value="Phải sau"      <c:if test="${record.fetalPosition == 'Phải sau'}">selected</c:if>>Phải sau</option>
-                    <option value="Chưa xác định" <c:if test="${record.fetalPosition == 'Chưa xác định'}">selected</c:if>>Chưa xác định</option>
-                  </select>
-                </div>
-                <div class="col-sm-4">
-                  <label class="form-label fw-medium">Vận động thai</label>
-                  <select name="fetalMovement" class="form-select">
-                    <option value="">Chưa đánh giá</option>
-                    <option value="Có"             <c:if test="${record.fetalMovement == 'Có'}">selected</c:if>>Có (Bình thường)</option>
-                    <option value="Giảm"           <c:if test="${record.fetalMovement == 'Giảm'}">selected</c:if>>Giảm vận động</option>
-                    <option value="Không cảm nhận" <c:if test="${record.fetalMovement == 'Không cảm nhận'}">selected</c:if>>Không cảm nhận</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <%-- ═══ TAB 2: KHÁM SẢN KHOA / CHUYỂN DẠ ═══ --%>
-            <div id="tab2" style="display:none;">
-              <div class="form-check form-switch mb-3 p-3 bg-light rounded-3 border">
-                <input class="form-check-input" type="checkbox" id="enableLaborExamToggle" name="enableLaborExamToggle"
-                       onchange="toggleLaborExamSection(this.checked)"
-                       <c:if test="${not empty record.cervicalDilationCm or not empty record.cervicalEffacement or not empty record.presentationStation}">checked</c:if>>
-                <label class="form-check-label fw-bold text-primary" for="enableLaborExamToggle">
-                  <i class="bi bi-stethoscope me-1"></i>Thực hiện khám chuyển dạ / khám sản khoa chuyên sâu
-                </label>
-              </div>
-
-              <div id="laborExamContainer" style="display:${(not empty record.cervicalDilationCm or not empty record.cervicalEffacement or not empty record.presentationStation) ? 'block' : 'none'};">
-                <div class="row g-3">
-                  <div class="col-sm-4">
-                    <label class="form-label fw-medium">Độ mở CTC <span class="field-unit">(cm)</span></label>
-                    <input type="number" name="cervicalDilationCm" id="cervDilation" step="0.5" min="0" max="10" class="form-control"
-                           placeholder="0–10" value="${record.cervicalDilationCm}">
-                  </div>
-                  <div class="col-sm-4">
-                    <label class="form-label fw-medium">Độ xóa CTC</label>
-                    <select name="cervicalEffacement" id="cervEffacement" class="form-select">
-                      <option value="">Chưa đánh giá</option>
-                      <option value="Chưa xóa" <c:if test="${record.cervicalEffacement == 'Chưa xóa'}">selected</c:if>>Chưa xóa</option>
-                      <option value="25%" <c:if test="${record.cervicalEffacement == '25%'}">selected</c:if>>25%</option>
-                      <option value="50%" <c:if test="${record.cervicalEffacement == '50%'}">selected</c:if>>50%</option>
-                      <option value="75%" <c:if test="${record.cervicalEffacement == '75%'}">selected</c:if>>75%</option>
-                      <option value="100%" <c:if test="${record.cervicalEffacement == '100%'}">selected</c:if>>100%</option>
-                    </select>
-                  </div>
-                  <div class="col-sm-4">
-                    <label class="form-label fw-medium">Mức độ lọt</label>
-                    <select name="presentationStation" id="presStation" class="form-select">
-                      <option value="">Chưa đánh giá</option>
-                      <option value="-3" <c:if test="${record.presentationStation == '-3'}">selected</c:if>>-3 (Cao)</option>
-                      <option value="-2" <c:if test="${record.presentationStation == '-2'}">selected</c:if>>-2</option>
-                      <option value="-1" <c:if test="${record.presentationStation == '-1'}">selected</c:if>>-1</option>
-                      <option value="0" <c:if test="${record.presentationStation == '0'}">selected</c:if>>0 (Lọt chặt)</option>
-                      <option value="+1" <c:if test="${record.presentationStation == '+1'}">selected</c:if>>+1</option>
-                      <option value="+2" <c:if test="${record.presentationStation == '+2'}">selected</c:if>>+2</option>
-                      <option value="+3" <c:if test="${record.presentationStation == '+3'}">selected</c:if>>+3 (Thấp)</option>
-                    </select>
-                  </div>
-                  <div class="col-sm-6">
-                    <label class="form-label fw-medium">Tình trạng nước ối</label>
-                    <select name="amnioticFluid" id="amniFluid" class="form-select">
-                      <option value="">Chưa đánh giá</option>
-                      <option value="Bình thường" <c:if test="${record.amnioticFluid == 'Bình thường'}">selected</c:if>>Bình thường (Còn nguyên)</option>
-                      <option value="Thiểu ối" <c:if test="${record.amnioticFluid == 'Thiểu ối'}">selected</c:if>>Thiểu ối</option>
-                      <option value="Đa ối" <c:if test="${record.amnioticFluid == 'Đa ối'}">selected</c:if>>Đa ối</option>
-                      <option value="Vỡ ối" <c:if test="${record.amnioticFluid == 'Vỡ ối'}">selected</c:if>>Vỡ ối tự nhiên</option>
-                      <option value="Ối màu xanh" <c:if test="${record.amnioticFluid == 'Ối màu xanh'}">selected</c:if>>Ối màu xanh/vàng</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div class="mt-4">
-                <label class="form-label fw-medium"><i class="bi bi-pencil-square me-1 text-primary"></i>Ghi chú khám lâm sàng bổ sung</label>
-                <textarea name="clinicalNotes" class="form-control" rows="5"
-                          placeholder="Nhập ghi chú quan sát lâm sàng, triệu chứng chi tiết…">${record.clinicalNotes}</textarea>
-              </div>
-            </div>
-
-            <%-- ═══ TAB 3: DẤU HIỆU NGUY HIỂM ═══ --%>
-            <div id="tab3" style="display:none;">
-              <div class="risk-box ${record.hasRisk() ? 'active' : ''} mb-4" id="riskBox">
-                <h6 class="fw-bold text-danger mb-3"><i class="bi bi-exclamation-triangle-fill me-2"></i>Dấu hiệu nguy hiểm — Ghi nhận lâm sàng</h6>
-
-                <div class="row g-3 mb-3">
-                  <div class="col-sm-6">
-                    <div class="form-check form-switch">
-                      <input class="form-check-input risk-check" type="checkbox" id="vaginalBleeding" name="vaginalBleeding"
-                             <c:if test="${record.vaginalBleeding}">checked</c:if>>
-                      <label class="form-check-label fw-medium" for="vaginalBleeding">
-                        <i class="bi bi-droplet-fill text-danger me-1"></i>Chảy máu âm đạo bất thường
-                      </label>
+                <c:if test="${not empty rec.weightKg or not empty rec.heightCm or not empty rec.bloodPressure or not empty rec.pulseBpm or not empty rec.temperatureC}">
+                  <div class="col-md-6"><div class="p-3 rounded-3 border h-100" style="background:#f8fafc;"><div class="fw-semibold small text-muted mb-2"><i class="bi bi-activity me-1 text-primary"></i>SINH HIỆU MẸ</div>
+                    <div class="row g-2 small">
+                      <c:if test="${not empty rec.weightKg}"><div class="col-6"><span class="text-muted">Cân nặng:</span> <strong>${rec.weightKg} kg</strong></div></c:if>
+                      <c:if test="${not empty rec.heightCm}"><div class="col-6"><span class="text-muted">Chiều cao:</span> <strong>${rec.heightCm} cm</strong></div></c:if>
+                      <c:if test="${not empty rec.weightKg && not empty rec.heightCm && rec.heightCm > 0}"><div class="col-6"><span class="text-muted">BMI:</span> <strong><fmt:formatNumber value="${rec.weightKg / (rec.heightCm * rec.heightCm / 10000)}" maxFractionDigits="1"/></strong></div></c:if>
+                      <c:if test="${not empty rec.bloodPressure}"><div class="col-6"><span class="text-muted">Huyết áp:</span> <strong>${rec.bloodPressure} mmHg</strong></div></c:if>
+                      <c:if test="${not empty rec.pulseBpm}"><div class="col-6"><span class="text-muted">Mạch:</span> <strong>${rec.pulseBpm} bpm</strong></div></c:if>
+                      <c:if test="${not empty rec.temperatureC}"><div class="col-6"><span class="text-muted">Nhiệt độ:</span> <strong>${rec.temperatureC}°C</strong></div></c:if>
                     </div>
-                  </div>
-                  <div class="col-sm-6">
-                    <div class="form-check form-switch">
-                      <input class="form-check-input risk-check" type="checkbox" id="uterineContractions" name="uterineContractions"
-                             <c:if test="${record.uterineContractions}">checked</c:if>>
-                      <label class="form-check-label fw-medium" for="uterineContractions">
-                        <i class="bi bi-activity text-danger me-1"></i>Cơn co tử cung bất thường
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="row g-3">
-                  <div class="col-sm-4">
-                    <label class="form-label fw-medium">Phù</label>
-                    <select name="edema" class="form-select risk-select">
-                      <option value="Không" <c:if test="${record.edema == 'Không' || empty record.edema}">selected</c:if>>Không</option>
-                      <option value="Chi dưới" <c:if test="${record.edema == 'Chi dưới'}">selected</c:if>>Chi dưới</option>
-                      <option value="Toàn thân" <c:if test="${record.edema == 'Toàn thân'}">selected</c:if>>Toàn thân (Nguy cơ cao)</option>
-                    </select>
-                  </div>
-                  <div class="col-sm-4">
-                    <label class="form-label fw-medium">Protein niệu</label>
-                    <select name="proteinuria" class="form-select risk-select">
-                      <option value="Âm tính" <c:if test="${record.proteinuria == 'Âm tính' || empty record.proteinuria}">selected</c:if>>Âm tính</option>
-                      <option value="1+" <c:if test="${record.proteinuria == '1+'}">selected</c:if>>1+</option>
-                      <option value="2+" <c:if test="${record.proteinuria == '2+'}">selected</c:if>>2+ (Nguy cơ)</option>
-                      <option value="3+" <c:if test="${record.proteinuria == '3+'}">selected</c:if>>3+ (Nguy cơ rất cao)</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label class="form-label fw-medium">Ghi chú nguy cơ bổ sung</label>
-                <input type="hidden" name="riskFlagsJson" id="riskFlagsJson" value="${record.riskFlagsJson}">
-                <textarea id="riskNotesDisplay" class="form-control" rows="3"
-                          placeholder="Nhập các dấu hiệu bất thường khác…"
-                          oninput="document.getElementById('riskFlagsJson').value=this.value"
-                          >${record.riskFlagsJson}</textarea>
-              </div>
-            </div>
-
-            <%-- ═══ TAB 4: CHẨN ĐOÁN & KẾ HOẠCH ═══ --%>
-            <div id="tab4" style="display:none;">
-
-              <%-- Card A: Chẩn đoán --%>
-              <div class="card border-0 bg-light rounded-3 mb-4">
-                <div class="card-body">
-                  <label class="form-label fw-bold text-primary mb-2">
-                    <i class="bi bi-clipboard2-pulse me-1"></i>CHẨN ĐOÁN LÂM SÀNG — BẮT BUỘC KHl CHỐT HỒ SƠ
-                    <span class="field-unit ms-2">(Nhập mã ICD-10 nếu có, vd: O34.2)</span>
-                  </label>
-                  <textarea name="finalDiagnosis" class="form-control" rows="3"
-                            placeholder="Nhập kết luận chẩn đoán lâm sàng…">${record.finalDiagnosis}</textarea>
-                </div>
-              </div>
-
-              <%-- Card B: Hướng xử trí & Kế hoạch điều trị --%>
-              <div class="card border-0 bg-light rounded-3 mb-4">
-                <div class="card-body">
-                  <label class="form-label fw-bold text-primary mb-2">
-                    <i class="bi bi-clipboard-check me-1"></i>HƯỚNG XỬ TRÍ &amp; KẾ HOẠCH ĐIỀU TRỊ
-                  </label>
-                  <textarea name="treatmentPlan" class="form-control mb-3" rows="3"
-                            placeholder="Hướng xử trí, lời khuyên cho sản phụ, chế độ dinh dưỡng…">${record.treatmentPlan}</textarea>
-                  <div class="row g-3">
-                    <div class="col-12">
-                      <label class="form-label fw-medium"><i class="bi bi-arrow-up-right-circle me-1 text-primary"></i>Chuyển viện / Chuyên khoa</label>
-                      <input type="text" name="referredTo" class="form-control"
-                             placeholder="Để trống nếu không chuyển" value="${record.referredTo}">
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <%-- Nếu còn siêu âm đang chờ xử lý → chặn kê đơn + chốt hồ sơ --%>
-              <c:if test="${hasBlockingUltrasound}">
-              <div class="alert alert-warning border-0 rounded-3 mb-3 d-flex align-items-center gap-3" role="alert">
-                <i class="bi bi-hourglass-split fs-3"></i>
-                <div>
-                  <strong>Đang chờ kết quả siêu âm</strong>
-                  <div class="small mt-1">Chưa thể kê đơn thuốc và chốt hồ sơ. Vui lòng chờ Bác sĩ Siêu âm hoàn tất và bạn xác nhận kết quả trước.</div>
-                </div>
-                <c:if test="${record.id > 0}">
-                  <a href="${pageContext.request.contextPath}/doctor/results?recordId=${record.id}"
-                     class="btn btn-outline-primary btn-sm rounded-pill ms-auto text-nowrap">
-                    <i class="bi bi-soundwave me-1"></i>Xem kết quả siêu âm
-                  </a>
+                  </div></div>
+                </c:if>
+                <c:if test="${not empty rec.fetalHeartRate or not empty rec.fundalHeightCm or not empty rec.fetalPresentation}">
+                  <div class="col-md-6"><div class="p-3 rounded-3 border h-100" style="background:#f8fafc;"><div class="fw-semibold small text-muted mb-2"><i class="bi bi-heart-pulse me-1 text-danger"></i>THAI NHI</div>
+                    <div class="row g-2 small"><c:if test="${not empty rec.fetalHeartRate}"><div class="col-6"><span class="text-muted">Tim thai:</span> <strong>${rec.fetalHeartRate} bpm</strong></div></c:if><c:if test="${not empty rec.fundalHeightCm}"><div class="col-6"><span class="text-muted">CCTC:</span> <strong>${rec.fundalHeightCm} cm</strong></div></c:if><c:if test="${not empty rec.fetalPresentation}"><div class="col-6"><span class="text-muted">Ngôi thai:</span> <strong>${rec.fetalPresentation}</strong></div></c:if></div>
+                  </div></div>
+                </c:if>
+                <c:if test="${not empty rec.treatmentPlan}"><div class="col-12"><div class="small"><span class="text-muted fw-semibold"><i class="bi bi-clipboard2-pulse me-1"></i>Kế hoạch:</span> ${rec.treatmentPlan}</div></div></c:if>
+                <%-- Đơn thuốc summary --%>
+                <c:if test="${not empty rx}">
+                <div class="col-12"><div class="small p-2 rounded-3 border" style="background:#f0fdf4;">
+                  <span class="text-muted fw-semibold"><i class="bi bi-capsule me-1 text-success"></i>Đơn thuốc (${fn:length(rx.items)} thuốc):</span>
+                  <c:forEach var="item" items="${rx.items}" varStatus="rxLoop">
+                    <span class="badge bg-white text-dark border me-1 mb-1">${item.medicineName} x${item.quantity}</span>
+                  </c:forEach>
+                </div></div>
                 </c:if>
               </div>
-              </c:if>
-
-              <c:if test="${!hasBlockingUltrasound}">
-              <%-- Card C: Kê đơn thuốc (embedded) --%>
-              <div class="card border-0 bg-light rounded-3 mb-3">
-                <div class="card-body">
-                  <div class="d-flex align-items-center justify-content-between mb-2">
-                    <label class="form-label fw-bold text-primary mb-0">
-                      <i class="bi bi-capsule me-1"></i>KÊ ĐƠN THUỐC
-                    </label>
-                    <span class="badge bg-primary rounded-pill" id="rxRowCount">
-                      0 loại thuốc
-                    </span>
-                  </div>
-                  <p class="text-muted small mb-2">Bỏ trống nếu không kê đơn. Bác sĩ lâm sàng chỉ thêm dòng thuốc khi thực sự cho đơn.</p>
-
-                                    <div class="border rounded-3 p-3 bg-white mb-2" id="rxMedicineArea">
-                    <!-- Header hàng (chỉ hiển thị trên desktop) -->
-                    <div class="row g-2 mb-2 d-none d-md-flex fw-bold text-muted border-bottom pb-2 small">
-                      <div class="col-md-5">Tên thuốc</div>
-                      <div class="col-md-2">Số lượng</div>
-                      <div class="col-md-4">Liều dùng / Hướng dẫn <span class="text-danger">*</span></div>
-                      <div class="col-md-1 text-end">Xóa</div>
-                    </div>
-
-                    <div id="rxMedicineRows">
-                      <c:choose>
-                        <c:when test="${not empty prescription and not empty prescription.items}">
-                          <c:forEach var="item" items="${prescription.items}">
-                            <div class="rx-medicine-row border-bottom py-3 py-md-2">
-                              <div class="row g-2 align-items-start">
-                                <div class="col-md-5 col-12">
-                                  <label class="form-label small fw-semibold text-muted d-md-none mb-1">Tên thuốc</label>
-                                  <select name="medicineId[]"
-                                          class="form-select form-select-sm rounded-3 rx-med-dropdown"
-                                          <c:if test="${not canEditRecord}">disabled</c:if>>
-                                    <option value="">— Chọn thuốc —</option>
-                                    <c:forEach var="med" items="${medicines}">
-                                      <option value="${med.id}"
-                                              data-unit="${med.unit}"
-                                              data-stock="${med.stockQuantity}"
-                                              data-desc="${med.description}"
-                                              <c:if test="${med.id == item.medicineId}">selected</c:if>>
-                                        ${med.name}<c:if test="${not empty med.categoryName}"> [${med.categoryName}]</c:if>
-                                      </option>
-                                    </c:forEach>
-                                  </select>
-                                  <div class="rx-med-desc-hint text-muted small mt-1" style="font-size:.75rem;"></div>
-                                </div>
-                                <div class="col-md-2 col-6">
-                                  <label class="form-label small fw-semibold text-muted d-md-none mb-1">Số lượng</label>
-                                  <div class="input-group input-group-sm">
-                                    <input type="number" name="quantity[]"
-                                           class="form-control rounded-start-3 text-center"
-                                           value="${item.quantity}" min="1" max="9999"
-                                           <c:if test="${not canEditRecord}">disabled</c:if>>
-                                    <span class="input-group-text rx-unit-suffix rounded-end-3 text-truncate" style="max-width: 60px;">${item.medicineUnit}</span>
-                                  </div>
-                                </div>
-                                <div class="col-md-4 col-6">
-                                  <label class="form-label small fw-semibold text-muted d-md-none mb-1">Liều dùng / Hướng dẫn *</label>
-                                  <input type="text" name="dosage[]"
-                                         class="form-control form-control-sm rounded-3"
-                                         value="${item.dosage}"
-                                         autocomplete="off"
-                                         placeholder="VD: 2 viên/ngày, sáng-tối"
-                                         <c:if test="${not canEditRecord}">disabled</c:if>>
-                                </div>
-                                <div class="col-md-1 col-12 align-self-start text-end pt-md-1">
-                                  <c:if test="${canEditRecord}">
-                                    <button type="button"
-                                            class="btn btn-sm btn-outline-danger rounded-circle rx-remove-row"
-                                            style="width:30px;height:30px;padding:0;">
-                                      <i class="bi bi-x"></i>
-                                    </button>
-                                  </c:if>
-                                </div>
-                              </div>
-                            </div>
-                          </c:forEach>
-                        </c:when>
-                      </c:choose>
-                    </div>
-                  </div>
-
-                  <c:if test="${canEditRecord}">
-                    <button type="button" id="rxAddRowBtn" class="btn btn-sm btn-outline-primary rounded-pill px-3">
-                      <i class="bi bi-plus-lg me-1"></i>Thêm thuốc
-                    </button>
-                  </c:if>
-                </div>
+              <div class="d-flex gap-2 mt-3">
+                <a href="${pageContext.request.contextPath}/doctor/medical-records?apptId=${rec.appointmentId}" class="btn btn-sm btn-outline-primary rounded-pill"><i class="bi bi-eye me-1"></i>Xem Hồ Sơ</a>
               </div>
+            </div></div>
+          </div>
+        </c:forEach>
+      </div>
+    </c:otherwise>
+  </c:choose>
+</c:if>
 
-              <template id="rxRowTemplate">
-                <div class="rx-medicine-row border-bottom py-3 py-md-2">
-                  <div class="row g-2 align-items-start">
-                    <div class="col-md-5 col-12">
-                      <label class="form-label small fw-semibold text-muted d-md-none mb-1">Tên thuốc</label>
-                      <select name="medicineId[]" class="form-select form-select-sm rounded-3 rx-med-dropdown">
-                        <option value="">— Chọn thuốc —</option>
-                        <c:forEach var="med" items="${medicines}">
-                          <option value="${med.id}"
-                                  data-unit="${med.unit}"
-                                  data-stock="${med.stockQuantity}"
-                                  data-desc="${med.description}">
-                            ${med.name}<c:if test="${not empty med.categoryName}"> [${med.categoryName}]</c:if>
-                          </option>
-                        </c:forEach>
-                      </select>
-                      <div class="rx-med-desc-hint text-muted small mt-1" style="font-size:.75rem;"></div>
-                    </div>
-                    <div class="col-md-2 col-6">
-                      <label class="form-label small fw-semibold text-muted d-md-none mb-1">Số lượng</label>
-                      <div class="input-group input-group-sm">
-                        <input type="number" name="quantity[]"
-                               class="form-control rounded-start-3 text-center"
-                               value="1" min="1" max="9999">
-                        <span class="input-group-text rx-unit-suffix rounded-end-3 text-truncate" style="max-width: 60px;">—</span>
-                      </div>
-                    </div>
-                    <div class="col-md-4 col-6">
-                      <label class="form-label small fw-semibold text-muted d-md-none mb-1">Liều dùng / Hướng dẫn *</label>
-                      <input type="text" name="dosage[]"
-                             class="form-control form-control-sm rounded-3"
-                             autocomplete="off"
-                             placeholder="VD: 2 viên/ngày, sáng-tối">
-                    </div>
-                    <div class="col-md-1 col-12 align-self-start text-end pt-md-1">
-                      <button type="button"
-                              class="btn btn-sm btn-outline-danger rounded-circle rx-remove-row"
-                              style="width:30px;height:30px;padding:0;">
-                        <i class="bi bi-x"></i>
-                      </button>
-                    </div>
-                  </div>
+<%-- ═══════════════════════════════════════════════ FORM TẠO/SỬA ═══════════════════════════════════════════════ --%>
+<c:if test="${mode == 'form'}">
+  <%-- Messages --%>
+  <c:if test="${not empty errorMessage}"><div class="alert alert-danger rounded-3 mb-3" data-cams-toast><i class="bi bi-exclamation-triangle-fill me-2"></i>${errorMessage}</div></c:if>
+  <c:if test="${param.saved=='1' && param.draft=='1'}"><div class="alert alert-success" data-cams-toast><i class="bi bi-check-circle-fill me-2"></i>Đã lưu nháp khám lâm sàng. Tiếp tục các bước kế tiếp.</div></c:if>
+  <c:if test="${param.finalized=='1'}"><div class="alert alert-success" data-cams-toast><i class="bi bi-check-circle-fill me-2"></i>Đã chốt hồ sơ bệnh án và hoàn tất ca khám thành công!</div></c:if>
+  <c:if test="${param.success=='requested'}"><div class="alert alert-info" data-cams-toast><i class="bi bi-send-check me-2"></i>Đã tạo chỉ định siêu âm. Chờ bệnh nhân thanh toán và BS siêu âm trả KQ.</div></c:if>
+  <c:if test="${param.success=='cancelled'}"><div class="alert alert-warning" data-cams-toast><i class="bi bi-x-circle me-2"></i>Đã huỷ chỉ định siêu âm.</div></c:if>
+  <c:if test="${param.error=='saveRecordFirst'}"><div class="alert alert-warning"><i class="bi bi-exclamation-triangle me-2"></i>Cần lưu nháp khám lâm sàng trước khi chỉ định siêu âm.</div></c:if>
+
+  <%-- Hero --%>
+  <div class="card border-0 rounded-4 text-white mb-3" style="background:linear-gradient(135deg,#0d6efd,#0a58ca);"><div class="card-body p-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div><h5 class="fw-bold mb-0"><i class="bi bi-journal-plus me-2"></i>${record.id>0?'Hồ Sơ Khám #'.concat(record.id):'Tạo Hồ Sơ Bệnh Án Mới'}</h5><small class="opacity-75">BS. ${doctorName}</small></div>
+    <div class="d-flex gap-2"><a href="${pageContext.request.contextPath}/doctor/medical-records" class="btn btn-light btn-sm rounded-pill px-3">Danh sách</a><a href="${pageContext.request.contextPath}/doctor/appointments" class="btn btn-outline-light btn-sm rounded-pill px-3">Lịch hẹn</a></div>
+  </div></div>
+
+  <%-- Stage Indicator --%>
+  <c:if test="${not empty examStageLabel}"><div class="alert border-0 shadow-sm d-flex align-items-center gap-2 mb-3 rounded-3" style="background:${examStage=='FINALIZED'?'#d1fae5':(examStage=='READY_TO_FINALIZE'?'#e0f2fe':'#f0f4ff')};border-left:4px solid ${examStage=='FINALIZED'?'#15803d':'#6366f1'};"><i class="bi ${examStage=='FINALIZED'?'bi-check-circle-fill text-success':'bi-stethoscope text-primary'} fs-4"></i><div><strong>${examStageLabel}</strong><c:if test="${examStage=='WAITING_PAYMENT'}"><div class="small text-danger">Bệnh nhân cần thanh toán dịch vụ tại quầy Lễ tân</div></c:if><c:if test="${examStage=='WAITING_ULTRASOUND'}"><div class="small text-warning">Đang chờ bác sĩ siêu âm trả kết quả</div></c:if></div></div></c:if>
+
+  <div class="row g-4">
+    <%-- ═══ LEFT: Patient Info ═══ --%>
+    <div class="col-lg-3">
+      <div class="info-card"><div class="card-body p-3">
+        <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-person-badge me-1"></i>Thông tin bệnh nhân</h6>
+        <div class="info-item"><span class="info-label">Họ tên</span><span class="info-value">${not empty record.patientName ? record.patientName : (not empty patientName ? patientName : '—')}</span></div>
+        <div class="info-item"><span class="info-label">Điện thoại</span><span class="info-value">${not empty patientPhone?patientPhone:'—'}</span></div>
+        <div class="info-item"><span class="info-label">Ngày sinh</span><span class="info-value">${not empty patientDob?patientDob:'—'}</span></div>
+        <div class="info-item"><span class="info-label">Ngày khám</span><span class="info-value"><i class="bi bi-calendar3 text-success me-1"></i>${record.appointmentDate}</span></div>
+        <div class="info-item"><span class="info-label">Giờ khám</span><span class="info-value"><i class="bi bi-clock text-success me-1"></i>${not empty record.timeSlot?record.timeSlot:'—'}</span></div>
+        <div class="info-item"><span class="info-label">Nguồn đặt</span><span class="info-value">
+          <c:choose>
+            <c:when test="${fn:toLowerCase(bookingSource) == 'staff' || fn:toLowerCase(bookingSource) == 'reception' || fn:toLowerCase(bookingSource) == 'counter'}">
+              <span class="badge rounded-pill px-2 py-0.5" style="background:#e0e7ff; color:#3730a3; border:1px solid #c7d2fe; font-size:.65rem; font-weight:700;"><i class="bi bi-person-workspace me-1"></i>Tại quầy</span>
+            </c:when>
+            <c:otherwise>
+              <span class="badge rounded-pill px-2 py-0.5" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; font-size:.65rem; font-weight:700;"><i class="bi bi-globe me-1"></i>Đặt Online</span>
+            </c:otherwise>
+          </c:choose>
+        </span></div>
+        <div class="info-item"><span class="info-label">Kinh cuối (LMP)</span><span class="info-value" id="infoLmp">${not empty record.lastMenstrualPeriod?record.lastMenstrualPeriod:'—'}</span></div>
+        <div class="info-item"><span class="info-label">Tuổi thai</span><span class="info-value" id="infoGa">${not empty record.gestationalAgeWeeks?record.gestationalAgeWeeks:'—'} tuần ${not empty record.gestationalAgeDays?record.gestationalAgeDays:'0'} ngày</span></div>
+        <c:if test="${not empty record.weightKg}"><div class="info-item"><span class="info-label">Cân nặng</span><span class="info-value">${record.weightKg} kg</span></div></c:if>
+        <c:if test="${not empty record.bloodPressure}"><div class="info-item"><span class="info-label">Huyết áp</span><span class="info-value">${record.bloodPressure}</span></div></c:if>
+      </div></div>
+    </div>
+
+    <%-- ═══ RIGHT: Step-based Form ═══ --%>
+    <div class="col-lg-9">
+    <c:choose>
+      <c:when test="${!canEditRecord && record.id > 0}">
+        <%-- READ-ONLY: Hiển thị đầy đủ hồ sơ đã chốt --%>
+        <%-- STEP 1: Khám lâm sàng --%>
+        <div class="step-card step-done" id="step1">
+          <div class="step-header"><span class="step-num"><i class="bi bi-check-lg"></i></span><h6 class="mb-0">Khám lâm sàng</h6><span class="badge bg-success ms-2">Đã hoàn thành</span></div>
+          <div class="step-body">
+            <div class="row g-3">
+              <c:if test="${not empty record.weightKg}"><div class="col-md-3"><small class="text-muted d-block">Cân nặng</small><strong>${record.weightKg} kg</strong></div></c:if>
+              <c:if test="${not empty record.heightCm}"><div class="col-md-3"><small class="text-muted d-block">Chiều cao</small><strong>${record.heightCm} cm</strong></div></c:if>
+              <c:if test="${not empty record.weightKg && not empty record.heightCm && record.heightCm > 0}"><div class="col-md-3"><small class="text-muted d-block">BMI</small><strong><fmt:formatNumber value="${record.weightKg / (record.heightCm * record.heightCm / 10000)}" maxFractionDigits="1"/></strong></div></c:if>
+              <c:if test="${not empty record.bloodPressure}"><div class="col-md-3"><small class="text-muted d-block">Huyết áp</small><strong>${record.bloodPressure} mmHg</strong></div></c:if>
+              <c:if test="${not empty record.pulseBpm}"><div class="col-md-3"><small class="text-muted d-block">Mạch</small><strong>${record.pulseBpm} bpm</strong></div></c:if>
+              <c:if test="${not empty record.temperatureC}"><div class="col-md-3"><small class="text-muted d-block">Nhiệt độ</small><strong>${record.temperatureC}°C</strong></div></c:if>
+              <c:if test="${not empty record.lastMenstrualPeriod}"><div class="col-md-3"><small class="text-muted d-block">Kinh cuối (LMP)</small><strong>${record.lastMenstrualPeriod}</strong></div></c:if>
+              <c:if test="${not empty record.gestationalAgeWeeks}"><div class="col-md-3"><small class="text-muted d-block">Tuổi thai</small><strong>${record.gestationalAgeWeeks} tuần ${not empty record.gestationalAgeDays ? record.gestationalAgeDays : '0'} ngày</strong></div></c:if>
+              <c:if test="${not empty record.clinicalNotes}"><div class="col-12"><small class="text-muted d-block">Ghi chú khám lâm sàng</small><div class="clinical-value">${record.clinicalNotes}</div></div></c:if>
+              <c:if test="${not empty record.treatmentPlan}"><div class="col-12"><small class="text-muted d-block">Điều trị / Hướng xử trí</small><div class="clinical-value">${record.treatmentPlan}</div></div></c:if>
+            </div>
+          </div>
+        </div>
+
+        <%-- STEP 2: Siêu âm --%>
+        <c:if test="${existingUltrasoundOrders}">
+          <div class="step-card step-done">
+            <div class="step-header"><span class="step-num"><i class="bi bi-check-lg"></i></span><h6 class="mb-0">Siêu âm cận lâm sàng</h6><span class="badge bg-success ms-2">Đã thực hiện</span></div>
+            <div class="step-body">
+              <div class="d-flex align-items-center gap-3">
+                <i class="bi bi-soundwave fs-2 text-primary"></i>
+                <div>
+                  <strong>Đã có kết quả siêu âm</strong>
+                  <div class="small text-muted">Bấm nút bên dưới để xem hình ảnh và nhận xét chuyên môn.</div>
                 </div>
-              </template>
-
+                <button type="button" class="btn btn-sm btn-success rounded-pill px-3 ms-auto fw-semibold"
+                        data-bs-toggle="modal" data-bs-target="#ultrasoundResultModal"
+                        onclick="document.getElementById('usResultIframe').src='${pageContext.request.contextPath}/doctor/results?recordId=${record.id}&embed=true';">
+                  <i class="bi bi-eye-fill me-1"></i>Xem kết quả siêu âm
+                </button>
+              </div>
             </div>
-              </c:if><%-- end !hasBlockingUltrasound (prescription section) --%>
+          </div>
+        </c:if>
 
-          </div><%-- card-body (tabs 1-4) --%>
-          </div><%-- collapse clinicalSection --%>
-          </div><%-- clinical card --%>
-          </c:if>
-
-          <%-- ════ STEP 2: SIÊU ÂM (chỉ hiện sau lưu nháp) ════ --%>
-          <c:if test="${draftSaved && canEditRecord}">
-          <div class="card border-0 shadow-sm mb-3" id="ultrasoundStepCard">
-            <div class="card-header bg-white">
-              <h6 class="mb-0">
-                <i class="bi ${usResolved ? 'bi-check-circle-fill text-success' : 'bi-2-circle-fill text-primary'} me-2"></i>
-                <c:choose>
-                  <c:when test="${existingUltrasoundOrders}">Bước 2: Siêu âm — <span class="text-muted">đã chỉ định</span></c:when>
-                  <c:otherwise>Bước 2: Quyết định siêu âm</c:otherwise>
-                </c:choose>
-              </h6>
+        <%-- STEP 3: Chẩn đoán & Kê đơn --%>
+        <div class="step-card step-done">
+          <div class="step-header"><span class="step-num"><i class="bi bi-check-lg"></i></span><h6 class="mb-0">Chẩn đoán &amp; Kê đơn</h6><span class="badge bg-success ms-2">Đã chốt</span></div>
+          <div class="step-body">
+            <%-- Diagnosis --%>
+            <div class="mb-3">
+              <small class="text-muted d-block fw-semibold"><i class="bi bi-stethoscope me-1 text-primary"></i>Chẩn đoán lâm sàng</small>
+              <div class="p-2 rounded-3 bg-light border mt-1 clinical-value">${not empty record.finalDiagnosis ? record.finalDiagnosis : '<span class="text-muted fst-italic">Không có</span>'}</div>
             </div>
-            <div class="card-body p-3">
+            <%-- Prescription --%>
+            <div class="mb-3">
+              <small class="text-muted d-block fw-semibold"><i class="bi bi-capsule me-1 text-primary"></i>Đơn thuốc</small>
               <c:choose>
-                <c:when test="${hasBlockingUltrasound}">
-                  <div class="alert alert-warning mb-0 d-flex align-items-center gap-3">
-                    <i class="bi bi-hourglass-split fs-3"></i>
-                    <div class="flex-grow-1">
-                      <strong>Đang chờ kết quả siêu âm</strong>
-                      <div class="small mt-1">Bác sĩ Siêu âm đang xử lý. Sau khi có kết quả, bạn xác nhận rồi mới kê đơn và chốt hồ sơ.</div>
-                    </div>
-                    <a href="${pageContext.request.contextPath}/doctor/results?recordId=${record.id}" class="btn btn-outline-primary btn-sm rounded-pill text-nowrap">
-                      <i class="bi bi-soundwave me-1"></i>Xem kết quả
-                    </a>
-                  </div>
+                <c:when test="${not empty prescription && not empty prescription.items}">
+                  <div class="table-responsive mt-1"><table class="table table-sm table-bordered mb-0"><thead class="table-light"><tr><th>#</th><th>Thuốc</th><th class="text-center">SL</th><th>Liều dùng</th></tr></thead><tbody>
+                    <c:forEach var="item" items="${prescription.items}" varStatus="rxLoop">
+                      <tr><td>${rxLoop.index+1}</td><td class="fw-medium">${item.medicineName}</td><td class="text-center">${item.quantity}</td><td>${item.dosage}</td></tr>
+                    </c:forEach>
+                  </tbody></table></div>
                 </c:when>
-                <c:otherwise>
-                  <div class="alert alert-success mb-0 d-flex align-items-center gap-2">
-                    <i class="bi bi-check-circle-fill"></i>
-                    <span>Siêu âm đã hoàn tất — chuyển sang bước Chẩn đoán &amp; Kê đơn.</span>
-                  </div>
-                </c:otherwise>
+                <c:otherwise><div class="text-muted fst-italic mt-1">Không kê đơn thuốc</div></c:otherwise>
               </c:choose>
             </div>
+            <%-- Treatment Plan --%>
+            <c:if test="${not empty record.treatmentPlan}">
+              <div><small class="text-muted d-block fw-semibold"><i class="bi bi-clipboard2-pulse me-1 text-primary"></i>Kế hoạch điều trị</small><div class="clinical-value mt-1">${record.treatmentPlan}</div></div>
+            </c:if>
           </div>
-          </c:if>
+        </div>
 
-          <%-- ════ STEP 3: CHẨN ĐOÁN & KÊ ĐƠN + ACTION BAR ════ --%>
-          <c:if test="${canEditRecord && draftSaved && usResolved}">
-          <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header bg-white">
-              <h6 class="mb-0">
-                <i class="bi bi-3-circle-fill text-primary me-2"></i>Bước 3: Chẩn đoán &amp; Kê đơn
-              </h6>
+        <div class="d-flex gap-2 mt-2">
+          <a href="${pageContext.request.contextPath}/doctor/medical-records" class="btn btn-outline-secondary btn-sm rounded-pill"><i class="bi bi-arrow-left me-1"></i>Danh sách bệnh nhân</a>
+          <a href="${pageContext.request.contextPath}/doctor/appointments" class="btn btn-outline-primary btn-sm rounded-pill"><i class="bi bi-calendar2-week me-1"></i>Lịch hẹn</a>
+        </div>
+      </c:when>
+      <c:otherwise>
+      <form method="post" action="${pageContext.request.contextPath}/doctor/medical-records" id="mainForm">
+        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+        <input type="hidden" name="appointmentId" value="${apptId}">
+        <input type="hidden" name="recordId" value="${record.id}">
+        <input type="hidden" name="submitAction" id="submitAction" value="draft">
+
+        <%-- ═══ STEP 1: Khám lâm sàng ═══ --%>
+        <c:set var="step1Class" value="${record.id>0?'step-done':'step-active'}"/>
+        <div class="step-card ${step1Class}" id="step1">
+          <div class="step-header"><span class="step-num"><i class="bi bi-stethoscope"></i></span><h6 class="mb-0">Khám lâm sàng</h6><c:if test="${record.id>0}"><span class="badge bg-success ms-2">Đã lưu</span></c:if></div>
+          <div class="step-body">
+            <div class="row g-3">
+              <%-- Hàng 1: Cân nặng, Chiều cao, BMI --%>
+              <div class="col-md-4">
+                <label class="form-label small fw-semibold">Cân nặng (kg)</label>
+                <input type="number" step="0.1" name="weightKg" class="form-control form-control-sm" value="${record.weightKg}" onchange="calcBMI()" placeholder="VD: 55.0 (20–300 kg)">
+                <div class="form-text text-muted" style="font-size:.7rem;">Gợi ý: nhập từ 20 đến 300 kg</div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small fw-semibold">Chiều cao (cm)</label>
+                <input type="number" step="0.1" name="heightCm" class="form-control form-control-sm" value="${record.heightCm}" onchange="calcBMI()" placeholder="VD: 160.0 (100–250 cm)">
+                <div class="form-text text-muted" style="font-size:.7rem;">Gợi ý: nhập từ 100 đến 250 cm</div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small fw-semibold">BMI</label>
+                <input type="text" id="bmiDisplay" class="form-control form-control-sm" readonly placeholder="Tự động tính BMI">
+                <div class="form-text text-muted" style="font-size:.7rem;">Tự động tính toán từ Cân nặng & Chiều cao</div>
+              </div>
+
+              <%-- Hàng 2: Huyết áp tâm thu, HA tâm trương, Mạch, Nhiệt độ --%>
+              <div class="col-md-3">
+                <label class="form-label small fw-semibold">HA tâm thu (mmHg)</label>
+                <input type="number" name="systolicBP" class="form-control form-control-sm" value="${not empty record.bloodPressure?fn:split(record.bloodPressure,'/')[0]:''}" placeholder="VD: 120 (50–250)">
+                <div class="form-text text-muted" style="font-size:.7rem;">Gợi ý: từ 50 đến 250 mmHg</div>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small fw-semibold">HA tâm trương (mmHg)</label>
+                <input type="number" name="diastolicBP" class="form-control form-control-sm" value="${not empty record.bloodPressure?fn:split(record.bloodPressure,'/')[1]:''}" placeholder="VD: 80 (30–150)">
+                <div class="form-text text-muted" style="font-size:.7rem;">Gợi ý: từ 30 đến 150 mmHg</div>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small fw-semibold">Mạch (bpm)</label>
+                <input type="number" name="pulseBpm" class="form-control form-control-sm" value="${record.pulseBpm}" placeholder="VD: 80 (30–250)">
+                <div class="form-text text-muted" style="font-size:.7rem;">Gợi ý: từ 30 đến 250 bpm</div>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small fw-semibold">Nhiệt độ (°C)</label>
+                <input type="number" step="0.1" name="temperatureC" class="form-control form-control-sm" value="${record.temperatureC}" placeholder="VD: 36.5 (34.0–43.0)">
+                <div class="form-text text-muted" style="font-size:.7rem;">Gợi ý: từ 34.0 đến 43.0 °C</div>
+              </div>
+
+              <%-- Hàng 3: Kinh cuối (LMP), Tuổi thai tuần, Tuổi thai ngày --%>
+              <div class="col-md-4">
+                <label class="form-label small fw-semibold">Kinh cuối (LMP)</label>
+                <input type="date" name="lastMenstrualPeriod" class="form-control form-control-sm" value="${record.lastMenstrualPeriod}">
+                <div class="form-text text-muted" style="font-size:.7rem;">Gợi ý: chọn ngày trước hoặc bằng ngày khám</div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small fw-semibold">Tuổi thai (tuần)</label>
+                <input type="number" name="gestationalAgeWeeks" class="form-control form-control-sm" value="${record.gestationalAgeWeeks}" placeholder="VD: 12 (0–44 tuần)">
+                <div class="form-text text-muted" style="font-size:.7rem;">Gợi ý: từ 0 đến 44 tuần</div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small fw-semibold">Tuổi thai (ngày lẻ)</label>
+                <input type="number" name="gestationalAgeDays" class="form-control form-control-sm" value="${record.gestationalAgeDays}" placeholder="VD: 3 (0–6 ngày)">
+                <div class="form-text text-muted" style="font-size:.7rem;">Gợi ý: từ 0 đến 6 ngày lẻ</div>
+              </div>
+
+              <%-- Hàng 4: Ghi chú khám lâm sàng --%>
+              <div class="col-12">
+                <label class="form-label small fw-semibold">Ghi chú khám lâm sàng</label>
+                <textarea name="clinicalNotes" class="form-control form-control-sm" rows="2" placeholder="VD: Bệnh nhân tỉnh táo, đau nhẹ vùng hạ vị, không có dấu hiệu bất thường...">${record.clinicalNotes}</textarea>
+              </div>
+
+              <%-- Hàng 5: Điều trị / Hướng xử trí --%>
+              <div class="col-12">
+                <label class="form-label small fw-semibold">Điều trị / Hướng xử trí</label>
+                <textarea name="treatmentPlan" class="form-control form-control-sm" rows="2" placeholder="VD: Khám định kỳ, nghỉ ngơi, dặn dò chế độ dinh dưỡng...">${record.treatmentPlan}</textarea>
+              </div>
             </div>
-            <div class="card-body p-0">
-          </c:if>
+            <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+              <c:if test="${record.id>0}"><span class="small text-success"><i class="bi bi-check-circle me-1"></i>Đã lưu nháp — có thể chỉnh sửa lại</span></c:if>
+              <c:if test="${record.id==0}"><span class="small text-muted">Vui lòng điền thông tin và Lưu nháp</span></c:if>
+              <button type="button" class="btn btn-primary btn-sm rounded-pill px-4" onclick="doSubmit('draft')"><i class="bi bi-save me-1"></i>Lưu nháp</button>
+            </div>
+          </div>
+        </div>
 
-          <%-- ════ THANH HÀNH ĐỘNG STICKY (ACTION BAR) ════ --%>
-          <div class="doctor-action-bar">
-            <c:choose>
-              <c:when test="${canEditRecord}">
-                <input type="hidden" name="submitAction" id="submitActionField" value="final">
-
-                <div class="d-flex gap-3 align-items-center flex-wrap">
-                  <a href="${pageContext.request.contextPath}/doctor/appointments" class="btn btn-outline-secondary rounded-3 px-4">
-                    <i class="bi bi-arrow-left me-1"></i>Quay lại
-                  </a>
-
-                  <c:if test="${!hasBlockingUltrasound}">
-                  <button type="button" onclick="doSubmit('draft')" id="btnDraft" class="btn btn-outline-warning rounded-3 px-4">
-                    <i class="bi bi-file-earmark me-2"></i>Lưu nháp
-                  </button>
-
-                  <button type="button" onclick="confirmAndSubmitFinal()" id="btnFinal" class="btn btn-success rounded-3 px-4 ms-auto fw-semibold">
-                    <i class="bi bi-floppy me-2"></i>Chốt hồ sơ &amp; hoàn thành khám
-                  </button>
+        <%-- ═══ STEP 2: Chỉ định siêu âm (hiện sau khi lưu nháp) ═══ --%>
+        <c:if test="${record.id > 0}">
+          <c:choose>
+            <c:when test="${hasBlockingUltrasound}">
+              <%-- WAITING STATE --%>
+              <div class="step-card step-locked" id="stepWait">
+                <div class="step-header"><span class="step-num">⏳</span><h6 class="mb-0">Đang chờ kết quả siêu âm</h6></div>
+                <div class="step-body text-center py-3">
+                  <p class="text-warning mb-2"><i class="bi bi-hourglass-split me-1"></i>Bệnh nhân đã được chỉ định siêu âm. Vui lòng đợi bác sĩ siêu âm hoàn tất và trả kết quả.</p>
+                  <a href="${pageContext.request.contextPath}/doctor/medical-records?apptId=${apptId}" class="btn btn-outline-primary btn-sm"><i class="bi bi-arrow-clockwise me-1"></i>Tải lại kiểm tra</a>
+                </div>
+              </div>
+            </c:when>
+            <c:otherwise>
+              <%-- DECISION --%>
+              <c:set var="step2Class" value="${existingUltrasoundOrders?'step-done':'step-active'}"/>
+              <div class="step-card ${step2Class}" id="step2">
+                <div class="step-header"><span class="step-num"><i class="bi bi-ui-checks"></i></span><h6 class="mb-0">Chỉ định cận lâm sàng</h6><c:if test="${existingUltrasoundOrders}"><span class="badge bg-success ms-2">Đã chỉ định</span></c:if></div>
+                <div class="step-body">
+                  <c:if test="${existingUltrasoundOrders}">
+                    <p class="small text-muted"><i class="bi bi-check-circle text-success me-1"></i>Đã tạo chỉ định siêu âm. Có thể huỷ nếu cần.</p>
                   </c:if>
-                </div>
-              </c:when>
-              <c:otherwise>
-                <div class="d-flex align-items-center justify-content-between">
-                  <span class="text-muted small"><i class="bi bi-lock-fill me-1"></i>Ca khám đã hoàn thành hoặc ở chế độ Read-Only.</span>
-                  <a href="${pageContext.request.contextPath}/doctor/appointments" class="btn btn-sm btn-outline-secondary rounded-3 px-4">
-                    <i class="bi bi-arrow-left me-1"></i>Quay lại lịch hẹn
-                  </a>
-                </div>
-              </c:otherwise>
-            </c:choose>
-          </div>
-
-      </form>
-
-      <c:if test="${canEditRecord && draftSaved && usResolved}">
-          </div><%-- card-body (step 3) --%>
-          </div><%-- step 3 card --%>
-      </c:if>
-
-      <%-- ════ READ-ONLY VIEW: Hồ sơ đã chốt (không còn edit được) ════ --%>
-      <c:if test="${!canEditRecord && record.id > 0}">
-      <div class="card border-0 shadow-sm mt-3">
-        <div class="card-header bg-success bg-opacity-10 d-flex justify-content-between align-items-center">
-          <h6 class="mb-0"><i class="bi bi-check-circle-fill text-success me-2"></i>Hồ sơ đã hoàn thành</h6>
-          <span class="badge bg-success">Read-Only</span>
-        </div>
-        <div class="card-body p-4">
-          <div class="row g-3">
-            <div class="col-md-6">
-              <div class="border rounded-3 p-3 mb-3 bg-light">
-                <h6 class="small fw-bold text-uppercase text-muted mb-2">Sinh hiệu</h6>
-                <div class="d-flex flex-wrap gap-3 small">
-                  <span><strong>Cân nặng:</strong> ${not empty record.weightKg ? record.weightKg : '—'} kg</span>
-                  <span><strong>Chiều cao:</strong> ${not empty record.heightCm ? record.heightCm : '—'} cm</span>
-                  <span><strong>Mạch:</strong> ${not empty record.pulseBpm ? record.pulseBpm : '—'} bpm</span>
-                  <span><strong>Nhiệt độ:</strong> ${not empty record.temperatureC ? record.temperatureC : '—'}°C</span>
-                  <span><strong>HA:</strong> ${not empty record.bloodPressure ? record.bloodPressure : '—'}</span>
+                  <c:if test="${!existingUltrasoundOrders}">
+                    <div class="alert alert-light border mb-2"><i class="bi bi-info-circle me-1"></i>Quyết định: Bệnh nhân có cần siêu âm không?</div>
+                  </c:if>
+                  <div class="d-flex flex-wrap gap-2">
+                    <c:if test="${existingUltrasoundOrders}">
+                      <button type="button" class="btn btn-sm btn-outline-danger" onclick="cancelUltrasound()">
+                        <i class="bi bi-x-circle me-1"></i>Huỷ chỉ định siêu âm
+                      </button>
+                    </c:if>
+                    <c:if test="${!existingUltrasoundOrders}">
+                      <div class="d-flex gap-2 align-items-center">
+                        <label class="form-check-label small me-2"><input type="checkbox" id="skipUltrasound" onchange="toggleUltrasoundForm()"> Không cần siêu âm</label>
+                        <div id="ultrasoundForm" style="display:none;" class="d-flex flex-wrap gap-2 align-items-center">
+                          <select name="ultrasoundServiceId" class="form-select form-select-sm" style="width:auto;">
+                            <option value="">— Chọn dịch vụ —</option>
+                            <c:forEach var="us" items="${ultrasoundServices}"><option value="${us.id}">${us.serviceName} — <fmt:formatNumber value="${us.price}" pattern="#,###"/>đ</option></c:forEach>
+                          </select>
+                          <input type="text" name="reorderReason" class="form-control form-control-sm" placeholder="Lý do chỉ định (≥5 ký tự)" style="width:220px;">
+                          <button type="button" class="btn btn-sm btn-danger" onclick="submitUltrasound()"><i class="bi bi-send me-1"></i>Tạo chỉ định</button>
+                        </div>
+                      </div>
+                      <input type="hidden" name="ultrasoundSkipped" id="ultrasoundSkipped" value="false">
+                    </c:if>
+                  </div>
                 </div>
               </div>
-              <div class="border rounded-3 p-3 mb-3 bg-light">
-                <h6 class="small fw-bold text-uppercase text-muted mb-2">Thai kỳ</h6>
-                <div class="d-flex flex-wrap gap-3 small">
-                  <span><strong>Tuổi thai:</strong> ${not empty record.gestationalAgeWeeks ? record.gestationalAgeWeeks : '—'} tuần ${not empty record.gestationalAgeDays ? record.gestationalAgeDays : '0'} ngày</span>
-                  <span><strong>Tim thai:</strong> ${not empty record.fetalHeartRate ? record.fetalHeartRate : '—'} bpm</span>
-                  <span><strong>Chiều cao TC:</strong> ${not empty record.fundalHeightCm ? record.fundalHeightCm : '—'} cm</span>
-                  <span><strong>Ngôi thai:</strong> ${not empty record.fetalPresentation ? record.fetalPresentation : '—'}</span>
-                </div>
-              </div>
-              <div class="border rounded-3 p-3 mb-3 bg-light">
-                <h6 class="small fw-bold text-uppercase text-muted mb-2">Khám cổ tử cung</h6>
-                <div class="d-flex flex-wrap gap-3 small">
-                  <span><strong>Độ mở CTC:</strong> ${not empty record.cervicalDilationCm ? record.cervicalDilationCm : '—'} cm</span>
-                  <span><strong>Độ xóa CTC:</strong> ${not empty record.cervicalEffacementPercent ? record.cervicalEffacementPercent : '—'}%</span>
-                  <span><strong>Ngôi thai/CTC:</strong> ${not empty record.cervicalStation ? record.cervicalStation : '—'}</span>
-                  <span><strong>Tình trạng ối:</strong> ${not empty record.amnioticFluidDescription ? record.amnioticFluidDescription : '—'}</span>
-                </div>
-              </div>
+            </c:otherwise>
+          </c:choose>
+        </c:if>
+
+        <%-- ═══ STEP 4: Chẩn đoán & Kê đơn & Chốt (hiện sau khi siêu âm resolved hoặc skip) ═══ --%>
+        <c:if test="${record.id > 0 && !hasBlockingUltrasound}">
+          <div class="step-card ${step4Class}" id="step4" style="${!existingUltrasoundOrders ? 'display:none;' : ''}">
+            <div class="step-header">
+              <span class="step-num bg-primary text-white me-2"><i class="bi bi-prescription2 fs-5"></i></span>
+              <h6 class="mb-0 fw-bold fs-6">Chẩn đoán &amp; Kê đơn</h6>
+              <c:if test="${examStage=='READY_TO_FINALIZE'}"><span class="badge bg-success ms-2">Sẵn sàng chốt</span></c:if>
             </div>
-            <div class="col-md-6">
-              <div class="border rounded-3 p-3 mb-3 bg-light">
-                <h6 class="small fw-bold text-uppercase text-muted mb-2">Chẩn đoán & Điều trị</h6>
-                <p class="small mb-2" style="white-space:pre-wrap;"><strong>Chẩn đoán:</strong> ${not empty record.finalDiagnosis ? record.finalDiagnosis : '—'}</p>
-                <p class="small mb-0" style="white-space:pre-wrap;"><strong>Ghi chú lâm sàng:</strong> ${not empty record.clinicalNotes ? record.clinicalNotes : '—'}</p>
-              </div>
-              <div class="border rounded-3 p-3 mb-3 bg-light">
-                <h6 class="small fw-bold text-uppercase text-muted mb-2">Dấu hiệu nguy cơ</h6>
-                <p class="small mb-0">
-                  <c:choose>
-                    <c:when test="${record.hasRisk()}"><span class="badge bg-danger">Có yếu tố nguy cơ</span></c:when>
-                    <c:otherwise><span class="badge bg-success bg-opacity-10 text-success">Không ghi nhận</span></c:otherwise>
-                  </c:choose>
-                </p>
-              </div>
-              <c:if test="${record.id > 0}">
-              <div class="border rounded-3 p-3 mb-3">
-                <a href="${pageContext.request.contextPath}/doctor/results?recordId=${record.id}"
-                   class="btn btn-outline-primary btn-sm rounded-pill w-100">
-                  <i class="bi bi-soundwave me-1"></i>Xem kết quả siêu âm
-                </a>
-              </div>
+            <div class="step-body">
+              <%-- Ultrasound results banner & view modal button --%>
+              <c:if test="${existingUltrasoundOrders}">
+                <div class="alert alert-success d-flex justify-content-between align-items-center mb-3 py-2 px-3 rounded-3 shadow-sm">
+                  <div class="d-flex align-items-center">
+                    <i class="bi bi-check-circle-fill text-success fs-4 me-2"></i>
+                    <div>
+                      <strong class="text-success">Kết quả siêu âm đã hoàn thành!</strong>
+                      <div class="small text-muted">Bác sĩ có thể xem hình ảnh &amp; nhận xét chuyên môn để đưa ra chẩn đoán.</div>
+                    </div>
+                  </div>
+                  <button type="button" class="btn btn-sm btn-success rounded-pill px-3 flex-shrink-0 ms-3 fw-semibold shadow-sm"
+                          data-bs-toggle="modal" data-bs-target="#ultrasoundResultModal"
+                          onclick="document.getElementById('usResultIframe').src='${pageContext.request.contextPath}/doctor/results?recordId=${record.id}&amp;embed=true';">
+                    <i class="bi bi-eye-fill me-1"></i>Xem kết quả siêu âm
+                  </button>
+                </div>
               </c:if>
+
+              <%-- Diagnosis --%>
+              <div class="mb-3">
+                <label class="form-label small fw-bold text-dark"><i class="bi bi-stethoscope me-1 text-primary"></i>Chẩn đoán lâm sàng <span class="text-danger">*</span></label>
+                <textarea name="finalDiagnosis" id="finalDiagnosis" class="form-control form-control-sm rounded-3" rows="3" required placeholder="VD: Viêm dạ dày cấp / Thai 12 tuần phát triển bình thường (tối đa 1000 ký tự)...">${record.finalDiagnosis}</textarea>
+                <div class="form-text text-muted" style="font-size:.72rem;">Gợi ý: Nhập chẩn đoán lâm sàng của bác sĩ (bắt buộc khi chốt hồ sơ, tối đa 1000 ký tự)</div>
+              </div>
+
+              <%-- Prescription --%>
+              <div class="mb-3">
+                <label class="form-label small fw-bold text-dark"><i class="bi bi-capsule me-1 text-primary"></i>Kê đơn thuốc</label>
+                <div id="rxContainer" class="p-3 bg-light rounded-3 border">
+                  <div class="d-flex flex-column gap-2 mb-2" id="rxMedicineRows">
+                    <c:if test="${not empty prescription}">
+                      <c:forEach var="pi" items="${prescription.items}" varStatus="rxLoop">
+                        <div class="rx-medicine-row d-flex gap-2 align-items-center w-100 p-2 bg-white rounded-3 border shadow-sm">
+                          <div style="flex:4; min-width:200px;">
+                            <select name="medicineId" class="form-select form-select-sm" required>
+                              <option value="">— Chọn biệt dược / thuốc —</option>
+                              <c:forEach var="m" items="${medicines}">
+                                <option value="${m.id}" ${m.id==pi.medicineId?'selected':''}>${m.name} (${m.unit})</option>
+                              </c:forEach>
+                            </select>
+                          </div>
+                          <div style="flex:1.5; min-width:90px;">
+                            <input type="number" name="quantity" class="form-control form-control-sm" placeholder="SL" min="1" max="9999" value="${pi.quantity}" required>
+                          </div>
+                          <div style="flex:5; min-width:220px;">
+                            <input type="text" name="dosage" class="form-control form-control-sm" placeholder="Liều dùng (VD: 1 viên/lần, 2 lần/ngày sau ăn)" value="${pi.dosage}" required>
+                          </div>
+                          <div>
+                            <button type="button" class="btn btn-sm btn-outline-danger border-0 rounded-circle" onclick="this.closest('.rx-medicine-row').remove()" title="Xóa thuốc này">
+                              <i class="bi bi-x-circle-fill fs-6"></i>
+                            </button>
+                          </div>
+                        </div>
+                      </c:forEach>
+                    </c:if>
+                  </div>
+                  <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="addRxRow()">
+                    <i class="bi bi-plus-circle-fill me-1"></i>Thêm thuốc
+                  </button>
+                </div>
+              </div>
+
+              <%-- Finalize button --%>
+              <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                <span class="small text-muted"><i class="bi bi-info-circle me-1"></i>Kiểm tra kỹ chẩn đoán và đơn thuốc trước khi chốt</span>
+                <button type="button" class="btn btn-success btn-sm rounded-pill px-4 py-2 fw-bold shadow-sm" onclick="confirmFinalize()">
+                  <i class="bi bi-check-circle-fill me-1"></i>Chốt hồ sơ &amp; Hoàn tất khám
+                </button>
+              </div>
             </div>
           </div>
-          <div class="d-flex justify-content-end mt-3">
-            <a href="${pageContext.request.contextPath}/doctor/appointments" class="btn btn-outline-secondary rounded-3 px-4">
-              <i class="bi bi-arrow-left me-1"></i>Quay lại lịch hẹn
-            </a>
-          </div>
-        </div>
+        </c:if>
+
+        <c:if test="${examStage == 'FINALIZED'}">
+          <div class="step-card step-done"><div class="step-header"><span class="step-num bg-success text-white">✓</span><h6 class="mb-0 fw-bold">Đã hoàn tất</h6></div><div class="step-body"><p class="text-muted mb-0">Hồ sơ này đã được chốt. <a href="${pageContext.request.contextPath}/doctor/appointments">Quay lại lịch hẹn</a></p></div></div>
+        </c:if>
+      </form>
+      </c:otherwise>
+    </c:choose>
+    </div>
+  </div>
+</c:if>
+
+<%-- Modal Xem Kết Quả Siêu Âm Trực Tiếp Trên Tránh Chuyển Trang --%>
+<div class="modal fade" id="ultrasoundResultModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
+      <div class="modal-header border-0 bg-primary text-white py-2.5 px-3 d-flex align-items-center justify-content-between">
+        <h6 class="modal-title fw-bold text-white mb-0 d-flex align-items-center">
+          <i class="bi bi-soundwave me-2 fs-5"></i>KẾT QUẢ SIÊU ÂM CẬN LÂM SÀNG
+        </h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      </c:if>
-
-    </div><%-- col --%>
-  </div><%-- row --%>
-
-  <%-- Modal Xác nhận Chốt Hồ Sơ --%>
-  <div class="modal fade" id="finalConfirmModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content rounded-4 border-0 shadow">
-        <div class="modal-header border-0 bg-success text-white rounded-top-4">
-          <h5 class="modal-title fw-bold"><i class="bi bi-check-circle-fill me-2"></i>Xác Nhận Chốt Hồ Sơ &amp; Hoàn Thành Khám</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body p-4">
-          <p class="mb-2">Bạn có chắc chắn muốn chốt hồ sơ bệnh án cho bệnh nhân <strong>${record.patientName}</strong>?</p>
-          <ul class="small text-muted mb-3">
-            <li>Lịch hẹn sẽ chuyển sang trạng thái <strong>Hoàn thành</strong>.</li>
-            <li>Hồ sơ bệnh án sẽ đóng chỉnh sửa chính thức.</li>
-          </ul>
-          <div id="modalSummary" class="p-3 bg-light rounded-3 small"></div>
-        </div>
-        <div class="modal-footer border-0 p-3 bg-light rounded-bottom-4">
-          <button type="button" class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal">Kiểm tra lại</button>
-          <button type="button" class="btn btn-success rounded-3 fw-bold px-4" id="btnConfirmFinal" onclick="executeFinalSubmit()">
-            <i class="bi bi-check2-circle me-1"></i>Xác nhận Chốt &amp; Hoàn thành
-          </button>
-        </div>
+      <div class="modal-body p-0" style="background:#f8fafc;">
+        <iframe id="usResultIframe" src="" style="width:100%;height:78vh;border:none;"></iframe>
       </div>
     </div>
   </div>
+</div>
 
-  <script>
-  let formDirty = false;
+<%-- Template cho dòng kê đơn thuốc mới --%>
+<template id="rxRowTemplate">
+  <div class="rx-medicine-row d-flex gap-2 align-items-center w-100 p-2 bg-white rounded-3 border shadow-sm">
+    <div style="flex:4; min-width:200px;">
+      <select name="medicineId" class="form-select form-select-sm">
+        <option value="">— Chọn biệt dược / thuốc —</option>
+        <c:forEach var="m" items="${medicines}">
+          <option value="${m.id}"><c:out value="${m.name}"/> (<c:out value="${m.unit}"/>)</option>
+        </c:forEach>
+      </select>
+    </div>
+    <div style="flex:1.5; min-width:90px;">
+      <input type="number" name="quantity" class="form-control form-control-sm" placeholder="SL" min="1" max="9999">
+    </div>
+    <div style="flex:5; min-width:220px;">
+      <input type="text" name="dosage" class="form-control form-control-sm" placeholder="Liều dùng (VD: 1 viên/lần, 2 lần/ngày sau ăn)">
+    </div>
+    <div>
+      <button type="button" class="btn btn-sm btn-outline-danger border-0 rounded-circle" onclick="this.closest('.rx-medicine-row').remove()" title="Xóa thuốc này">
+        <i class="bi bi-x-circle-fill fs-6"></i>
+      </button>
+    </div>
+  </div>
+</template>
 
-  // ── Tab switching ──────────────────────────────────────────────────────
-  document.querySelectorAll('[data-tab]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('[data-tab]').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      ['tab1','tab2','tab3','tab4'].forEach(id => {
-        document.getElementById(id).style.display = (id === btn.dataset.tab) ? '' : 'none';
-      });
-    });
-  });
-
-  // ── Track form changes for beforeunload ────────────────────────────────
-  document.querySelectorAll('#obsForm input, #obsForm select, #obsForm textarea').forEach(el => {
-    el.addEventListener('change', () => { formDirty = true; });
-  });
-
-  window.addEventListener('beforeunload', (e) => {
-    if (formDirty) {
-      e.preventDefault();
-      e.returnValue = '';
+<%-- ═══════ SCRIPTS ═══════ --%>
+<c:if test="${mode == 'form' && canEditRecord}">
+<script>
+function calcBMI(){var w=parseFloat(document.querySelector('[name=weightKg]')?.value);var h=parseFloat(document.querySelector('[name=heightCm]')?.value);var el=document.getElementById('bmiDisplay');if(w&&h&&h>0){el.value=(w/((h/100)*(h/100))).toFixed(1);}else{el.value='';}}
+function doSubmit(action){document.getElementById('submitAction').value=action;document.getElementById('mainForm').submit();}
+function toggleUltrasoundForm(){var isSkipped=document.getElementById('skipUltrasound').checked;document.getElementById('ultrasoundForm').style.display=isSkipped?'none':'flex';document.getElementById('ultrasoundSkipped').value=isSkipped?'true':'false';var s4=document.getElementById('step4');if(s4){s4.style.display=isSkipped?'block':'none';}}
+function submitUltrasound(){var sel=document.querySelector('[name=ultrasoundServiceId]');var reason=document.querySelector('[name=reorderReason]');if(!sel.value){alert('Vui lòng chọn dịch vụ siêu âm.');return;}if(!reason.value||reason.value.length<5){alert('Vui lòng nhập lý do chỉ định (ít nhất 5 ký tự).');return;}var f=document.createElement('form');f.method='POST';f.action='${pageContext.request.contextPath}/doctor/ultrasound-request';var csrf=document.createElement('input');csrf.type='hidden';csrf.name='_csrf';csrf.value='${sessionScope.csrfToken}';f.appendChild(csrf);['apptId=${apptId}','recordId=${record.id}','action=create'].forEach(function(p){var kv=p.split('=');var i=document.createElement('input');i.type='hidden';i.name=kv[0];i.value=kv[1];f.appendChild(i);});var sid=document.createElement('input');sid.type='hidden';sid.name='serviceId';sid.value=sel.value;f.appendChild(sid);var rr=document.createElement('input');rr.type='hidden';rr.name='reorderReason';rr.value=reason.value;f.appendChild(rr);document.body.appendChild(f);f.submit();}
+function cancelUltrasound(){
+    var r=prompt('Nhập lý do huỷ chỉ định siêu âm (10-500 ký tự):');
+    if(!r||r.length<10){alert('Lý do phải từ 10 ký tự.');return;}
+    if(!confirm('Bạn có chắc muốn HUỶ chỉ định siêu âm này? Hành động này không thể hoàn tác.')) return;
+    var f=document.createElement('form');f.method='POST';f.action='${pageContext.request.contextPath}/doctor/ultrasound-request';
+    var csrf=document.createElement('input');csrf.type='hidden';csrf.name='_csrf';csrf.value='${sessionScope.csrfToken}';f.appendChild(csrf);
+    ['action=cancel','apptId=${apptId}','orderId=${record.id}','reason='+encodeURIComponent(r)].forEach(function(p){var kv=p.split('=');var i=document.createElement('input');i.type='hidden';i.name=kv[0];i.value=kv.slice(1).join('=');f.appendChild(i);});
+    document.body.appendChild(f);f.submit();
+}
+function addRxRow(){
+    var container = document.getElementById('rxMedicineRows');
+    var tmpl = document.getElementById('rxRowTemplate');
+    if (container && tmpl) {
+        var clone = tmpl.content.cloneNode(true);
+        container.appendChild(clone);
     }
-  });
-
-  // ── Auto Calculate BMI & LMP Gestational Age ───────────────────────────
-  function calcBMI() {
-    const w = parseFloat(document.getElementById('weightKg').value);
-    const h = parseFloat(document.getElementById('heightCm').value);
-    const el = document.getElementById('bmiDisplay');
-    if (!el) return;
-    if (!isNaN(w) && !isNaN(h) && h > 0 && w > 0) {
-      const bmi = (w / Math.pow(h / 100, 2)).toFixed(1);
-      let cat = 'Bình thường';
-      if (bmi < 18.5) cat = 'Thiếu cân';
-      else if (bmi >= 23 && bmi < 25) cat = 'Thừa cân';
-      else if (bmi >= 25) cat = 'Béo phì';
-      el.innerHTML = '<strong>' + bmi + '</strong> (' + cat + ')';
-    } else {
-      el.innerHTML = '—';
+}
+function confirmFinalize(){
+    var diagEl = document.getElementById('finalDiagnosis');
+    var diag = diagEl ? diagEl.value.trim() : '';
+    if(!diag){
+        alert('Vui lòng nhập chẩn đoán trước khi chốt hồ sơ.');
+        if (diagEl) diagEl.focus();
+        return;
     }
-  }
-
-  // ── Labor Exam Section Toggle ──────────────────────────────────────────
-  function toggleLaborExamSection(enabled) {
-    const container = document.getElementById('laborExamContainer');
-    if (!container) return;
-    container.style.display = enabled ? 'block' : 'none';
-    container.querySelectorAll('input, select').forEach(el => {
-      el.disabled = !enabled;
-      if (!enabled) el.value = '';
-    });
-  }
-
-  // ── Risk box highlight ─────────────────────────────────────────────────
-  function updateRiskBox() {
-    const hasRisk = [...document.querySelectorAll('.risk-check')].some(c => c.checked) ||
-                    ['edema','proteinuria'].some(n => {
-                      const el = document.querySelector('[name="'+n+'"]');
-                      return el && ['Toàn thân','2+','3+'].includes(el.value);
-                    });
-    document.getElementById('riskBox').classList.toggle('active', hasRisk);
-  }
-  document.querySelectorAll('.risk-check, .risk-select').forEach(el => el.addEventListener('change', updateRiskBox));
-
-  // ── Validation & Submit Helper ─────────────────────────────────────────
-  function showFieldError(fieldName, msg, tabId) {
-    const el = document.querySelector('[name="' + fieldName + '"]');
-    if (!el) return;
-    el.classList.add('is-invalid');
-    let fb = el.parentNode.querySelector('.invalid-feedback');
-    if (!fb) {
-      fb = document.createElement('div');
-      fb.className = 'invalid-feedback';
-      el.parentNode.appendChild(fb);
-    }
-    fb.textContent = msg;
-    if (tabId) document.querySelector('[data-tab="' + tabId + '"]').click();
-    el.focus();
-  }
-
-  function clearFieldError(fieldName) {
-    const el = document.querySelector('[name="' + fieldName + '"]');
-    if (el) {
-      el.classList.remove('is-invalid');
-      const fb = el.parentNode.querySelector('.invalid-feedback');
-      if (fb) fb.textContent = '';
-    }
-  }
-
-  function submitObsForm() {
-    ['finalDiagnosis','weightKg','heightCm','pulseBpm','temperatureC',
-     'systolicBP','diastolicBP','gestationalAgeWeeks','gestationalAgeDays',
-     'fetalHeartRate','fundalHeightCm','cervicalDilationCm'].forEach(clearFieldError);
-
-    let firstError = null;
-    const isFinal = document.getElementById('submitActionField').value === 'final';
-
-    // 1. Chẩn đoán (Bắt buộc khi final)
-    const diag = document.querySelector('[name="finalDiagnosis"]');
-    if (isFinal && (!diag || !diag.value.trim())) {
-      showFieldError('finalDiagnosis', 'Vui lòng nhập chẩn đoán trước khi chốt hồ sơ.', 'tab4');
-      return;
-    }
-    if (diag && diag.value.trim().length > 1000) {
-      showFieldError('finalDiagnosis', 'Chẩn đoán không được vượt quá 1000 ký tự.', 'tab4');
-      return;
-    }
-
-    // Helper kiểm tra range số
-    function validateNum(name, min, max, label, tab) {
-      const el = document.querySelector('[name="' + name + '"]');
-      if (!el || el.value === '' || el.disabled) return true;
-      const v = parseFloat(el.value);
-      if (isNaN(v) || v < min || v > max) {
-        if (!firstError) {
-          showFieldError(name, label + ' phải từ ' + min + ' đến ' + max + '.', tab);
-          firstError = name;
-        }
-        return false;
-      }
-      return true;
-    }
-
-    validateNum('weightKg',     20,  300, 'Cân nặng (kg)',          'tab1');
-    validateNum('heightCm',    100,  250, 'Chiều cao (cm)',         'tab1');
-    validateNum('pulseBpm',     30,  250, 'Mạch (bpm)',             'tab1');
-    validateNum('temperatureC', 34,   43, 'Nhiệt độ (°C)',          'tab1');
-    validateNum('systolicBP',   50,  250, 'Huyết áp tâm thu',       'tab1');
-    validateNum('diastolicBP',  30,  150, 'Huyết áp tâm trương',    'tab1');
-
-    validateNum('gestationalAgeWeeks',  4,  44, 'Tuổi thai (tuần)',        'tab1');
-    validateNum('gestationalAgeDays',   0,   6, 'Ngày lẻ tuổi thai',      'tab1');
-    validateNum('fetalHeartRate',      60, 220, 'Nhịp tim thai (bpm)',     'tab1');
-    validateNum('fundalHeightCm',       5,  50, 'Chiều cao tử cung (cm)', 'tab1');
-
-    validateNum('cervicalDilationCm', 0, 10, 'Độ mở CTC (cm)', 'tab2');
-
-    // Đơn thuốc kèm theo
-    if (!firstError) {
-      const rxSelects = document.querySelectorAll('select[name="medicineId[]"]');
-      const seenMed = new Set();
-      rxSelects.forEach(sel => {
-        if (firstError || !sel.value) return;
-        const row = sel.closest('.rx-medicine-row');
-        if (!row) return;
-        const qtyEl = row.querySelector('input[name="quantity[]"]');
-        const dosageEl = row.querySelector('input[name="dosage[]"]');
-        const q = parseInt(qtyEl.value);
-        if (!qtyEl.value || isNaN(q) || q < 1 || q > 9999) {
-          qtyEl.classList.add('is-invalid');
-          document.querySelector('[data-tab="tab4"]').click();
-          qtyEl.focus();
-          firstError = 'rxQuantity';
-          return;
-        }
-        if (!dosageEl.value || !dosageEl.value.trim()) {
-          dosageEl.classList.add('is-invalid');
-          document.querySelector('[data-tab="tab4"]').click();
-          dosageEl.focus();
-          firstError = 'rxDosage';
-          return;
-        }
-        if (seenMed.has(sel.value)) {
-          sel.classList.add('is-invalid');
-          document.querySelector('[data-tab="tab4"]').click();
-          firstError = 'rxDuplicate';
-          return;
-        }
-        seenMed.add(sel.value);
-      });
-    }
-
-    if (firstError) return;
-
-    formDirty = false;
-    document.getElementById('btnFinal').disabled = true;
-    document.getElementById('btnDraft').disabled = true;
-    document.getElementById('obsForm').submit();
-  }
-
-  // ── Bảng kê đơn thuốc ──────────────────────────────────────────────────
-  (function () {
-    const tbody  = document.getElementById('rxMedicineRows');
-    const addBtn = document.getElementById('rxAddRowBtn');
-    const tpl    = document.getElementById('rxRowTemplate');
-    if (!tbody || !tpl) return;
-
-    function updateCount() {
-      const n = tbody.querySelectorAll('.rx-medicine-row').length;
-      document.getElementById('rxRowCount').textContent = n + ' loại thuốc';
-    }
-    updateCount();
-
-        function bindDescHint(sel) {
-      const row = sel.closest('.rx-medicine-row');
-
-      function refresh() {
-        const opt    = sel.options[sel.selectedIndex];
-        const hint   = row.querySelector('.rx-med-desc-hint');
-        const unitEl = row.querySelector('.rx-unit-suffix');
-        const desc   = opt ? (opt.dataset.desc || '') : '';
-        const unit   = opt ? (opt.dataset.unit || '') : '';
-        if (unitEl) unitEl.textContent = unit || '—';
-        if (hint) hint.textContent = desc;
-        checkStock();
-      }
-
-      function checkStock() {
-        const opt   = sel.options[sel.selectedIndex];
-        const hint  = row.querySelector('.rx-med-desc-hint');
-        const qtyEl = row.querySelector('input[name="quantity[]"]');
-        if (!opt || !opt.value || !hint) return;
-        const stock = parseInt(opt.dataset.stock);
-        const qty   = parseInt(qtyEl.value);
-        const desc  = opt.dataset.desc || '';
-        if (!isNaN(stock) && !isNaN(qty) && qty > stock) {
-          hint.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Kho chỉ còn ' + stock + ' — kê vượt tồn kho.</span>';
-        } else {
-          hint.textContent = desc;
-        }
-      }
-
-      sel.addEventListener('change', refresh);
-      const qtyInput = row.querySelector('input[name="quantity[]"]');
-      if (qtyInput) qtyInput.addEventListener('input', checkStock);
-      refresh();
-    }
-
-    tbody.querySelectorAll('.rx-med-dropdown').forEach(bindDescHint);
-
-    if (addBtn) {
-      addBtn.addEventListener('click', () => {
-        const clone = tpl.content.cloneNode(true);
-        tbody.appendChild(clone);
-        const newSel = tbody.lastElementChild.querySelector('.rx-med-dropdown');
-        if (newSel) bindDescHint(newSel);
-        updateCount();
-      });
-    }
-
-    tbody.addEventListener('click', (e) => {
-      const btn = e.target.closest('.rx-remove-row');
-      if (!btn) return;
-      btn.closest('.rx-medicine-row').remove();
-      updateCount();
-    });
-  })();
-
-  function doSubmit(action) {
-    document.getElementById('submitActionField').value = action;
-    submitObsForm();
-  }
-
-  function confirmAndSubmitFinal() {
-    const diag = document.querySelector('[name="finalDiagnosis"]').value.trim();
-    if (!diag) {
-      showFieldError('finalDiagnosis', 'Vui lòng nhập chẩn đoán trước khi chốt hồ sơ.', 'tab4');
-      return;
-    }
-
-    // Kiểm tra bác sĩ đã ra quyết định về siêu âm chưa
-    const ultrasoundSkipped = document.getElementById('ultrasoundSkipped');
-    const hasExistingUltrasound = ${not empty existingUltrasoundOrders && existingUltrasoundOrders ? 'true' : 'false'};
-    if (!hasExistingUltrasound && ultrasoundSkipped && !ultrasoundSkipped.checked) {
-      alert('Vui lòng ra quyết định về siêu âm trước khi chốt hồ sơ:\n'
-        + '- Tạo Chỉ định Siêu âm (nếu cần)\n'
-        + '- Hoặc tích chọn "Không cần chỉ định siêu âm"');
-      document.getElementById('skipUltrasoundBox').scrollIntoView({ behavior: 'smooth', block: 'center' });
-      return;
-    }
-
-    const rxCount = document.querySelectorAll('#rxMedicineRows .rx-medicine-row').length;
-    const hasRisk = document.getElementById('riskBox').classList.contains('active');
-
-    let summaryHtml = '<div><strong>Chẩn đoán:</strong> ' + diag + '</div>';
-    summaryHtml += '<div><strong>Siêu âm:</strong> ' + (ultrasoundSkipped && ultrasoundSkipped.checked ? 'Không cần' : (hasExistingUltrasound ? 'Đã chỉ định' : 'Chưa quyết định')) + '</div>';
-    summaryHtml += '<div><strong>Đơn thuốc:</strong> ' + rxCount + ' loại thuốc</div>';
-    if (hasRisk) {
-      summaryHtml += '<div class="text-danger mt-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>Có ghi nhận yếu tố nguy cơ.</div>';
-    }
-
-    document.getElementById('modalSummary').innerHTML = summaryHtml;
-    const modal = new bootstrap.Modal(document.getElementById('finalConfirmModal'));
-    modal.show();
-  }
-
-  function onUltrasoundSkippedChanged() {
-    // Reset nếu bác sĩ đổi ý và tạo chỉ định siêu âm mới
-  }
-
-  function executeFinalSubmit() {
-    const btn = document.getElementById('btnConfirmFinal');
-    if (btn) btn.disabled = true;
+    if(!confirm('Xác nhận CHỐT HỒ SƠ và HOÀN TẤT KHÁM? Hành động này không thể hoàn tác.')) return;
     doSubmit('final');
-  }
-
-  // Khởi tạo trạng thái ban đầu
-  calcBMI();
-  </script>
-
+}
+calcBMI();
+document.querySelectorAll('.risk-check').forEach(function(cb){cb.addEventListener('change',function(){var box=document.getElementById('riskBox');var any=document.querySelectorAll('.risk-check:checked').length>0;box.className='risk-box'+(any?' active':'');});});
+</script>
 </c:if>
 
 <%@ include file="../common/footer.jsp" %>

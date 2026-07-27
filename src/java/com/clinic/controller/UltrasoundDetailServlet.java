@@ -56,6 +56,34 @@ public class UltrasoundDetailServlet extends HttpServlet {
             }
 
             request.setAttribute("order", order);
+
+            // Tải thông tin khám lâm sàng từ Bác sĩ khám
+            com.clinic.model.MedicalRecord medicalRecord = null;
+            try {
+                com.clinic.dao.MedicalRecordDAO mrDAO = new com.clinic.dao.MedicalRecordDAO();
+                if (order.getMedicalRecordId() != null && order.getMedicalRecordId() > 0) {
+                    medicalRecord = mrDAO.getById(order.getMedicalRecordId());
+                }
+                if (medicalRecord == null && order.getAppointmentId() != null && order.getAppointmentId() > 0) {
+                    medicalRecord = mrDAO.getByAppointmentId(order.getAppointmentId());
+                }
+            } catch (Exception e) {
+                System.err.println("[UltrasoundDetailServlet] Load medicalRecord error: " + e.getMessage());
+            }
+            request.setAttribute("medicalRecord", medicalRecord);
+
+            // Tải chi tiết dịch vụ siêu âm
+            com.clinic.model.Service serviceDetail = null;
+            try {
+                if (order.getServiceId() != null && order.getServiceId() > 0) {
+                    com.clinic.dao.ServiceDAO serviceDAO = new com.clinic.dao.ServiceDAO();
+                    serviceDetail = serviceDAO.findById(order.getServiceId());
+                }
+            } catch (Exception e) {
+                System.err.println("[UltrasoundDetailServlet] Load serviceDetail error: " + e.getMessage());
+            }
+            request.setAttribute("serviceDetail", serviceDetail);
+
             List<UltrasoundImage> images = orderService.getUltrasoundImages(orderId);
             if (orderService.isReviewSchemaSupported()) {
                 for (UltrasoundImage image : images) {
@@ -182,6 +210,17 @@ public class UltrasoundDetailServlet extends HttpServlet {
                 request.getParameter("professionalFindings"), request.getParameter("conclusion"), sign);
 
         if (saved) {
+            // Thông báo cho bác sĩ lâm sàng rằng kết quả siêu âm đã sẵn sàng
+            try {
+                com.clinic.model.UltrasoundWaitingPatient orderInfo = orderService.getById(orderId);
+                if (orderInfo != null && orderInfo.getMedicalRecordId() != null) {
+                    com.clinic.utils.NotificationHelper.ultrasoundReportSigned(
+                            orderInfo.getMedicalRecordId(),
+                            orderInfo.getServiceName() != null ? orderInfo.getServiceName() : "Siêu âm");
+                }
+            } catch (Exception e) {
+                System.err.println("[UltrasoundDetailServlet] Không gửi được thông báo: " + e.getMessage());
+            }
             redirect(response, request, orderId, "success=signed");
         } else {
             redirect(response, request, orderId, "error=signFailed");

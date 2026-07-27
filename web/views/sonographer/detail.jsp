@@ -68,25 +68,98 @@
         <div class="us-step" data-step="pending"><span class="us-step-dot">1</span><div class="small mt-2">Tiếp nhận</div></div>
         <div class="us-step" data-step="inprogress"><span class="us-step-dot">2</span><div class="small mt-2">Chụp và tải ảnh</div></div>
         <div class="us-step" data-step="uploaded"><span class="us-step-dot">3</span><div class="small mt-2">AI và duyệt ảnh</div></div>
-        <div class="us-step" data-step="completed"><span class="us-step-dot">4</span><div class="small mt-2">Đã ký</div></div>
-        <div class="us-step" data-step="confirmed"><span class="us-step-dot">5</span><div class="small mt-2">BS lâm sàng xác nhận</div></div>
+        <div class="us-step" data-step="completed"><span class="us-step-dot">4</span><div class="small mt-2">Hoàn thành</div></div>
     </div>
 </div>
 
 <div class="row g-4">
     <div class="col-lg-4">
         <div class="admin-card h-100">
-            <div class="card-header bg-white py-3"><h5 class="mb-0">Thông tin chỉ định</h5></div>
+            <div class="card-header bg-white py-3 border-bottom">
+                <h5 class="mb-0 text-dark fw-bold"><i class="bi bi-file-earmark-medical me-2 text-primary"></i>Thông tin chỉ định &amp; Khám lâm sàng</h5>
+            </div>
             <div class="card-body">
                 <dl class="row mb-0 small">
-                    <dt class="col-5 text-muted mb-3">Sản phụ</dt><dd class="col-7 fw-semibold"><c:out value="${order.patientName}" /></dd>
-                    <dt class="col-5 text-muted mb-3">Ngày sinh</dt><dd class="col-7"><c:out value="${order.dateOfBirth}" /></dd>
-                    <dt class="col-5 text-muted mb-3">Dịch vụ</dt><dd class="col-7 fw-semibold text-primary"><c:out value="${order.serviceName}" /></dd>
-                    <dt class="col-5 text-muted mb-3">Bác sĩ lâm sàng chỉ định</dt><dd class="col-7">BS. <c:out value="${order.doctorName}" /></dd>
-                    <dt class="col-5 text-muted mb-3">Triệu chứng</dt><dd class="col-7"><c:out value="${empty order.symptoms ? 'Không ghi nhận' : order.symptoms}" /></dd>
-                    <dt class="col-5 text-muted">Ưu tiên</dt><dd class="col-7">
-                        <c:choose><c:when test="${order.priority || order.emergency}"><span class="badge bg-warning text-dark">Ưu tiên</span></c:when>
-                        <c:otherwise><span class="badge bg-secondary-subtle text-secondary">Thông thường</span></c:otherwise></c:choose>
+                    <dt class="col-5 text-muted mb-3">Sản phụ</dt>
+                    <dd class="col-7 fw-bold text-dark mb-3"><c:out value="${order.patientName}" /></dd>
+                    
+                    <dt class="col-5 text-muted mb-3">Ngày sinh</dt>
+                    <dd class="col-7 mb-3 text-dark"><c:out value="${order.dateOfBirthText}" /> <span class="text-muted">(${order.ageText})</span></dd>
+
+                    <dt class="col-5 text-muted mb-3">SĐT liên hệ</dt>
+                    <dd class="col-7 mb-3 text-dark"><c:out value="${empty order.phoneNumber ? 'Chưa có' : order.phoneNumber}" /></dd>
+                    
+                    <dt class="col-5 text-muted mb-3">Dịch vụ</dt>
+                    <dd class="col-7 fw-bold text-primary mb-3"><c:out value="${order.serviceName}" /></dd>
+                    
+                    <dt class="col-5 text-muted mb-3">Bác sĩ chỉ định</dt>
+                    <dd class="col-7 text-dark mb-3">BS. <c:out value="${order.doctorName}" /></dd>
+                    
+                    <dt class="col-5 text-muted mb-3">Triệu chứng / Lý do</dt>
+                    <dd class="col-7 mb-3 text-dark fw-medium"><c:out value="${empty order.symptoms ? 'Không ghi nhận' : order.symptoms}" /></dd>
+
+                    <dt class="col-5 text-muted mb-3">Chẩn đoán sơ bộ</dt>
+                    <dd class="col-7 mb-3 text-danger fw-semibold">
+                        <c:choose>
+                            <c:when test="${not empty medicalRecord && not empty medicalRecord.finalDiagnosis}"><c:out value="${medicalRecord.finalDiagnosis}" /></c:when>
+                            <c:otherwise><c:out value="${empty order.symptoms ? 'Chưa có chẩn đoán' : order.symptoms}" /></c:otherwise>
+                        </c:choose>
+                    </dd>
+
+                    <dt class="col-5 text-muted mb-3">Ghi chú BS khám</dt>
+                    <dd class="col-7 mb-3 text-dark">
+                        <c:choose>
+                            <c:when test="${not empty medicalRecord && not empty medicalRecord.clinicalNotes}"><c:out value="${medicalRecord.clinicalNotes}" /></c:when>
+                            <c:otherwise><span class="text-muted fst-italic">Không có ghi chú thêm</span></c:otherwise>
+                        </c:choose>
+                    </dd>
+
+                    <dt class="col-5 text-muted mb-3">Tuổi thai (GA)</dt>
+                    <dd class="col-7 mb-3 fw-bold text-success">
+                        <c:choose>
+                            <c:when test="${not empty medicalRecord && (medicalRecord.gestationalAgeWeeks > 0 || medicalRecord.gestationalAgeDays > 0)}">
+                                ${medicalRecord.gestationalAgeWeeks} tuần ${medicalRecord.gestationalAgeDays} ngày
+                            </c:when>
+                            <c:otherwise><span class="text-muted fw-normal">Chưa xác định</span></c:otherwise>
+                        </c:choose>
+                    </dd>
+
+                    <dt class="col-5 text-muted mb-3">Kinh cuối (LMP)</dt>
+                    <dd class="col-7 mb-3 text-dark"><c:out value="${empty medicalRecord.lastMenstrualPeriod ? 'Chưa rõ' : medicalRecord.lastMenstrualPeriod}" /></dd>
+
+                    <dt class="col-5 text-muted mb-3">Sinh hiệu / Chỉ số</dt>
+                    <dd class="col-7 mb-3">
+                        <c:if test="${not empty medicalRecord}">
+                            <span class="badge bg-light text-dark border me-1">HA: ${empty medicalRecord.bloodPressure ? '—' : medicalRecord.bloodPressure}</span>
+                            <span class="badge bg-light text-dark border">Nặng: <c:choose><c:when test="${not empty medicalRecord.weightKg && medicalRecord.weightKg > 0}">${medicalRecord.weightKg} kg</c:when><c:otherwise>—</c:otherwise></c:choose></span>
+                        </c:if>
+                        <c:if test="${empty medicalRecord}">
+                            <span class="text-muted">Chưa có chỉ số</span>
+                        </c:if>
+                    </dd>
+
+                    <dt class="col-5 text-muted mb-3">Yêu cầu chuẩn bị</dt>
+                    <dd class="col-7 mb-3">
+                        <c:set var="hasPrep" value="false" />
+                        <c:if test="${order.requiresFasting || (not empty serviceDetail && serviceDetail.requiresFasting)}">
+                            <span class="badge bg-warning text-dark me-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>Cần nhịn ăn</span>
+                            <c:set var="hasPrep" value="true" />
+                        </c:if>
+                        <c:if test="${order.requiresFullBladder || (not empty serviceDetail && serviceDetail.requiresFullBladder)}">
+                            <span class="badge bg-info text-dark"><i class="bi bi-droplet-fill me-1"></i>Cần nhịn tiểu</span>
+                            <c:set var="hasPrep" value="true" />
+                        </c:if>
+                        <c:if test="${not hasPrep}">
+                            <span class="text-muted">Không yêu cầu chuẩn bị</span>
+                        </c:if>
+                    </dd>
+
+                    <dt class="col-5 text-muted mb-0">Mức ưu tiên</dt>
+                    <dd class="col-7 mb-0">
+                        <c:choose>
+                            <c:when test="${order.priority || order.emergency}"><span class="badge bg-warning text-dark">Ưu tiên</span></c:when>
+                            <c:otherwise><span class="badge bg-secondary-subtle text-secondary">Thông thường</span></c:otherwise>
+                        </c:choose>
                     </dd>
                 </dl>
             </div>
@@ -94,7 +167,16 @@
     </div>
     <div class="col-lg-8">
         <div class="admin-card h-100">
-            <div class="card-header bg-white py-3"><h5 class="mb-0">Việc cần làm ở bước hiện tại</h5></div>
+            <div class="card-header bg-white py-3">
+              <h5 class="mb-0">
+                <c:choose>
+                  <c:when test="${status == 'completed' || status == 'confirmed'}">
+                    <i class="bi bi-patch-check-fill text-success me-2"></i>Kết quả siêu âm đã hoàn thành
+                  </c:when>
+                  <c:otherwise>Việc cần làm ở bước hiện tại</c:otherwise>
+                </c:choose>
+              </h5>
+            </div>
             <div class="card-body">
                 <c:choose>
                     <c:when test="${not ownershipSupported}">
@@ -166,11 +248,37 @@
                             </form>
                         </c:if>
                     </c:when>
-                    <c:when test="${status == 'completed'}">
-                        <div class="alert alert-info mb-0"><strong>Đã ký phiếu.</strong> Đang chờ Bác sĩ lâm sàng xem và xác nhận.</div>
-                    </c:when>
-                    <c:when test="${status == 'confirmed'}">
-                        <div class="alert alert-success mb-0"><strong>Đã hoàn tất.</strong> Bác sĩ lâm sàng đã xác nhận kết quả.</div>
+                    <c:when test="${status == 'completed' || status == 'confirmed'}">
+                        <%-- Hiện ảnh kết quả và phiếu đã ký --%>
+                        <div class="d-flex align-items-center gap-2 p-3 rounded-3 bg-success bg-opacity-10 border border-success mb-3">
+                          <i class="bi bi-patch-check-fill text-success fs-4"></i>
+                          <div>
+                            <div class="fw-semibold text-success">Ca siêu âm đã hoàn thành</div>
+                            <div class="small text-muted">Đã ký phiếu kết quả. Bác sĩ lâm sàng có thể xem kết quả này.</div>
+                          </div>
+                        </div>
+                        <c:if test="${not empty selectedImage}">
+                          <div class="row g-3">
+                            <div class="col-md-6">
+                              <div class="small fw-semibold text-muted mb-2">Ảnh siêu âm gốc</div>
+                              <img src="${pageContext.request.contextPath}/medical/ultrasound-image?id=${selectedImage.id}"
+                                   alt="Ảnh siêu âm" class="img-fluid rounded-3 border w-100" style="max-height:220px;object-fit:contain;background:#0f172a;">
+                            </div>
+                            <c:if test="${not empty aiResult && aiResult.status == 'Success' && aiResult.detected}">
+                              <div class="col-md-6">
+                                <div class="small fw-semibold text-muted mb-2">Ảnh AI phân tích (YOLOv3)</div>
+                                <img src="${pageContext.request.contextPath}/medical/ai-image?orderId=${order.orderId}&amp;imageId=${selectedImage.id}&amp;type=result"
+                                     alt="Kết quả AI" class="img-fluid rounded-3 border w-100" style="max-height:220px;object-fit:contain;background:#0f172a;">
+                              </div>
+                            </c:if>
+                          </div>
+                          <c:if test="${not empty currentReport}">
+                            <div class="mt-3 p-3 rounded-3 bg-light border">
+                              <div class="small fw-semibold text-muted mb-1"><i class="bi bi-file-earmark-text me-1"></i>Kết luận của Bác sĩ siêu âm</div>
+                              <div class="small text-dark" style="white-space:pre-wrap"><c:out value="${currentReport.conclusion}"/></div>
+                            </div>
+                          </c:if>
+                        </c:if>
                     </c:when>
                 </c:choose>
             </div>
@@ -207,9 +315,11 @@
                     <div class="row g-3 mb-4">
                         <div class="col-lg-8">
                             <div class="us-image-stage" id="imageStage"><div id="imageViewport">
-                                <img id="rawUltrasoundImage" src="${pageContext.request.contextPath}/medical/ultrasound-image?id=${selectedImage.id}" alt="Ảnh siêu âm gốc">
+                                <%-- Ảnh gốc (src sẽ được chuyển sang result.png khi xem AI để hiện khung YOLOv3) --%>
+                                <img id="rawUltrasoundImage" src="${pageContext.request.contextPath}/medical/ultrasound-image?id=${selectedImage.id}" alt="Ảnh siêu âm">
+                                <%-- Lớp mask UNet chồng lên khi xem AI --%>
                                 <c:if test="${aiResult.status == 'Success' && aiResult.detected && not empty aiResult.maskImage}">
-                                    <img id="aiMaskLayer" src="${pageContext.request.contextPath}/medical/ai-image?orderId=${order.orderId}&amp;imageId=${selectedImage.id}&amp;type=mask&amp;v=${not empty aiResult.analyzedAt ? aiResult.analyzedAt.time : aiResult.id}" alt="Lớp vùng AI">
+                                    <img id="aiMaskLayer" src="${pageContext.request.contextPath}/medical/ai-image?orderId=${order.orderId}&amp;imageId=${selectedImage.id}&amp;type=mask&amp;v=${not empty aiResult.analyzedAt ? aiResult.analyzedAt.time : aiResult.id}" alt="Lớp vùng UNet" style="display:none">
                                 </c:if>
                                 <canvas id="annotationCanvas"></canvas>
                             </div></div>
@@ -241,13 +351,10 @@
 
                     <h6 class="fw-bold mb-3"><span class="badge bg-primary me-2">2</span>Duyệt vùng phân tích</h6>
                     <div class="row g-3 mb-3">
-                        <div class="col-md-4"><label class="review-choice d-block"><input type="radio" name="reviewStatus" value="Accepted"
+                        <div class="col-md-6"><label class="review-choice d-block"><input type="radio" name="reviewStatus" value="Accepted"
                             ${currentAnnotation.reviewStatus == 'Accepted' ? 'checked' : ''} ${aiResult.status != 'Success' ? 'disabled' : ''}>
                             <strong class="ms-1">Chấp nhận AI</strong><div class="small text-muted mt-1">Vùng và nhận định AI phù hợp.</div></label></div>
-                        <div class="col-md-4"><label class="review-choice d-block"><input type="radio" name="reviewStatus" value="Corrected"
-                            ${currentAnnotation.reviewStatus == 'Corrected' ? 'checked' : ''}>
-                            <strong class="ms-1">Hiệu chỉnh vùng</strong><div class="small text-muted mt-1">Vẽ đa giác chuyên môn thay thế.</div></label></div>
-                        <div class="col-md-4"><label class="review-choice d-block"><input type="radio" name="reviewStatus" value="Rejected"
+                        <div class="col-md-6"><label class="review-choice d-block"><input type="radio" name="reviewStatus" value="Rejected"
                             ${currentAnnotation.reviewStatus == 'Rejected' ? 'checked' : ''}>
                             <strong class="ms-1">Từ chối gợi ý</strong><div class="small text-muted mt-1">Nêu lý do; có thể vẽ vùng thủ công.</div></label></div>
                     </div>
@@ -299,9 +406,9 @@
                     </div>
                     <div class="mb-3"><label class="form-label">Kết luận siêu âm <span class="text-danger">*</span></label>
                         <textarea class="form-control" name="conclusion" rows="3" maxlength="8000"><c:out value="${currentReport.conclusion}" /></textarea></div>
-                    <div class="alert alert-light border small">Người ký: <strong><c:out value="${sessionScope.user.fullName}" /></strong>. Sau khi ký, phiếu chuyển sang chờ Bác sĩ lâm sàng xác nhận và không thể sửa trực tiếp.</div>
+                    <div class="alert alert-light border small">Người ký: <strong><c:out value="${sessionScope.user.fullName}" /></strong>. Sau khi ký, phiếu hoàn thành và không thể sửa trực tiếp.</div>
                     <div class="d-flex justify-content-end gap-2">
-                        <button type="submit" class="btn btn-primary" id="signButton"><i class="bi bi-pen me-1"></i>Ký và chuyển Bác sĩ lâm sàng</button>
+                        <button type="submit" class="btn btn-success" id="signButton"><i class="bi bi-patch-check me-1"></i>Ký và hoàn thành kết quả</button>
                     </div>
                 </form>
                 <textarea id="existingAnnotationData" hidden><c:out value="${currentAnnotation.annotationData}" /></textarea>
@@ -325,16 +432,19 @@
                 <div class="col-12"><div class="text-muted small">Mô tả hình ảnh</div><div class="readonly-field"><c:out value="${currentReport.imageDescription}" /></div></div>
                 <div class="col-12"><div class="text-muted small">Nhận xét chuyên môn</div><div class="readonly-field"><c:out value="${currentReport.professionalFindings}" /></div></div>
                 <div class="col-12"><div class="text-muted small">Kết luận</div><div class="readonly-field fw-semibold"><c:out value="${currentReport.conclusion}" /></div></div>
-                <c:if test="${status == 'confirmed'}"><div class="col-12"><div class="alert alert-success mb-0">Bác sĩ lâm sàng đã xác nhận lúc <c:out value="${currentReport.doctorConfirmedAt}" />.</div></div></c:if>
             </div>
         </c:otherwise></c:choose>
     </div>
 </section>
 </c:if>
 
+<c:set var="aiResultUrl" value="" />
+<c:if test="${aiResult.status == 'Success' && aiResult.detected && not empty aiResult.resultImage}">
+    <c:set var="aiResultUrl">${pageContext.request.contextPath}/medical/ai-image?orderId=${order.orderId}&imageId=${selectedImage.id}&type=result&v=${not empty aiResult.analyzedAt ? aiResult.analyzedAt.time : aiResult.id}</c:set>
+</c:if>
 <script>
 (function () {
-    const states = ['pending', 'inprogress', 'uploaded', 'completed', 'confirmed'];
+    const states = ['pending', 'inprogress', 'uploaded', 'completed'];
     let state = '${status}';
     if (state === 'waiting' || state === 'ordered') state = 'pending';
     const current = Math.max(0, states.indexOf(state));
@@ -367,7 +477,7 @@
         x2: ${not empty aiResult.xmax && aiResult.detected ? aiResult.xmax : 'null'}, y2: ${not empty aiResult.ymax && aiResult.detected ? aiResult.ymax : 'null'}
     };
     const viewport = document.getElementById('imageViewport');
-    let points = [], undoStack = [], redoStack = [], dragIndex = -1, activeView = 'raw';
+    let points = [], undoStack = [], redoStack = [], dragIndex = -1, activeView = aiDetected ? 'ai' : 'raw';
     let viewScale = 1, viewX = 0, viewY = 0, panMode = false, panStart = null;
 
     function selectedReview() { const x = form.querySelector('[name="reviewStatus"]:checked'); return x ? x.value : ''; }
@@ -383,15 +493,21 @@
         canvas.style.width = w + 'px'; canvas.style.height = h + 'px'; canvas.width = Math.round(w); canvas.height = Math.round(h);
         widthField.value = raw.naturalWidth; heightField.value = raw.naturalHeight; draw();
     }
+    const rawSrcOriginal = raw.src;
+    const aiResultSrc = '${aiResultUrl}';
+    
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         const showAiLayer = aiDetected && (activeView === 'ai' || (activeView === 'review' && selectedReview() === 'Accepted'));
-        if (mask) mask.style.display = showAiLayer ? 'block' : 'none';
-        if (showAiLayer && aiBox.x1 !== null && raw.naturalWidth) {
-            ctx.save(); ctx.setLineDash([7,5]); ctx.strokeStyle='#38bdf8'; ctx.lineWidth=2;
-            ctx.strokeRect(aiBox.x1/raw.naturalWidth*canvas.width, aiBox.y1/raw.naturalHeight*canvas.height,
-                (aiBox.x2-aiBox.x1)/raw.naturalWidth*canvas.width, (aiBox.y2-aiBox.y1)/raw.naturalHeight*canvas.height); ctx.restore();
+
+        // Khi xem AI: đổi src của rawUltrasoundImage sang result.png có sẵn bounding box YOLOv3 + hiện mask UNet đè lên
+        if (showAiLayer && aiResultSrc) {
+            if (raw.dataset.mode !== 'ai') { raw.src = aiResultSrc; raw.dataset.mode = 'ai'; }
+        } else {
+            if (raw.dataset.mode === 'ai') { raw.src = rawSrcOriginal; raw.dataset.mode = 'raw'; }
         }
+        if (mask) mask.style.display = showAiLayer ? 'block' : 'none';
+
         if (activeView !== 'review' || !points.length) return;
         ctx.beginPath(); points.forEach((p,i) => { const x=p.x*canvas.width,y=p.y*canvas.height; i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
         if (points.length > 2) ctx.closePath(); ctx.fillStyle='rgba(37,99,235,.18)'; ctx.fill(); ctx.strokeStyle='#2563eb'; ctx.lineWidth=2.5; ctx.stroke();
@@ -401,7 +517,7 @@
     canvas.addEventListener('pointerdown', e => {
         if (panMode) { panStart={x:e.clientX,y:e.clientY,viewX,viewY}; canvas.setPointerCapture(e.pointerId); return; }
         if (activeView !== 'review') return;
-        const review=selectedReview(); if (review !== 'Corrected' && review !== 'Rejected') return;
+        const review=selectedReview(); if (review !== 'Rejected') return;
         const p=position(e), threshold=12/Math.max(canvas.width,1);
         dragIndex=points.findIndex(q => Math.hypot(q.x-p.x,q.y-p.y)<threshold); saveHistory();
         if (dragIndex < 0) { points.push(p); dragIndex=points.length-1; }
@@ -428,6 +544,7 @@
     document.querySelectorAll('.image-view-button').forEach(button => {
         button.addEventListener('click', () => setImageView(button.dataset.imageView));
     });
+    setImageView(aiDetected ? 'ai' : 'raw');
     function applyView(){viewport.style.transform=`translate(${viewX}px,${viewY}px) scale(${viewScale})`;}
     document.getElementById('zoomInButton').onclick=()=>{viewScale=Math.min(4,viewScale+.25);applyView();};
     document.getElementById('zoomOutButton').onclick=()=>{viewScale=Math.max(.5,viewScale-.25);applyView();};
@@ -481,15 +598,15 @@
 
         const signing = clickedAction === 'sign', review = selectedReview();
         if (!review) {
-            e.preventDefault(); notifyValidation('Bác sĩ siêu âm phải chủ động chọn Chấp nhận, Hiệu chỉnh hoặc Từ chối gợi ý AI.'); return;
+            e.preventDefault(); notifyValidation('Bác sĩ siêu âm phải chủ động chọn Chấp nhận hoặc Từ chối gợi ý AI.'); return;
         }
-        if ((review==='Corrected' && points.length<3) || (review==='Rejected' && form.rejectionReason.value.trim().length<5)) {
-            e.preventDefault(); notifyValidation(review==='Corrected'?'Vui lòng tạo vùng đa giác có ít nhất 3 điểm.':'Vui lòng nêu lý do từ chối (ít nhất 5 ký tự).'); return;
+        if (review==='Rejected' && form.rejectionReason.value.trim().length<5) {
+            e.preventDefault(); notifyValidation('Vui lòng nêu lý do từ chối (ít nhất 5 ký tự).'); return;
         }
         if (signing) {
             const fields=['imageDescription','professionalFindings','conclusion'];
             if(fields.some(n=>form.elements[n].value.trim().length<5) || form.conclusion.value.trim().length<10){e.preventDefault();notifyValidation('Vui lòng nhập đầy đủ mô tả, nhận xét và kết luận trước khi ký.');return;}
-            if(!confirm('Xác nhận ký phiếu và chuyển cho Bác sĩ lâm sàng?'))e.preventDefault();
+            if(!confirm('Xác nhận ký phiếu và hoàn thành kết quả siêu âm?'))e.preventDefault();
         }
     });
     try { const existing=JSON.parse(document.getElementById('existingAnnotationData').value||'null'); if(existing&&Array.isArray(existing.points))points=existing.points; } catch(ignore) {}

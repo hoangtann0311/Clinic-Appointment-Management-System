@@ -1,6 +1,7 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
+<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
 <%@ include file="../common/header.jsp" %>
 
 <div class="row mb-4">
@@ -99,6 +100,110 @@
     </c:if>
 
     <%-- ══════════════════════════════════════════════════════════ --%>
+    <%-- PATIENT: Khối việc cần làm [P11]                         --%>
+    <%-- ══════════════════════════════════════════════════════════ --%>
+    <c:if test="${user.roleId == 5 && not empty patientActionNeeded}">
+    <div class="col-12">
+        <c:set var="pan" value="${patientActionNeeded}"/>
+        <c:set var="panType" value="${pan['type']}"/>
+        <c:choose>
+            <%-- (a) Chưa thanh toán siêu âm --%>
+            <c:when test="${panType == 'unpaid_ultrasound'}">
+                <div class="card border-0 rounded-4" style="background: linear-gradient(135deg, #fff3cd, #ffe69c); border-left: 5px solid #f59e0b;">
+                    <div class="card-body p-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
+                        <div>
+                            <h6 class="fw-bold mb-1"><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>${pan['message']}</h6>
+                            <p class="mb-0 small">Vui lòng đến quầy lễ tân thanh toán. Số tiền: <strong><fmt:formatNumber value="${pan['amount']}" pattern="#,###"/>đ</strong></p>
+                        </div>
+                        <a href="${pageContext.request.contextPath}/patient/invoices" class="btn btn-warning btn-sm rounded-pill px-4"><i class="bi bi-cash me-1"></i>Xem hoá đơn</a>
+                    </div>
+                </div>
+            </c:when>
+            <%-- (b) Chưa thanh toán phí khám --%>
+            <c:when test="${panType == 'unpaid_preexam'}">
+                <div class="card border-0 rounded-4" style="background: linear-gradient(135deg, #fff3cd, #ffe69c); border-left: 5px solid #f59e0b;">
+                    <div class="card-body p-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
+                        <div>
+                            <h6 class="fw-bold mb-1"><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>${pan['message']}</h6>
+                            <p class="mb-0 small">Vui lòng đến quầy lễ tân thanh toán trước giờ khám. Số tiền: <strong><fmt:formatNumber value="${pan['amount']}" pattern="#,###"/>đ</strong> &mdash; Ngày khám: ${pan['appointmentDate']} ${pan['timeSlot']}</p>
+                        </div>
+                        <a href="${pageContext.request.contextPath}/patient/invoices" class="btn btn-warning btn-sm rounded-pill px-4"><i class="bi bi-cash me-1"></i>Xem hoá đơn</a>
+                    </div>
+                </div>
+            </c:when>
+            <%-- (c) Đang chờ khám — hiển thị STT --%>
+            <c:when test="${panType == 'waiting_for_exam'}">
+                <div class="card border-0 rounded-4" style="background: linear-gradient(135deg, #dbeafe, #bfdbfe); border-left: 5px solid #3b82f6;">
+                    <div class="card-body p-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
+                        <div>
+                            <h6 class="fw-bold mb-1"><i class="bi bi-hourglass-split text-primary me-2"></i>${pan['message']}</h6>
+                            <p class="mb-0 small">Số thứ tự của bạn: <span class="badge bg-primary fs-5">${pan['queueNumber']}</span> &mdash; BS. ${pan['doctorName']}</p>
+                        </div>
+                        <a href="${pageContext.request.contextPath}/patient/appointments" class="btn btn-primary btn-sm rounded-pill px-4"><i class="bi bi-arrow-clockwise me-1"></i>Tải lại</a>
+                    </div>
+                </div>
+            </c:when>
+            <%-- (d) Đang chờ kết quả siêu âm --%>
+            <c:when test="${panType == 'waiting_ultrasound'}">
+                <div class="card border-0 rounded-4" style="background: linear-gradient(135deg, #e0e7ff, #c7d2fe); border-left: 5px solid #6366f1;">
+                    <div class="card-body p-4">
+                        <h6 class="fw-bold mb-1"><i class="bi bi-soundwave text-primary me-2"></i>${pan['message']}</h6>
+                        <p class="mb-0 small">Bác sĩ siêu âm đang thực hiện. Vui lòng đợi kết quả.</p>
+                    </div>
+                </div>
+            </c:when>
+            <%-- (e) Kết quả khám đã sẵn sàng --%>
+            <c:when test="${panType == 'new_result'}">
+                <div class="card border-0 rounded-4" style="background: linear-gradient(135deg, #d1fae5, #a7f3d0); border-left: 5px solid #10b981;">
+                    <div class="card-body p-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
+                        <div>
+                            <h6 class="fw-bold mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>${pan['message']}</h6>
+                            <p class="mb-0 small">Bác sĩ đã chốt hồ sơ bệnh án của bạn.</p>
+                        </div>
+                        <a href="${pageContext.request.contextPath}/patient/medical-records?recordId=${pan['recordId']}" class="btn btn-success btn-sm rounded-pill px-4"><i class="bi bi-eye me-1"></i>Xem kết quả</a>
+                    </div>
+                </div>
+            </c:when>
+            <%-- (f) Hoá đơn thuốc chưa thanh toán --%>
+            <c:when test="${panType == 'unpaid_prescription'}">
+                <div class="card border-0 rounded-4" style="background: linear-gradient(135deg, #fef3c7, #fde68a); border-left: 5px solid #f59e0b;">
+                    <div class="card-body p-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
+                        <div>
+                            <h6 class="fw-bold mb-1"><i class="bi bi-capsule me-2"></i>${pan['message']}</h6>
+                            <p class="mb-0 small">Số tiền: <strong><fmt:formatNumber value="${pan['amount']}" pattern="#,###"/>đ</strong></p>
+                        </div>
+                        <a href="${pageContext.request.contextPath}/patient/invoices" class="btn btn-warning btn-sm rounded-pill px-4"><i class="bi bi-cash me-1"></i>Xem hoá đơn</a>
+                    </div>
+                </div>
+            </c:when>
+            <%-- (g) Lịch sắp tới đã thanh toán --%>
+            <c:when test="${panType == 'upcoming_paid'}">
+                <div class="card border-0 rounded-4" style="background: linear-gradient(135deg, #fdf2f8, #fce4ec); border-left: 5px solid #b86689;">
+                    <div class="card-body p-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
+                        <div>
+                            <h6 class="fw-bold mb-1"><i class="bi bi-calendar-heart me-2"></i>${pan['message']}</h6>
+                            <p class="mb-0 small">${pan['appointmentDate']} &mdash; ${pan['timeSlot']} &mdash; ${pan['doctorName']}</p>
+                        </div>
+                        <a href="${pageContext.request.contextPath}/patient/appointments" class="btn btn-sm rounded-pill px-4" style="background: #b86689; color: #fff;"><i class="bi bi-list-ul me-1"></i>Xem lịch hẹn</a>
+                    </div>
+                </div>
+            </c:when>
+            <%-- (h) Không có lịch — nút đặt lịch --%>
+            <c:otherwise>
+                <div class="card border-0 rounded-4" style="background: linear-gradient(135deg, #e0f2fe, #bae6fd); border-left: 5px solid #0ea5e9;">
+                    <div class="card-body p-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
+                        <div>
+                            <h6 class="fw-bold mb-1"><i class="bi bi-info-circle-fill text-info me-2"></i>${pan['message']}</h6>
+                        </div>
+                        <a href="${pageContext.request.contextPath}/patient/booking" class="btn btn-info btn-sm rounded-pill px-4 text-white"><i class="bi bi-plus-circle me-1"></i>Đặt lịch khám mới</a>
+                    </div>
+                </div>
+            </c:otherwise>
+        </c:choose>
+    </div>
+    </c:if>
+
+    <%-- ══════════════════════════════════════════════════════════ --%>
     <%-- PATIENT: Lịch hẹn sắp tới (nếu có)                       --%>
     <%-- ══════════════════════════════════════════════════════════ --%>
     <c:if test="${user.roleId == 5 && not empty upcomingAppointment}">
@@ -128,7 +233,7 @@
                         </h5>
                         <div class="d-flex flex-wrap gap-3 mt-2 text-muted small">
                             <span><i class="bi bi-calendar3 me-1"></i>${upcomingAppointment.appointmentDate}</span>
-                            <span><i class="bi bi-clock me-1"></i>${upcomingAppointment.timeSlot}</span>
+                            <span><i class="bi bi-clock me-1"></i>${not empty upcomingAppointment.shiftLabel ? upcomingAppointment.shiftLabel : upcomingAppointment.timeSlot}</span>
                             <span><i class="bi bi-hospital me-1"></i><c:out value="${upcomingAppointment.serviceName}" default="Khám thai định kỳ"/></span>
                         </div>
                     </div>
@@ -145,7 +250,7 @@
                     <div class="d-flex flex-wrap gap-2 mt-2">
                         <c:forEach var="apt" items="${upcomingAppts}" begin="1" end="3">
                             <span class="badge bg-white text-dark border rounded-pill px-3 py-2 small">
-                                <i class="bi bi-dot"></i>${apt.appointmentDate} — ${apt.timeSlot} — <c:choose><c:when test="${not empty apt.doctor}">BS. ${apt.doctor.fullName}</c:when><c:otherwise>Bác sĩ</c:otherwise></c:choose>
+                                <i class="bi bi-dot"></i>${apt.appointmentDate} — ${not empty apt.shiftLabel ? apt.shiftLabel : apt.timeSlot} — <c:choose><c:when test="${not empty apt.doctor}">BS. ${apt.doctor.fullName}</c:when><c:otherwise>Bác sĩ</c:otherwise></c:choose>
                             </span>
                         </c:forEach>
                     </div>
@@ -243,7 +348,7 @@
                             </a>
                         </div>
                         <div class="col-sm-6">
-                            <a href="${pageContext.request.contextPath}/doctor/patients" class="text-decoration-none">
+                            <a href="${pageContext.request.contextPath}/doctor/medical-records" class="text-decoration-none">
                                 <div class="quick-link-card p-3 rounded-3 border">
                                     <i class="bi bi-people fs-4 text-info"></i>
                                     <h6 class="mt-2 mb-1">Bệnh Nhân</h6>

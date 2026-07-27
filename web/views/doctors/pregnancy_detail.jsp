@@ -19,7 +19,7 @@
                         </p>
                     </div>
                     <div class="d-flex gap-2">
-                        <a href="${pageContext.request.contextPath}/doctor/patient-history?patientId=${pregnancy.patientId}"
+                        <a href="${pageContext.request.contextPath}/doctor/medical-records?patientId=${pregnancy.patientId}"
                            class="btn btn-light btn-sm rounded-pill px-3">
                             <i class="bi bi-clock-history me-1"></i>Lịch sử khám
                         </a>

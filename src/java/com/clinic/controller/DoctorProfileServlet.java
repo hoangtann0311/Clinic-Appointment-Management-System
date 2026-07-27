@@ -1,22 +1,25 @@
 package com.clinic.controller;
 
+import com.clinic.config.AppConfig;
 import com.clinic.dao.DoctorDAO;
 import com.clinic.dao.DoctorScheduleDAO;
 import com.clinic.dao.UserDAO;
 import com.clinic.model.Doctor;
 import com.clinic.model.DoctorSchedule;
 import com.clinic.model.User;
-import com.clinic.utils.ProfileFormSupport;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.sql.Date;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Bác sĩ xem và cập nhật hồ sơ cá nhân — bao gồm upload ảnh đại diện từ máy.
@@ -32,8 +35,8 @@ import java.util.List;
 )
 public class DoctorProfileServlet extends HttpServlet {
 
-    // Danh sách MIME cho phép nay do ProfileFormSupport.saveAvatar() quản lý,
-    // dùng chung với ba vai trò còn lại.
+    private static final java.util.Set<String> ALLOWED_CONTENT_TYPES =
+            java.util.Set.of("image/jpeg", "image/jpg", "image/png", "image/webp");
 
     private static final java.util.Set<String> ALLOWED_SPECIALIZATIONS = java.util.Set.of(
             "Sản phụ khoa",
@@ -130,28 +133,41 @@ public class DoctorProfileServlet extends HttpServlet {
         }
 
         // ── Xử lý ảnh đại diện tải lên từ máy (nếu có) ────────────────────────
-        // Dùng ProfileFormSupport.saveAvatar() — cùng một chỗ với ba vai trò mới.
-        // Giữ nguyên hành vi cũ: cùng thư mục lưu, cùng giới hạn 5MB, cùng danh sách
-        // MIME, và cùng khuôn tên file "doctor-<id>-<uuid><ext>".
-        //
-        // Bổ sung hai chốt mà bản cũ tại chỗ này thiếu:
-        //   1. Danh sách trắng ĐUÔI file (.jpg .jpeg .png .webp). Bản cũ lấy nguyên
-        //      đuôi từ tên người dùng gửi lên, nên tải lên "x.svg" khai
-        //      Content-Type: image/png là ghi được file .svg vào thư mục webapp.
-        //      Đuôi .svg nằm trong AuthorizationConfig.STATIC_EXTENSIONS nên URL đó
-        //      truy cập được KHÔNG CẦN đăng nhập; SVG chứa <script> chạy trên chính
-        //      origin của ứng dụng → stored XSS.
-        //   2. Đối chiếu chữ ký byte thật của JPEG/PNG/WEBP, thay vì chỉ tin header
-        //      Content-Type do phía gửi tự đặt.
         String avatarUrl = doctor.getAvatarUrl(); // mặc định giữ nguyên ảnh cũ
-        ProfileFormSupport.AvatarUploadResult upload = ProfileFormSupport.saveAvatar(
-                req, getServletContext(), "avatarFile", "doctor", doctor.getId());
-        if (upload.getErrorMessage() != null) {
-            showError(req, resp, doctor, upload.getErrorMessage());
-            return;
-        }
-        if (upload.isSuccess()) {
-            avatarUrl = upload.getAvatarUrl();
+        Part avatarPart = req.getPart("avatarFile");
+        if (avatarPart != null && avatarPart.getSize() > 0) {
+            String originalFileName = getFileName(avatarPart);
+            String contentType = avatarPart.getContentType();
+
+            if (originalFileName == null || originalFileName.isEmpty()) {
+                showError(req, resp, doctor, "File ảnh không hợp lệ.");
+                return;
+            }
+            if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType)) {
+                showError(req, resp, doctor, "Chỉ hỗ trợ ảnh định dạng JPG, PNG hoặc WEBP.");
+                return;
+            }
+            if (avatarPart.getSize() > AppConfig.getMaxAvatarFileSize()) {
+                showError(req, resp, doctor, "Kích thước ảnh không được vượt quá 5MB.");
+                return;
+            }
+
+            String relativeUploadDir = AppConfig.getAvatarUploadDirectory();
+            String uploadPath = getServletContext().getRealPath("") + File.separator + relativeUploadDir;
+            File uploadDirFile = new File(uploadPath);
+            if (!uploadDirFile.exists()) {
+                uploadDirFile.mkdirs();
+            }
+
+            String extension = originalFileName.contains(".")
+                    ? originalFileName.substring(originalFileName.lastIndexOf("."))
+                    : "";
+            String storedFileName = "doctor-" + doctor.getId() + "-" + UUID.randomUUID() + extension;
+            String filePath = uploadPath + File.separator + storedFileName;
+
+            avatarPart.write(filePath);
+
+            avatarUrl = req.getContextPath() + "/" + relativeUploadDir + "/" + storedFileName;
         }
 
         // ── Lưu ─────────────────────────────────────────────────────────────
@@ -206,5 +222,17 @@ public class DoctorProfileServlet extends HttpServlet {
 
     private String trim(String s) {
         return (s == null) ? null : s.trim();
+    }
+
+    private String getFileName(Part part) {
+        String contentDisposition = part.getHeader("content-disposition");
+        if (contentDisposition == null) return null;
+        for (String token : contentDisposition.split(";")) {
+            if (token.trim().startsWith("filename")) {
+                String filename = token.substring(token.indexOf("=") + 2, token.length() - 1);
+                return Paths.get(filename).getFileName().toString();
+            }
+        }
+        return null;
     }
 }

@@ -5,6 +5,7 @@ import com.clinic.model.MedicalRecord;
 import com.clinic.model.PatientMedicalSummary;
 
 import java.sql.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,10 +36,12 @@ public class MedicalRecordDAO {
         "  a.time_slot                                       AS time_slot, " +
         "  a.symptoms, " +
         "  CONVERT(varchar, a.last_menstrual_period, 23)     AS last_menstrual_period, " +
-        "  a.pregnancy_id " +
+        "  a.pregnancy_id, " +
+        "  d.full_name AS doctor_name " +
         "FROM medical_records mr " +
         "JOIN appointments a ON mr.appointment_id = a.id " +
-        "JOIN patients pt    ON a.patient_id = pt.id ";
+        "JOIN patients pt    ON a.patient_id = pt.id " +
+        "LEFT JOIN doctors d ON a.doctor_id = d.id ";
 
     public MedicalRecord getByAppointmentId(int appointmentId) {
         try (Connection conn = DatabaseConfig.getConnection();
@@ -66,7 +69,7 @@ public class MedicalRecordDAO {
     public MedicalRecord getByIdAndPatientId(int recordId, int patientId) {
         if (recordId <= 0 || patientId <= 0) return null;
         String sql = BASE_SELECT + "WHERE mr.id = ? AND a.patient_id = ? "
-                + "AND (mr.status IS NULL OR LOWER(LTRIM(RTRIM(mr.status))) = 'final') "
+                + "AND LOWER(LTRIM(RTRIM(ISNULL(mr.status, 'final')))) = 'final' "
                 + "AND UPPER(LTRIM(RTRIM(ISNULL(a.status, '')))) IN ('SUCCESS', 'COMPLETED')";
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -99,31 +102,64 @@ public class MedicalRecordDAO {
     public List<MedicalRecord> getByDoctorId(int doctorId) { return getByDoctorId(doctorId, null); }
 
     public List<PatientMedicalSummary> getPatientSummariesByDoctorId(int doctorId, String keyword) {
+        return getPatientSummariesByDoctorId(doctorId, keyword, null, null, -1, -1);
+    }
+
+    /**
+     * Danh sách bệnh nhân có phân trang DB-level + lọc theo khoảng ngày khám.
+     * offset<0 hoặc limit<0 → không phân trang (trả về tất cả).
+     */
+    public List<PatientMedicalSummary> getPatientSummariesByDoctorId(int doctorId, String keyword,
+            LocalDate dateFrom, LocalDate dateTo, int offset, int limit) {
         boolean hasKw = keyword != null && !keyword.isBlank();
-        String sql = "SELECT pt.id AS patient_id, pt.full_name AS patient_name, " +
-                "pt.phone_number AS patient_phone, pt.date_of_birth AS patient_dob, " +
-                "COUNT(mr.id) AS total_visits, " +
-                "MAX(a.appointment_date) AS last_visit_date, " +
-                "(SELECT TOP 1 m2.final_diagnosis FROM medical_records m2 JOIN appointments a2 ON m2.appointment_id = a2.id WHERE a2.patient_id = pt.id ORDER BY a2.appointment_date DESC) AS last_diagnosis, " +
-                "MAX(CAST(CASE WHEN mr.vaginal_bleeding = 1 OR mr.uterine_contractions = 1 OR mr.edema = N'Toàn thân' OR mr.proteinuria IN ('2+', '3+') THEN 1 ELSE 0 END AS INT)) AS has_risk " +
-                "FROM patients pt " +
-                "JOIN appointments a ON pt.id = a.patient_id " +
-                "JOIN medical_records mr ON a.id = mr.appointment_id " +
-                "WHERE a.doctor_id = ? ";
+        boolean hasDateFrom = dateFrom != null;
+        boolean hasDateTo = dateTo != null;
+
+        StringBuilder sql = new StringBuilder(
+            "SELECT pt.id AS patient_id, pt.full_name AS patient_name, " +
+            "pt.phone_number AS patient_phone, pt.date_of_birth AS patient_dob, " +
+            "COUNT(mr.id) AS total_visits, " +
+            "MAX(a.appointment_date) AS last_visit_date, " +
+            "(SELECT TOP 1 m2.final_diagnosis FROM medical_records m2 " +
+            " JOIN appointments a2 ON m2.appointment_id = a2.id " +
+            " WHERE a2.patient_id = pt.id ORDER BY a2.appointment_date DESC) AS last_diagnosis, " +
+            "MAX(CAST(CASE WHEN mr.vaginal_bleeding = 1 OR mr.uterine_contractions = 1 " +
+            " OR mr.edema = N'Toàn thân' OR mr.proteinuria IN ('2+', '3+') THEN 1 ELSE 0 END AS INT)) AS has_risk " +
+            "FROM patients pt " +
+            "JOIN appointments a ON pt.id = a.patient_id " +
+            "JOIN medical_records mr ON a.id = mr.appointment_id " +
+            "WHERE a.doctor_id = ? ");
+
         if (hasKw) {
-            sql += "AND (pt.full_name LIKE ? OR pt.phone_number LIKE ?) ";
+            sql.append("AND (pt.full_name LIKE ? OR pt.phone_number LIKE ?) ");
         }
-        sql += "GROUP BY pt.id, pt.full_name, pt.phone_number, pt.date_of_birth " +
-               "ORDER BY last_visit_date DESC";
+        if (hasDateFrom) {
+            sql.append("AND a.appointment_date >= ? ");
+        }
+        if (hasDateTo) {
+            sql.append("AND a.appointment_date <= ? ");
+        }
+        sql.append("GROUP BY pt.id, pt.full_name, pt.phone_number, pt.date_of_birth ");
+        sql.append("ORDER BY last_visit_date DESC ");
+        if (offset >= 0 && limit > 0) {
+            sql.append("OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
+        }
 
         List<PatientMedicalSummary> list = new ArrayList<>();
         try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, doctorId);
-            if (hasKw) { 
-                String lk = "%" + keyword.trim() + "%"; 
-                ps.setString(2, lk); 
-                ps.setString(3, lk); 
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            int idx = 1;
+            ps.setInt(idx++, doctorId);
+            if (hasKw) {
+                String lk = "%" + keyword.trim() + "%";
+                ps.setString(idx++, lk);
+                ps.setString(idx++, lk);
+            }
+            if (hasDateFrom) ps.setDate(idx++, java.sql.Date.valueOf(dateFrom));
+            if (hasDateTo)   ps.setDate(idx++, java.sql.Date.valueOf(dateTo));
+            if (offset >= 0 && limit > 0) {
+                ps.setInt(idx++, offset);
+                ps.setInt(idx++, limit);
             }
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -144,6 +180,47 @@ public class MedicalRecordDAO {
             e.printStackTrace();
         }
         return list;
+    }
+
+    /** Đếm tổng số bệnh nhân (cho phân trang) — dùng chung điều kiện lọc với query trên */
+    public int countPatientSummariesByDoctorId(int doctorId, String keyword,
+            LocalDate dateFrom, LocalDate dateTo) {
+        boolean hasKw = keyword != null && !keyword.isBlank();
+        boolean hasDateFrom = dateFrom != null;
+        boolean hasDateTo = dateTo != null;
+
+        StringBuilder sql = new StringBuilder(
+            "SELECT COUNT(DISTINCT pt.id) " +
+            "FROM patients pt " +
+            "JOIN appointments a ON pt.id = a.patient_id " +
+            "JOIN medical_records mr ON a.id = mr.appointment_id " +
+            "WHERE a.doctor_id = ? ");
+
+        if (hasKw) {
+            sql.append("AND (pt.full_name LIKE ? OR pt.phone_number LIKE ?) ");
+        }
+        if (hasDateFrom) {
+            sql.append("AND a.appointment_date >= ? ");
+        }
+        if (hasDateTo) {
+            sql.append("AND a.appointment_date <= ? ");
+        }
+
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            int idx = 1;
+            ps.setInt(idx++, doctorId);
+            if (hasKw) {
+                String lk = "%" + keyword.trim() + "%";
+                ps.setString(idx++, lk);
+                ps.setString(idx++, lk);
+            }
+            if (hasDateFrom) ps.setDate(idx++, java.sql.Date.valueOf(dateFrom));
+            if (hasDateTo)   ps.setDate(idx++, java.sql.Date.valueOf(dateTo));
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) return rs.getInt(1);
+        } catch (SQLException e) { e.printStackTrace(); }
+        return 0;
     }
 
     public List<MedicalRecord> getByPatientId(int patientId) {
@@ -249,7 +326,7 @@ public class MedicalRecordDAO {
         String sql = "SELECT 1 FROM test_orders o WITH (UPDLOCK, HOLDLOCK) "
                 + "JOIN medical_records mr ON mr.id = o.medical_record_id "
                 + "WHERE mr.appointment_id = ? "
-                + "AND LOWER(LTRIM(RTRIM(ISNULL(o.status, '')))) NOT IN ('confirmed', 'cancelled')";
+                + "AND LOWER(LTRIM(RTRIM(ISNULL(o.status, '')))) NOT IN ('completed', 'confirmed', 'cancelled')";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, appointmentId);
             try (ResultSet rs = ps.executeQuery()) {
@@ -442,6 +519,7 @@ public class MedicalRecordDAO {
         mr.setSymptoms(rs.getString("symptoms"));
         mr.setLastMenstrualPeriod(rs.getString("last_menstrual_period"));
         int pid = rs.getInt("pregnancy_id"); if (!rs.wasNull()) mr.setPregnancyId(pid);
+        try { mr.setDoctorName(rs.getString("doctor_name")); } catch (SQLException ignored) {}
 
         return mr;
     }

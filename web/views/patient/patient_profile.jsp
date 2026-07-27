@@ -40,7 +40,7 @@
 
         <div class="card">
             <div class="card-body p-4">
-                <form method="post" action="${pageContext.request.contextPath}/patient/profile" novalidate>
+                <form method="post" action="${pageContext.request.contextPath}/patient/profile">
                     <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
 
                     <div class="row g-4">
@@ -64,7 +64,9 @@
                                 <span class="input-group-text bg-light"><i class="bi bi-phone"></i></span>
                                 <input type="tel" id="phone" name="phone" class="form-control"
                                        value="${not empty formPhone ? formPhone : (not empty patient ? patient.phone : user.phone)}"
-                                       placeholder="0901234567">
+                                       placeholder="0901234567" pattern="[0-9]{10}" maxlength="10"
+                                       title="Số điện thoại 10 chữ số"
+                                       oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10)">
                             </div>
                         </div>
 
@@ -106,7 +108,7 @@
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Vai trò</label>
                             <input type="text" class="form-control bg-light"
-                                   value="${user.roleId == 5 ? 'Bệnh nhân' : 'Tài khoản #' += user.roleId}" readonly>
+                                   value="${user.roleId == 5 ? 'Bệnh nhân' : 'Tài khoản #'}${user.roleId}" readonly>
                         </div>
 
                         <c:if test="${not empty patient}">

@@ -16,8 +16,9 @@
 .col-time { width: 10%; }
 .col-symptoms { width: 18%; }
 .col-source { width: 9%; }
-.col-status { width: 11%; }
-.col-action { width: 23%; }
+.col-status { width: 10%; }
+.col-stage { width: 12%; }
+.col-action { width: 18%; }
 .st-chip { display: inline-block; padding: .2rem .55rem; border-radius: 2rem; font-size: .75rem; font-weight: 600; }
 .st-confirmed { background: #d1fae5; color: #065f46; }
 .st-waiting { background: #e0f2fe; color: #075985; }
@@ -30,7 +31,7 @@
 <div class="mb-4">
     <div class="card border-0 bg-primary bg-gradient text-white rounded-4">
         <div class="card-body p-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
-            <div><h2 class="fw-bold mb-1"><i class="bi bi-calendar2-week me-2"></i>Lịch Hẹn</h2>
+            <div><h2 class="fw-bold mb-1"><i class="bi bi-calendar2-week me-2"></i>Lịch hẹn của bệnh nhân</h2>
                 <p class="mb-0 opacity-75">BS. ${doctorName} — <c:choose><c:when test="${mode == 'single'}">Ngày ${viewDate}</c:when><c:otherwise>${fromDate} → ${toDate}</c:otherwise></c:choose></p>
             </div>
             <a href="${pageContext.request.contextPath}/doctor/dashboard" class="btn btn-light btn-sm rounded-pill px-3"><i class="bi bi-arrow-left me-1"></i>Tổng Quan</a>
@@ -54,24 +55,26 @@
 <div class="card rounded-4 border-0 shadow-sm mb-4">
     <div class="card-body p-3">
         <form method="get" class="row g-2 align-items-end">
-            <div class="col-md-3"><label class="form-label small fw-medium text-muted mb-1">Ngày</label><input type="date" name="date" class="form-control form-control-sm rounded-3" value="${mode == 'single' ? viewDate : ''}"></div>
+            <div class="col-md-2"><label class="form-label small fw-medium text-muted mb-1">Ngày</label><input type="date" name="date" class="form-control form-control-sm rounded-3" value="${mode == 'single' ? viewDate : ''}"></div>
             <div class="col-md-2"><label class="form-label small fw-medium text-muted mb-1">Từ ngày</label><input type="date" name="from" class="form-control form-control-sm rounded-3" value="${mode == 'range' ? fromDate : ''}"></div>
             <div class="col-md-2"><label class="form-label small fw-medium text-muted mb-1">Đến ngày</label><input type="date" name="to" class="form-control form-control-sm rounded-3" value="${mode == 'range' ? toDate : ''}"></div>
-            <div class="col-md-2"><label class="form-label small fw-medium text-muted mb-1">Trạng thái</label><select name="status" class="form-select form-select-sm rounded-3"><option value="">Tất cả</option><option value="Confirmed" ${fn:toLowerCase(statusFilter)=='confirmed'?'selected':''}>Đã xác nhận</option><option value="Waiting" ${fn:toLowerCase(statusFilter)=='waiting'?'selected':''}>Chờ khám</option><option value="InProgress" ${fn:toLowerCase(statusFilter)=='inprogress'?'selected':''}>Đang khám</option><option value="SUCCESS" ${fn:toLowerCase(statusFilter)=='success'?'selected':''}>Hoàn thành</option><option value="Cancelled" ${fn:toLowerCase(statusFilter)=='cancelled'?'selected':''}>Đã huỷ</option></select></div>
-            <div class="col-md-3 d-flex gap-2"><button type="submit" class="btn btn-primary btn-sm rounded-3 flex-fill"><i class="bi bi-search me-1"></i>Tìm</button><a href="${pageContext.request.contextPath}/doctor/appointments" class="btn btn-outline-secondary btn-sm rounded-3"><i class="bi bi-arrow-counterclockwise"></i></a></div>
+            <div class="col-md-2"><label class="form-label small fw-medium text-muted mb-1">Trạng thái</label><select name="status" class="form-select form-select-sm rounded-3"><option value="">Tất cả</option><option value="Confirmed" ${fn:toLowerCase(statusFilter)=='confirmed'?'selected':''}>Đã xác nhận</option><option value="Waiting" ${fn:toLowerCase(statusFilter)=='waiting'?'selected':''}>Chờ khám</option><option value="InProgress" ${fn:toLowerCase(statusFilter)=='inprogress'?'selected':''}>Đang khám</option><option value="WaitingResult" ${fn:toLowerCase(statusFilter)=='waitingresult'?'selected':''}>Đang chờ kết quả</option><option value="SUCCESS" ${fn:toLowerCase(statusFilter)=='success'?'selected':''}>Hoàn thành</option><option value="Cancelled" ${fn:toLowerCase(statusFilter)=='cancelled'?'selected':''}>Đã huỷ</option></select></div>
+            <div class="col-md-2"><label class="form-label small fw-medium text-muted mb-1">Tìm kiếm</label><input type="text" name="keyword" class="form-control form-control-sm rounded-3" placeholder="Tên hoặc SĐT..." value="${fn:escapeXml(keyword)}"></div>
+            <div class="col-md-2 d-flex gap-2"><button type="submit" class="btn btn-primary btn-sm rounded-3 flex-fill"><i class="bi bi-search me-1"></i>Tìm</button><a href="${pageContext.request.contextPath}/doctor/appointments" class="btn btn-outline-secondary btn-sm rounded-3"><i class="bi bi-arrow-counterclockwise"></i></a></div>
         </form>
     </div>
 </div>
 
 <%-- Table --%>
 <div class="card rounded-4 border-0 shadow-sm">
-    <div class="card-header bg-transparent border-0 p-3 d-flex justify-content-between align-items-center"><h6 class="fw-semibold mb-0"><i class="bi bi-list-ul me-2 text-primary"></i>Danh sách <span class="badge bg-primary rounded-pill ms-1">${fn:length(appointments)}</span></h6></div>
+    <div class="card-header bg-transparent border-0 p-3 d-flex justify-content-between align-items-center"><h6 class="fw-semibold mb-0"><i class="bi bi-list-ul me-2 text-primary"></i>Lịch hẹn của bệnh nhân <span class="badge bg-primary rounded-pill ms-1">${totalRecords}</span></h6><c:if test="${not empty keyword}"><span class="badge bg-warning text-dark rounded-pill ms-2"><i class="bi bi-funnel me-1"></i>Lọc: "${fn:escapeXml(keyword)}"</span></c:if></div>
     <div class="card-body p-0">
         <c:choose>
             <c:when test="${empty appointments}"><div class="text-center py-5 text-muted">Không có lịch hẹn nào.</div></c:when>
             <c:otherwise>
-                <table class="table table-hover align-middle mb-0 doc-table">
-                    <thead><tr><th class="col-idx ps-3">#</th><th class="col-patient">Bệnh nhân</th><th class="col-date">Ngày</th><th class="col-time">Giờ</th><th class="col-symptoms">Triệu chứng</th><th class="col-source">Nguồn</th><th class="col-status">Trạng thái</th><th class="col-action pe-3">Thao tác</th></tr></thead>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" style="min-width: 950px; width: 100%;">
+                    <thead><tr><th class="col-idx ps-3">#</th><th class="col-patient">Bệnh nhân</th><th class="col-date">Ngày</th><th class="col-time">Giờ</th><th class="col-symptoms">Triệu chứng</th><th class="col-source">Nguồn</th><th class="col-status">Trạng thái</th><th class="col-stage" style="width:12%;">Giai đoạn</th><th class="col-action pe-3">Thao tác</th></tr></thead>
                     <tbody>
                     <c:forEach var="a" items="${appointments}" varStatus="loop">
                     <c:set var="st" value="${fn:toLowerCase(a.status)}"/>
@@ -90,7 +93,7 @@
                             </c:if>
                         </td>
                         <td class="col-date text-nowrap">${a.appointmentDate}</td>
-                        <td class="col-time text-nowrap">${not empty a.timeSlot ? a.timeSlot : '—'}</td>
+                        <td class="col-time text-nowrap">${not empty a.shiftLabel ? a.shiftLabel : (not empty a.timeSlot ? a.timeSlot : '—')}</td>
                         <td class="col-symptoms text-truncate" title="${a.symptoms}" style="max-width:0;">${not empty a.symptoms ? a.symptoms : '—'}</td>
                         <td class="col-source"><c:choose><c:when test="${a.bookingSource == 'WEB'}"><span class="badge bg-info bg-opacity-75 text-dark rounded-pill">Trực tuyến</span></c:when><c:when test="${a.bookingSource == 'Staff'}"><span class="badge bg-secondary rounded-pill">Tại quầy</span></c:when><c:otherwise><span class="text-muted small">—</span></c:otherwise></c:choose></td>
                         <td class="col-status">
@@ -103,13 +106,47 @@
                                 <c:otherwise><span class="st-chip" style="background:#f3f4f6;color:#6b7280;">${a.status}</span></c:otherwise>
                             </c:choose>
                         </td>
+                        <td class="col-stage small text-muted">
+                            <c:choose>
+                                <c:when test="${a.status == 'InProgress'}">
+                                    <span class="badge bg-info bg-opacity-75 text-dark">${not empty appointmentStages[a.id] ? appointmentStages[a.id] : '—'}</span>
+                                </c:when>
+                                <c:otherwise><span class="text-muted">—</span></c:otherwise>
+                            </c:choose>
+                        </td>
                         <td class="col-action pe-3"><a href="${pageContext.request.contextPath}/doctor/medical-records?apptId=${a.id}" class="btn btn-sm btn-outline-success rounded-pill"><i class="bi bi-journal-plus me-1"></i>Hồ sơ</a></td>
                     </tr>
                     </c:forEach>
-                    </tbody>
                 </table>
+                </div>
             </c:otherwise>
         </c:choose>
+
+        <%-- Phân trang --%>
+        <c:if test="${totalPages > 1}">
+          <div class="card-footer bg-white p-3 border-top d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div class="text-muted small">Hiển thị <strong>${fn:length(appointments)}</strong> / <strong>${totalRecords}</strong> lịch hẹn</div>
+            <nav><ul class="pagination pagination-sm mb-0">
+              <c:set var="qp" value=""/>
+              <c:if test="${not empty param.date}"><c:set var="qp" value="${qp}&date=${fn:escapeXml(param.date)}"/></c:if>
+              <c:if test="${not empty param.from}"><c:set var="qp" value="${qp}&from=${fn:escapeXml(param.from)}"/></c:if>
+              <c:if test="${not empty param.to}"><c:set var="qp" value="${qp}&to=${fn:escapeXml(param.to)}"/></c:if>
+              <c:if test="${not empty param.status}"><c:set var="qp" value="${qp}&status=${fn:escapeXml(param.status)}"/></c:if>
+              <c:if test="${not empty keyword}"><c:set var="qp" value="${qp}&keyword=${fn:escapeXml(keyword)}"/></c:if>
+              <li class="page-item ${currentPage == 1 ? 'disabled' : ''}">
+                <a class="page-link" href="?page=${currentPage - 1}${qp}"><i class="bi bi-chevron-left"></i></a>
+              </li>
+              <c:forEach begin="1" end="${totalPages}" var="i">
+                <li class="page-item ${i == currentPage ? 'active' : ''}">
+                  <a class="page-link" href="?page=${i}${qp}">${i}</a>
+                </li>
+              </c:forEach>
+              <li class="page-item ${currentPage == totalPages ? 'disabled' : ''}">
+                <a class="page-link" href="?page=${currentPage + 1}${qp}"><i class="bi bi-chevron-right"></i></a>
+              </li>
+            </ul></nav>
+          </div>
+        </c:if>
     </div>
 </div>
 <%@ include file="../common/footer.jsp" %>

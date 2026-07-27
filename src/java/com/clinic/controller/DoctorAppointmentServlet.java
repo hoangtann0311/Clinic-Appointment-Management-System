@@ -43,17 +43,33 @@ public class DoctorAppointmentServlet extends HttpServlet {
                 return;
             }
 
-            // Parse tham số ngày
+            // Parse tham số
             String dateParam   = request.getParameter("date");
             String fromParam   = request.getParameter("from");
             String toParam     = request.getParameter("to");
             String statusParam = request.getParameter("status");
+            String keyword     = request.getParameter("keyword");
+            String pageParam   = request.getParameter("page");
+
+            // [P6] "WaitingResult" → lọc InProgress + stage WAITING_ULTRASOUND/WAITING_PAYMENT
+            boolean waitingResultFilter = "WaitingResult".equalsIgnoreCase(statusParam);
+            String daoStatusParam = waitingResultFilter ? "InProgress" : statusParam;
+
+            // Phân trang
+            int page = 1;
+            int pageSize = 10;
+            if (pageParam != null && !pageParam.isBlank()) {
+                try { page = Integer.parseInt(pageParam.trim()); } catch (NumberFormatException ignored) {}
+            }
+            if (page < 1) page = 1;
 
             List<Appointment> appointments;
             LocalDate viewDate = null;
             LocalDate fromDate = null;
             LocalDate toDate   = null;
             String mode;
+            int totalRecords;
+            int offset = (page - 1) * pageSize;
 
             if (fromParam != null && !fromParam.isBlank()
                     && toParam != null && !toParam.isBlank()) {
@@ -62,25 +78,68 @@ public class DoctorAppointmentServlet extends HttpServlet {
                 if (fromDate.isAfter(toDate)) {
                     LocalDate tmp = fromDate; fromDate = toDate; toDate = tmp;
                 }
-                appointments = appointmentDAO.getByDoctorDateRange(doctorId, fromDate, toDate, statusParam);
+                appointments = appointmentDAO.getByDoctorDateRangePaged(
+                        doctorId, fromDate, toDate, daoStatusParam, keyword, offset, pageSize);
+                totalRecords = appointmentDAO.countByDoctorDateRange(
+                        doctorId, fromDate, toDate, daoStatusParam, keyword);
                 mode = "range";
             } else {
                 viewDate     = parseDate(dateParam, LocalDate.now());
-                appointments = appointmentDAO.getByDoctorAndDate(doctorId, viewDate, statusParam);
+                appointments = appointmentDAO.getByDoctorAndDatePaged(
+                        doctorId, viewDate, daoStatusParam, keyword, offset, pageSize);
+                totalRecords = appointmentDAO.countByDoctorAndDate(
+                        doctorId, viewDate, daoStatusParam, keyword);
                 mode = "single";
             }
+
+            int totalPages = (int) Math.ceil((double) totalRecords / pageSize);
+            if (totalPages < 1) totalPages = 1;
+            if (page > totalPages) page = totalPages;
 
             // Thống kê theo ngày đang xem: single → viewDate, range → fromDate, fallback → hôm nay
             LocalDate countDate = (viewDate != null) ? viewDate : (fromDate != null ? fromDate : LocalDate.now());
             Map<String, Integer> todayCounts = appointmentDAO.countTodayByStatus(doctorId, countDate);
 
+            // [P5] Tính giai đoạn khám cho các appointment đang InProgress
+            com.clinic.service.AppointmentStageService stageSvc = new com.clinic.service.AppointmentStageService();
+            Map<Integer, String> appointmentStages = new java.util.HashMap<>();
+            for (Appointment a : appointments) {
+                if ("InProgress".equalsIgnoreCase(a.getStatus())) {
+                    try {
+                        com.clinic.model.ExamStage st = stageSvc.getStage(a.getId());
+                        appointmentStages.put(a.getId(), st.toDisplayString());
+                    } catch (Exception ignored) {}
+                }
+            }
+
+            // [P6] Post-filter "Đang chờ kết quả": giữ lại InProgress + stage WAITING_ULTRASOUND hoặc WAITING_PAYMENT
+            if (waitingResultFilter) {
+                List<Appointment> filtered = new java.util.ArrayList<>();
+                for (Appointment a : appointments) {
+                    String stageLabel = appointmentStages.get(a.getId());
+                    if (stageLabel != null && (stageLabel.contains("Chờ thanh toán") || stageLabel.contains("Chờ kết quả siêu âm"))) {
+                        filtered.add(a);
+                    }
+                }
+                appointments = filtered;
+                // Với WaitingResult filter, totalRecords là ước lượng (post-filter trong Java)
+                totalRecords = appointments.size();
+                totalPages = (int) Math.ceil((double) totalRecords / pageSize);
+                if (totalPages < 1) totalPages = 1;
+            }
+
             request.setAttribute("appointments",  appointments);
+            request.setAttribute("appointmentStages", appointmentStages);
             request.setAttribute("todayCounts",   todayCounts);
             request.setAttribute("viewDate",      viewDate);
             request.setAttribute("fromDate",      fromDate);
             request.setAttribute("toDate",        toDate);
             request.setAttribute("mode",          mode);
             request.setAttribute("statusFilter",  statusParam != null ? statusParam : "");
+            request.setAttribute("keyword",       keyword != null ? keyword : "");
+            request.setAttribute("currentPage",   page);
+            request.setAttribute("totalPages",    totalPages);
+            request.setAttribute("totalRecords",  totalRecords);
             request.setAttribute("doctorName",    user.getFullName());
 
             request.getRequestDispatcher("/views/doctors/appointment_list.jsp")

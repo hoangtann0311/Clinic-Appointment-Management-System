@@ -189,7 +189,7 @@ public class AiAnalysisResultDAO {
             setNullableInt(ps, 9, res.getXmin());
             setNullableInt(ps, 10, res.getYmin());
             setNullableInt(ps, 11, res.getXmax());
-            setNullableInt(ps, 12, res.getymax());
+            setNullableInt(ps, 12, res.getYmax());
             ps.setTimestamp(13, res.getAnalyzedAt() == null
                     ? new Timestamp(System.currentTimeMillis()) : res.getAnalyzedAt());
             ps.setString(14, res.getErrorMessage());
@@ -222,7 +222,7 @@ public class AiAnalysisResultDAO {
         int xmax = rs.getInt("xmax");
         res.setXmax(rs.wasNull() ? null : xmax);
         int ymax = rs.getInt("ymax");
-        res.setymax(rs.wasNull() ? null : ymax);
+        res.setYmax(rs.wasNull() ? null : ymax);
 
         res.setAnalyzedAt(rs.getTimestamp("analyzed_at"));
         res.setErrorMessage(rs.getString("error_message"));

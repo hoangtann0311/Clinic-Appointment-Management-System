@@ -1,6 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
+<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
 <jsp:include page="../common/header.jsp" />
 
 <%-- CSS and document shell are provided once by common/header.jsp. --%>
@@ -51,8 +52,7 @@
                     <option value="Pending" ${statusParam == 'Pending' ? 'selected' : ''}>Chờ siêu âm</option>
                     <option value="InProgress" ${statusParam == 'InProgress' ? 'selected' : ''}>Đang siêu âm</option>
                     <option value="Uploaded" ${statusParam == 'Uploaded' ? 'selected' : ''}>Đã tải ảnh</option>
-                    <option value="Completed" ${statusParam == 'Completed' ? 'selected' : ''}>Đã hoàn thành / Đã xác nhận</option>
-                    <option value="confirmed" ${statusParam == 'confirmed' ? 'selected' : ''}>Đã xác nhận (Bác sĩ LS)</option>
+                    <option value="Completed" ${statusParam == 'Completed' ? 'selected' : ''}>Hoàn thành</option>
                 </select>
             </div>
             <div class="col-md-2">
@@ -129,7 +129,7 @@
                                     </td>
                                     <td>
                                         <span class="fw-semibold text-dark"><c:out value="${order.serviceName}"/></span><br>
-                                        <small class="text-danger fw-bold"><c:out value="${String.format('%,.0f', order.price)}"/>đ</small>
+                                        <small class="text-danger fw-bold"><fmt:formatNumber value="${order.price}" pattern="#,###"/>đ</small>
                                     </td>
                                     <td>
                                         <span>BS. <c:out value="${order.doctorName}"/></span>
@@ -156,7 +156,7 @@
                                                 <span class="badge bg-success-subtle text-success border border-success-subtle">Hoàn thành</span>
                                             </c:when>
                                             <c:when test="${fn:toLowerCase(order.status) == 'confirmed'}">
-                                                <span class="badge bg-success text-white border border-success">Đã xác nhận</span>
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle">Hoàn thành</span>
                                             </c:when>
                                             <c:otherwise>
                                                 <span class="badge bg-light text-muted border"><c:out value="${order.status}"/></span>

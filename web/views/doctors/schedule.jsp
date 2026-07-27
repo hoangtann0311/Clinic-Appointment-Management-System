@@ -226,12 +226,15 @@
                                     <%-- Ngày --%>
                                     <td class="fw-medium">
                                         <i class="bi bi-calendar3 me-1 text-primary"></i>
-                                        <fmt:formatDate value="${s.workDate}" pattern="dd/MM/yyyy"/>
-                                        <c:set var="dow" value="${s.workDate.day}"/>
-                                        <%-- Hiển thị thứ --%>
-                                        <span class="d-block small text-muted">
-                                            <fmt:formatDate value="${s.workDate}" pattern="EEEE" />
-                                        </span>
+                                        <c:choose>
+                                            <c:when test="${not empty s.workDate}">
+                                                <fmt:formatDate value="${s.workDate}" pattern="dd/MM/yyyy"/>
+                                                <span class="d-block small text-muted">
+                                                    <fmt:formatDate value="${s.workDate}" pattern="EEEE" />
+                                                </span>
+                                            </c:when>
+                                            <c:otherwise>—</c:otherwise>
+                                        </c:choose>
                                     </td>
 
                                     <%-- Ca làm việc --%>
@@ -241,9 +244,14 @@
                                             <c:choose>
                                                 <c:when test="${not empty s.shiftName}">${s.shiftName}</c:when>
                                                 <c:otherwise>
-                                                    <fmt:formatDate value="${s.startTime}" pattern="HH:mm"/>
-                                                    &ndash;
-                                                    <fmt:formatDate value="${s.endTime}" pattern="HH:mm"/>
+                                                    <c:choose>
+                                                        <c:when test="${not empty s.startTime and not empty s.endTime}">
+                                                            <fmt:formatDate value="${s.startTime}" pattern="HH:mm"/>
+                                                            &ndash;
+                                                            <fmt:formatDate value="${s.endTime}" pattern="HH:mm"/>
+                                                        </c:when>
+                                                        <c:otherwise>—</c:otherwise>
+                                                    </c:choose>
                                                 </c:otherwise>
                                             </c:choose>
                                         </span>
