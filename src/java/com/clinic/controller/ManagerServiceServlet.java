@@ -118,16 +118,13 @@ public class ManagerServiceServlet extends HttpServlet {
                     String price = req.getParameter("price");
                     String durationMins = req.getParameter("durationMins");
                     String specialRequirements = req.getParameter("specialRequirements");
-                    String requiredRoomType = req.getParameter("requiredRoomType");
-                    String allowedSpecialties = req.getParameter("allowedSpecialties");
-                    String categoryId = req.getParameter("categoryId");
 
                     Map<String, String> errors = new HashMap<>();
                     // Ghép yêu cầu đặc biệt vào mô tả nếu có
                     String fullDescription = mergeSpecialRequirements(description, specialRequirements);
                     if (serviceService.createService(serviceCode, serviceName, fullDescription,
                             price, durationMins, false, false,
-                            requiredRoomType, allowedSpecialties, categoryId, errors, changedBy)) {
+                            null, null, null, errors, changedBy)) {
                         AuditUtil.log(changedBy,
                                 "Tạo mới dịch vụ: " + serviceName + " (mã: " + serviceCode + ")",
                                 "services", null, "price=" + price, clientIp);
@@ -151,10 +148,9 @@ public class ManagerServiceServlet extends HttpServlet {
                     String price = req.getParameter("price");
                     String durationMins = req.getParameter("durationMins");
                     String specialRequirements = req.getParameter("specialRequirements");
-                    String requiredRoomType = req.getParameter("requiredRoomType");
-                    String allowedSpecialties = req.getParameter("allowedSpecialties");
-                    String categoryId = req.getParameter("categoryId");
-                    boolean isActive = "on".equals(req.getParameter("isActive"));
+                    // isActive là hidden input: "true" hoặc "false", không phải checkbox
+                    String isActiveStr = req.getParameter("isActive");
+                    boolean isActive = "true".equals(isActiveStr) || "on".equals(isActiveStr);
                     String changeReason = req.getParameter("changeReason");
 
                     Map<String, String> errors = new HashMap<>();
@@ -162,7 +158,7 @@ public class ManagerServiceServlet extends HttpServlet {
                     String fullDescription = mergeSpecialRequirements(description, specialRequirements);
                     if (serviceService.updateService(id, serviceCode, serviceName, fullDescription,
                             price, durationMins, false, false,
-                            requiredRoomType, allowedSpecialties, categoryId, isActive, errors,
+                            null, null, null, isActive, errors,
                             changedBy, changeReason)) {
                         AuditUtil.log(changedBy,
                                 "Cập nhật dịch vụ ID=" + id + ": " + serviceName,
@@ -315,11 +311,9 @@ public class ManagerServiceServlet extends HttpServlet {
         data.put("description", req.getParameter("description"));
         data.put("price", req.getParameter("price"));
         data.put("durationMins", req.getParameter("durationMins"));
-        data.put("requiredRoomType", req.getParameter("requiredRoomType"));
-        data.put("allowedSpecialties", req.getParameter("allowedSpecialties"));
-        data.put("categoryId", req.getParameter("categoryId"));
-        data.put("changeReason", req.getParameter("changeReason"));
         data.put("specialRequirements", req.getParameter("specialRequirements"));
+        data.put("changeReason", req.getParameter("changeReason"));
+        data.put("isActive", req.getParameter("isActive"));
         return data;
     }
 

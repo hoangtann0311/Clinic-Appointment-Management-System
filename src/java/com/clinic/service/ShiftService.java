@@ -64,6 +64,31 @@ public class ShiftService {
         }
     }
 
+    /**
+     * Lấy danh sách 3 ca chuẩn đang hoạt động:
+     * Ca sáng (07:00-11:00), Ca chiều (13:00-17:00), Ca tối (19:00-23:00).
+     * Luôn sắp xếp theo thứ tự: sáng → chiều → tối.
+     *
+     * @return danh sách tối đa 3 ca chuẩn
+     */
+    public List<Shift> getStandardShifts() {
+        java.sql.Time morningStart = java.sql.Time.valueOf("07:00:00");
+        java.sql.Time afternoonStart = java.sql.Time.valueOf("13:00:00");
+        java.sql.Time eveningStart = java.sql.Time.valueOf("19:00:00");
+
+        List<Shift> all = getActiveShifts();
+        List<Shift> standard = new ArrayList<>();
+        for (Shift s : all) {
+            if (s.getStartTime().equals(morningStart)
+                    || s.getStartTime().equals(afternoonStart)
+                    || s.getStartTime().equals(eveningStart)) {
+                standard.add(s);
+            }
+        }
+        standard.sort((a, b) -> a.getStartTime().compareTo(b.getStartTime()));
+        return standard;
+    }
+
     // ──────────────────────────────────────────────
     //  CRUD với validate
     // ──────────────────────────────────────────────

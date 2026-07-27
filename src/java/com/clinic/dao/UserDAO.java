@@ -25,6 +25,7 @@ public class UserDAO {
     private static Boolean hasCreatedAtColumn = null;
     private static Boolean hasIsVerifiedColumn = null;
     private static Boolean hasAuthProviderColumn = null;
+    private static Boolean hasDepartmentColumn = null;
 
     // ============================================================
     // SQL FRAGMENTS CHO MÃ HOÁ/GIẢI MÃ EMAIL & PHONE
@@ -634,35 +635,59 @@ public class UserDAO {
     public java.util.List<User> findAll(int offset, int pageSize,
                                          String search, java.util.List<Integer> roleIds, String statusFilter,
                                          boolean includeDeleted) {
-        // Lần đầu: thử fullColumns=true (gồm created_at, is_verified, auth_provider).
-        // Nếu cột chưa được migration → cache false và dùng base columns từ các lần sau.
-        // Nếu thành công → cache true.
-        if (hasCreatedAtColumn == null) {
-            try {
-                java.util.List<User> result = findAllInternal(offset, pageSize, search,
-                        roleIds, statusFilter, true, includeDeleted);
-                hasCreatedAtColumn = true;
-                return result;
-            } catch (SQLException e) {
-                String msg = e.getMessage() != null ? e.getMessage() : "";
-                if (msg.contains("Invalid column name") || msg.contains("invalid column")
-                    || msg.contains("tên cột không hợp lệ") || msg.contains("colonne non valide")) {
-                    System.err.println("[UserDAO] Cột created_at/is_verified/auth_provider"
-                            + " chưa tồn tại — cache fallback.");
-                    hasCreatedAtColumn = false;
-                } else {
-                    System.err.println("[UserDAO] findAll error: " + e.getMessage());
+
+        boolean tryFull  = (hasCreatedAtColumn == null || hasCreatedAtColumn);
+        boolean tryDept  = (hasDepartmentColumn == null || hasDepartmentColumn);
+
+        try {
+            return findAllInternal(offset, pageSize, search, roleIds, statusFilter,
+                    tryFull, tryDept, includeDeleted);
+        } catch (SQLException e) {
+            String msg = e.getMessage() != null ? e.getMessage() : "";
+
+            // 1) Thiếu cột department hoặc job_title
+            if (tryDept && (msg.contains("department") || msg.contains("job_title"))) {
+                System.err.println("[UserDAO] Cột department/job_title"
+                        + " chưa tồn tại — cache fallback.");
+                hasDepartmentColumn = false;
+                try {
+                    return findAllInternal(offset, pageSize, search, roleIds, statusFilter,
+                            tryFull, false, includeDeleted);
+                } catch (SQLException e2) {
+                    System.err.println("[UserDAO] findAll dept-fallback error: " + e2.getMessage());
                     return new java.util.ArrayList<>();
                 }
             }
-        }
 
-        // Dùng trạng thái đã cache
-        boolean fullCol = (hasCreatedAtColumn != null && hasCreatedAtColumn);
-        try {
-            return findAllInternal(offset, pageSize, search, roleIds, statusFilter, fullCol, includeDeleted);
-        } catch (SQLException e2) {
-            System.err.println("[UserDAO] findAll error: " + e2.getMessage());
+            // 2) Thiếu cột migration (created_at, is_verified, auth_provider)
+            if (tryFull && (msg.contains("Invalid column name") || msg.contains("invalid column")
+                || msg.contains("tên cột không hợp lệ") || msg.contains("colonne non valide"))) {
+                System.err.println("[UserDAO] Cột created_at/is_verified/auth_provider"
+                        + " chưa tồn tại — cache fallback.");
+                hasCreatedAtColumn = false;
+                try {
+                    return findAllInternal(offset, pageSize, search, roleIds, statusFilter,
+                            false, tryDept, includeDeleted);
+                } catch (SQLException e2) {
+                    System.err.println("[UserDAO] findAll migration-fallback error: " + e2.getMessage());
+                    return new java.util.ArrayList<>();
+                }
+            }
+
+            // 3) Lỗi khác — thử query tối thiểu (không migration, không department)
+            if (tryFull || tryDept) {
+                System.err.println("[UserDAO] findAll lỗi không xác định"
+                        + " — thử query tối thiểu: " + msg);
+                try {
+                    return findAllInternal(offset, pageSize, search, roleIds, statusFilter,
+                            false, false, includeDeleted);
+                } catch (SQLException e2) {
+                    System.err.println("[UserDAO] findAll minimal-fallback error: " + e2.getMessage());
+                    return new java.util.ArrayList<>();
+                }
+            }
+
+            System.err.println("[UserDAO] findAll error: " + msg);
             return new java.util.ArrayList<>();
         }
     }
@@ -673,6 +698,7 @@ public class UserDAO {
     private java.util.List<User> findAllInternal(int offset, int pageSize,
                                                   String search, java.util.List<Integer> roleIds,
                                                   String statusFilter, boolean fullColumns,
+                                                  boolean includeDepartment,
                                                   boolean includeDeleted)
             throws SQLException {
         // Chọn cột: fullColumns=true dùng đủ cột, false dùng cột cơ bản (luôn tồn tại)
@@ -688,9 +714,10 @@ public class UserDAO {
         }
         // Luôn select is_deleted để JSP biết user nào đã bị xoá mềm
         columns += ", u.is_deleted";
-        // Bộ phận / chức danh — màn Quản Lý Người Dùng cần để đổ sẵn vào form sửa.
-        // Không có hai cột này thì mỗi lần sửa tài khoản sẽ xoá mất giá trị đã gán.
-        columns += ", u.department, u.job_title";
+        // Bộ phận / chức danh — chỉ thêm vào nếu cột đã tồn tại trong DB
+        if (includeDepartment) {
+            columns += ", u.department, u.job_title";
+        }
 
         // WHERE clause: mặc định chỉ hiện user chưa xoá (is_deleted=0),
         // khi includeDeleted=true → chỉ hiện user đã xoá (is_deleted=1)

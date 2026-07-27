@@ -308,6 +308,153 @@
             padding: 0.55rem 1.2rem; transition: all var(--t-fast);
             font-family: var(--font-body);
         }
+
+        /* ═══════════════════════════════════════════════════════
+           SHIFT CARDS — 3 ca chuẩn
+           ═══════════════════════════════════════════════════════ */
+        .shift-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.25rem;
+        }
+        .shift-card {
+            background: var(--c-surface);
+            border: 2px solid var(--c-outline-variant);
+            border-radius: var(--r-lg);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            transition: all var(--t-smooth);
+            position: relative;
+            overflow: hidden;
+        }
+        .shift-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-md);
+        }
+        .shift-card--active {
+            border-color: var(--c-outline-variant);
+        }
+        .shift-card--inactive {
+            opacity: 0.55;
+            background: #f9f9f9;
+        }
+        .shift-card--inactive:hover {
+            opacity: 0.8;
+        }
+
+        .shift-card-icon {
+            width: 64px; height: 64px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.8rem; margin-bottom: 0.75rem;
+            flex-shrink: 0;
+        }
+        .shift-card--morning .shift-card-icon {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            color: #1565c0;
+        }
+        .shift-card--afternoon .shift-card-icon {
+            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+            color: #e65100;
+        }
+        .shift-card--evening .shift-card-icon {
+            background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+            color: #7b1fa2;
+        }
+
+        .shift-card-body { flex: 1; min-width: 0; width: 100%; }
+        .shift-card-name {
+            font-family: var(--font-display);
+            font-weight: 800; font-size: 1.15rem;
+            color: var(--c-on-surface);
+            margin: 0 0 0.15rem 0;
+            display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .shift-card-time-label {
+            font-size: 0.65rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.08em;
+            padding: 0.15rem 0.5rem; border-radius: 1rem;
+            background: var(--pink-50); color: var(--pink-600);
+        }
+        .shift-card-time {
+            font-size: 0.95rem; font-weight: 700;
+            color: var(--c-primary); margin-bottom: 0.25rem;
+        }
+        .shift-card-desc {
+            font-size: 0.75rem; color: var(--c-muted);
+            margin-top: 0.25rem; line-height: 1.3;
+        }
+
+        .shift-card-action {
+            margin-top: 1rem; width: 100%;
+            display: flex; flex-direction: column; align-items: center;
+            gap: 0.4rem;
+        }
+        .shift-status-badge {
+            font-size: 0.75rem; font-weight: 700;
+            padding: 0.25rem 0.75rem; border-radius: 1rem;
+            display: inline-flex; align-items: center; gap: 0.3rem;
+        }
+        .shift-status-badge--active {
+            background: #e8f5e9; color: #2e7d32;
+            border: 1px solid #a5d6a7;
+        }
+        .shift-status-badge--inactive {
+            background: #eceff1; color: #546e7a;
+            border: 1px solid #b0bec5;
+        }
+
+        .shift-toggle-btn {
+            font-size: 0.8rem; font-weight: 700; border: none;
+            padding: 0.45rem 1.25rem; border-radius: var(--r-sm);
+            cursor: pointer; transition: all var(--t-fast);
+            display: inline-flex; align-items: center; gap: 0.3rem;
+        }
+        .shift-toggle-btn--off {
+            background: linear-gradient(135deg, #546e7a, #78909c);
+            color: #fff;
+        }
+        .shift-toggle-btn--off:hover {
+            background: linear-gradient(135deg, #37474f, #546e7a);
+            box-shadow: 0 4px 12px rgba(84,110,122,0.35);
+        }
+        .shift-toggle-btn--on {
+            background: linear-gradient(135deg, #2e7d32, #43a047);
+            color: #fff;
+        }
+        .shift-toggle-btn--on:hover {
+            background: linear-gradient(135deg, #1b5e20, #2e7d32);
+            box-shadow: 0 4px 12px rgba(46,125,50,0.35);
+        }
+
+        /* ═══════════════════════════════════════════════════════
+           SHIFT GROUP ACCORDION
+           ═══════════════════════════════════════════════════════ */
+        .shift-group-card {
+            transition: all var(--t-smooth);
+        }
+        .shift-group-card:hover {
+            box-shadow: var(--shadow-sm);
+        }
+        .shift-group-header {
+            transition: all var(--t-fast);
+        }
+        .shift-group-header:hover {
+            filter: brightness(0.97);
+        }
+        .shift-group-chevron {
+            transition: transform 0.3s ease;
+        }
+        .shift-group-header[aria-expanded="true"] .shift-group-chevron {
+            transform: rotate(180deg);
+        }
+        .shift-group-header[aria-expanded="false"] .shift-group-chevron {
+            transform: rotate(0deg);
+        }
     </style>
 </head>
 <body class="admin-body">
@@ -439,28 +586,7 @@
          ============================================================ --%>
     <c:if test="${tab eq 'shifts'}">
 
-    <%-- Shift alert messages --%>
-    <c:if test="${success eq 'shiftCreated'}">
-        <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert" style="border-radius:var(--r-md);">
-            <i class="bi bi-check-circle-fill me-2 fs-5"></i>
-            <div><strong>Tạo thành công!</strong> Ca làm việc mới đã được thêm vào hệ thống.</div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    </c:if>
-    <c:if test="${success eq 'shiftUpdated'}">
-        <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert" style="border-radius:var(--r-md);">
-            <i class="bi bi-check-circle-fill me-2 fs-5"></i>
-            <div><strong>Cập nhật thành công!</strong> Thông tin ca làm việc đã được cập nhật.</div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    </c:if>
-    <c:if test="${success eq 'shiftDeleted'}">
-        <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert" style="border-radius:var(--r-md);">
-            <i class="bi bi-check-circle-fill me-2 fs-5"></i>
-            <div><strong>Xóa thành công!</strong> Ca làm việc đã được xóa khỏi hệ thống.</div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    </c:if>
+    <%-- Shift toggle alert --%>
     <c:if test="${success eq 'shiftToggled'}">
         <div class="alert alert-info alert-dismissible fade show d-flex align-items-center" role="alert" style="border-radius:var(--r-md);">
             <i class="bi bi-info-circle-fill me-2 fs-5"></i>
@@ -471,116 +597,110 @@
     <c:if test="${not empty shiftErrors}">
         <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert" style="border-radius:var(--r-md);">
             <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
-            <div>
-                <c:if test="${not empty shiftErrors.general}"><strong>${fn:escapeXml(shiftErrors.general)}</strong></c:if>
-                <c:if test="${not empty shiftErrors.shiftName}"><div>${fn:escapeXml(shiftErrors.shiftName)}</div></c:if>
-                <c:if test="${not empty shiftErrors.shiftTime}"><div>${fn:escapeXml(shiftErrors.shiftTime)}</div></c:if>
-            </div>
+            <div><strong>${fn:escapeXml(shiftErrors.general)}</strong></div>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     </c:if>
 
-    <%-- Shift Table Header + Add Button --%>
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 style="font-family:var(--font-display);font-weight:800;color:var(--c-primary-dark);margin:0;">
-            <i class="bi bi-layers-fill me-2" style="color:#b86689;"></i>Danh Sách Ca Làm Việc
-        </h5>
+    <%-- Section header with Add button --%>
+    <div class="mb-3 d-flex justify-content-between align-items-start">
+        <div>
+            <h5 style="font-family:var(--font-display);font-weight:800;color:var(--c-primary-dark);margin:0;">
+                <i class="bi bi-layers-fill me-2" style="color:#b86689;"></i>Danh Sách Ca Làm Việc Chuẩn
+            </h5>
+            <p style="font-size:0.8rem;color:var(--c-muted);margin:0.25rem 0 0 0;">
+                <i class="bi bi-info-circle me-1"></i>Hệ thống vận hành với 3 ca cố định. Tắt ca để tạm ngưng nhận đăng ký lịch.
+            </p>
+        </div>
         <button type="button" class="btn btn-primary-pink" onclick="openShiftModal('create')">
             <i class="bi bi-plus-lg me-1"></i>Thêm Ca Làm Việc
         </button>
     </div>
 
-    <%-- Shift Table --%>
-    <div class="admin-card">
-        <div class="card-body p-0">
-            <div class="admin-table-wrapper">
-                <table class="admin-table" style="table-layout:fixed;">
-                    <thead>
-                        <tr>
-                            <th style="width:50px;">STT</th>
-                            <th style="width:auto;">Tên Ca</th>
-                            <th style="width:100px;">Giờ BĐ</th>
-                            <th style="width:100px;">Giờ KT</th>
-                            <th style="width:115px;">Trạng Thái</th>
-                            <th style="width:120px;">Thao Tác</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <c:choose>
-                            <c:when test="${not empty shifts}">
-                                <c:forEach var="shift" items="${shifts}" varStatus="row">
-                                    <tr class="${shift.active ? 'shift-active' : 'shift-inactive'}" style="white-space:nowrap;">
-                                        <td style="color:var(--c-muted);font-size:0.8rem;text-align:center;">${row.count}</td>
-                                        <td style="font-weight:600;font-size:0.87rem;overflow:hidden;text-overflow:ellipsis;" title="${fn:escapeXml(shift.name)}">${fn:escapeXml(shift.name)}</td>
-                                        <td style="font-weight:600;color:var(--pink-600);font-size:0.85rem;">
-                                            <i class="bi bi-clock me-1"></i>${fn:substring(shift.startTime.toString(), 0, 5)}
-                                        </td>
-                                        <td style="font-weight:600;color:var(--pink-600);font-size:0.85rem;">
-                                            <i class="bi bi-clock-fill me-1"></i>${fn:substring(shift.endTime.toString(), 0, 5)}
-                                        </td>
-                                        <td>
-                                            <c:choose>
-                                                <c:when test="${shift.active}">
-                                                    <span class="badge-status-approved" style="font-size:0.73rem;white-space:nowrap;">
-                                                        <i class="bi bi-check-circle me-1"></i>Hoạt động
-                                                    </span>
-                                                </c:when>
-                                                <c:otherwise>
-                                                    <span class="badge-status-cancelled" style="font-size:0.73rem;white-space:nowrap;">
-                                                        <i class="bi bi-slash-circle me-1"></i>K.hoạt động
-                                                    </span>
-                                                </c:otherwise>
-                                            </c:choose>
-                                        </td>
-                                        <td>
-                                            <div class="d-flex gap-1">
-                                                <button type="button" class="btn btn-sm btn-outline-secondary"
-                                                        title="Sửa" style="font-size:0.75rem;padding:0.3rem 0.5rem;"
-                                                        onclick="openShiftModal('edit', '${shift.id}', '${fn:escapeXml(shift.name)}', '${fn:substring(shift.startTime.toString(), 0, 5)}', '${fn:substring(shift.endTime.toString(), 0, 5)}')">
-                                                    <i class="bi bi-pencil-fill"></i>
-                                                </button>
-                                                <form method="post" action="${pageContext.request.contextPath}/manager/schedules/" style="display:inline;"
-                                                      onsubmit="return confirm('Bạn có chắc muốn ${shift.active ? 'vô hiệu hóa' : 'kích hoạt'} ca làm việc \'${fn:escapeXml(shift.name)}\'?')">
-                                                    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
-                                                    <input type="hidden" name="action" value="toggleShift">
-                                                    <input type="hidden" name="shiftId" value="${shift.id}">
-                                                    <input type="hidden" name="shiftActive" value="${!shift.active}">
-                                                    <button type="submit" class="btn btn-sm ${shift.active ? 'btn-outline-warning' : 'btn-outline-success'}"
-                                                            title="${shift.active ? 'Vô hiệu hóa' : 'Kích hoạt'}" style="font-size:0.75rem;padding:0.3rem 0.5rem;">
-                                                        <i class="bi ${shift.active ? 'bi-toggle-on' : 'bi-toggle-off'}"></i>
-                                                    </button>
-                                                </form>
-                                                <form method="post" action="${pageContext.request.contextPath}/manager/schedules/" style="display:inline;"
-                                                      onsubmit="return confirmDeleteShift('${fn:escapeXml(shift.name)}')">
-                                                    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
-                                                    <input type="hidden" name="action" value="deleteShift">
-                                                    <input type="hidden" name="shiftId" value="${shift.id}">
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger"
-                                                            title="Xóa" style="font-size:0.75rem;padding:0.3rem 0.5rem;">
-                                                        <i class="bi bi-trash-fill"></i>
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </c:forEach>
-                            </c:when>
-                            <c:otherwise>
-                                <tr>
-                                    <td colspan="6">
-                                        <div class="admin-empty-state">
-                                            <i class="bi bi-layers" style="font-size:3rem;color:var(--c-muted);"></i>
-                                            <h6>Chưa có ca làm việc nào</h6>
-                                            <p>Nhấn "Thêm Ca Làm Việc" để tạo ca làm việc đầu tiên.</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </c:otherwise>
-                        </c:choose>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+    <%-- 3 Shift Cards --%>
+    <div class="shift-cards-grid">
+        <c:choose>
+            <c:when test="${not empty shifts}">
+                <c:forEach var="shift" items="${shifts}" varStatus="row">
+                    <%-- Determine card theme based on start time --%>
+                    <c:set var="cardTheme" value="morning"/>
+                    <c:set var="cardIcon" value="bi-sunrise-fill"/>
+                    <c:set var="cardTimeLabel" value="Buổi sáng"/>
+                    <c:choose>
+                        <c:when test="${fn:substring(shift.startTime.toString(), 0, 5) eq '13:00'}">
+                            <c:set var="cardTheme" value="afternoon"/>
+                            <c:set var="cardIcon" value="bi-sun-fill"/>
+                            <c:set var="cardTimeLabel" value="Buổi chiều"/>
+                        </c:when>
+                        <c:when test="${fn:substring(shift.startTime.toString(), 0, 5) eq '19:00'}">
+                            <c:set var="cardTheme" value="evening"/>
+                            <c:set var="cardIcon" value="bi-moon-stars-fill"/>
+                            <c:set var="cardTimeLabel" value="Buổi tối"/>
+                        </c:when>
+                    </c:choose>
+
+                    <div class="shift-card shift-card--${cardTheme} ${shift.active ? 'shift-card--active' : 'shift-card--inactive'}">
+                        <%-- Icon --%>
+                        <div class="shift-card-icon">
+                            <i class="bi ${cardIcon}"></i>
+                        </div>
+                        <%-- Info --%>
+                        <div class="shift-card-body">
+                            <h3 class="shift-card-name">
+                                ${fn:escapeXml(shift.name)}
+                                <span class="shift-card-time-label">${cardTimeLabel}</span>
+                            </h3>
+                            <div class="shift-card-time">
+                                <i class="bi bi-clock me-1"></i>
+                                ${fn:substring(shift.startTime.toString(), 0, 5)} — ${fn:substring(shift.endTime.toString(), 0, 5)}
+                            </div>
+                            <c:if test="${not empty shift.description}">
+                                <div class="shift-card-desc">${fn:escapeXml(shift.description)}</div>
+                            </c:if>
+                        </div>
+                        <%-- Status & Action --%>
+                        <div class="shift-card-action">
+                            <c:choose>
+                                <c:when test="${shift.active}">
+                                    <span class="shift-status-badge shift-status-badge--active">
+                                        <i class="bi bi-check-circle-fill me-1"></i>Đang hoạt động
+                                    </span>
+                                </c:when>
+                                <c:otherwise>
+                                    <span class="shift-status-badge shift-status-badge--inactive">
+                                        <i class="bi bi-pause-circle-fill me-1"></i>Đã tắt
+                                    </span>
+                                </c:otherwise>
+                            </c:choose>
+                            <form method="post" action="${pageContext.request.contextPath}/manager/schedules/" style="margin-top:0.5rem;"
+                                  onsubmit="return confirm('Bạn có chắc muốn ${shift.active ? 'TẮT' : 'BẬT'} ca \'${fn:escapeXml(shift.name)}\'?\n\n${shift.active ? 'Bác sĩ sẽ không thể đăng ký lịch cho ca này.' : 'Bác sĩ sẽ có thể đăng ký lịch cho ca này trở lại.'}')">
+                                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                                <input type="hidden" name="action" value="toggleShift">
+                                <input type="hidden" name="shiftId" value="${shift.id}">
+                                <input type="hidden" name="shiftActive" value="${!shift.active}">
+                                <button type="submit" class="shift-toggle-btn ${shift.active ? 'shift-toggle-btn--off' : 'shift-toggle-btn--on'}">
+                                    <c:choose>
+                                        <c:when test="${shift.active}">
+                                            <i class="bi bi-toggle2-off me-1"></i>Tắt ca
+                                        </c:when>
+                                        <c:otherwise>
+                                            <i class="bi bi-toggle2-on me-1"></i>Bật ca
+                                        </c:otherwise>
+                                    </c:choose>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </c:forEach>
+            </c:when>
+            <c:otherwise>
+                <div class="admin-empty-state" style="grid-column:1/-1;">
+                    <i class="bi bi-exclamation-triangle" style="font-size:3rem;color:#e65100;"></i>
+                    <h6>Chưa có ca làm việc chuẩn</h6>
+                    <p>Vui lòng chạy script <code>docs/CleanShifts.sql</code> để tạo 3 ca chuẩn: Ca sáng (07-11), Ca chiều (13-17), Ca tối (19-23).</p>
+                </div>
+            </c:otherwise>
+        </c:choose>
     </div>
     </c:if>
 
@@ -629,156 +749,208 @@
     </div>
 
     <%-- ============================================================
-         SCHEDULES TABLE
+         GROUPED SCHEDULES BY SHIFT (accordion)
          ============================================================ --%>
-    <div class="admin-card">
-        <div class="card-header admin-card-header-link d-flex justify-content-between align-items-center">
-            <h5><i class="bi bi-calendar-check me-2" style="color:#b86689;"></i>Danh Sách Lịch Làm Việc</h5>
-            <span class="badge bg-white text-dark border" style="font-size:0.78rem;">
-                <i class="bi bi-database me-1"></i>${totalSchedules} lịch làm việc
-            </span>
-        </div>
-        <div class="card-body p-0">
-            <div class="admin-table-wrapper">
-                <table class="admin-table" style="table-layout:fixed;min-width:1200px;">
-                    <thead>
-                        <tr>
-                            <th style="width:45px;">#</th>
-                            <th style="width:155px;">Bác sĩ</th>
-                            <th style="width:115px;">Chuyên Khoa</th>
-                            <th style="width:100px;">Ngày Trực</th>
-                            <th style="width:105px;">Ca Làm Việc</th>
-                            <th style="width:75px;">SL Tối Đa</th>
-                            <th style="width:125px;">Trạng Thái</th>
-                            <th style="width:130px;">Người XN</th>
-                            <th style="width:100px;">Ngày XN</th>
-                            <th style="width:190px;">Thao Tác</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <c:choose>
-                            <c:when test="${not empty schedules}">
-                                <c:forEach var="sched" items="${schedules}" varStatus="row">
-                                    <tr style="white-space:nowrap;">
-                                        <td style="color:var(--c-muted);font-size:0.78rem;text-align:center;">${(currentPage - 1) * pageSize + row.count}</td>
-                                        <td>
-                                            <div class="d-flex align-items-center gap-2 overflow-hidden">
-                                                <div class="doctor-avatar-sm" style="flex-shrink:0;">
-                                                    ${fn:substring(sched.doctorName, 0, 1)}
-                                                </div>
-                                                <span style="font-weight:600;font-size:0.85rem;overflow:hidden;text-overflow:ellipsis;" title="${fn:escapeXml(sched.doctorName)}">${fn:escapeXml(sched.doctorName)}</span>
-                                            </div>
-                                        </td>
-                                        <td style="font-size:0.8rem;overflow:hidden;text-overflow:ellipsis;" title="${fn:escapeXml(sched.doctorSpecialization)}">
-                                            ${not empty sched.doctorSpecialization ? fn:escapeXml(sched.doctorSpecialization) : '<span class="text-muted">&mdash;</span>'}
-                                        </td>
-                                        <td style="font-weight:600;">
-                                            <i class="bi bi-calendar3 me-1" style="color:var(--pink-500);"></i>
-                                            <fmt:formatDate value="${sched.workDate}" pattern="dd/MM/yyyy"/>
-                                        </td>
-                                        <td>
-                                            <c:set var="startHour" value="${fn:substring(sched.startTime, 0, 2)}"/>
-                                            <c:choose>
-                                                <c:when test="${startHour < '12'}">
-                                                    <span class="shift-badge-morning" style="font-size:0.75rem;"><i class="bi bi-sunrise-fill me-1"></i>${sched.shiftLabel}</span>
-                                                </c:when>
-                                                <c:when test="${startHour < '17'}">
-                                                    <span class="shift-badge-afternoon" style="font-size:0.75rem;"><i class="bi bi-sun-fill me-1"></i>${sched.shiftLabel}</span>
-                                                </c:when>
-                                                <c:otherwise>
-                                                    <span class="shift-badge-evening" style="font-size:0.75rem;"><i class="bi bi-moon-fill me-1"></i>${sched.shiftLabel}</span>
-                                                </c:otherwise>
-                                            </c:choose>
-                                        </td>
-                                        <td style="text-align:center;font-weight:600;">${sched.maxSlots}</td>
-                                        <td>
-                                            <c:choose>
-                                                <c:when test="${sched.status.name() eq 'PENDING'}">
-                                                    <span class="badge-status-pending" style="font-size:0.73rem;white-space:nowrap;"><i class="bi bi-hourglass-split me-1"></i>Chờ xác nhận</span>
-                                                </c:when>
-                                                <c:when test="${sched.status.name() eq 'APPROVED'}">
-                                                    <span class="badge-status-approved" style="font-size:0.73rem;white-space:nowrap;"><i class="bi bi-check-circle me-1"></i>Đã xác nhận</span>
-                                                </c:when>
-                                                <c:when test="${sched.status.name() eq 'REJECTED'}">
-                                                    <span class="badge-status-rejected" style="font-size:0.73rem;white-space:nowrap;"><i class="bi bi-x-circle me-1"></i>Đã từ chối</span>
-                                                    <c:if test="${not empty sched.rejectionReason}">
-                                                        <span class="d-block mt-1" style="font-size:0.7rem;color:var(--c-muted);overflow:hidden;text-overflow:ellipsis;max-width:120px;cursor:pointer;" title="${fn:escapeXml(sched.rejectionReason)}">
-                                                <i class="bi bi-chat-left-text me-1"></i>${fn:escapeXml(sched.rejectionReason)}
-                                            </span>
+    <c:set var="hasAnySchedules" value="false"/>
+    <c:forEach var="entry" items="${groupedSchedules}">
+        <c:if test="${not empty entry.value}">
+            <c:set var="hasAnySchedules" value="true"/>
+        </c:if>
+    </c:forEach>
+
+    <c:choose>
+        <c:when test="${hasAnySchedules}">
+
+            <c:forEach var="entry" items="${groupedSchedules}" varStatus="shiftLoop">
+                <c:set var="shiftKey" value="${entry.key}"/>
+                <c:set var="shiftSchedules" value="${entry.value}"/>
+                <c:set var="schedCount" value="${fn:length(shiftSchedules)}"/>
+
+                <%-- Determine shift theme --%>
+                <c:set var="accordionIcon" value="bi-sunrise-fill"/>
+                <c:set var="accordionColor" value="#1565c0"/>
+                <c:set var="accordionBg" value="#e3f2fd"/>
+                <c:set var="accordionBorder" value="#90caf9"/>
+                <c:if test="${shiftKey eq 'Ca chiều'}">
+                    <c:set var="accordionIcon" value="bi-sun-fill"/>
+                    <c:set var="accordionColor" value="#e65100"/>
+                    <c:set var="accordionBg" value="#fff3e0"/>
+                    <c:set var="accordionBorder" value="#ffcc80"/>
+                </c:if>
+                <c:if test="${shiftKey eq 'Ca tối'}">
+                    <c:set var="accordionIcon" value="bi-moon-stars-fill"/>
+                    <c:set var="accordionColor" value="#7b1fa2"/>
+                    <c:set var="accordionBg" value="#f3e5f5"/>
+                    <c:set var="accordionBorder" value="#ce93d8"/>
+                </c:if>
+
+                <div class="shift-group-card" style="border:1px solid ${accordionBorder};border-radius:var(--r-lg);margin-bottom:1rem;overflow:hidden;">
+                    <%-- Accordion Header --%>
+                    <button class="shift-group-header"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#collapseShift${shiftLoop.index}"
+                            aria-expanded="${schedCount > 0 ? 'true' : 'false'}"
+                            style="background:${accordionBg};border:none;width:100%;padding:0.85rem 1.25rem;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:all var(--t-fast);">
+                        <div style="display:flex;align-items:center;gap:0.75rem;">
+                            <span style="font-size:1.4rem;color:${accordionColor};width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.7);border-radius:50%;">
+                                <i class="bi ${accordionIcon}"></i>
+                            </span>
+                            <div style="text-align:left;">
+                                <strong style="font-size:0.95rem;color:${accordionColor};font-family:var(--font-display);">
+                                    ${shiftKey}
+                                </strong>
+                                <div style="font-size:0.75rem;color:var(--c-muted);font-weight:500;">
+                                    <c:choose>
+                                        <c:when test="${shiftKey eq 'Ca sáng'}">07:00 — 11:00</c:when>
+                                        <c:when test="${shiftKey eq 'Ca chiều'}">13:00 — 17:00</c:when>
+                                        <c:when test="${shiftKey eq 'Ca tối'}">19:00 — 23:00</c:when>
+                                        <c:otherwise>${shiftKey}</c:otherwise>
+                                    </c:choose>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:0.75rem;">
+                            <span style="background:${accordionColor};color:#fff;padding:0.25rem 0.65rem;border-radius:1rem;font-size:0.75rem;font-weight:700;">
+                                ${schedCount} lịch
+                            </span>
+                            <i class="bi bi-chevron-down shift-group-chevron" style="color:${accordionColor};transition:transform 0.3s;"></i>
+                        </div>
+                    </button>
+
+                    <%-- Accordion Body --%>
+                    <div id="collapseShift${shiftLoop.index}" class="collapse ${schedCount > 0 ? 'show' : ''}">
+                        <div style="padding:0.5rem;">
+                            <div class="admin-table-wrapper">
+                                <table class="admin-table" style="table-layout:fixed;min-width:1150px;">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:40px;">#</th>
+                                            <th style="width:145px;">Bác sĩ</th>
+                                            <th style="width:110px;">Chuyên Khoa</th>
+                                            <th style="width:95px;">Ngày Trực</th>
+                                            <th style="width:70px;">SL Tối Đa</th>
+                                            <th style="width:120px;">Trạng Thái</th>
+                                            <th style="width:120px;">Người XN</th>
+                                            <th style="width:95px;">Ngày XN</th>
+                                            <th style="width:180px;">Thao Tác</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <c:forEach var="sched" items="${shiftSchedules}" varStatus="row">
+                                            <tr style="white-space:nowrap;">
+                                                <td style="color:var(--c-muted);font-size:0.75rem;text-align:center;">${row.count}</td>
+                                                <td>
+                                                    <div class="d-flex align-items-center gap-2 overflow-hidden">
+                                                        <div class="doctor-avatar-sm" style="flex-shrink:0;">
+                                                            ${fn:substring(sched.doctorName, 0, 1)}
+                                                        </div>
+                                                        <span style="font-weight:600;font-size:0.83rem;overflow:hidden;text-overflow:ellipsis;" title="${fn:escapeXml(sched.doctorName)}">${fn:escapeXml(sched.doctorName)}</span>
+                                                    </div>
+                                                </td>
+                                                <td style="font-size:0.78rem;overflow:hidden;text-overflow:ellipsis;" title="${fn:escapeXml(sched.doctorSpecialization)}">
+                                                    ${not empty sched.doctorSpecialization ? fn:escapeXml(sched.doctorSpecialization) : '<span class="text-muted">&mdash;</span>'}
+                                                </td>
+                                                <td style="font-weight:600;">
+                                                    <i class="bi bi-calendar3 me-1" style="color:var(--pink-500);"></i>
+                                                    <fmt:formatDate value="${sched.workDate}" pattern="dd/MM/yyyy"/>
+                                                </td>
+                                                <td style="text-align:center;font-weight:600;">${sched.maxSlots}</td>
+                                                <td>
+                                                    <c:choose>
+                                                        <c:when test="${sched.status.name() eq 'PENDING'}">
+                                                            <span class="badge-status-pending" style="font-size:0.7rem;white-space:nowrap;"><i class="bi bi-hourglass-split me-1"></i>Chờ xác nhận</span>
+                                                        </c:when>
+                                                        <c:when test="${sched.status.name() eq 'APPROVED'}">
+                                                            <span class="badge-status-approved" style="font-size:0.7rem;white-space:nowrap;"><i class="bi bi-check-circle me-1"></i>Đã xác nhận</span>
+                                                        </c:when>
+                                                        <c:when test="${sched.status.name() eq 'REJECTED'}">
+                                                            <span class="badge-status-rejected" style="font-size:0.7rem;white-space:nowrap;"><i class="bi bi-x-circle me-1"></i>Đã từ chối</span>
+                                                            <c:if test="${not empty sched.rejectionReason}">
+                                                                <span class="d-block mt-1" style="font-size:0.68rem;color:var(--c-muted);overflow:hidden;text-overflow:ellipsis;max-width:110px;cursor:pointer;" title="${fn:escapeXml(sched.rejectionReason)}">
+                                                                    <i class="bi bi-chat-left-text me-1"></i>${fn:escapeXml(sched.rejectionReason)}
+                                                                </span>
+                                                            </c:if>
+                                                        </c:when>
+                                                        <c:otherwise>
+                                                            <span class="badge-status-cancelled" style="font-size:0.7rem;white-space:nowrap;"><i class="bi bi-slash-circle me-1"></i>Đã hủy</span>
+                                                        </c:otherwise>
+                                                    </c:choose>
+                                                </td>
+                                                <td style="font-size:0.78rem;overflow:hidden;text-overflow:ellipsis;" title="${fn:escapeXml(sched.approvedByName)}">
+                                                    ${not empty sched.approvedByName ? fn:escapeXml(sched.approvedByName) : '<span class="text-muted">&mdash;</span>'}
+                                                </td>
+                                                <td style="font-size:0.8rem;color:var(--c-muted);">
+                                                    <c:choose>
+                                                        <c:when test="${not empty sched.approvedAt}">
+                                                            <fmt:formatDate value="${sched.approvedAt}" pattern="dd/MM/yyyy"/>
+                                                        </c:when>
+                                                        <c:otherwise>&mdash;</c:otherwise>
+                                                    </c:choose>
+                                                </td>
+                                                <td>
+                                                    <c:if test="${sched.status.name() eq 'PENDING'}">
+                                                        <div class="d-flex gap-1">
+                                                            <form method="post" action="${pageContext.request.contextPath}/manager/schedules/" style="display:inline;"
+                                                                  onsubmit="return confirmApproval('${sched.id}', '${fn:escapeXml(sched.doctorName)}', '${sched.shiftLabel}')">
+                                                                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                                                                <input type="hidden" name="action" value="approve">
+                                                                <input type="hidden" name="id" value="${sched.id}">
+                                                                <button type="submit" class="btn btn-sm btn-approve" title="Xác nhận" style="padding:0.3rem 0.55rem;font-size:0.72rem;">
+                                                                    <i class="bi bi-check-lg"></i> Duyệt
+                                                                </button>
+                                                            </form>
+                                                            <button type="button" class="btn btn-sm btn-reject" title="Từ chối" style="padding:0.3rem 0.55rem;font-size:0.72rem;"
+                                                                    onclick="openRejectModal('${sched.id}', '${fn:escapeXml(sched.doctorName)}', '${sched.shiftLabel}')">
+                                                                <i class="bi bi-x-lg"></i> Từ chối
+                                                            </button>
+                                                        </div>
                                                     </c:if>
-                                                </c:when>
-                                                <c:otherwise>
-                                                    <span class="badge-status-cancelled" style="font-size:0.73rem;white-space:nowrap;"><i class="bi bi-slash-circle me-1"></i>Đã hủy</span>
-                                                </c:otherwise>
-                                            </c:choose>
-                                        </td>
-                                        <td style="font-size:0.8rem;overflow:hidden;text-overflow:ellipsis;" title="${fn:escapeXml(sched.approvedByName)}">
-                                            ${not empty sched.approvedByName ? fn:escapeXml(sched.approvedByName) : '<span class="text-muted">&mdash;</span>'}
-                                        </td>
-                                        <td style="font-size:0.82rem;color:var(--c-muted);">
-                                            <c:choose>
-                                                <c:when test="${not empty sched.approvedAt}">
-                                                    <fmt:formatDate value="${sched.approvedAt}" pattern="dd/MM/yyyy"/>
-                                                </c:when>
-                                                <c:otherwise>&mdash;</c:otherwise>
-                                            </c:choose>
-                                        </td>
-                                        <td>
-                                            <c:if test="${sched.status.name() eq 'PENDING'}">
-                                                <div class="d-flex gap-1">
-                                                    <%-- Nút Duyệt (icon check, xanh) --%>
-                                                    <form method="post" action="${pageContext.request.contextPath}/manager/schedules/" style="display:inline;"
-                                                          onsubmit="return confirmApproval('${sched.id}', '${fn:escapeXml(sched.doctorName)}', '${sched.shiftLabel}')">
-                                                        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
-                                                        <input type="hidden" name="action" value="approve">
-                                                        <input type="hidden" name="id" value="${sched.id}">
-                                                        <button type="submit" class="btn btn-sm btn-approve" title="Xác nhận" style="padding:0.35rem 0.65rem;font-size:0.75rem;">
-                                                            <i class="bi bi-check-lg"></i> Duyệt
-                                                        </button>
-                                                    </form>
-                                                    <%-- Nút Từ chối (icon x, đỏ) — mở modal --%>
-                                                    <button type="button" class="btn btn-sm btn-reject" title="Từ chối" style="padding:0.35rem 0.65rem;font-size:0.75rem;"
-                                                            onclick="openRejectModal('${sched.id}', '${fn:escapeXml(sched.doctorName)}', '${sched.shiftLabel}')">
-                                                        <i class="bi bi-x-lg"></i> Từ chối
-                                                    </button>
-                                                </div>
-                                            </c:if>
-                                            <c:if test="${sched.status.name() eq 'APPROVED'}">
-                                                <div class="d-flex gap-1">
-                                                    <a href="${pageContext.request.contextPath}/manager/time-slots/?scheduleId=${sched.id}"
-                                                       class="btn btn-sm btn-outline-primary" title="Khung giờ" style="padding:0.35rem 0.55rem;font-size:0.73rem;">
-                                                        <i class="bi bi-clock-fill"></i> Khung Giờ
-                                                    </a>
-                                                    <button type="button" class="btn btn-sm btn-outline-danger" title="Hủy lịch" style="padding:0.35rem 0.55rem;font-size:0.73rem;"
-                                                            onclick="openCancelModal('${sched.id}', '${fn:escapeXml(sched.doctorName)}', '${sched.shiftLabel}')">
-                                                        <i class="bi bi-x-circle"></i> Hủy
-                                                    </button>
-                                                </div>
-                                            </c:if>
-                                            <c:if test="${sched.status.name() eq 'REJECTED' or sched.status.name() eq 'CANCELLED'}">
-                                                <span class="text-muted" style="font-size:0.75rem;"><i class="bi bi-check2-all me-1"></i>Đã xử lý</span>
-                                            </c:if>
-                                        </td>
-                                    </tr>
-                                </c:forEach>
-                            </c:when>
-                            <c:otherwise>
-                                <tr>
-                                    <td colspan="10">
-                                        <div class="admin-empty-state">
-                                            <i class="bi bi-calendar-x" style="font-size:3rem;color:var(--c-muted);"></i>
-                                            <h6>Không tìm thấy lịch làm việc</h6>
-                                            <p>Chưa có đăng ký lịch làm việc nào hoặc dữ liệu không khớp bộ lọc.</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </c:otherwise>
-                        </c:choose>
-                    </tbody>
-                </table>
+                                                    <c:if test="${sched.status.name() eq 'APPROVED'}">
+                                                        <div class="d-flex gap-1">
+                                                            <a href="${pageContext.request.contextPath}/manager/time-slots/?scheduleId=${sched.id}"
+                                                               class="btn btn-sm btn-outline-primary" title="Khung giờ" style="padding:0.3rem 0.45rem;font-size:0.7rem;">
+                                                                <i class="bi bi-clock-fill"></i> Khung Giờ
+                                                            </a>
+                                                            <button type="button" class="btn btn-sm btn-outline-danger" title="Hủy lịch" style="padding:0.3rem 0.45rem;font-size:0.7rem;"
+                                                                    onclick="openCancelModal('${sched.id}', '${fn:escapeXml(sched.doctorName)}', '${sched.shiftLabel}')">
+                                                                <i class="bi bi-x-circle"></i> Hủy
+                                                            </button>
+                                                        </div>
+                                                    </c:if>
+                                                    <c:if test="${sched.status.name() eq 'REJECTED' or sched.status.name() eq 'CANCELLED'}">
+                                                        <span class="text-muted" style="font-size:0.72rem;"><i class="bi bi-check2-all me-1"></i>Đã xử lý</span>
+                                                    </c:if>
+                                                </td>
+                                            </tr>
+                                        </c:forEach>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <c:if test="${empty shiftSchedules}">
+                                <div style="text-align:center;padding:1.5rem;color:var(--c-muted);">
+                                    <i class="bi bi-inbox" style="font-size:1.5rem;display:block;margin-bottom:0.5rem;"></i>
+                                    <span style="font-size:0.85rem;font-weight:600;">Không có lịch nào trong ca này</span>
+                                </div>
+                            </c:if>
+                        </div>
+                    </div>
+                </div>
+            </c:forEach>
+
+        </c:when>
+        <c:otherwise>
+            <div class="admin-card">
+                <div class="card-body">
+                    <div class="admin-empty-state">
+                        <i class="bi bi-calendar-x" style="font-size:3rem;color:var(--c-muted);"></i>
+                        <h6>Không tìm thấy lịch làm việc</h6>
+                        <p>Chưa có đăng ký lịch làm việc nào hoặc dữ liệu không khớp bộ lọc.</p>
+                    </div>
+                </div>
             </div>
-        </div>
-    </div>
+        </c:otherwise>
+    </c:choose>
 
     <%-- ============================================================
          PAGINATION
@@ -1300,11 +1472,25 @@ function openCancelModal(id, doctorName, shiftLabel) {
     });
 </c:if>
 
-<%-- Hiển thị shift modal nếu có lỗi validate --%>
+// ── Accordion chevron rotation ──
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.shift-group-header').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var chevron = this.querySelector('.shift-group-chevron');
+            if (chevron) {
+                setTimeout(function() {
+                    var collapsed = btn.getAttribute('aria-expanded') === 'false';
+                    chevron.style.transform = collapsed ? 'rotate(0deg)' : 'rotate(180deg)';
+                }, 10);
+            }
+        });
+    });
+});
+
+<%-- Hiển thị shift modal nếu có lỗi validate trước đó --%>
 <c:if test="${showShiftModal}">
     document.addEventListener('DOMContentLoaded', function() {
         openShiftModal('<%= request.getAttribute("shiftAction") != null ? request.getAttribute("shiftAction") : "create" %>');
-        // Điền lại giá trị đã nhập nếu có
         var shiftName = '${fn:escapeXml(param.shiftName)}';
         var shiftStart = '${fn:escapeXml(param.shiftStartTime)}';
         var shiftEnd = '${fn:escapeXml(param.shiftEndTime)}';
@@ -1319,7 +1505,6 @@ function openCancelModal(id, doctorName, shiftLabel) {
 function openShiftModal(mode, id, name, startTime, endTime) {
     var modal = new bootstrap.Modal(document.getElementById('shiftModal'));
     var title = document.getElementById('shiftModalTitle');
-    var form = document.getElementById('shiftForm');
     var actionInput = document.getElementById('shiftAction');
     var shiftIdInput = document.getElementById('shiftId');
     var submitBtn = document.getElementById('shiftSubmitBtn');
@@ -1334,7 +1519,7 @@ function openShiftModal(mode, id, name, startTime, endTime) {
         document.getElementById('shiftName').value = '';
         document.getElementById('shiftStartTime').value = '';
         document.getElementById('shiftEndTime').value = '';
-        } else {
+    } else {
         title.innerHTML = '<i class="bi bi-pencil-fill me-2" style="color:#b86689;"></i>Sửa Ca Làm Việc';
         actionInput.value = 'updateShift';
         shiftIdInput.value = id || '';
@@ -1342,7 +1527,7 @@ function openShiftModal(mode, id, name, startTime, endTime) {
         document.getElementById('shiftName').value = name || '';
         document.getElementById('shiftStartTime').value = startTime || '';
         document.getElementById('shiftEndTime').value = endTime || '';
-        }
+    }
     modal.show();
 }
 
@@ -1369,12 +1554,6 @@ function validateShiftForm() {
     }
     errorEl.style.display = 'none';
     return true;
-}
-
-function confirmDeleteShift(name) {
-    return confirm('Bạn có chắc muốn xóa ca làm việc "' + name + '"?\n\n'
-        + 'Lưu ý: Nếu ca đã có lịch đăng ký, xóa sẽ bị chặn. '
-        + 'Bạn có thể vô hiệu hóa ca thay vì xóa.');
 }
 </script>
 

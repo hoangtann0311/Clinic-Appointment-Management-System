@@ -374,7 +374,9 @@ public class ServiceDAO {
             + "LEFT JOIN service_categories sc ON sc.id = s.category_id "
             + "LEFT JOIN ("
             + "  SELECT a.service_id, COUNT(*) AS cnt "
-            + "  FROM appointments a WHERE a.service_id IS NOT NULL GROUP BY a.service_id"
+            + "  FROM appointments a "
+            + "  INNER JOIN invoices i ON i.appointment_id = a.id AND i.status = 'Paid'"
+            + "  WHERE a.service_id IS NOT NULL GROUP BY a.service_id"
             + ") usage_cnt ON usage_cnt.service_id = s.id "
             + "WHERE 1=1 ");
 
@@ -475,9 +477,11 @@ public class ServiceDAO {
         return 0;
     }
 
-    /** Lấy số lượt sử dụng của một dịch vụ. */
+    /** Lấy số lượt sử dụng thực tế của một dịch vụ (chỉ tính cuộc hẹn đã thanh toán). */
     public int getUsageCount(int serviceId) {
-        String sql = "SELECT COUNT(*) AS cnt FROM appointments WHERE service_id = ?";
+        String sql = "SELECT COUNT(*) AS cnt FROM appointments a "
+                   + "INNER JOIN invoices i ON i.appointment_id = a.id AND i.status = 'Paid' "
+                   + "WHERE a.service_id = ?";
         Connection conn = null;
         PreparedStatement ps = null;
         ResultSet rs = null;

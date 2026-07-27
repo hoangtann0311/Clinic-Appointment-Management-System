@@ -38,6 +38,8 @@ import java.util.Map;
 @WebServlet(urlPatterns = {"/manager/time-slots/", "/manager/time-slots"})
 public class ManagerTimeSlotServlet extends HttpServlet {
 
+    private static final int PAGE_SIZE = 10;
+
     private DoctorScheduleDAO scheduleDAO;
 
     @Override
@@ -99,10 +101,29 @@ public class ManagerTimeSlotServlet extends HttpServlet {
     private void showOverview(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
 
-        List<DoctorSchedule> approvedSchedules = scheduleDAO.findAllApproved(0, 100);
+        // ── Phân trang ──
+        int page = 1;
+        String pageParam = req.getParameter("page");
+        if (pageParam != null && !pageParam.isEmpty()) {
+            try {
+                page = Integer.parseInt(pageParam);
+                if (page < 1) page = 1;
+            } catch (NumberFormatException e) {
+                page = 1;
+            }
+        }
+        int offset = (page - 1) * PAGE_SIZE;
+
+        List<DoctorSchedule> approvedSchedules = scheduleDAO.findAllApproved(offset, PAGE_SIZE);
+        int totalSchedules = scheduleDAO.countAllApproved();
+        int totalPages = (int) Math.ceil((double) totalSchedules / PAGE_SIZE);
 
         req.setAttribute("overviewMode", true);
         req.setAttribute("approvedSchedules", approvedSchedules);
+        req.setAttribute("currentPage", page);
+        req.setAttribute("totalPages", totalPages);
+        req.setAttribute("totalSchedules", totalSchedules);
+        req.setAttribute("pageSize", PAGE_SIZE);
 
         req.setAttribute("error", req.getParameter("error"));
 
