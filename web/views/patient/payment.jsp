@@ -93,7 +93,7 @@
                         <div class="row g-3">
                             <div class="col-6"><span class="text-muted small">Bác sĩ lâm sàng</span><div class="fw-bold">BS. ${appointment.doctorName}</div></div>
                             <div class="col-6"><span class="text-muted small">Ngày khám</span><div class="fw-bold">${appointment.appointmentDate}</div></div>
-                            <div class="col-6"><span class="text-muted small">Giờ khám</span><div class="fw-bold">${appointment.timeSlot}</div></div>
+                            <div class="col-6"><span class="text-muted small">Ca / Giờ khám</span><div class="fw-bold">${not empty appointment.shiftLabel ? appointment.shiftLabel : appointment.timeSlot}</div></div>
                             <div class="col-6"><span class="text-muted small">Dịch vụ</span><div class="fw-bold">${appointment.serviceName}</div></div>
                             <div class="col-6"><span class="text-muted small">Phương thức</span><div class="fw-bold">${invoice.paymentMethod == 'Cash' ? 'Tiền mặt' : 'Chuyển khoản'}</div></div>
                             <div class="col-6"><span class="text-muted small">Trạng thái</span><div><span class="badge bg-success">Đã thanh toán</span></div></div>
@@ -165,7 +165,7 @@
                             <div class="row g-3">
                                 <div class="col-6"><span class="text-muted small">Bác sĩ lâm sàng</span><div class="fw-bold">BS. ${appointment.doctorName}</div></div>
                                 <div class="col-6"><span class="text-muted small">Ngày khám</span><div class="fw-bold">${appointment.appointmentDate}</div></div>
-                                <div class="col-6"><span class="text-muted small">Giờ khám</span><div class="fw-bold">${appointment.timeSlot}</div></div>
+                                <div class="col-6"><span class="text-muted small">Ca / Giờ khám</span><div class="fw-bold">${not empty appointment.shiftLabel ? appointment.shiftLabel : appointment.timeSlot}</div></div>
                                 <div class="col-6"><span class="text-muted small">Dịch vụ</span><div class="fw-bold"><c:choose><c:when test="${not empty appointment.serviceName}">${appointment.serviceName}</c:when><c:otherwise>Khám lâm sàng<c:if test="${not empty appointment.doctor}"> (${appointment.doctor.specialization})</c:if></c:otherwise></c:choose></div></div>
                                 <c:if test="${not empty invoice.transactionCode}">
                                     <div class="col-12"><span class="text-muted small">Mã giao dịch</span><div><code>${invoice.transactionCode}</code></div></div>
@@ -224,7 +224,7 @@
                             <div class="row g-3 mb-3">
                                 <div class="col-md-6"><span class="text-muted small">Bác sĩ lâm sàng</span><div class="fw-bold">BS. ${appointment.doctorName}</div></div>
                                 <div class="col-md-6"><span class="text-muted small">Ngày khám</span><div class="fw-bold">${appointment.appointmentDate}</div></div>
-                                <div class="col-md-6"><span class="text-muted small">Giờ khám</span><div class="fw-bold">${appointment.timeSlot}</div></div>
+                                <div class="col-md-6"><span class="text-muted small">Ca / Giờ khám</span><div class="fw-bold">${not empty appointment.shiftLabel ? appointment.shiftLabel : appointment.timeSlot}</div></div>
                                 <div class="col-md-6"><span class="text-muted small">Dịch vụ</span><div class="fw-bold"><c:choose><c:when test="${not empty appointment.serviceName}">${appointment.serviceName}</c:when><c:otherwise>Khám lâm sàng<c:if test="${not empty appointment.doctor}"> (${appointment.doctor.specialization})</c:if></c:otherwise></c:choose></div></div>
                             </div>
 

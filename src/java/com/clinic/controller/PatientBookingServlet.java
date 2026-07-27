@@ -41,7 +41,23 @@ public class PatientBookingServlet extends HttpServlet {
         try {
             String rescheduleId = request.getParameter("rescheduleId");
             if (rescheduleId != null) {
-                request.setAttribute("rescheduleId", rescheduleId);
+                // [P12] Kiểm tra ownership trước khi hiển thị form đổi lịch
+                try {
+                    int rId = Integer.parseInt(rescheduleId);
+                    int patientId = new com.clinic.dao.PatientDAO().getPatientIdByUserId(user.getId());
+                    com.clinic.model.Appointment appt = new com.clinic.dao.AppointmentDAO().findAppointmentById(rId);
+                    if (appt == null || patientId <= 0 || appt.getPatientId() != patientId) {
+                        request.getSession().setAttribute("bookingError",
+                                "Bạn không có quyền đổi lịch hẹn này.");
+                        response.sendRedirect(request.getContextPath() + "/patient/appointments");
+                        return;
+                    }
+                    request.setAttribute("rescheduleId", rescheduleId);
+                } catch (NumberFormatException e) {
+                    request.getSession().setAttribute("bookingError", "Mã lịch hẹn không hợp lệ.");
+                    response.sendRedirect(request.getContextPath() + "/patient/appointments");
+                    return;
+                }
             }
 
             int page = 1;
@@ -66,24 +82,28 @@ public class PatientBookingServlet extends HttpServlet {
             request.setAttribute("keyword", keyword);
             request.setAttribute("today", LocalDate.now().toString());
 
-            // ── Kiểm tra BN đã có lịch active nào chưa → hiển thị cảnh báo trên UI ──
+            // ── Cảnh báo nếu BN đã có lịch active trong HÔM NAY ──
+            //     (chỉ hiển thị lịch cùng ngày — lịch cũ InProgress từ ngày khác
+            //      không chặn đặt lịch mới, tránh gây hoang mang cho BN)
             com.clinic.dao.PatientDAO patientDAO = new com.clinic.dao.PatientDAO();
             int patientId = patientDAO.getPatientIdByUserId(user.getId());
             if (patientId > 0) {
                 List<Appointment> activeAppointments = bookingService.getMyAppointments(user.getId());
-                // Lọc các lịch đang active (chưa kết thúc)
-                java.util.List<Appointment> upcoming = new java.util.ArrayList<>();
+                java.util.List<Appointment> todayAppointments = new java.util.ArrayList<>();
+                java.time.LocalDate today = java.time.LocalDate.now();
                 for (Appointment a : activeAppointments) {
                     if (a.getStatus() != null &&
                         !"Cancelled".equalsIgnoreCase(a.getStatus()) &&
                         !"NoShow".equalsIgnoreCase(a.getStatus()) &&
                         !"SUCCESS".equalsIgnoreCase(a.getStatus()) &&
-                        !"Completed".equalsIgnoreCase(a.getStatus())) {
-                        upcoming.add(a);
+                        !"Completed".equalsIgnoreCase(a.getStatus()) &&
+                        a.getAppointmentDate() != null &&
+                        a.getAppointmentDate().equals(today)) {
+                        todayAppointments.add(a);
                     }
                 }
-                if (!upcoming.isEmpty()) {
-                    request.setAttribute("existingAppointments", upcoming);
+                if (!todayAppointments.isEmpty()) {
+                    request.setAttribute("existingAppointments", todayAppointments);
                 }
             }
 

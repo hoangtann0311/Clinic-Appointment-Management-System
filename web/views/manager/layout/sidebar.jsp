@@ -72,6 +72,15 @@
                 <span>Nhật Ký Điều Chỉnh Giá</span>
             </a>
         </li>
+
+        <li class="admin-sidebar-section">Báo Cáo & Theo Dõi</li>
+        <li>
+            <a href="${pageContext.request.contextPath}/manager/statistics/"
+               class="${fn:contains(requestURI, '/manager/statistics') ? 'active' : ''}">
+                <i class="bi bi-bar-chart-line"></i>
+                <span>Thống Kê Dịch Vụ</span>
+            </a>
+        </li>
     </ul>
 </aside>
 

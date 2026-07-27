@@ -6,7 +6,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Lịch Làm Việc - CAMS Lễ Tân</title>
+    <title>Lịch Trực Bác Sĩ - CAMS Lễ Tân</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
@@ -270,7 +270,7 @@
             <li><a href="${pageContext.request.contextPath}/admin/reception"><i class="bi bi-speedometer2"></i><span>Hàng Đợi Tiếp Đón</span></a></li>
             <li class="admin-sidebar-section">Quản lý tiếp đón</li>
             <li><a href="${pageContext.request.contextPath}/admin/reception/booking"><i class="bi bi-calendar-plus"></i><span>Đặt Lịch Thủ Công</span></a></li>
-            <li><a class="active" href="${pageContext.request.contextPath}/admin/reception/doctor-schedules"><i class="bi bi-calendar-week"></i><span>Lịch Làm Việc</span></a></li>
+            <li><a class="active" href="${pageContext.request.contextPath}/admin/reception/doctor-schedules"><i class="bi bi-calendar-week"></i><span>Lịch Trực Bác Sĩ</span></a></li>
         </ul>
     </aside>
 
@@ -279,8 +279,8 @@
         <!-- Header row -->
         <div class="admin-page-header d-flex justify-content-between align-items-center flex-wrap gap-3">
             <div>
-                <h1 class="admin-page-title"><i class="bi bi-calendar-week me-2"></i>Lịch Làm Việc Hôm Nay</h1>
-                <div class="admin-page-subtitle">Tổng quan ca trực bác sĩ — trạng thái từng khung giờ — bệnh nhân đang khám</div>
+                <h1 class="admin-page-title"><i class="bi bi-calendar-week me-2"></i>Lịch Trực Bác Sĩ</h1>
+                <div class="admin-page-subtitle">Tổng quan ca trực từng bác sĩ — số lượng đã đặt / còn trống — click vào khung giờ để xem chi tiết bệnh nhân</div>
             </div>
             <!-- Date navigation -->
             <form method="get" class="date-nav-form" id="dateNavForm">
@@ -382,155 +382,144 @@
             </div>
         </c:if>
 
-        <!-- ── Flat Slot Table ── -->
+        <!-- ── Grouped Doctor Cards ── -->
         <c:if test="${not empty slotPage.slots}">
-            <div class="admin-card">
-                <!-- Summary bar -->
-                <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom flex-wrap gap-2">
-                    <span class="small text-muted">
-                        <i class="bi bi-list-ul me-1"></i>
-                        Hiển thị <strong>${slotPage.slots.size()}</strong> / <strong>${slotPage.totalRecords}</strong> khung giờ
-                        <c:if test="${not empty search}">— tìm "<strong>${search}</strong>"</c:if>
-                        <c:if test="${not empty statusFilter}">— trạng thái "<strong>${statusFilter}</strong>"</c:if>
-                    </span>
-                    <span class="small text-muted">
-                        Trang <strong>${slotPage.currentPage}</strong> / <strong>${slotPage.totalPages}</strong>
-                    </span>
+            <c:set var="prevDoctor" value=""/>
+            <c:set var="doctorTotalSlots" value="0"/>
+            <c:set var="doctorBookedSlots" value="0"/>
+            <c:set var="doctorAvailableSlots" value="0"/>
+
+            <c:forEach var="sl" items="${slotPage.slots}" varStatus="loopStat">
+                <%-- Detect new doctor group → close previous card, open new --%>
+                <c:if test="${sl.doctorName != prevDoctor}">
+                    <c:if test="${not empty prevDoctor}">
+                        </div><!-- end slot-grid -->
+                        </div><!-- end card-body -->
+                        </div><!-- end doctor-sched-card -->
+                        <script>
+                            (function(){
+                                var kpi = document.getElementById('kpi-${prevDoctorId}');
+                                if(kpi){
+                                    kpi.querySelector('.total-cnt').textContent = '${doctorTotalSlots}';
+                                    kpi.querySelector('.booked-cnt').textContent = '${doctorBookedSlots}';
+                                    kpi.querySelector('.avail-cnt').textContent = '${doctorAvailableSlots}';
+                                }
+                            })();
+                        </script>
+                    </c:if>
+                    <c:set var="prevDoctor" value="${sl.doctorName}"/>
+                    <c:set var="prevDoctorId" value="${sl.doctorId}"/>
+                    <c:set var="doctorTotalSlots" value="0"/>
+                    <c:set var="doctorBookedSlots" value="0"/>
+                    <c:set var="doctorAvailableSlots" value="0"/>
+
+                    <div class="doctor-sched-card">
+                        <div class="doctor-sched-header">
+                            <div class="doctor-avatar">${fn:substring(sl.doctorName, 0, 1)}</div>
+                            <div class="flex-grow-1">
+                                <div class="doctor-info-name">BS. ${sl.doctorName}</div>
+                                <div class="doctor-info-spec">${not empty sl.doctorSpec ? sl.doctorSpec : 'Sản Phụ khoa'}</div>
+                            </div>
+                            <div class="d-flex gap-2 align-items-center flex-wrap" id="kpi-${sl.doctorId}">
+                                <span class="kpi-pill kpi-pill-total"><i class="bi bi-grid-3x3-gap"></i> <span class="total-cnt">0</span> ca</span>
+                                <span class="kpi-pill kpi-pill-booked"><i class="bi bi-people-fill"></i> <span class="booked-cnt">0</span> đặt</span>
+                                <span class="kpi-pill kpi-pill-avail"><i class="bi bi-check-circle"></i> <span class="avail-cnt">0</span> trống</span>
+                            </div>
+                            <a href="${pageContext.request.contextPath}/admin/reception/booking?doctorId=${sl.doctorId}&date=${selectedDate}"
+                               class="btn btn-sm btn-success rounded-pill px-3">
+                                <i class="bi bi-calendar-plus me-1"></i>Đặt lịch
+                            </a>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="slot-grid">
+                </c:if>
+
+                <%-- Count KPIs --%>
+                <c:set var="doctorTotalSlots" value="${doctorTotalSlots + sl.maxSlots}"/>
+                <c:set var="doctorBookedSlots" value="${doctorBookedSlots + sl.bookedCount}"/>
+                <c:set var="doctorAvailableSlots" value="${doctorAvailableSlots + (sl.maxSlots - sl.bookedCount)}"/>
+
+                <%-- Slot card --%>
+                <c:choose>
+                    <c:when test="${sl.status == 'COMPLETED'}"><c:set var="cardClass" value="completed"/></c:when>
+                    <c:when test="${sl.status == 'BOOKED'}"><c:set var="cardClass" value="booked"/></c:when>
+                    <c:when test="${sl.status == 'CANCELLED'}"><c:set var="cardClass" value="past"/></c:when>
+                    <c:when test="${sl.available}"><c:set var="cardClass" value="available"/></c:when>
+                    <c:otherwise><c:set var="cardClass" value="past"/></c:otherwise>
+                </c:choose>
+
+                <div class="slot-card ${cardClass}" style="cursor:pointer;"
+                     onclick="showSlotDetail('${sl.id}')"
+                     title="Click để xem chi tiết">
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <span class="slot-time"><i class="bi bi-clock me-1"></i>${sl.timeLabel}</span>
+                        <c:choose>
+                            <c:when test="${sl.status == 'AVAILABLE'}">
+                                <span class="slot-status-badge" style="background:#dcfce7;color:#15803d;">Trống</span>
+                            </c:when>
+                            <c:when test="${sl.status == 'BOOKED'}">
+                                <span class="slot-status-badge" style="background:#fee2e2;color:#b91c1c;">Đã đặt</span>
+                            </c:when>
+                            <c:when test="${sl.status == 'CANCELLED'}">
+                                <span class="slot-status-badge" style="background:#f3f4f6;color:#9ca3af;">Hủy</span>
+                            </c:when>
+                            <c:when test="${sl.status == 'COMPLETED'}">
+                                <span class="slot-status-badge" style="background:#f3f4f6;color:#6b7280;">Xong</span>
+                            </c:when>
+                            <c:otherwise>
+                                <span class="slot-status-badge" style="background:#fef3c7;color:#92400e;">Khác</span>
+                            </c:otherwise>
+                        </c:choose>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center small">
+                        <span class="text-muted">
+                            <i class="bi bi-people me-1"></i>${sl.bookedCount}/${sl.maxSlots}
+                        </span>
+                        <c:if test="${not empty sl.bookedPatients}">
+                            <span class="slot-patient text-truncate" style="max-width:140px;" title="${fn:escapeXml(sl.bookedPatients)}">
+                                ${fn:escapeXml(sl.bookedPatients)}
+                            </span>
+                        </c:if>
+                        <c:if test="${empty sl.bookedPatients}">
+                            <span class="text-muted"><em>chưa có BN</em></span>
+                        </c:if>
+                    </div>
+                    <div class="progress mt-2" style="height:4px;">
+                        <c:set var="pct" value="${sl.maxSlots > 0 ? (sl.bookedCount * 100 / sl.maxSlots) : 0}"/>
+                        <div class="progress-bar ${sl.available ? 'bg-success' : 'bg-danger'}" style="width:${pct}%;"></div>
+                    </div>
                 </div>
 
-                <!-- Slot table -->
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0 slot-table">
-                        <thead class="table-light">
-                            <tr>
-                                <th style="width:5%;">#</th>
-                                <th style="width:14%;">Khung giờ</th>
-                                <th style="width:18%;">Bác sĩ</th>
-                                <th style="width:11%;">Trạng thái</th>
-                                <th style="width:18%;">Bệnh nhân</th>
-                                <th style="width:12%;">Giá khám</th>
-                                <th style="width:22%;">Thao tác</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <c:set var="rowIdx" value="${(slotPage.currentPage - 1) * 10 + 1}"/>
-                            <c:forEach var="sl" items="${slotPage.slots}">
-                                <%-- Determine row style --%>
-                                <c:choose>
-                                    <c:when test="${sl.status == 'COMPLETED'}">
-                                        <c:set var="rowClass" value="table-secondary"/>
-                                        <c:set var="rowOpacity" value="opacity-75"/>
-                                    </c:when>
-                                    <c:when test="${sl.status == 'BOOKED' || sl.status == 'WAITING_VERIFICATION'}">
-                                        <c:set var="rowClass" value=""/>
-                                        <c:set var="rowOpacity" value=""/>
-                                    </c:when>
-                                    <c:when test="${sl.status == 'HELD'}">
-                                        <c:set var="rowClass" value="table-warning"/>
-                                        <c:set var="rowOpacity" value=""/>
-                                    </c:when>
-                                    <c:when test="${sl.status == 'CANCELLED'}">
-                                        <c:set var="rowClass" value="table-secondary"/>
-                                        <c:set var="rowOpacity" value="opacity-50"/>
-                                    </c:when>
-                                    <c:when test="${sl.available}">
-                                        <c:set var="rowClass" value=""/>
-                                        <c:set var="rowOpacity" value=""/>
-                                    </c:when>
-                                    <c:otherwise>
-                                        <c:set var="rowClass" value="table-secondary"/>
-                                        <c:set var="rowOpacity" value="opacity-50"/>
-                                    </c:otherwise>
-                                </c:choose>
+                <%-- Close card on last iteration --%>
+                <c:if test="${loopStat.last}">
+                        </div><!-- end slot-grid -->
+                        </div><!-- end card-body -->
+                        </div><!-- end doctor-sched-card -->
+                        <script>
+                            (function(){
+                                var kpi = document.getElementById('kpi-${prevDoctorId}');
+                                if(kpi){
+                                    kpi.querySelector('.total-cnt').textContent = '${doctorTotalSlots}';
+                                    kpi.querySelector('.booked-cnt').textContent = '${doctorBookedSlots}';
+                                    kpi.querySelector('.avail-cnt').textContent = '${doctorAvailableSlots}';
+                                }
+                            })();
+                        </script>
+                </c:if>
+            </c:forEach>
 
-                                <tr class="slot-row ${rowClass} ${rowOpacity}" data-slot-id="${sl.id}">
-                                    <td class="fw-semibold text-muted small">${rowIdx}</td>
-                                    <td>
-                                        <span class="slot-time"><i class="bi bi-clock me-1"></i>${sl.timeLabel}</span>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex align-items-center gap-2">
-                                            <div class="doctor-avatar-sm" style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-weight:700;font-size:0.75rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                                                ${fn:substring(sl.doctorName, 0, 1)}
-                                            </div>
-                                            <div>
-                                                <div class="fw-semibold small">BS. ${sl.doctorName}</div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <c:choose>
-                                            <c:when test="${sl.status == 'AVAILABLE'}">
-                                                <span class="slot-status-badge" style="background:#dcfce7;color:#15803d;"><i class="bi bi-circle-fill me-1" style="font-size:0.45rem;"></i>Trống</span>
-                                            </c:when>
-                                            <c:when test="${sl.status == 'HELD'}">
-                                                <span class="slot-status-badge" style="background:#fef3c7;color:#92400e;"><i class="bi bi-hourglass-split me-1"></i>Giữ chỗ</span>
-                                            </c:when>
-                                            <c:when test="${sl.status == 'WAITING_VERIFICATION'}">
-                                                <span class="slot-status-badge" style="background:#fef3c7;color:#92400e;"><i class="bi bi-clipboard-check me-1"></i>Chờ XN</span>
-                                            </c:when>
-                                            <c:when test="${sl.status == 'BOOKED'}">
-                                                <span class="slot-status-badge" style="background:#fee2e2;color:#b91c1c;"><i class="bi bi-circle-fill me-1" style="font-size:0.45rem;"></i>Đã đặt</span>
-                                            </c:when>
-                                            <c:when test="${sl.status == 'COMPLETED'}">
-                                                <span class="slot-status-badge" style="background:#f3f4f6;color:#6b7280;"><i class="bi bi-check-circle me-1"></i>Xong</span>
-                                            </c:when>
-                                            <c:when test="${sl.status == 'CANCELLED'}">
-                                                <span class="slot-status-badge" style="background:#f3f4f6;color:#9ca3af;"><i class="bi bi-x-circle me-1"></i>Hủy</span>
-                                            </c:when>
-                                            <c:otherwise>
-                                                <span class="slot-status-badge" style="background:#f3f4f6;color:#9ca3af;"><i class="bi bi-dash-circle me-1"></i>Quá giờ</span>
-                                            </c:otherwise>
-                                        </c:choose>
-                                    </td>
-                                    <td>
-                                        <c:choose>
-                                            <c:when test="${not empty sl.bookedByName}">
-                                                <span class="fw-semibold small text-primary">${sl.bookedByName}</span>
-                                            </c:when>
-                                            <c:otherwise>
-                                                <span class="text-muted small"><em>—</em></span>
-                                            </c:otherwise>
-                                        </c:choose>
-                                    </td>
-                                    <td>
-                                        <c:if test="${sl.price != null && sl.price > 0}">
-                                            <span class="fw-semibold small"><fmt:formatNumber value="${sl.price}" pattern="#,###"/>đ</span>
-                                        </c:if>
-                                        <c:if test="${sl.price == null || sl.price == 0}">
-                                            <span class="text-muted small">—</span>
-                                        </c:if>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex gap-1 flex-wrap">
-                                            <%-- View detail button — always shown --%>
-                                            <button type="button" class="btn btn-sm btn-outline-secondary"
-                                                    onclick="showSlotDetail(${sl.id}, '${sl.timeLabel}', '${sl.doctorName}', '${sl.status}', '${not empty sl.bookedByName ? sl.bookedByName : ''}', '${sl.price != null ? sl.price : 0}', '${selectedDate}')"
-                                                    title="Xem chi tiết">
-                                                <i class="bi bi-eye"></i>
-                                            </button>
-                                            <%-- Book button (only for available slots) --%>
-                                            <c:if test="${sl.status == 'AVAILABLE'}">
-                                                <a href="${pageContext.request.contextPath}/admin/reception/booking?doctorId=${sl.doctorId}&date=${selectedDate}&slot=${sl.timeLabel}"
-                                                   class="btn btn-sm btn-success">
-                                                    <i class="bi bi-calendar-plus me-1"></i>Đặt lịch
-                                                </a>
-                                            </c:if>
-                                            <%-- Booked/held: quick booking for same doctor --%>
-                                            <c:if test="${!sl.available && sl.status != 'COMPLETED' && sl.status != 'CANCELLED'}">
-                                                <a href="${pageContext.request.contextPath}/admin/reception/booking?doctorId=${sl.doctorId}&date=${selectedDate}"
-                                                   class="btn btn-sm btn-outline-primary">
-                                                    <i class="bi bi-person-plus"></i>
-                                                </a>
-                                            </c:if>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <c:set var="rowIdx" value="${rowIdx + 1}"/>
-                            </c:forEach>
-                        </tbody>
-                    </table>
-                </div>
+            <!-- Summary bar -->
+            <div class="d-flex justify-content-between align-items-center px-3 py-2 mt-2 flex-wrap gap-2">
+                <span class="small text-muted">
+                    <i class="bi bi-list-ul me-1"></i>
+                    Hiển thị <strong>${slotPage.slots.size()}</strong> / <strong>${slotPage.totalRecords}</strong> khung giờ
+                    <c:if test="${not empty search}">— tìm "<strong>${search}</strong>"</c:if>
+                    <c:if test="${not empty statusFilter}">— trạng thái "<strong>${statusFilter}</strong>"</c:if>
+                </span>
+                <span class="small text-muted">
+                    Trang <strong>${slotPage.currentPage}</strong> / <strong>${slotPage.totalPages}</strong>
+                </span>
+            </div>
             </div>
 
             <!-- ── Pagination ── -->
@@ -656,7 +645,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-// Map slot data from server for detail view
 var slotDataMap = {};
 <c:forEach var="sl" items="${slotPage.slots}">
 slotDataMap[${sl.id}] = {
@@ -665,9 +653,11 @@ slotDataMap[${sl.id}] = {
     doctorName: '${sl.doctorName}',
     doctorId: ${sl.doctorId},
     status: '${sl.status}',
-    statusLabel: '<c:choose><c:when test="${sl.status == 'AVAILABLE'}">Trống</c:when><c:when test="${sl.status == 'HELD'}">Đang giữ chỗ</c:when><c:when test="${sl.status == 'WAITING_VERIFICATION'}">Chờ xác nhận</c:when><c:when test="${sl.status == 'BOOKED'}">Đã đặt</c:when><c:when test="${sl.status == 'COMPLETED'}">Hoàn thành</c:when><c:when test="${sl.status == 'CANCELLED'}">Đã hủy</c:when><c:otherwise>Không xác định</c:otherwise></c:choose>',
+    statusLabel: '<c:choose><c:when test="${sl.status == 'AVAILABLE'}">Trống</c:when><c:when test="${sl.status == 'BOOKED'}">Đã đặt</c:when><c:when test="${sl.status == 'CANCELLED'}">Đã hủy</c:when><c:when test="${sl.status == 'COMPLETED'}">Hoàn thành</c:when><c:otherwise>Khác</c:otherwise></c:choose>',
     patientName: '${not empty sl.bookedByName ? sl.bookedByName : ""}',
     bookedPatients: '${fn:escapeXml(sl.bookedPatients)}',
+    bookedCount: ${sl.bookedCount},
+    maxSlots: ${sl.maxSlots},
     price: ${sl.price != null ? sl.price : 0},
     scheduleId: ${sl.scheduleId != null ? sl.scheduleId : 0},
     workDate: '${selectedDate}',
@@ -675,24 +665,11 @@ slotDataMap[${sl.id}] = {
 };
 </c:forEach>
 
-function showSlotDetail(slotId, timeLabel, doctorName, status, patientName, price, date) {
+function showSlotDetail(slotId) {
     var data = slotDataMap[slotId];
     if (!data) {
-        // Fallback with passed params
-        data = {
-            id: slotId,
-            timeLabel: timeLabel,
-            doctorName: doctorName,
-            doctorId: 0,
-            status: status,
-            statusLabel: status,
-            patientName: patientName,
-            bookedPatients: '',
-            price: parseFloat(price) || 0,
-            scheduleId: 0,
-            workDate: date,
-            notes: ''
-        };
+        alert('Không tìm thấy dữ liệu ca khám.');
+        return;
     }
 
     var statusIcons = {
@@ -716,15 +693,21 @@ function showSlotDetail(slotId, timeLabel, doctorName, status, patientName, pric
 
     var priceFormatted = data.price > 0 ? new Intl.NumberFormat('vi-VN').format(data.price) + '₫' : 'Chưa công bố';
 
+    var remaining = Math.max(0, data.maxSlots - data.bookedCount);
+    var pct = data.maxSlots > 0 ? Math.round(data.bookedCount * 100 / data.maxSlots) : 0;
+    var barColor = remaining > 0 ? 'bg-success' : 'bg-danger';
+
     var html = '<div class="mb-3">'
         + '<div class="d-flex align-items-center gap-2 mb-3">'
         + '<span class="badge fs-6 px-3 py-2" style="background:' + sc.bg + ';color:' + sc.color + ';">' + si + data.statusLabel + '</span>'
         + '</div>'
         + '<table class="table table-sm table-bordered mb-0">'
-        + '<tr><td class="fw-semibold text-muted" style="width:35%;">Mã slot</td><td><strong>#SLOT-' + data.id + '</strong></td></tr>'
+        + '<tr><td class="fw-semibold text-muted" style="width:35%;">Mã ca</td><td><strong>#CA-' + data.id + '</strong></td></tr>'
         + '<tr><td class="fw-semibold text-muted">Ngày</td><td>' + data.workDate + '</td></tr>'
         + '<tr><td class="fw-semibold text-muted">Khung giờ</td><td><span class="fw-bold"><i class="bi bi-clock me-1"></i>' + data.timeLabel + '</span></td></tr>'
         + '<tr><td class="fw-semibold text-muted">Bác sĩ</td><td><i class="bi bi-person-badge me-1"></i>BS. ' + data.doctorName + '</td></tr>'
+        + '<tr><td class="fw-semibold text-muted">Tiếp nhận</td><td><span class="fw-bold">' + data.bookedCount + ' / ' + data.maxSlots + '</span> <span class="small text-muted">(còn ' + remaining + ' chỗ)</span>'
+        + '<div class="progress mt-1" style="height:5px;"><div class="progress-bar ' + barColor + '" style="width:' + pct + '%;"></div></div></td></tr>'
         + '<tr><td class="fw-semibold text-muted">Giá khám</td><td><span class="fw-bold text-success">' + priceFormatted + '</span></td></tr>';
 
     if (data.bookedPatients) {

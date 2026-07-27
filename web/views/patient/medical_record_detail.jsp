@@ -25,15 +25,16 @@
                 </div>
             </c:when>
             <c:otherwise>
-                <table class="table table-hover align-middle mb-0" style="table-layout:fixed;width:100%;">
+                <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" style="min-width:700px;">
                     <thead class="table-light">
                         <tr>
                             <th style="width:4%;" class="ps-3">#</th>
                             <th style="width:12%;">Ngày khám</th>
-                            <th style="width:13%;">Giờ</th>
-                            <th style="width:22%;">Chẩn đoán</th>
-                            <th style="width:15%;">Ngày tạo</th>
-                            <th style="width:10%;" class="text-center">Chi tiết</th>
+                            <th style="width:14%;">Giờ</th>
+                            <th style="width:24%;">Chẩn đoán</th>
+                            <th style="width:14%;">Ngày tạo</th>
+                            <th style="width:8%;" class="text-center">Chi tiết</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -41,8 +42,17 @@
                             <tr>
                                 <td class="ps-3 text-muted small">${loop.index + 1}</td>
                                 <td class="fw-medium" style="font-size:.85rem;">${rec.appointmentDateText}</td>
-                                <td style="font-size:.85rem;">${not empty rec.timeSlot ? rec.timeSlot : '—'}</td>
-                                <td style="font-size:.84rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:0;" title="${rec.finalDiagnosis}">${not empty rec.finalDiagnosis ? rec.finalDiagnosis : '—'}</td>
+                                <td style="font-size:.82rem;">
+                                    <c:set var="ts" value="${rec.timeSlot}"/>
+                                    <c:choose>
+                                        <c:when test="${not empty ts && fn:contains(ts, '(')}">
+                                            <c:set var="to" value="${fn:substringAfter(ts, '(')}"/>
+                                            ${fn:substringBefore(to, ')')}
+                                        </c:when>
+                                        <c:otherwise>${not empty ts ? ts : '—'}</c:otherwise>
+                                    </c:choose>
+                                </td>
+                                <td style="font-size:.84rem; max-width:180px;" class="text-truncate" title="${fn:escapeXml(rec.finalDiagnosis)}">${not empty rec.finalDiagnosis ? rec.finalDiagnosis : '—'}</td>
                                 <td class="text-muted small">${rec.createdAtText}</td>
                                 <td class="text-center">
                                     <a href="${pageContext.request.contextPath}/patient/medical-records?recordId=${rec.id}" class="btn btn-sm btn-outline-info rounded-pill"><i class="bi bi-eye me-1"></i>Xem</a>
@@ -51,6 +61,7 @@
                         </c:forEach>
                     </tbody>
                 </table>
+                </div>
             </c:otherwise>
         </c:choose>
     </div>
@@ -82,7 +93,22 @@
         <div class="card-body p-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
             <div>
                 <h2 class="fw-bold mb-1"><i class="bi bi-journal-text me-2"></i>Chi Tiết Hồ Sơ Bệnh Án</h2>
-                <p class="mb-0 opacity-75">Ngày khám: ${record.appointmentDateText} <c:if test="${not empty record.timeSlot}">&mdash; ${record.timeSlot}</c:if></p>
+                <div class="d-flex align-items-center flex-wrap gap-2 opacity-90 small mt-1">
+                    <span><i class="bi bi-calendar-check me-1"></i>Ngày khám: <strong>${record.appointmentDateText}</strong></span>
+                    <c:if test="${not empty record.timeSlot}">
+                        <span>&bull;</span>
+                        <span><i class="bi bi-clock me-1"></i>Khung giờ: <strong>${record.timeSlot}</strong></span>
+                    </c:if>
+                    <c:if test="${not empty record.doctorName}">
+                        <span>&bull;</span>
+                        <span><i class="bi bi-person-badge me-1"></i>BS. <strong>${record.doctorName}</strong></span>
+                    </c:if>
+                    <c:if test="${not empty record.createdAtText}">
+                        <span class="badge bg-white text-primary rounded-pill px-2.5 py-1 ms-1 shadow-sm">
+                            <i class="bi bi-check-circle-fill text-success me-1"></i>Bác sĩ hoàn tất lúc: ${record.createdAtText}
+                        </span>
+                    </c:if>
+                </div>
             </div>
             <a href="${pageContext.request.contextPath}/patient/medical-records" class="btn btn-sm rounded-pill px-3 fw-semibold" style="background:var(--pt-pink-50);color:var(--pt-pink-600);border:1.5px solid var(--pt-pink-200);"><i class="bi bi-arrow-left me-1"></i>Quay lại</a>
         </div>

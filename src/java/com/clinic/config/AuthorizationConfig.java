@@ -151,6 +151,7 @@ public final class AuthorizationConfig {
         Map.entry("/doctor/patient-history",    "medical_record.view"),
         Map.entry("/doctor/pregnancy",          "medical_record.view"),
         Map.entry("/doctor/results",            "ultrasound.view"),
+        Map.entry("/doctor/ultrasound-request",        "medical_record.edit"),
         Map.entry("/doctor/ultrasound-request/create", "medical_record.edit"),
 
         // ──────────── STAFF ZONE (/staff/*) ────────────
@@ -159,6 +160,9 @@ public final class AuthorizationConfig {
         // chặt trong zone Staff. Exact route được ưu tiên trước prefix.
         Map.entry("/admin/reception",                  "appointment.view"),
         Map.entry("/admin/reception/booking",          "appointment.create"),
+        Map.entry("/admin/reception/approve-payment-request", "appointment.edit"),
+        Map.entry("/admin/reception/approve-post-exam", "appointment.edit"),
+        Map.entry("/admin/reception/pay-pre-exam",     "appointment.edit"),
         Map.entry("/admin/reception/checkin",          "appointment.edit"),
         Map.entry("/admin/reception/cancel",           "appointment.cancel"),
         Map.entry("/admin/reception/priority",         "queue.priority"),
@@ -168,6 +172,8 @@ public final class AuthorizationConfig {
         Map.entry("/admin/reception/patient-lookup",   "user.view"),
 
         Map.entry("/admin/reception/quick-pay",        "appointment.edit"),
+        Map.entry("/admin/reception/noshow",          "appointment.edit"),
+        Map.entry("/admin/reception/refund",          "appointment.edit"),
 
         // ──────────── SONOGRAPHER ZONE (/sonographer/*) ────────────
         Map.entry("/sonographer/dashboard", "ultrasound.view"),

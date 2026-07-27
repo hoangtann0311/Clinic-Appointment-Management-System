@@ -77,6 +77,50 @@
     <div class="alert alert-danger alert-dismissible fade show" data-cams-toast role="alert"><i class="bi bi-exclamation-triangle-fill me-2"></i>${bookingError}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 </c:if>
 
+<%-- Khối Việc Cần Làm (P11) — ưu tiên hiển thị việc gần nhất --%>
+<c:set var="actionBlock" value=""/>
+<c:set var="actionIcon" value=""/>
+<c:set var="actionType" value=""/>
+<c:forEach var="a" items="${appointments}">
+    <c:set var="st" value="${fn:toLowerCase(a.status)}"/>
+    <%-- a. Có hoá đơn dịch vụ siêu âm chưa thanh toán --%>
+    <c:if test="${empty actionBlock && st == 'inprogress' && a.preExamPaymentStatus == 'Paid'}">
+        <c:set var="actionIcon" value="bi-exclamation-triangle-fill"/>
+        <c:set var="actionBlock" value="Bạn có dịch vụ cận lâm sàng cần thanh toán tại quầy."/>
+        <c:set var="actionType" value="warning"/>
+    </c:if>
+    <%-- b. Đã duyệt, hoá đơn khám chưa thanh toán --%>
+    <c:if test="${empty actionBlock && st == 'confirmed' && a.preExamPaymentStatus != 'Paid'}">
+        <c:set var="actionIcon" value="bi-credit-card-fill"/>
+        <c:set var="actionBlock" value="Vui lòng đến quầy lễ tân thanh toán phí khám trước giờ hẹn."/>
+        <c:set var="actionType" value="warning"/>
+    </c:if>
+    <%-- c. Đang chờ khám — hiển thị số thứ tự --%>
+    <c:if test="${empty actionBlock && st == 'waiting'}">
+        <c:set var="actionIcon" value="bi-hash"/>
+        <c:set var="actionBlock" value="Đang chờ khám. ${not empty a.queueNumber ? 'Số thứ tự của bạn: '.concat(a.queueNumber) : ''}"/>
+        <c:set var="actionType" value="info"/>
+    </c:if>
+    <%-- d&e. Hoàn tất gần đây --%>
+    <c:if test="${empty actionBlock && (st == 'success' || st == 'completed')}">
+        <c:set var="actionIcon" value="bi-check-circle-fill"/>
+        <c:set var="actionBlock" value="Kết quả khám đã sẵn sàng. Xem trong mục Hồ sơ bệnh án."/>
+        <c:set var="actionType" value="success"/>
+    </c:if>
+    <%-- f. Đang khám --%>
+    <c:if test="${empty actionBlock && st == 'inprogress'}">
+        <c:set var="actionIcon" value="bi-hospital-fill"/>
+        <c:set var="actionBlock" value="Bạn đang được bác sĩ khám."/>
+        <c:set var="actionType" value="info"/>
+    </c:if>
+</c:forEach>
+<c:if test="${not empty actionBlock}">
+    <div class="alert alert-${actionType == 'warning' ? 'warning' : (actionType == 'success' ? 'success' : 'info')} border-0 shadow-sm d-flex align-items-center gap-2.5 mb-4 rounded-3" role="alert">
+        <i class="bi ${actionIcon} fs-5"></i>
+        <span><c:out value="${actionBlock}"/></span>
+    </div>
+</c:if>
+
 <%-- Filter bar --%>
 <form action="${pageContext.request.contextPath}/patient/appointments" method="GET" class="mb-4">
     <div class="row">
@@ -127,6 +171,7 @@
                             <th>Bác sĩ</th>
                             <th>Dịch vụ</th>
                             <th>Trạng thái</th>
+                            <th class="text-center">Số TT</th>
                             <th>Thanh toán</th>
                             <th class="text-center" style="width:120px;">Thao tác</th>
                         </tr>
@@ -137,17 +182,20 @@
                             <tr>
                                 <%-- Ngày + Giờ gộp chung --%>
                                 <td>
-                                    <div class="fw-semibold">${a.appointmentDate}</div>
-                                    <c:set var="ts" value="${a.timeSlot}"/>
-                                    <div class="small text-muted">
-                                        <c:choose>
-                                            <c:when test="${fn:contains(ts, '(')}">
-                                                <c:set var="timeOnly" value="${fn:substringAfter(ts, '(')}"/>
-                                                ${fn:substringBefore(timeOnly, ')')}
-                                            </c:when>
-                                            <c:otherwise>${ts}</c:otherwise>
-                                        </c:choose>
-                                    </div>
+                                    <div class="fw-bold text-dark">${a.appointmentDate}</div>
+                                    <div class="small fw-semibold text-primary mt-0.5"><i class="bi bi-clock me-1"></i>${a.shiftLabel}</div>
+                                    <c:choose>
+                                        <c:when test="${not empty a.bookedAtDisplay}">
+                                            <div class="small text-muted fw-normal mt-1" style="font-size: 0.72rem;">
+                                                <i class="bi bi-clock-history me-1"></i>Đặt lúc: ${a.bookedAtDisplay}
+                                            </div>
+                                        </c:when>
+                                        <c:when test="${not empty a.createdAtText}">
+                                            <div class="small text-muted fw-normal mt-1" style="font-size: 0.72rem;">
+                                                <i class="bi bi-clock-history me-1"></i>Đặt lúc: ${a.createdAtText}
+                                            </div>
+                                        </c:when>
+                                    </c:choose>
                                 </td>
                                 <%-- Bác sĩ --%>
                                 <td>
@@ -157,17 +205,28 @@
                                 <td>
                                     <c:out value="${not empty a.serviceName ? a.serviceName : 'Khám lâm sàng'}"/>
                                 </td>
-                                <%-- Trạng thái --%>
+                                <%-- Trạng thái — dùng getDisplayStatus() tập trung --%>
                                 <td>
+                                    <c:set var="displaySt" value="${a.displayStatus}"/>
                                     <c:choose>
-                                        <c:when test="${st == 'confirmed'}"><span class="st-chip st-confirmed">Đã xác nhận</span></c:when>
-                                        <c:when test="${st == 'pending'}"><span class="st-chip st-pending">Chờ duyệt</span></c:when>
-                                        <c:when test="${st == 'waiting'}"><span class="st-chip st-waiting">Chờ khám</span></c:when>
-                                        <c:when test="${st == 'success' || st == 'completed'}"><span class="st-chip st-success">Hoàn thành</span></c:when>
-                                        <c:when test="${st == 'inprogress'}"><span class="st-chip st-inprogress">Đang khám</span></c:when>
-                                        <c:when test="${st == 'cancelled'}"><span class="st-chip st-cancelled">Đã huỷ</span></c:when>
-                                        <c:when test="${st == 'noshow'}"><span class="st-chip st-noshow">Vắng mặt</span></c:when>
-                                        <c:otherwise><span class="st-chip" style="background:#f3f4f6;color:#6b7280;">${a.status}</span></c:otherwise>
+                                        <c:when test="${st == 'pending'}"><span class="st-chip st-pending"><c:out value="${displaySt}"/></span></c:when>
+                                        <c:when test="${st == 'confirmed' && a.preExamPaymentStatus != 'Paid'}"><span class="st-chip st-pending"><c:out value="${displaySt}"/></span></c:when>
+                                        <c:when test="${st == 'confirmed' && a.preExamPaymentStatus == 'Paid'}"><span class="st-chip st-confirmed"><c:out value="${displaySt}"/></span></c:when>
+                                        <c:when test="${st == 'waiting'}"><span class="st-chip st-waiting"><c:out value="${displaySt}"/></span></c:when>
+                                        <c:when test="${st == 'success' || st == 'completed'}"><span class="st-chip st-success"><c:out value="${displaySt}"/></span></c:when>
+                                        <c:when test="${st == 'inprogress'}"><span class="st-chip st-inprogress"><c:out value="${displaySt}"/></span></c:when>
+                                        <c:when test="${st == 'cancelled'}"><span class="st-chip st-cancelled"><c:out value="${displaySt}"/></span></c:when>
+                                        <c:when test="${st == 'noshow'}"><span class="st-chip st-noshow"><c:out value="${displaySt}"/></span></c:when>
+                                        <c:otherwise><span class="st-chip" style="background:#f3f4f6;color:#6b7280;"><c:out value="${displaySt}"/></span></c:otherwise>
+                                    </c:choose>
+                                </td>
+                                <%-- Số thứ tự hàng đợi --%>
+                                <td class="text-center fw-bold">
+                                    <c:choose>
+                                        <c:when test="${st == 'waiting' && not empty a.queueNumber}">
+                                            <span class="badge bg-primary rounded-pill fs-6">${a.queueNumber}</span>
+                                        </c:when>
+                                        <c:otherwise><span class="text-muted">—</span></c:otherwise>
                                     </c:choose>
                                 </td>
                                 <%-- Thanh toán --%>
@@ -198,15 +257,14 @@
                                 <%-- Thao tác --%>
                                 <td class="text-center">
                                     <div class="act-group">
-                                        <c:if test="${st == 'pending' || st == 'confirmed'}">
+                                        <%-- Chỉ hiện đổi/huỷ khi CHƯA thanh toán --%>
+                                        <c:if test="${(st == 'pending' || st == 'confirmed') && a.preExamPaymentStatus != 'Paid'}">
                                             <a href="${pageContext.request.contextPath}/patient/booking?rescheduleId=${a.id}"
                                                class="btn btn-outline-warning btn-sm btn-action" title="Đổi lịch">
                                                 <i class="bi bi-arrow-repeat"></i>
                                             </a>
-                                        </c:if>
-                                        <c:if test="${(st == 'pending' || st == 'confirmed') && a.preExamPaymentStatus != 'Paid'}">
                                             <form method="post" action="${pageContext.request.contextPath}/patient/appointments"
-                                                  onsubmit="return confirm('Bạn có chắc muốn huỷ lịch hẹn này?');">
+                                                  onsubmit="return confirm('Huỷ lịch hẹn: ${fn:escapeXml(a.appointmentDate)} — ${not empty a.doctor ? fn:escapeXml(a.doctor.fullName) : ''}\n\nHành động này không thể hoàn tác. Bạn có chắc chắn?');">
                                                 <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                                 <input type="hidden" name="action" value="cancel">
                                                 <input type="hidden" name="appointmentId" value="${a.id}">
@@ -214,6 +272,12 @@
                                                     <i class="bi bi-x-lg"></i>
                                                 </button>
                                             </form>
+                                        </c:if>
+                                        <%-- Đã thanh toán → chỉ hiện biểu tượng khóa --%>
+                                        <c:if test="${st == 'confirmed' && a.preExamPaymentStatus == 'Paid'}">
+                                            <span class="text-muted small" title="Đã thanh toán, cần liên hệ lễ tân để thay đổi">
+                                                <i class="bi bi-lock"></i>
+                                            </span>
                                         </c:if>
                                     </div>
                                 </td>
@@ -249,5 +313,18 @@
         </div>
     </c:otherwise>
 </c:choose>
+
+<%-- [P11] Auto-refresh STT mỗi 30s khi có lịch đang chờ khám --%>
+<c:if test="${not empty appointments}">
+    <c:set var="hasWaiting" value="false"/>
+    <c:forEach var="a" items="${appointments}">
+        <c:if test="${fn:toLowerCase(a.status) == 'waiting'}"><c:set var="hasWaiting" value="true"/></c:if>
+    </c:forEach>
+    <c:if test="${hasWaiting}">
+    <script>
+    (function(){var refresh=function(){fetch(window.location.href,{headers:{'X-Requested-With':'XMLHttpRequest'}}).then(function(r){if(r.ok)setTimeout(function(){location.reload();},500);});};setInterval(refresh,30000);})();
+    </script>
+    </c:if>
+</c:if>
 
 <%@ include file="../common/footer.jsp" %>

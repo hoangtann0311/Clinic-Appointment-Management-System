@@ -3,10 +3,8 @@ package com.clinic.controller;
 import com.clinic.config.DatabaseConfig;
 import com.clinic.dao.DoctorDAO;
 import com.clinic.dao.MedicalRecordDAO;
-import com.clinic.dao.UltrasoundOrderDAO;
 import com.clinic.model.User;
 import com.clinic.service.UltrasoundOrderService;
-import com.clinic.model.UltrasoundWaitingPatient;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -88,92 +86,18 @@ public class DoctorResultsServlet extends HttpServlet {
         }
     }
 
-    /**
-     * POST /doctor/results
-     * Bác sĩ xác nhận kết quả phân tích AI siêu âm.
-     * Params: orderId, doctorMessage, recordId (dùng để redirect sau khi xác nhận)
-     */
-    @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse resp)
-            throws ServletException, IOException {
-
-        // Auth
-        HttpSession session = req.getSession(false);
-        if (session == null || session.getAttribute("user") == null) {
-            resp.sendRedirect(req.getContextPath() + "/login"); return;
-        }
-        User user = (User) session.getAttribute("user");
-        // Kết luận lâm sàng là trách nhiệm của bác sĩ điều trị.
-        if (user.getRoleId() != 2) {
-            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ Bác sĩ mới có quyền xác nhận kết quả siêu âm."); return;
-        }
-
-        // Nhận tham số
-        String orderIdStr   = req.getParameter("orderId");
-        String doctorMsg    = req.getParameter("doctorMessage");
-        String recordIdStr  = req.getParameter("recordId");
-
-        int recordId = -1;
-        try { recordId = Integer.parseInt(recordIdStr); } catch (Exception ignored) {}
-
-        if (orderIdStr == null || orderIdStr.isBlank()) {
-            resp.sendRedirect(req.getContextPath() + "/doctor/results?recordId=" + recordId + "&error=invalidOrder"); return;
-        }
-        if (doctorMsg == null || doctorMsg.isBlank()) {
-            resp.sendRedirect(req.getContextPath() + "/doctor/results?recordId=" + recordId + "&error=missingConclusion"); return;
-        }
-        if (doctorMsg.trim().length() < 20) {
-            resp.sendRedirect(req.getContextPath() + "/doctor/results?recordId=" + recordId + "&error=incompleteConclusion"); return;
-        }
-
-        int orderId;
-        try { orderId = Integer.parseInt(orderIdStr); }
-        catch (NumberFormatException e) {
-            resp.sendRedirect(req.getContextPath() + "/doctor/results?recordId=" + recordId + "&error=invalidOrder"); return;
-        }
-
-        // IDOR Check
-        Integer doctorId = DoctorDAO.getDoctorIdByUserId(user.getId());
-        if (doctorId == null) {
-            resp.sendRedirect(req.getContextPath() + "/doctor/results?recordId=" + recordId + "&error=noDoctorProfile");
-            return;
-        }
-
-        MedicalRecordDAO recordDAO = new MedicalRecordDAO();
-        if (!recordDAO.recordBelongsToDoctor(recordId, doctorId)) {
-            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền xác nhận kết quả siêu âm cho bệnh án này.");
-            return;
-        }
-
-        UltrasoundWaitingPatient order = new UltrasoundOrderDAO().getById(orderId);
-        if (order == null || order.getMedicalRecordId() != recordId) {
-            resp.sendRedirect(req.getContextPath() + "/doctor/results?recordId=" + recordId + "&error=invalidOrderMapping");
-            return;
-        }
-
-        // Thực hiện xác nhận
-        UltrasoundOrderService orderService = new UltrasoundOrderService();
-        boolean success = orderService.confirmUltrasoundResult(orderId, user.getId(), doctorMsg);
-
-        if (success) {
-            resp.sendRedirect(req.getContextPath() + "/doctor/results?recordId=" + recordId + "&success=confirmed#us-order-" + orderId);
-        } else {
-            resp.sendRedirect(req.getContextPath() + "/doctor/results?recordId=" + recordId + "&error=confirmFailed&orderId=" + orderId);
-        }
-    }
 
     // ── Kết quả siêu âm ─────────────────────────────────────────────────────
     private List<Map<String,Object>> loadUltrasoundResults(int recordId, boolean reviewSchemaSupported) {
         String reportColumns = reviewSchemaSupported
                 ? "       ann.annotation_data, ann.annotation_type, ann.review_status, ann.rejection_reason, "
                   + "       ur.image_description, ur.professional_findings, ur.conclusion AS sonographer_conclusion, "
-                  + "       ur.report_status, ur.signed_name, ur.signed_at, ur.doctor_review_notes, ur.doctor_confirmed_at, "
+                  + "       ur.report_status, ur.signed_name, ur.signed_at, "
                 : "       CAST(NULL AS nvarchar(max)) AS annotation_data, CAST(NULL AS nvarchar(30)) AS annotation_type, "
                   + "       CAST(NULL AS nvarchar(30)) AS review_status, CAST(NULL AS nvarchar(500)) AS rejection_reason, "
                   + "       CAST(NULL AS nvarchar(max)) AS image_description, CAST(NULL AS nvarchar(max)) AS professional_findings, "
                   + "       CAST(NULL AS nvarchar(max)) AS sonographer_conclusion, CAST(NULL AS nvarchar(20)) AS report_status, "
-                  + "       CAST(NULL AS nvarchar(200)) AS signed_name, CAST(NULL AS datetime2) AS signed_at, "
-                  + "       CAST(NULL AS nvarchar(2000)) AS doctor_review_notes, CAST(NULL AS datetime2) AS doctor_confirmed_at, ";
+                  + "       CAST(NULL AS nvarchar(200)) AS signed_name, CAST(NULL AS datetime2) AS signed_at, ";
         String reviewJoins = reviewSchemaSupported
                 ? "LEFT JOIN ultrasound_reports ur ON ur.test_order_id = to2.id AND ur.is_current = 1 "
                   + "AND ur.report_status = 'Signed' AND ur.signed_at IS NOT NULL "

@@ -60,6 +60,8 @@ public class MedicalRecord {
     private Integer pregnancyId;
     private String  patientPhone;
     private String  patientDob;
+    private String  doctorName;
+    private String  bookingSource;
 
     public MedicalRecord() {}
 
@@ -180,7 +182,27 @@ public class MedicalRecord {
     public String getAppointmentDate() { return appointmentDate; }
     public void setAppointmentDate(String v) { this.appointmentDate = v; }
 
-    public String getTimeSlot() { return timeSlot; }
+    public String getTimeSlot() {
+        if (timeSlot == null || timeSlot.isBlank()) return "—";
+        String ts = timeSlot.trim();
+        if (ts.matches("^\\d{1,2}:\\d{2}:\\d{2}(\\.\\d+)?$")) {
+            String[] parts = ts.split(":");
+            try {
+                int hour = Integer.parseInt(parts[0]);
+                int minute = Integer.parseInt(parts[1]);
+                int endMinute = minute + 20;
+                int endHour = hour;
+                if (endMinute >= 60) {
+                    endHour += 1;
+                    endMinute -= 60;
+                }
+                return String.format("%02d:%02d - %02d:%02d", hour, minute, endHour, endMinute);
+            } catch (Exception e) {
+                return String.format("%02d:%s", Integer.parseInt(parts[0]), parts[1]);
+            }
+        }
+        return ts;
+    }
     public void setTimeSlot(String v) { this.timeSlot = v; }
 
     public String getSymptoms() { return symptoms; }
@@ -197,6 +219,12 @@ public class MedicalRecord {
 
     public String getPatientDob() { return patientDob; }
     public void setPatientDob(String v) { this.patientDob = v; }
+
+    public String getDoctorName() { return doctorName; }
+    public void setDoctorName(String v) { this.doctorName = v; }
+
+    public String getBookingSource() { return bookingSource; }
+    public void setBookingSource(String v) { this.bookingSource = v; }
 
     /** Tiện ích: hiển thị tuổi thai */
     public String getGestationalAgeDisplay() {

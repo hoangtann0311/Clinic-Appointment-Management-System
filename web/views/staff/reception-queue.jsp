@@ -103,7 +103,7 @@
                 <a href="${pageContext.request.contextPath}/admin/reception/doctor-schedules"
                    class="${fn:contains(requestURI, 'doctor-schedules') ? 'active' : ''}">
                     <i class="bi bi-calendar-week"></i>
-                    <span>Lịch Làm Việc</span>
+                    <span>Lịch Trực Bác Sĩ</span>
                 </a>
             </li>
 
@@ -200,6 +200,8 @@
                         <option value="Confirmed" ${status == 'Confirmed' ? 'selected' : ''}>Đã duyệt</option>
                         <option value="Waiting" ${status == 'Waiting' ? 'selected' : ''}>Chờ khám</option>
                         <option value="InProgress" ${status == 'InProgress' ? 'selected' : ''}>Đang khám</option>
+                        <option value="SUCCESS" ${status == 'SUCCESS' || status == 'Completed' ? 'selected' : ''}>Hoàn thành</option>
+                        <option value="Cancelled" ${status == 'Cancelled' ? 'selected' : ''}>Đã hủy</option>
                     </select>
                     <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search"></i> Lọc</button>
                     <c:if test="${not empty search or not empty status}">
@@ -229,6 +231,13 @@
                     <div class="alert alert-success alert-dismissible fade show m-3" data-cams-toast role="alert">
                         <i class="bi bi-check-circle-fill me-2"></i>
                         <c:out value="${queueSuccess}"/>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                </c:if>
+                <c:if test="${not empty autoMovedCount && autoMovedCount > 0}">
+                    <div class="alert alert-info alert-dismissible fade show m-3" data-cams-toast role="alert">
+                        <i class="bi bi-arrow-repeat me-2"></i>
+                        Hệ thống đã tự động chuyển <strong>${autoMovedCount}</strong> bệnh nhân sang ca tiếp theo do bác sĩ đã hết ca làm việc.
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                 </c:if>
@@ -288,24 +297,43 @@
                                     <small class="text-muted">
                                         <c:out value="${apt.patient != null ? apt.patient.phone : ''}"/>
                                     </small>
+                                    <c:if test="${not empty apt.bookingSource}">
+                                        <div class="mt-0.5">
+                                            <c:choose>
+                                                <c:when test="${fn:toLowerCase(apt.bookingSource) == 'staff' || fn:toLowerCase(apt.bookingSource) == 'reception' || fn:toLowerCase(apt.bookingSource) == 'counter'}">
+                                                    <span class="badge rounded-pill px-2 py-1" style="background:#e0e7ff; color:#3730a3; border:1px solid #c7d2fe; font-size:.68rem; font-weight:700;"><i class="bi bi-person-workspace me-1"></i>Tại quầy</span>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <span class="badge rounded-pill px-2 py-1" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; font-size:.68rem; font-weight:700;"><i class="bi bi-globe me-1"></i>Đặt Online</span>
+                                                </c:otherwise>
+                                            </c:choose>
+                                        </div>
+                                    </c:if>
                                 </td>
 
                                 <td>
                                     <c:choose>
                                         <c:when test="${apt.doctor != null}">
-                                            BS. <c:out value="${apt.doctor.fullName}"/>
+                                            BS. <c:out value="${not empty apt.doctor ? apt.doctor.fullName : '—'}"/>
                                         </c:when>
                                         <c:otherwise>-</c:otherwise>
                                     </c:choose>
                                 </td>
 
                                 <td class="fw-medium">
-                                    <c:out value="${apt.timeSlot}"/>
-                                    <c:if test="${not empty apt.createdAtText}">
-                                        <div class="small text-muted fw-normal mt-1" style="font-size: 0.75rem;">
-                                            <i class="bi bi-clock-history"></i> Đặt lúc: <c:out value="${apt.createdAtText}"/>
-                                        </div>
-                                    </c:if>
+                                    <c:out value="${not empty apt.shiftLabel ? apt.shiftLabel : apt.timeSlot}"/>
+                                    <c:choose>
+                                        <c:when test="${not empty apt.bookedAtDisplay}">
+                                            <div class="small text-muted fw-normal mt-1" style="font-size: 0.75rem;">
+                                                <i class="bi bi-clock-history"></i> Đặt lúc: <c:out value="${apt.bookedAtDisplay}"/>
+                                            </div>
+                                        </c:when>
+                                        <c:when test="${not empty apt.createdAtText}">
+                                            <div class="small text-muted fw-normal mt-1" style="font-size: 0.75rem;">
+                                                <i class="bi bi-clock-history"></i> Đặt lúc: <c:out value="${apt.createdAtText}"/>
+                                            </div>
+                                        </c:when>
+                                    </c:choose>
                                 </td>
 
                                 <td class="fw-semibold text-primary">
@@ -313,8 +341,6 @@
                                 </td>
 
                                 <td>
-                                    <%-- Lịch đặt online có thể lưu nhiều dịch vụ trong appointment_services,
-                                         nên service_id trên appointment có thể NULL. serviceName đã được DAO tổng hợp. --%>
                                     <c:out value="${not empty apt.serviceName ? apt.serviceName : (apt.service != null ? apt.service.serviceName : '-')}"/>
                                 </td>
 
@@ -324,7 +350,7 @@
 
                                 <td>
                                     <c:choose>
-                                        <c:when test="${apt.preExamPaymentStatus == 'Paid'}">
+                                        <c:when test="${apt.preExamPaymentStatus == 'Paid' || statusLower == 'success' || statusLower == 'completed' || statusLower == 'inprogress' || statusLower == 'waiting'}">
                                             <span class="badge-cams badge-success">
                                                 <i class="bi bi-check-circle"></i> Đã thanh toán
                                             </span>
@@ -402,34 +428,89 @@
                                                         <i class="bi bi-x-circle"></i> Huỷ
                                                     </button>
                                                 </form>
+
+                                                <form action="${pageContext.request.contextPath}/admin/reception/noshow"
+                                                      method="post"
+                                                      style="display:inline;"
+                                                      onsubmit="return confirm('Xác nhận bệnh nhân này KHÔNG ĐẾN khám? Slot sẽ được trả về.')">
+                                                    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                                                    <input type="hidden" name="id" value="${apt.id}">
+                                                    <button type="submit" class="btn btn-sm btn-outline-secondary" style="font-size:.7rem;padding:.15rem .4rem;" title="Đánh dấu không đến — trả slot">
+                                                        <i class="bi bi-person-x"></i> Không đến
+                                                    </button>
+                                                </form>
                                             </div>
                                         </c:when>
 
                                         <c:when test="${statusLower == 'confirmed'}">
                                             <div class="d-flex flex-wrap justify-content-center gap-1">
+                                                <%-- Nút xác nhận thanh toán — chỉ hiện khi PRE_EXAM chưa Paid --%>
+                                                <c:if test="${apt.preExamPaymentStatus != 'Paid'}">
+                                                <form action="${pageContext.request.contextPath}/admin/reception/pay-pre-exam"
+                                                      method="post"
+                                                      style="display:inline;">
+                                                    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                                                    <input type="hidden" name="id" value="${apt.id}">
+                                                     <button type="submit" class="btn-cams btn-cams-success btn-sm" style="font-size:.72rem;padding:.2rem .45rem;" title="Xác nhận bệnh nhân đã nộp tiền mặt tại quầy">
+                                                         <i class="bi bi-cash-coin"></i> Xác Nhận Thanh Toán
+                                                     </button>
+                                                </form>
+                                                </c:if>
+                                                <%-- Nút check-in — chỉ hiện khi PRE_EXAM đã Paid --%>
+                                                <c:if test="${apt.preExamPaymentStatus == 'Paid'}">
                                                 <form action="${pageContext.request.contextPath}/admin/reception/checkin"
                                                       method="post"
                                                       style="display:inline;">
                                                     <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                                     <input type="hidden" name="id" value="${apt.id}">
-                                                     <button type="submit" class="btn-cams btn-cams-success btn-sm" style="font-size:.72rem;padding:.2rem .45rem;" title="Xác nhận bệnh nhân đã nộp tiền mặt tại quầy và đưa vào hàng đợi Bác sĩ">
-                                                         <i class="bi bi-cash-coin"></i> Thu Tiền &amp; Check-in
+                                                     <button type="submit" class="btn-cams btn-cams-success btn-sm" style="font-size:.72rem;padding:.2rem .45rem;" title="Đưa bệnh nhân vào hàng đợi chờ Bác sĩ">
+                                                         <i class="bi bi-person-check"></i> Check-in
                                                      </button>
                                                 </form>
+                                                </c:if>
 
                                                 <a href="${pageContext.request.contextPath}/admin/reception/edit?id=${apt.id}"
                                                    class="btn-action btn-action-edit" style="font-size:.7rem;padding:.15rem .4rem;">
                                                     <i class="bi bi-pencil-square"></i> Sửa
                                                 </a>
 
-                                                <form action="${pageContext.request.contextPath}/admin/reception/cancel"
+                                                <c:choose>
+                                                    <c:when test="${apt.preExamPaymentStatus == 'Paid'}">
+                                                        <%-- Đã thanh toán: cần xác nhận hoàn tiền --%>
+                                                        <form action="${pageContext.request.contextPath}/admin/reception/cancel"
+                                                              method="post"
+                                                              style="display:inline;"
+                                                              onsubmit="return confirm('Lịch hẹn này ĐÃ THANH TOÁN phí khám.\n\nXác nhận hủy lịch và HOÀN TIỀN cho bệnh nhân?\n\n(Lễ tân tự xử lý hoàn tiền mặt với bệnh nhân tại quầy.)')">
+                                                            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                                                            <input type="hidden" name="id" value="${apt.id}">
+                                                            <button type="submit" class="btn-action btn-action-delete" style="font-size:.7rem;padding:.15rem .4rem;">
+                                                                <i class="bi bi-x-circle"></i> Huỷ &amp; Hoàn tiền
+                                                            </button>
+                                                        </form>
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <%-- Chưa thanh toán: hủy bình thường --%>
+                                                        <form action="${pageContext.request.contextPath}/admin/reception/cancel"
+                                                              method="post"
+                                                              style="display:inline;"
+                                                              onsubmit="return confirm('Bạn có chắc chắn muốn hủy lịch hẹn khám này?')">
+                                                            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                                                            <input type="hidden" name="id" value="${apt.id}">
+                                                            <button type="submit" class="btn-action btn-action-delete" style="font-size:.7rem;padding:.15rem .4rem;">
+                                                                <i class="bi bi-x-circle"></i> Huỷ
+                                                            </button>
+                                                        </form>
+                                                    </c:otherwise>
+                                                </c:choose>
+
+                                                <form action="${pageContext.request.contextPath}/admin/reception/noshow"
                                                       method="post"
                                                       style="display:inline;"
-                                                      onsubmit="return confirm('Bạn có chắc chắn muốn hủy lịch hẹn khám này?')">
+                                                      onsubmit="return confirm('Xác nhận bệnh nhân này KHÔNG ĐẾN khám? Slot sẽ được trả về.')">
                                                     <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                                     <input type="hidden" name="id" value="${apt.id}">
-                                                    <button type="submit" class="btn-action btn-action-delete" style="font-size:.7rem;padding:.15rem .4rem;">
-                                                        <i class="bi bi-x-circle"></i> Huỷ
+                                                    <button type="submit" class="btn btn-sm btn-outline-secondary" style="font-size:.7rem;padding:.15rem .4rem;" title="Đánh dấu không đến — trả slot">
+                                                        <i class="bi bi-person-x"></i> Không đến
                                                     </button>
                                                 </form>
                                             </div>

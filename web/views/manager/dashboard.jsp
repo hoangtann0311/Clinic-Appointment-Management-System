@@ -863,6 +863,41 @@
     </div>
 
     <%-- ════════════════════════════════════════════ --%>
+    <%-- [P13] Ca chưa chốt quá 24h --%>
+    <c:if test="${not empty stuckCases}">
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card border-0 rounded-4 border-danger border-opacity-50">
+                <div class="card-header bg-danger bg-opacity-10 border-0 rounded-top-4 py-3 d-flex align-items-center gap-2">
+                    <i class="bi bi-exclamation-triangle-fill text-danger fs-5"></i>
+                    <h6 class="fw-bold mb-0 text-danger">Ca Chưa Chốt Quá 24 Giờ</h6>
+                    <span class="badge bg-danger ms-auto">${fn:length(stuckCases)} ca</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light small">
+                            <tr><th class="ps-3">Bệnh Nhân</th><th>Bác Sĩ</th><th>Ngày Khám</th><th>Giờ</th><th>Giai Đoạn Hiện Tại</th></tr>
+                        </thead>
+                        <tbody>
+                            <c:forEach var="sc" items="${stuckCases}">
+                            <tr>
+                                <td class="ps-3 fw-medium">${sc['patientName']}</td>
+                                <td>${sc['doctorName']}</td>
+                                <td class="small">${sc['appointmentDate']}</td>
+                                <td class="small">${sc['timeSlot']}</td>
+                                <td><span class="badge bg-warning text-dark">${sc['stage']}</span></td>
+                            </tr>
+                            </c:forEach>
+                        </tbody>
+                    </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </c:if>
+
     <%-- HÀNG CUỐI: Dịch vụ & Thuốc KPI + Cảnh báo tồn kho --%>
     <%-- ════════════════════════════════════════════ --%>
     <div class="row g-3 mb-4">

@@ -135,11 +135,11 @@ public class AiAnalysisResult implements Serializable {
         this.xmax = xmax;
     }
 
-    public Integer getymax() {
+    public Integer getYmax() {
         return ymax;
     }
 
-    public void setymax(Integer ymax) {
+    public void setYmax(Integer ymax) {
         this.ymax = ymax;
     }
 

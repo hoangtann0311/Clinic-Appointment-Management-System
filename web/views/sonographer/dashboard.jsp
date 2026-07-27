@@ -160,7 +160,7 @@
                                                 <span class="badge bg-success-subtle text-success border border-success-subtle">Hoàn thành</span>
                                             </c:when>
                                             <c:when test="${fn:toLowerCase(order.status) == 'confirmed'}">
-                                                <span class="badge bg-success text-white border border-success">Đã xác nhận</span>
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle">Hoàn thành</span>
                                             </c:when>
                                             <c:otherwise>
                                                 <span class="badge bg-light text-muted border"><c:out value="${order.status}"/></span>

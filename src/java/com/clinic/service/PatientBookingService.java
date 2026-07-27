@@ -146,22 +146,15 @@ public class PatientBookingService {
             }
         }
 
-        // 7. Validate thời gian đặt lịch (ca sắp kết thúc / đã bắt đầu)
+        // 7. Validate thời gian đặt lịch: chỉ chặn khi ca sắp kết thúc (còn < 30 phút)
+        // KHÔNG chặn khi ca đã bắt đầu — BN vẫn đặt được miễn còn chỗ.
         if (info.workDate != null && info.endTime != null) {
             java.time.LocalDate wDate = info.workDate.toLocalDate();
             java.time.LocalTime et = java.time.LocalTime.parse(info.endTime);
             java.time.LocalDateTime slotEndDateTime = java.time.LocalDateTime.of(wDate, et);
             if (java.time.LocalDateTime.now().plusMinutes(30).isAfter(slotEndDateTime)) {
-                errors.put("general", "Ca khám này đã sắp kết thúc hoặc đã qua, vui lòng chọn ca khác.");
+                errors.put("general", "Ca khám này sắp kết thúc (còn dưới 30 phút), vui lòng chọn ca khác.");
                 return null;
-            }
-            if (info.startTime != null && wDate.equals(java.time.LocalDate.now())) {
-                java.time.LocalTime st = java.time.LocalTime.parse(info.startTime);
-                java.time.LocalDateTime slotStartDateTime = java.time.LocalDateTime.of(wDate, st);
-                if (java.time.LocalDateTime.now().isAfter(slotStartDateTime)) {
-                    errors.put("general", "Ca khám này đã bắt đầu, không thể đặt lịch trực tuyến. Vui lòng đến trực tiếp quầy Lễ tân.");
-                    return null;
-                }
             }
         }
 
@@ -206,7 +199,7 @@ public class PatientBookingService {
             // Thông báo cho chính bệnh nhân
             com.clinic.dao.NotificationDAO notiDAO = new com.clinic.dao.NotificationDAO();
             notiDAO.create(userId,
-                    "📅 Đặt lịch khám thành công",
+                    "Đặt lịch khám thành công",
                     "Bạn đã đặt lịch khám với BS. " + (doctor != null ? doctor.getFullName() : "")
                     + " vào " + (expectedTimeSlot != null ? expectedTimeSlot : "")
                     + " ngày " + (workDate != null ? workDate.toString() : "")
@@ -306,20 +299,26 @@ public class PatientBookingService {
             return false;
         }
 
-        // Time check
+        // Time check: phải còn ít nhất 2 giờ trước giờ bắt đầu ca (theo A4#3)
+        // Dùng regex để parse HH:mm từ cả 2 format: "08:00 - 12:00" và "Sáng (08:00 - 12:00)"
         if (appt.getAppointmentDate() != null && appt.getTimeSlot() != null) {
-            try {
-                String[] parts = appt.getTimeSlot().contains(" - ")
-                        ? appt.getTimeSlot().split(" - ")[0].trim().split(":")
-                        : appt.getTimeSlot().split("-")[0].trim().split(":");
-                java.time.LocalTime time = java.time.LocalTime.of(
-                        Integer.parseInt(parts[0]), Integer.parseInt(parts.length > 1 ? parts[1] : "0"));
-                java.time.LocalDateTime apptDateTime = java.time.LocalDateTime.of(appt.getAppointmentDate(), time);
-                if (apptDateTime.isBefore(java.time.LocalDateTime.now())) {
-                    errors.put("general", "Không thể huỷ/đổi lịch khám đã qua.");
-                    return false;
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d{2}:\\d{2})")
+                    .matcher(appt.getTimeSlot());
+            if (m.find()) {
+                try {
+                    String[] hm = m.group(1).split(":");
+                    java.time.LocalTime time = java.time.LocalTime.of(
+                            Integer.parseInt(hm[0]), Integer.parseInt(hm[1]));
+                    java.time.LocalDateTime apptDateTime = java.time.LocalDateTime.of(appt.getAppointmentDate(), time);
+                    java.time.LocalDateTime deadline = apptDateTime.minusHours(2);
+                    if (java.time.LocalDateTime.now().isAfter(deadline)) {
+                        errors.put("general", "Chỉ có thể huỷ lịch trước 2 giờ so với giờ bắt đầu ca. Vui lòng liên hệ Lễ tân nếu cần gấp.");
+                        return false;
+                    }
+                } catch (Exception e) {
+                    System.err.println("[PatientBookingService] cancelAppointment time parse error: " + e.getMessage());
                 }
-            } catch (Exception ignored) {}
+            }
         }
 
         return appointmentDAO.cancelAppointmentAndReleaseSlot(appointmentId, userId, "Bệnh nhân huỷ lịch hẹn");
@@ -355,20 +354,26 @@ public class PatientBookingService {
             return false;
         }
 
-        // Time check for rescheduling
+        // Time check: phải còn ít nhất 2 giờ trước giờ bắt đầu ca cũ (theo A4#3)
+        // Dùng regex để parse HH:mm từ cả 2 format: "08:00 - 12:00" và "Sáng (08:00 - 12:00)"
         if (appt.getAppointmentDate() != null && appt.getTimeSlot() != null) {
-            try {
-                String[] parts = appt.getTimeSlot().contains(" - ")
-                        ? appt.getTimeSlot().split(" - ")[0].trim().split(":")
-                        : appt.getTimeSlot().split("-")[0].trim().split(":");
-                java.time.LocalTime time = java.time.LocalTime.of(
-                        Integer.parseInt(parts[0]), Integer.parseInt(parts.length > 1 ? parts[1] : "0"));
-                java.time.LocalDateTime apptDateTime = java.time.LocalDateTime.of(appt.getAppointmentDate(), time);
-                if (apptDateTime.isBefore(java.time.LocalDateTime.now())) {
-                    errors.put("general", "Không thể huỷ/đổi lịch khám đã qua.");
-                    return false;
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d{2}:\\d{2})")
+                    .matcher(appt.getTimeSlot());
+            if (m.find()) {
+                try {
+                    String[] hm = m.group(1).split(":");
+                    java.time.LocalTime time = java.time.LocalTime.of(
+                            Integer.parseInt(hm[0]), Integer.parseInt(hm[1]));
+                    java.time.LocalDateTime apptDateTime = java.time.LocalDateTime.of(appt.getAppointmentDate(), time);
+                    java.time.LocalDateTime deadline = apptDateTime.minusHours(2);
+                    if (java.time.LocalDateTime.now().isAfter(deadline)) {
+                        errors.put("general", "Chỉ có thể đổi lịch trước 2 giờ so với giờ bắt đầu ca. Vui lòng liên hệ Lễ tân nếu cần gấp.");
+                        return false;
+                    }
+                } catch (Exception e) {
+                    System.err.println("[PatientBookingService] rescheduleAppointment time parse error: " + e.getMessage());
                 }
-            } catch (Exception ignored) {}
+            }
         }
 
         Integer oldSlotId = appt.getSlotId();
@@ -382,7 +387,7 @@ public class PatientBookingService {
             return false;
         }
 
-        // Kiểm tra thông tin ca khám (Tối ưu V6)
+        // Kiểm tra thông tin ca khám mới
         ScheduleInfo info = getScheduleInfo(newSlotId);
         if (info == null) {
             errors.put("slotId", "Không tìm thấy thông tin ca khám mới.");
@@ -393,29 +398,64 @@ public class PatientBookingService {
             return false;
         }
 
-        // [V2-FIX] Kiểm tra ca mới không phải là ca đã bắt đầu trong hôm nay
-        if (info.workDate != null) {
+        // [A4#1] Chỉ được đổi sang slot khác CỦA CÙNG MỘT BÁC SĨ
+        // Đổi bác sĩ → đổi giá → phải huỷ rồi đặt lại
+        if (info.doctorId != appt.getDoctorId()) {
+            errors.put("slotId", "Chỉ được đổi lịch sang ca khác của cùng bác sĩ. Vui lòng huỷ lịch hiện tại và đặt lại nếu muốn đổi bác sĩ.");
+            return false;
+        }
+
+        // Chỉ chặn khi ca mới sắp kết thúc (< 30 phút), không chặn khi đã bắt đầu
+        if (info.workDate != null && info.endTime != null) {
             java.time.LocalDate wDate = info.workDate.toLocalDate();
-            if (wDate.equals(java.time.LocalDate.now()) && info.startTime != null) {
-                java.time.LocalTime st = java.time.LocalTime.parse(info.startTime);
-                if (java.time.LocalDateTime.now().isAfter(java.time.LocalDateTime.of(wDate, st))) {
-                    errors.put("slotId", "Ca khám này đã bắt đầu, không thể đổi lịch sang ca này. Vui lòng đến trực tiếp quầy Lễ tân.");
-                    return false;
-                }
-                // Ca sắp kết thúc (< 30 phút)
-                if (info.endTime != null) {
-                    java.time.LocalTime et = java.time.LocalTime.parse(info.endTime);
-                    if (java.time.LocalDateTime.now().plusMinutes(30).isAfter(java.time.LocalDateTime.of(wDate, et))) {
-                        errors.put("slotId", "Ca khám này sắp kết thúc, vui lòng chọn ca khác.");
-                        return false;
-                    }
-                }
+            java.time.LocalTime et = java.time.LocalTime.parse(info.endTime);
+            if (java.time.LocalDateTime.now().plusMinutes(30).isAfter(java.time.LocalDateTime.of(wDate, et))) {
+                errors.put("slotId", "Ca khám này sắp kết thúc (còn dưới 30 phút), vui lòng chọn ca khác.");
+                return false;
             }
         }
         
         java.sql.Time startTime = java.sql.Time.valueOf(expectedTimeSlot != null && !expectedTimeSlot.isEmpty() ? expectedTimeSlot + ":00" : info.startTime + ":00");
 
-        return appointmentDAO.rescheduleAppointmentTransaction(appointmentId, oldSlotId, newSlotId, userId, info.workDate, startTime, errors);
+        // [P12] Giới hạn max 2 lần đổi lịch — đếm từ audit log
+        int rescheduleCount = countRescheduleFromAuditLog(appointmentId);
+        if (rescheduleCount >= 2) {
+            errors.put("general", "Bạn đã đổi lịch quá số lần cho phép (tối đa 2 lần). Vui lòng liên hệ Lễ tân để được hỗ trợ.");
+            return false;
+        }
+
+        boolean success = appointmentDAO.rescheduleAppointmentTransaction(appointmentId, oldSlotId, newSlotId, userId, info.workDate, startTime, errors);
+        if (success) {
+            // Ghi audit log để đếm số lần đổi lịch
+            try {
+                new com.clinic.dao.AuditLogDAO().logAction(
+                    "BN đổi lịch #" + appointmentId + " từ slot #" + oldSlotId + " sang slot #" + newSlotId,
+                    "Patient",
+                    "appointments",
+                    "slot:" + oldSlotId,
+                    "slot:" + newSlotId
+                );
+            } catch (Exception e) {
+                System.err.println("[PatientBookingService] audit log error: " + e.getMessage());
+            }
+        }
+        return success;
+    }
+
+    /** [P12] Đếm số lần đã đổi lịch của một appointment từ audit_logs */
+    private int countRescheduleFromAuditLog(int appointmentId) {
+        String sql = "SELECT COUNT(*) FROM audit_logs "
+                + "WHERE table_name = 'appointments' "
+                + "AND action LIKE ?";
+        try (java.sql.Connection c = com.clinic.config.DatabaseConfig.getConnection();
+             java.sql.PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, "%đổi lịch #" + appointmentId + " %");
+            java.sql.ResultSet rs = ps.executeQuery();
+            if (rs.next()) return rs.getInt(1);
+        } catch (Exception e) {
+            System.err.println("[PatientBookingService] countReschedule ERROR: " + e.getMessage());
+        }
+        return 0;
     }
 
     // ── Helpers ──

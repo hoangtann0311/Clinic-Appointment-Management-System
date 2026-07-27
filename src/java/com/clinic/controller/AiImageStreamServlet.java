@@ -57,7 +57,10 @@ public class AiImageStreamServlet extends HttpServlet {
                     && orderService.checkSonographerOwnership(orderId, user.getId()))))
                 || (roleId == 5 && orderService.checkPatientOwnership(orderId, user.getId()));
         if (!authorized) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền xem ảnh phân tích AI của ca này.");
+            System.err.println("[SECURITY] AiImageStreamServlet: ACCESS DENIED — "
+                    + "userId=" + user.getId() + ", roleId=" + user.getRoleId()
+                    + ", orderId=" + orderId + ", imageId=" + imageId);
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
             return;
         }
 

@@ -32,13 +32,51 @@ public class DoctorPrescriptionListServlet extends HttpServlet {
         try {
             User user = (User) session.getAttribute("user");
             Integer doctorId = DoctorDAO.getDoctorIdByUserId(user.getId());
-            if (doctorId == null) {
-                resp.sendError(HttpServletResponse.SC_FORBIDDEN);
+
+            String action = req.getParameter("action");
+            if ("detail".equalsIgnoreCase(action) || "items".equalsIgnoreCase(action)) {
+                String rxIdStr = req.getParameter("id");
+                if (rxIdStr != null) {
+                    try {
+                        int rxId = Integer.parseInt(rxIdStr.trim());
+                        com.clinic.dao.PrescriptionDAO prescriptionDAO = new com.clinic.dao.PrescriptionDAO();
+                        com.clinic.model.Prescription p = prescriptionDAO.getById(rxId);
+                        if (p != null) {
+                            resp.setContentType("application/json;charset=UTF-8");
+                            StringBuilder json = new StringBuilder("[");
+                            if (p.getItems() != null) {
+                                for (int i = 0; i < p.getItems().size(); i++) {
+                                    com.clinic.model.PrescriptionItem item = p.getItems().get(i);
+                                    if (i > 0) json.append(",");
+                                    json.append("{")
+                                        .append("\"medicineName\":\"").append(escapeJson(item.getMedicineName())).append("\",")
+                                        .append("\"quantity\":").append(item.getQuantity()).append(",")
+                                        .append("\"dosage\":\"").append(escapeJson(item.getDosage())).append("\"")
+                                        .append("}");
+                                }
+                            }
+                            json.append("]");
+                            resp.getWriter().write(json.toString());
+                            return;
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+                resp.sendError(HttpServletResponse.SC_BAD_REQUEST);
                 return;
             }
 
             String keyword = req.getParameter("keyword");
             boolean hasKw = keyword != null && !keyword.isBlank();
+
+            String statusFilter = req.getParameter("status");
+            boolean hasStatus = statusFilter != null && !statusFilter.isBlank();
+
+            String dateFromParam = req.getParameter("dateFrom");
+            String dateToParam = req.getParameter("dateTo");
+            boolean hasDateFrom = dateFromParam != null && !dateFromParam.isBlank();
+            boolean hasDateTo = dateToParam != null && !dateToParam.isBlank();
 
             int page = 1;
             int pageSize = 10;
@@ -52,16 +90,33 @@ public class DoctorPrescriptionListServlet extends HttpServlet {
                               "JOIN medical_records mr ON p.medical_record_id = mr.id " +
                               "JOIN appointments a ON mr.appointment_id = a.id " +
                               "JOIN patients pt ON a.patient_id = pt.id " +
-                              "WHERE a.doctor_id = ? " +
-                              (hasKw ? "AND (pt.full_name LIKE ? OR p.prescription_code LIKE ?) " : "");
+                              "WHERE 1=1 " +
+                              (doctorId != null ? "AND (a.doctor_id = ? OR a.doctor_id IS NULL) " : "") +
+                              "AND EXISTS (SELECT 1 FROM prescription_items pi WHERE pi.prescription_id = p.id) " +
+                              (hasKw ? "AND (pt.full_name LIKE ? OR p.prescription_code LIKE ?) " : "") +
+                              (hasStatus ? "AND p.status = ? " : "") +
+                              (hasDateFrom ? "AND a.appointment_date >= ? " : "") +
+                              (hasDateTo ? "AND a.appointment_date <= ? " : "");
             int totalRecords = 0;
             try (Connection conn = DatabaseConfig.getConnection();
                  PreparedStatement ps = conn.prepareStatement(countSql)) {
-                ps.setInt(1, doctorId);
+                int pIdx = 1;
+                if (doctorId != null) {
+                    ps.setInt(pIdx++, doctorId);
+                }
                 if (hasKw) {
                     String lk = "%" + keyword.trim() + "%";
-                    ps.setString(2, lk);
-                    ps.setString(3, lk);
+                    ps.setString(pIdx++, lk);
+                    ps.setString(pIdx++, lk);
+                }
+                if (hasStatus) {
+                    ps.setString(pIdx++, statusFilter.trim());
+                }
+                if (hasDateFrom) {
+                    ps.setDate(pIdx++, java.sql.Date.valueOf(dateFromParam.trim()));
+                }
+                if (hasDateTo) {
+                    ps.setDate(pIdx++, java.sql.Date.valueOf(dateToParam.trim()));
                 }
                 ResultSet rs = ps.executeQuery();
                 if (rs.next()) totalRecords = rs.getInt(1);
@@ -83,20 +138,36 @@ public class DoctorPrescriptionListServlet extends HttpServlet {
                 "JOIN medical_records mr ON p.medical_record_id = mr.id " +
                 "JOIN appointments a ON mr.appointment_id = a.id " +
                 "JOIN patients pt ON a.patient_id = pt.id " +
-                "WHERE a.doctor_id = ? " +
+                "WHERE 1=1 " +
+                (doctorId != null ? "AND (a.doctor_id = ? OR a.doctor_id IS NULL) " : "") +
+                "AND EXISTS (SELECT 1 FROM prescription_items pi WHERE pi.prescription_id = p.id) " +
                 (hasKw ? "AND (pt.full_name LIKE ? OR p.prescription_code LIKE ?) " : "") +
+                (hasStatus ? "AND p.status = ? " : "") +
+                (hasDateFrom ? "AND a.appointment_date >= ? " : "") +
+                (hasDateTo ? "AND a.appointment_date <= ? " : "") +
                 "ORDER BY p.created_at DESC " +
                 "OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
 
             List<PrescriptionRow> rows = new ArrayList<>();
             try (Connection conn = DatabaseConfig.getConnection();
                  PreparedStatement ps = conn.prepareStatement(sql)) {
-                ps.setInt(1, doctorId);
-                int paramIndex = 2;
+                int paramIndex = 1;
+                if (doctorId != null) {
+                    ps.setInt(paramIndex++, doctorId);
+                }
                 if (hasKw) {
                     String lk = "%" + keyword.trim() + "%";
                     ps.setString(paramIndex++, lk);
                     ps.setString(paramIndex++, lk);
+                }
+                if (hasStatus) {
+                    ps.setString(paramIndex++, statusFilter.trim());
+                }
+                if (hasDateFrom) {
+                    ps.setDate(paramIndex++, java.sql.Date.valueOf(dateFromParam.trim()));
+                }
+                if (hasDateTo) {
+                    ps.setDate(paramIndex++, java.sql.Date.valueOf(dateToParam.trim()));
                 }
                 ps.setInt(paramIndex++, offset);
                 ps.setInt(paramIndex, pageSize);
@@ -122,6 +193,9 @@ public class DoctorPrescriptionListServlet extends HttpServlet {
 
             req.setAttribute("prescriptions", rows);
             req.setAttribute("keyword",       keyword != null ? keyword : "");
+            req.setAttribute("statusFilter",  statusFilter != null ? statusFilter : "");
+            req.setAttribute("dateFrom",      dateFromParam != null ? dateFromParam : "");
+            req.setAttribute("dateTo",        dateToParam != null ? dateToParam : "");
             req.setAttribute("doctorName",    user.getFullName());
             req.setAttribute("currentPage", page);
             req.setAttribute("totalPages",  totalPages);
@@ -130,9 +204,19 @@ public class DoctorPrescriptionListServlet extends HttpServlet {
         } catch (Exception e) {
             System.err.println("[DoctorPrescriptionListServlet] doGet ERROR: " + e.getMessage());
             e.printStackTrace();
-            req.setAttribute("errorMessage", "Không thể tải trang. Vui lòng thử lại sau.");
-            req.getRequestDispatcher("/views/doctors/prescription_list.jsp").forward(req, resp);
+            if (!resp.isCommitted()) {
+                req.setAttribute("errorMessage", "Không thể tải trang. Vui lòng thử lại sau.");
+                req.getRequestDispatcher("/views/doctors/prescription_list.jsp").forward(req, resp);
+            }
         }
+    }
+
+    private String escapeJson(String input) {
+        if (input == null) return "";
+        return input.replace("\\", "\\\\")
+                    .replace("\"", "\\\"")
+                    .replace("\n", "\\n")
+                    .replace("\r", "\\r");
     }
 
     public static class PrescriptionRow {

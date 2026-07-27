@@ -10,6 +10,7 @@ import com.clinic.model.Patient;
 import com.clinic.model.ServiceItem;
 import com.clinic.model.Invoice;
 import com.clinic.utils.AuditUtil;
+import com.clinic.utils.NotificationHelper;
 import com.clinic.utils.StaffValidator;
 
 import java.sql.Connection;
@@ -120,6 +121,7 @@ public class StaffReceptionService {
                     row.put("id", rs.getInt("id"));
                     row.put("doctorId", rs.getInt("doctor_id"));
                     row.put("doctorName", rs.getString("doctor_name"));
+                    row.put("doctorSpec", rs.getString("doctor_specialization"));
                     row.put("workDate", rs.getDate("work_date"));
                     java.sql.Time start = rs.getTime("start_time");
                     java.sql.Time end = rs.getTime("end_time");
@@ -264,7 +266,15 @@ public class StaffReceptionService {
         // 7. Tính tuổi thai
         String gestationalAge = calculateGestationalAge(lmp, appDate);
 
-        // 8. Tạo lịch hẹn
+        // 8. Tính giá khám — đồng nhất với luồng online (PatientBookingService)
+        double basePrice = 200000.00;
+        if (doctor.getExperienceYears() > 0) {
+            basePrice += (doctor.getExperienceYears() * 50000.00);
+        }
+        double servicePrice = service.getPrice();
+        double totalAmount = basePrice + servicePrice;
+
+        // 9. Tạo lịch hẹn
         String status = "Confirmed";
         String finalSlot = slot;
 
@@ -284,23 +294,21 @@ public class StaffReceptionService {
 
         if (foundSlotId != null) appointment.setSlotId(foundSlotId);
 
-        // 9. Lưu lịch hẹn và giữ slot trong cùng một transaction để tránh đặt trùng.
+        // 10. Lưu lịch hẹn + base_fee trong cùng transaction
         int patientUserId = getUserIdForPatient(patient.getId());
         appointment = appointmentDAO.createStaffAppointmentWithHeldSlot(
                 appointment,
                 foundSlotId,
-                patientUserId > 0 ? patientUserId : null
+                patientUserId > 0 ? patientUserId : null,
+                totalAmount
         );
         if (appointment == null) {
             throw new IllegalArgumentException("Khung giờ vừa được người khác chọn. Vui lòng tải lại và chọn slot khác.");
         }
 
-        // 10. Tạo hóa đơn PRE_EXAM
+        // 11. Tạo hóa đơn PRE_EXAM — copy từ base_fee
         if (appointment != null) {
-            double price = 200000.00;
-            if (appointment.getService() != null && appointment.getService().getPrice() > 0) {
-                price = appointment.getService().getPrice();
-            }
+            double price = totalAmount;
             Invoice preExamInvoice = new Invoice();
             preExamInvoice.setAppointmentId(appointment.getId());
             preExamInvoice.setTotalAmount(java.math.BigDecimal.valueOf(price));
@@ -325,7 +333,7 @@ public class StaffReceptionService {
 
             sendNotification(
                     patient,
-                    "Lịch hẹn khám của bạn đã được tạo vào ngày " + appDateStr + ", khung giờ " + slot + "."
+                    "Lịch hẹn khám của bạn đã được tạo vào ngày " + appDateStr + ". Bác sĩ sẽ khám theo ca làm việc, vui lòng đến đúng giờ ca."
             );
         }
 
@@ -356,10 +364,10 @@ public class StaffReceptionService {
         String normalizedStatus = status.trim().toUpperCase();
 
         switch (normalizedStatus) {
-            case "INPROGRESS": return 1;
-            case "WAITING": return 2;
-            case "CONFIRMED": return 3;
-            case "PENDING": return 4;
+            case "PENDING": return 1;    // Cần duyệt gấp — hiển thị đầu tiên
+            case "INPROGRESS": return 2;
+            case "WAITING": return 3;
+            case "CONFIRMED": return 4;
             case "SUCCESS":
             case "COMPLETED": return 5;
             case "CANCELLED": return 6;
@@ -368,6 +376,11 @@ public class StaffReceptionService {
         }
     }
 
+    /**
+     * Check-in bệnh nhân — chuyển trạng thái sang Waiting + cấp STT.
+     * Đặc tả B5: HOÁ ĐƠN PRE_EXAM PHẢI ĐÃ THANH TOÁN trước khi check-in.
+     * Việc xác nhận thanh toán là một hành động RIÊNG (confirmPreExamPayment).
+     */
     public void checkInPatient(String id) {
         try {
             int appointmentId = Integer.parseInt(id);
@@ -398,89 +411,74 @@ public class StaffReceptionService {
                 throw new IllegalArgumentException("Bệnh nhân đã check-in rồi.");
             }
 
-            // Chặn check-in khi lịch chưa được Lễ tân duyệt
-            // Luồng bắt buộc: Pending → (Lễ tân duyệt) → Confirmed → (Thu tiền mặt) → Waiting
             if ("Pending".equalsIgnoreCase(apt.getStatus())) {
                 throw new IllegalArgumentException(
-                        "Lịch hẹn chưa được duyệt. Vui lòng nhấn \"Duyệt & Tạo Hóa Đơn\" trước khi bệnh nhân thanh toán và check-in.");
+                        "Lịch hẹn chưa được duyệt. Vui lòng nhấn \"Duyệt & Tạo Hóa Đơn\" trước.");
             }
 
-            // Kiểm tra đã có hóa đơn PRE_EXAM chưa (bắt buộc phải có trước khi check-in)
+            // [B5] Điều kiện tiên quyết: hoá đơn PRE_EXAM PHẢI đã thanh toán
             com.clinic.dao.InvoiceDAO invoiceDAO2 = new com.clinic.dao.InvoiceDAO();
             com.clinic.model.Invoice preExamInv = invoiceDAO2.getByAppointmentIdAndType(appointmentId, "PRE_EXAM");
             if (preExamInv == null) {
                 throw new IllegalArgumentException(
-                        "Chưa có hóa đơn thanh toán trước khám. Vui lòng duyệt lịch hẹn trước để tạo hóa đơn.");
+                        "Chưa có hóa đơn phí khám. Vui lòng duyệt lịch hẹn trước để tạo hóa đơn.");
+            }
+            if (!"Paid".equalsIgnoreCase(preExamInv.getStatus())) {
+                throw new IllegalArgumentException(
+                        "Bệnh nhân chưa thanh toán phí khám. Vui lòng xác nhận thanh toán trước khi check-in.");
             }
 
+            // Validate thời gian check-in
+            java.time.LocalTime actualStartTime = null;
+            java.time.LocalTime actualEndTime = null;
+            try {
+                String shiftSql = "SELECT s.start_time, s.end_time FROM doctor_schedules ds "
+                        + "INNER JOIN shifts s ON ds.shift_id = s.id WHERE ds.id = ?";
+                try (java.sql.Connection c2 = com.clinic.config.DatabaseConfig.getConnection();
+                     java.sql.PreparedStatement p2 = c2.prepareStatement(shiftSql)) {
+                    p2.setInt(1, apt.getSlotId() != null ? apt.getSlotId() : 0);
+                    try (java.sql.ResultSet r2 = p2.executeQuery()) {
+                        if (r2.next()) {
+                            java.sql.Time st = r2.getTime("start_time");
+                            java.sql.Time et = r2.getTime("end_time");
+                            if (st != null) actualStartTime = st.toLocalTime();
+                            if (et != null) actualEndTime = et.toLocalTime();
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("[StaffReceptionService] Không lấy được giờ ca từ shifts: " + e.getMessage());
+            }
 
-            // Chỉ cho check-in trong vòng 30 phút trước giờ hẹn
-            // (tránh bệnh nhân đến sớm 2-3 tiếng rồi ngồi chờ)
-            // Đến muộn vẫn được check-in bình thường
-            if (apt.getTimeSlot() != null && !apt.getTimeSlot().trim().isEmpty()) {
-                try {
-                    String slotStart = apt.getTimeSlot().contains(" - ")
-                            ? apt.getTimeSlot().split(" - ")[0].trim()
-                            : apt.getTimeSlot().split("-")[0].trim();
-                    java.time.LocalTime startTime = java.time.LocalTime.parse(slotStart);
-                    // Dùng LocalDateTime (ngày + giờ) để tránh wrap-around qua nửa đêm.
-                    // LocalTime.minusMinutes(15) trên 00:10 → 23:55 (ngày hôm trước)
-                    // gây so sánh sai khi slot rơi vào đầu ngày mới.
-                    java.time.LocalDate apptDate = apt.getAppointmentDate(); // đã kiểm tra != null ở trên
-                    java.time.LocalDateTime apptDateTime = java.time.LocalDateTime.of(apptDate, startTime);
-                    java.time.LocalDateTime nowDT = java.time.LocalDateTime.now();
+            if (actualStartTime != null) {
+                java.time.LocalDate apptDate = apt.getAppointmentDate();
+                java.time.LocalDateTime apptDateTime = java.time.LocalDateTime.of(apptDate, actualStartTime);
+                java.time.LocalDateTime nowDT = java.time.LocalDateTime.now();
 
-                    // [V9-FIX] Nghiệp vụ yêu cầu bắt buộc phải check-in trước 15 phút trước giờ khám.
-                    // Nếu đến trễ hơn mốc này, bệnh nhân không được phép check-in và phải đổi sang ca khác.
-                    java.time.LocalDateTime deadline = apptDateTime.minusMinutes(15);
-                    if (nowDT.isAfter(deadline)) {
+                java.time.LocalDateTime earlyLimit = apptDateTime.minusMinutes(120);
+                if (nowDT.isBefore(earlyLimit)) {
+                    throw new IllegalArgumentException(
+                            "Chưa đến giờ check-in. Vui lòng check-in sau "
+                            + earlyLimit.toLocalTime().toString() + ".");
+                }
+
+                if (actualEndTime != null) {
+                    java.time.LocalDateTime endDateTime = java.time.LocalDateTime.of(apptDate, actualEndTime);
+                    if (nowDT.isAfter(endDateTime)) {
                         throw new IllegalArgumentException(
-                                "Đã quá hạn check-in (yêu cầu hoàn tất thủ tục trước 15 phút so với giờ bắt đầu ca khám). " +
-                                "Bệnh nhân cần được chuyển sang ca khám tiếp theo.");
+                                "Ca khám này đã kết thúc vào lúc " + actualEndTime.toString()
+                                + ". Bệnh nhân đến quá muộn, không thể check-in được nữa.");
                     }
-
-                    // Đến muộn: Không cho check-in nếu đã qua giờ KẾT THÚC của ca khám/khung giờ
-                    String slotEnd = apt.getTimeSlot().contains(" - ")
-                            ? apt.getTimeSlot().split(" - ")[1].trim()
-                            : "";
-                    if (!slotEnd.isEmpty()) {
-                        try {
-                            java.time.LocalTime endTime = java.time.LocalTime.parse(slotEnd);
-                            java.time.LocalDateTime endDateTime = java.time.LocalDateTime.of(apptDate, endTime);
-                            if (nowDT.isAfter(endDateTime)) {
-                                throw new IllegalArgumentException(
-                                        "Ca khám này đã kết thúc vào lúc " + endTime.toString() + ". Bệnh nhân đến quá muộn, không thể check-in được nữa.");
-                            }
-                        } catch (java.time.format.DateTimeParseException ignored) {}
-                    }
-
-                    // Đến sớm → không cho check-in trước quá 60 phút để tránh chờ lâu
-                    java.time.LocalDateTime earlyLimit = apptDateTime.minusMinutes(60);
-                    if (nowDT.isBefore(earlyLimit)) {
-                        throw new IllegalArgumentException(
-                                "Chưa đến giờ check-in. Vui lòng check-in sau "
-                                + earlyLimit.toLocalTime().toString() + ".");
-                    }
-                } catch (java.time.format.DateTimeParseException ignored) {
-                    // Không parse được giờ → bỏ qua, vẫn cho check-in
                 }
             }
 
-            // Xác nhận bệnh nhân đã nộp tiền mặt tại quầy → đánh dấu PRE_EXAM = Paid
-            // (Hóa đơn đã được tạo ở bước Duyệt, bây giờ chỉ cần update status)
-            try {
-                mockPayPreExamInvoice(String.valueOf(appointmentId));
-            } catch (Exception e) {
-                System.err.println("[StaffReceptionService] Warning: Không thể đánh dấu PRE_EXAM đã thanh toán khi check-in: " + e.getMessage());
-            }
-
-            // Đặt trạng thái Waiting và xếp lại STT hàng đợi trong cùng 1 DB transaction
+            // Chỉ check-in, không xác nhận thanh toán (đã làm riêng)
             if (!appointmentDAO.checkInAndRenumber(appointmentId)) {
                 throw new IllegalArgumentException("Không thể check-in. Vui lòng kiểm tra lại trạng thái lịch hẹn.");
             }
 
             auditLogDAO.logAction(
-                    "Check-in bệnh nhân, xếp hàng đợi theo giờ hẹn",
+                    "Check-in bệnh nhân, xếp hàng đợi",
                     "Staff",
                     "appointments",
                     apt.getStatus(),
@@ -536,11 +534,19 @@ public class StaffReceptionService {
                 throw new IllegalArgumentException("Không tìm thấy hóa đơn cận lâm sàng chưa thanh toán.");
             }
 
-            String sql = "UPDATE invoices SET status = 'Paid', confirmed_by = ?, payment_date = GETDATE() WHERE id = ? AND status = 'Unpaid'";
+            // Chống xác nhận trùng
+            if ("Paid".equalsIgnoreCase(invoice.getStatus())) {
+                throw new IllegalArgumentException("Hoá đơn này đã được thanh toán trước đó.");
+            }
+
+            String sql = "UPDATE invoices SET status = 'Paid', confirmed_at = GETDATE(), confirmed_by = ?, "
+                    + "paid_at = GETDATE(), paid_by_user_id = ?, payment_method = 'CASH' "
+                    + "WHERE id = ? AND status = 'Unpaid'";
             try (java.sql.Connection conn = com.clinic.config.DatabaseConfig.getConnection();
                  java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setInt(1, staffUserId);
-                ps.setInt(2, invoice.getId());
+                ps.setInt(2, staffUserId);
+                ps.setInt(3, invoice.getId());
                 int rows = ps.executeUpdate();
                 if (rows == 0) {
                     throw new IllegalArgumentException("Không thể cập nhật trạng thái hóa đơn.");
@@ -557,6 +563,14 @@ public class StaffReceptionService {
                     invoice.getStatus(),
                     "Paid"
             );
+
+            // Gửi thông báo cho bệnh nhân
+            try {
+                double amount = invoice.getTotalAmount() != null ? invoice.getTotalAmount().doubleValue() : 0;
+                NotificationHelper.paymentConfirmed(appointmentId, "POST_EXAM", amount);
+            } catch (Exception e) {
+                System.err.println("[StaffReceptionService] Gửi TB thanh toán POST_EXAM thất bại: " + e.getMessage());
+            }
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException("Mã lịch hẹn không hợp lệ.");
         }
@@ -722,7 +736,7 @@ public class StaffReceptionService {
         return count;
     }
 
-    public void cancelAppointment(String id) {
+    public void cancelAppointment(String id, int staffUserId) {
         try {
             int appointmentId = Integer.parseInt(id);
             Appointment apt = appointmentDAO.findAppointmentById(appointmentId);
@@ -752,17 +766,92 @@ public class StaffReceptionService {
                 throw new IllegalArgumentException("Lịch hẹn đã được đánh dấu vắng mặt, không thể hủy.");
             }
 
+            // Nếu PRE_EXAM đã thanh toán: đánh dấu hoàn tiền trước khi hủy
+            // (hoàn tiền thực tế do staff và bệnh nhân tự xử lý với nhau tại quầy)
+            boolean wasRefunded = false;
+            if (appointmentDAO.isPreExamPaid(appointmentId)) {
+                Invoice preExamInv = invoiceDAO.getByAppointmentIdAndType(appointmentId, "PRE_EXAM");
+                if (preExamInv != null && "Paid".equalsIgnoreCase(preExamInv.getStatus())) {
+                    refundInvoice(preExamInv.getId(), staffUserId,
+                            "Hoàn tiền do huỷ lịch hẹn #" + appointmentId + " — Staff và bệnh nhân tự xử lý tại quầy");
+                    wasRefunded = true;
+                }
+            }
+
             boolean success = appointmentDAO.cancelAppointmentAndReleaseSlot(appointmentId, 0, "Lễ tân hủy lịch hẹn");
             if (!success) {
                 throw new IllegalArgumentException("Không thể hủy lịch hẹn hoặc lịch đã hoàn thành/đang khám.");
             }
 
             auditLogDAO.logAction(
-                    "Hủy lịch hẹn của " + apt.getPatientName(),
+                    "Hủy lịch hẹn của " + apt.getPatientName()
+                    + (wasRefunded ? " (đã hoàn tiền PRE_EXAM — Staff tự xử lý với bệnh nhân)" : ""),
                     "Staff",
                     "appointments",
                     apt.getStatus(),
                     "Cancelled"
+            );
+
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Mã lịch hẹn không hợp lệ.");
+        }
+    }
+
+    /**
+     * Đánh dấu bệnh nhân không đến (NoShow).
+     * Điều kiện: lịch Confirmed/Pending của HÔM NAY, đã qua giờ kết thúc ca.
+     */
+    public void markNoShow(String id, int staffUserId) {
+        try {
+            int appointmentId = Integer.parseInt(id);
+            Appointment apt = appointmentDAO.findAppointmentById(appointmentId);
+
+            if (apt == null) {
+                throw new IllegalArgumentException("Không tìm thấy lịch hẹn.");
+            }
+
+            if (!"Pending".equalsIgnoreCase(apt.getStatus()) && !"Confirmed".equalsIgnoreCase(apt.getStatus())) {
+                throw new IllegalArgumentException(
+                        "Chỉ có thể đánh dấu không đến cho lịch ở trạng thái Chờ duyệt hoặc Đã duyệt.");
+            }
+
+            if (apt.getAppointmentDate() == null || !apt.getAppointmentDate().equals(LocalDate.now())) {
+                throw new IllegalArgumentException(
+                        "Chỉ được đánh dấu không đến cho lịch hẹn trong ngày hôm nay.");
+            }
+
+            // Cảnh báo nếu PRE_EXAM đã thanh toán: cần hoàn tiền riêng (P13)
+            boolean hasPaidInvoice = appointmentDAO.isPreExamPaid(appointmentId);
+
+            if (apt.getSlotId() != null && apt.getSlotId() > 0) {
+                String endTimeStr = getShiftEndTimeBySlotId(apt.getSlotId());
+                if (endTimeStr != null) {
+                    try {
+                        java.time.LocalTime endTime = java.time.LocalTime.parse(endTimeStr);
+                        java.time.LocalDateTime shiftEnd = java.time.LocalDateTime.of(LocalDate.now(), endTime);
+                        if (java.time.LocalDateTime.now().isBefore(shiftEnd)) {
+                            throw new IllegalArgumentException(
+                                    "Ca khám chưa kết thúc (kết thúc lúc " + endTimeStr
+                                    + "). Không thể đánh dấu không đến khi ca vẫn đang diễn ra.");
+                        }
+                    } catch (java.time.format.DateTimeParseException ignored) {}
+                }
+            }
+
+            String reason = "Bệnh nhân không đến khám — Lễ tân #" + staffUserId + " đánh dấu NoShow"
+                    + (hasPaidInvoice ? " — CẢNH BÁO: Hoá đơn PRE_EXAM đã thanh toán, cần xử lý hoàn tiền!" : "");
+            boolean ok = appointmentDAO.markNoShowAndReleaseSlot(appointmentId, staffUserId, reason);
+            if (!ok) {
+                throw new IllegalArgumentException("Không thể đánh dấu không đến. Vui lòng kiểm tra lại trạng thái lịch hẹn.");
+            }
+
+            auditLogDAO.logAction(
+                    "Đánh dấu không đến cho lịch hẹn #" + appointmentId + " — " + apt.getPatientName()
+                    + (hasPaidInvoice ? " (có hoá đơn đã thanh toán cần hoàn tiền)" : ""),
+                    "Staff",
+                    "appointments",
+                    apt.getStatus(),
+                    "NoShow"
             );
 
         } catch (NumberFormatException e) {
@@ -864,15 +953,28 @@ public class StaffReceptionService {
         );
     }
 
+    /**
+     * Tìm doctor_schedule.id phù hợp.
+     * slot có thể là:
+     *   - scheduleId trực tiếp (chuỗi số thuần): dùng luôn
+     *   - Giờ "HH:mm": tìm ca chứa giờ này
+     *   - null/rỗng: trả null
+     */
     private Integer findAvailableOrCurrentSlot(int doctorId, LocalDate workDate, String slot, Integer currentSlotId) {
         if (slot == null || slot.trim().isEmpty()) return null;
         try {
-            java.time.LocalTime time = null;
-            if (slot.contains("-")) {
-                time = java.time.LocalTime.parse(slot.split("-")[0].trim());
-            } else {
-                time = java.time.LocalTime.parse(slot.trim());
+            // Nếu slot là scheduleId trực tiếp
+            try {
+                int directId = Integer.parseInt(slot.trim());
+                return directId > 0 ? directId : null;
+            } catch (NumberFormatException ignored) {
+                // không phải số — tiếp tục parse giờ
             }
+
+            // Parse giờ HH:mm (bỏ phần " - HH:mm" nếu có)
+            java.time.LocalTime time;
+            String slotClean = slot.contains("-") ? slot.split("-")[0].trim() : slot.trim();
+            time = java.time.LocalTime.parse(slotClean);
 
             String sql = "SELECT ds.id, s.end_time FROM doctor_schedules ds "
                     + "INNER JOIN shifts s ON ds.shift_id = s.id "
@@ -886,17 +988,11 @@ public class StaffReceptionService {
                 ps.setDate(2, java.sql.Date.valueOf(workDate));
                 ps.setTime(3, java.sql.Time.valueOf(time));
                 ps.setTime(4, java.sql.Time.valueOf(time));
-                if (currentSlotId != null) {
-                    ps.setInt(5, currentSlotId);
-                } else {
-                    ps.setInt(5, -1);
-                }
+                ps.setInt(5, currentSlotId != null ? currentSlotId : -1);
                 try (ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) {
                         int scheduleId = rs.getInt("id");
                         java.sql.Time endTimeSql = rs.getTime("end_time");
-                        
-                        // Validate booking near end of shift (30 minutes)
                         if (endTimeSql != null && workDate.isEqual(LocalDate.now())) {
                             java.time.LocalTime endTime = endTimeSql.toLocalTime();
                             java.time.LocalDateTime shiftEnd = java.time.LocalDateTime.of(workDate, endTime);
@@ -904,14 +1000,13 @@ public class StaffReceptionService {
                                 throw new IllegalArgumentException("Ca làm việc sắp kết thúc (dưới 30 phút). Không thể nhận thêm bệnh nhân.");
                             }
                         }
-                        
                         return scheduleId;
                     }
                     return null;
                 }
             }
         } catch (IllegalArgumentException e) {
-            throw e; // Re-throw business exceptions
+            throw e;
         } catch (Exception e) {
             return null;
         }
@@ -946,7 +1041,11 @@ public class StaffReceptionService {
     }
 
 
-    public void mockPayPreExamInvoice(String id) {
+    /**
+     * Xác nhận bệnh nhân đã nộp tiền mặt tại quầy cho hoá đơn PRE_EXAM.
+     * Ghi nhận đầy đủ: paid_at, paid_by_user_id, payment_method = 'CASH'.
+     */
+    public void confirmCashPayment(String id, int staffUserId) {
         try {
             int appointmentId = Integer.parseInt(id);
 
@@ -955,51 +1054,99 @@ public class StaffReceptionService {
                 throw new IllegalArgumentException("Không tìm thấy lịch hẹn.");
             }
 
-            // Chỉ được thu tiền khi lịch đã được Lễ tân duyệt (Confirmed) và có HĐ PRE_EXAM Unpaid
-            // Pending chưa có HĐ → không thể thu
-            if (!"Confirmed".equalsIgnoreCase(apt.getStatus())) {
-                throw new IllegalArgumentException("Chỉ có thể xác nhận thanh toán cho lịch đã được duyệt (Confirmed).");
+            String currentStatus = apt.getStatus();
+            if (!"Confirmed".equalsIgnoreCase(currentStatus)
+                    && !"Waiting".equalsIgnoreCase(currentStatus)) {
+                throw new IllegalArgumentException(
+                        "Chỉ có thể xác nhận thanh toán cho lịch đã được duyệt (Confirmed) hoặc đã check-in (Waiting). "
+                        + "Trạng thái hiện tại: " + currentStatus + ".");
             }
 
+            // Chống xác nhận trùng: kiểm tra PRE_EXAM chưa Paid
+            Invoice preExamInv = invoiceDAO.getByAppointmentIdAndType(appointmentId, "PRE_EXAM");
+            if (preExamInv != null && "Paid".equalsIgnoreCase(preExamInv.getStatus())) {
+                throw new IllegalArgumentException("Hoá đơn PRE_EXAM đã được thanh toán trước đó. Không thể xác nhận trùng.");
+            }
+
+            String transactionCode = "CASH_" + appointmentId + "_" + System.currentTimeMillis();
+
+            // Lấy amount từ base_fee (đồng bộ P1), fallback 250,000
+            double amount = 250000;
+            String sqlReadFee = "SELECT ISNULL(base_fee, 250000) AS fee FROM appointments WHERE id = ?";
+            try (Connection connFee = DatabaseConfig.getConnection();
+                 PreparedStatement psFee = connFee.prepareStatement(sqlReadFee)) {
+                psFee.setInt(1, appointmentId);
+                try (ResultSet rsFee = psFee.executeQuery()) {
+                    if (rsFee.next()) {
+                        double fee = rsFee.getDouble("fee");
+                        if (fee > 0) amount = fee;
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("[StaffReceptionService] Không đọc được base_fee: " + e.getMessage());
+            }
+
+            // Ghi đủ: paid_at, paid_by_user_id, payment_method
             String sqlUpdate = "UPDATE invoices " +
-                    "SET status = 'Paid', transaction_code = ? " +
+                    "SET status = 'Paid', transaction_code = ?, " +
+                    "confirmed_at = GETDATE(), confirmed_by = ?, " +
+                    "paid_at = GETDATE(), paid_by_user_id = ?, payment_method = 'CASH' " +
                     "WHERE appointment_id = ? AND invoice_type = 'PRE_EXAM' AND status = 'Unpaid'";
 
-            String sqlInsert = "INSERT INTO invoices (appointment_id, invoice_type, total_amount, status, transaction_code) " +
-                    "SELECT ?, 'PRE_EXAM', ?, 'Paid', ? " +
+            String sqlInsert = "INSERT INTO invoices (appointment_id, invoice_type, total_amount, status, " +
+                    "transaction_code, confirmed_at, confirmed_by, " +
+                    "paid_at, paid_by_user_id, payment_method) " +
+                    "SELECT ?, 'PRE_EXAM', ?, 'Paid', ?, GETDATE(), ?, GETDATE(), ?, 'CASH' " +
                     "WHERE NOT EXISTS ( " +
                     "   SELECT 1 FROM invoices WHERE appointment_id = ? AND invoice_type = 'PRE_EXAM' " +
                     ")";
 
-            String transactionCode = "MOCK_PAID_" + appointmentId;
-
             try (Connection conn = DBContext.getConnection()) {
-                try (PreparedStatement ps = conn.prepareStatement(sqlUpdate)) {
-                    ps.setString(1, transactionCode);
-                    ps.setInt(2, appointmentId);
-                    ps.executeUpdate();
-                }
+                conn.setAutoCommit(false);
+                try {
+                    try (PreparedStatement ps = conn.prepareStatement(sqlUpdate)) {
+                        ps.setString(1, transactionCode);
+                        ps.setInt(2, staffUserId);
+                        ps.setInt(3, staffUserId);
+                        ps.setInt(4, appointmentId);
+                        ps.executeUpdate();
+                    }
 
-                double amount = apt.getService() != null ? apt.getService().getPrice() : 250000;
-
-                try (PreparedStatement ps = conn.prepareStatement(sqlInsert)) {
-                    ps.setInt(1, appointmentId);
-                    ps.setDouble(2, amount);
-                    ps.setString(3, transactionCode);
-                    ps.setInt(4, appointmentId);
-                    ps.executeUpdate();
+                    try (PreparedStatement ps = conn.prepareStatement(sqlInsert)) {
+                        ps.setInt(1, appointmentId);
+                        ps.setDouble(2, amount);
+                        ps.setString(3, transactionCode);
+                        ps.setInt(4, staffUserId);
+                        ps.setInt(5, staffUserId);
+                        ps.setInt(6, appointmentId);
+                        ps.executeUpdate();
+                    }
+                    conn.commit();
+                } catch (SQLException e) {
+                    conn.rollback();
+                    throw e;
+                } finally {
+                    conn.setAutoCommit(true);
                 }
             }
 
             appointmentDAO.confirmAppointmentAfterPreExamPaid(appointmentId);
 
             auditLogDAO.logAction(
-                    "Mô phỏng thanh toán hóa đơn PRE_EXAM cho lịch hẹn #" + appointmentId,
-                    "Payment Mock",
+                    "Xác nhận thu tiền mặt PRE_EXAM cho lịch hẹn #" + appointmentId
+                    + " — Số tiền: " + String.format("%,.0fđ", amount),
+                    "Staff",
                     "invoices",
                     "Unpaid",
                     "Paid"
             );
+
+            // Gửi thông báo cho bệnh nhân
+            try {
+                NotificationHelper.paymentConfirmed(appointmentId, "PRE_EXAM", amount);
+            } catch (Exception e) {
+                System.err.println("[StaffReceptionService] Gửi TB thanh toán PRE_EXAM thất bại: " + e.getMessage());
+            }
 
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException("Mã lịch hẹn không hợp lệ.");
@@ -1009,6 +1156,48 @@ public class StaffReceptionService {
             e.printStackTrace();
             throw new IllegalArgumentException("Không thể cập nhật thanh toán PRE_EXAM.");
         }
+    }
+
+    /**
+     * [P13] Hoàn tiền một hoá đơn đã thanh toán.
+     * Chỉ hoàn được hoá đơn Paid, không hoàn hai lần.
+     */
+    public void refundInvoice(int invoiceId, int staffUserId, String reason) {
+        if (reason == null || reason.trim().length() < 10 || reason.trim().length() > 500) {
+            throw new IllegalArgumentException("Lý do hoàn tiền phải từ 10 đến 500 ký tự.");
+        }
+
+        Invoice invoice = invoiceDAO.getById(invoiceId);
+        if (invoice == null) {
+            throw new IllegalArgumentException("Không tìm thấy hoá đơn.");
+        }
+        if (!"Paid".equalsIgnoreCase(invoice.getStatus())) {
+            throw new IllegalArgumentException("Chỉ có thể hoàn tiền cho hoá đơn đã thanh toán. Trạng thái hiện tại: " + invoice.getStatus());
+        }
+
+        String sql = "UPDATE invoices SET status = 'Refunded', refunded_at = GETDATE(), "
+                + "refunded_by_user_id = ?, refund_reason = ? "
+                + "WHERE id = ? AND status = 'Paid'";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, staffUserId);
+            ps.setString(2, reason.trim());
+            ps.setInt(3, invoiceId);
+            int rows = ps.executeUpdate();
+            if (rows == 0) {
+                throw new IllegalArgumentException("Không thể hoàn tiền — hoá đơn có thể đã bị thay đổi. Vui lòng tải lại.");
+            }
+        } catch (SQLException e) {
+            throw new IllegalArgumentException("Lỗi hệ thống khi hoàn tiền: " + e.getMessage());
+        }
+
+        auditLogDAO.logAction(
+                "Hoàn tiền hoá đơn #" + invoiceId + " — Lý do: " + reason.trim(),
+                "Staff",
+                "invoices",
+                "Paid",
+                "Refunded"
+        );
     }
 
     /** Paginated slot list — query trực tiếp doctor_schedules + shifts. */
@@ -1026,6 +1215,11 @@ public class StaffReceptionService {
         public int totalPages;
         public int totalRecords;
         public int currentPage;
+
+        public List<Map<String, Object>> getSlots() { return slots; }
+        public int getTotalPages() { return totalPages; }
+        public int getTotalRecords() { return totalRecords; }
+        public int getCurrentPage() { return currentPage; }
     }
 
     public SlotPageResult getDoctorSlotsPage(LocalDate date, String search, String status,
@@ -1070,34 +1264,49 @@ public class StaffReceptionService {
     public QueueResult getSmartQueuePaginated(LocalDate date, String searchKeyword, String statusFilter, int page, int pageSize) {
         List<Appointment> allFiltered = new ArrayList<>();
         String searchLower = (searchKeyword != null) ? searchKeyword.trim().toLowerCase() : "";
-        for (Appointment appointment : appointmentDAO.getAllAppointments()) {
-            if (!"Cancelled".equalsIgnoreCase(appointment.getStatus())
-                    && !"NoShow".equalsIgnoreCase(appointment.getStatus())
-                    && !"SUCCESS".equalsIgnoreCase(appointment.getStatus())
-                    && !"Completed".equalsIgnoreCase(appointment.getStatus())
-                    && appointment.getAppointmentDate() != null
-                    && appointment.getAppointmentDate().equals(date)) {
-                
-                // Trạng thái (status)
-                if (statusFilter != null && !statusFilter.trim().isEmpty()) {
-                    if (!statusFilter.equalsIgnoreCase(appointment.getStatus())) {
-                        continue;
-                    }
-                }
-                
-                // Từ khóa tìm kiếm (mã, sđt, tên)
-                if (!searchLower.isEmpty()) {
-                    String ptName = appointment.getPatientName() != null ? appointment.getPatientName().toLowerCase() : "";
-                    String ptPhone = (appointment.getPatient() != null && appointment.getPatient().getPhone() != null) ? appointment.getPatient().getPhone().toLowerCase() : "";
-                    String aptCode = "APT-" + appointment.getId();
-                    if (!ptName.contains(searchLower) && !ptPhone.contains(searchLower) && !aptCode.toLowerCase().contains(searchLower)) {
-                        continue;
-                    }
-                }
-
-                allFiltered.add(appointment);
+        List<Appointment> all = appointmentDAO.getAppointmentsByDate(date);
+        int skippedDateNull = 0, skippedDateMismatch = 0, skippedStatus = 0;
+        for (Appointment appointment : all) {
+            if (appointment.getAppointmentDate() == null) {
+                skippedDateNull++;
+                continue;
             }
+            if (!appointment.getAppointmentDate().equals(date)) {
+                skippedDateMismatch++;
+                continue;
+            }
+
+            // Trạng thái (status)
+            if (statusFilter != null && !statusFilter.trim().isEmpty()) {
+                if (!statusFilter.equalsIgnoreCase(appointment.getStatus())) {
+                    skippedStatus++;
+                    continue;
+                }
+            } else {
+                // Khi không chọn bộ lọc cụ thể, chỉ bỏ qua các ca đã hủy hoặc bệnh nhân không đến
+                if ("Cancelled".equalsIgnoreCase(appointment.getStatus())
+                        || "NoShow".equalsIgnoreCase(appointment.getStatus())) {
+                    skippedStatus++;
+                    continue;
+                }
+            }
+
+            // Từ khóa tìm kiếm (mã, sđt, tên)
+            if (!searchLower.isEmpty()) {
+                String ptName = appointment.getPatientName() != null ? appointment.getPatientName().toLowerCase() : "";
+                String ptPhone = (appointment.getPatient() != null && appointment.getPatient().getPhone() != null) ? appointment.getPatient().getPhone().toLowerCase() : "";
+                String aptCode = "APT-" + appointment.getId();
+                if (!ptName.contains(searchLower) && !ptPhone.contains(searchLower) && !aptCode.toLowerCase().contains(searchLower)) {
+                    continue;
+                }
+            }
+
+            allFiltered.add(appointment);
         }
+        System.err.println("[StaffReception] Filtered: skippedStatus=" + skippedStatus
+                + " skippedDateNull=" + skippedDateNull
+                + " skippedDateMismatch=" + skippedDateMismatch
+                + " matched=" + allFiltered.size());
         allFiltered.sort((a1, a2) -> {
             int score1 = getStatusPriorityScore(a1.getStatus());
             int score2 = getStatusPriorityScore(a2.getStatus());
@@ -1133,12 +1342,11 @@ public class StaffReceptionService {
     }
 
     public int getWidgetAppointmentsByDate(LocalDate date) {
+        List<Appointment> list = appointmentDAO.getAppointmentsByDate(date);
         int count = 0;
-        for (Appointment appointment : appointmentDAO.getAllAppointments()) {
-            if (appointment.getAppointmentDate() != null
-                    && appointment.getAppointmentDate().equals(date)
-                    && !"Cancelled".equalsIgnoreCase(appointment.getStatus())
-                    && !"NoShow".equalsIgnoreCase(appointment.getStatus())) {
+        for (Appointment a : list) {
+            if (!"Cancelled".equalsIgnoreCase(a.getStatus())
+                    && !"NoShow".equalsIgnoreCase(a.getStatus())) {
                 count++;
             }
         }
@@ -1146,13 +1354,10 @@ public class StaffReceptionService {
     }
 
     public int getWidgetWaitingQueueByDate(LocalDate date) {
+        List<Appointment> list = appointmentDAO.getAppointmentsByDate(date);
         int count = 0;
-        for (Appointment appointment : appointmentDAO.getAllAppointments()) {
-            if (appointment.getAppointmentDate() != null
-                    && appointment.getAppointmentDate().equals(date)
-                    && "Waiting".equalsIgnoreCase(appointment.getStatus())) {
-                count++;
-            }
+        for (Appointment a : list) {
+            if ("Waiting".equalsIgnoreCase(a.getStatus())) count++;
         }
         return count;
     }
@@ -1160,11 +1365,10 @@ public class StaffReceptionService {
     /** Phát hiện bệnh nhân đến muộn: đã quá hạn check-in (chậm nhất 15 phút trước giờ khám) mà chưa check-in */
     public java.util.Set<Integer> getLateAppointmentIds(LocalDate date) {
         java.util.Set<Integer> late = new java.util.HashSet<>();
-        if (!date.equals(LocalDate.now())) return late; // chỉ áp dụng hôm nay
+        if (!date.equals(LocalDate.now())) return late;
 
         java.time.LocalTime now = java.time.LocalTime.now();
-        for (Appointment apt : appointmentDAO.getAllAppointments()) {
-            if (apt.getAppointmentDate() == null || !apt.getAppointmentDate().equals(date)) continue;
+        for (Appointment apt : appointmentDAO.getAppointmentsByDate(date)) {
             String status = apt.getStatus();
             if (status == null) continue;
             // Chỉ check các trạng thái đang chờ khám (chưa check-in)
@@ -1172,10 +1376,32 @@ public class StaffReceptionService {
             if (apt.getTimeSlot() == null || apt.getTimeSlot().trim().isEmpty()) continue;
 
             try {
+                // Lấy giờ bắt đầu ca làm việc từ shift (nếu có)
+                java.time.LocalTime shiftStart = null;
+                if (apt.getShiftStart() != null && !apt.getShiftStart().trim().isEmpty()) {
+                    try {
+                        shiftStart = java.time.LocalTime.parse(apt.getShiftStart().trim());
+                    } catch (Exception ignored) { }
+                }
+
+                // Chỉ kiểm tra đến muộn khi ca làm việc đã bắt đầu
+                // (tránh đánh dấu muộn khi ca còn chưa tới giờ, ví dụ ca tối 19h mà mới 14h)
+                if (shiftStart != null && now.isBefore(shiftStart.minusMinutes(15))) {
+                    continue;
+                }
+
                 String start = apt.getTimeSlot().contains(" - ")
                         ? apt.getTimeSlot().split(" - ")[0].trim()
                         : apt.getTimeSlot().split("-")[0].trim();
                 java.time.LocalTime slotTime = java.time.LocalTime.parse(start);
+
+                // Chuẩn hóa AM/PM dựa vào shift context:
+                // Nếu slotTime có vẻ là giờ sáng (0-11) nhưng shift bắt đầu từ 12h trưa trở đi,
+                // thì slotTime thực chất là giờ chiều/tối → cộng thêm 12 tiếng.
+                if (shiftStart != null && slotTime.getHour() < 12 && shiftStart.getHour() >= 12) {
+                    slotTime = slotTime.plusHours(12);
+                }
+
                 // Bệnh nhân bị coi là muộn nếu đã qua mốc 15 phút trước giờ hẹn
                 if (now.isAfter(slotTime.minusMinutes(15))) {
                     late.add(apt.getId());
@@ -1188,10 +1414,8 @@ public class StaffReceptionService {
     /** Đếm số bệnh nhân đang chờ/có lịch của mỗi bác sĩ trong hôm nay */
     public Map<Integer, Integer> getDoctorWorkloadToday() {
         Map<Integer, Integer> workload = new HashMap<>();
-        for (Appointment apt : appointmentDAO.getAllAppointments()) {
-            if (apt.getAppointmentDate() != null
-                    && apt.getAppointmentDate().equals(LocalDate.now())
-                    && apt.getDoctorId() > 0
+        for (Appointment apt : appointmentDAO.getAppointmentsByDate(LocalDate.now())) {
+            if (apt.getDoctorId() > 0
                     && !"Cancelled".equalsIgnoreCase(apt.getStatus())
                     && !"NoShow".equalsIgnoreCase(apt.getStatus())
                     && !"SUCCESS".equalsIgnoreCase(apt.getStatus())
@@ -1216,6 +1440,236 @@ public class StaffReceptionService {
 
     public Invoice getInvoiceById(int id) {
         return invoiceDAO.getById(id);
+    }
+
+    /**
+     * Tự động chuyển bệnh nhân đang chờ sang ca tiếp theo khi bác sĩ hết ca.
+     * Chạy mỗi lần staff load trang reception.
+     *
+     * @param date Ngày cần kiểm tra (thường là hôm nay)
+     * @return Số bệnh nhân đã được chuyển ca
+     */
+    public int autoMovePatientsToNextShift(LocalDate date) {
+        if (!date.equals(LocalDate.now())) return 0; // chỉ chạy cho ngày hôm nay
+
+        int movedCount = 0;
+        java.time.LocalTime now = java.time.LocalTime.now();
+
+        // 1. Tìm tất cả ca làm việc APPROVED trong ngày đã hết giờ
+        String endedShiftsSql =
+            "SELECT ds.id AS slot_id, ds.doctor_id, ds.work_date, s.start_time, s.end_time, " +
+            "       d.full_name AS doctor_name, s.name AS shift_name " +
+            "FROM doctor_schedules ds " +
+            "JOIN shifts s ON ds.shift_id = s.id " +
+            "JOIN doctors d ON ds.doctor_id = d.id " +
+            "WHERE ds.status = 'APPROVED' " +
+            "AND ds.work_date = ? " +
+            "AND CAST(s.end_time AS time) <= CAST(? AS time) " +
+            "ORDER BY s.end_time ASC";
+
+        java.util.List<java.util.Map<String, Object>> endedShifts = new java.util.ArrayList<>();
+        try (java.sql.Connection c = DatabaseConfig.getConnection();
+             java.sql.PreparedStatement ps = c.prepareStatement(endedShiftsSql)) {
+            ps.setDate(1, java.sql.Date.valueOf(date));
+            ps.setString(2, now.toString());
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    java.util.Map<String, Object> row = new java.util.HashMap<>();
+                    row.put("slotId", rs.getInt("slot_id"));
+                    row.put("doctorId", rs.getInt("doctor_id"));
+                    row.put("workDate", rs.getDate("work_date").toLocalDate());
+                    row.put("endTime", rs.getTime("end_time").toLocalTime());
+                    row.put("doctorName", rs.getString("doctor_name"));
+                    row.put("shiftName", rs.getString("shift_name"));
+                    endedShifts.add(row);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[StaffReceptionService] autoMovePatientsToNextShift ERROR (find shifts): " + e.getMessage());
+            return 0;
+        }
+
+        if (endedShifts.isEmpty()) return 0;
+
+        // 2. Với mỗi ca đã hết, tìm bệnh nhân đang chờ và chuyển sang ca tiếp theo
+        for (java.util.Map<String, Object> shift : endedShifts) {
+            int oldSlotId = (int) shift.get("slotId");
+            int doctorId = (int) shift.get("doctorId");
+            String doctorName = (String) shift.get("doctorName");
+            String shiftName = (String) shift.get("shiftName");
+
+            // Tìm bệnh nhân đang chờ trong ca này
+            String waitingSql =
+                "SELECT a.id, a.patient_id, p.full_name AS patient_name " +
+                "FROM appointments a " +
+                "JOIN patients p ON a.patient_id = p.id " +
+                "WHERE a.schedule_id = ? " +
+                "AND a.status IN ('Confirmed', 'Waiting') " +
+                "AND a.appointment_date = ?";
+
+            java.util.List<java.util.Map<String, Object>> waitingPatients = new java.util.ArrayList<>();
+            try (java.sql.Connection c = DatabaseConfig.getConnection();
+                 java.sql.PreparedStatement ps = c.prepareStatement(waitingSql)) {
+                ps.setInt(1, oldSlotId);
+                ps.setDate(2, java.sql.Date.valueOf(date));
+                try (java.sql.ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        java.util.Map<String, Object> p = new java.util.HashMap<>();
+                        p.put("apptId", rs.getInt("id"));
+                        p.put("patientId", rs.getInt("patient_id"));
+                        p.put("patientName", rs.getString("patient_name"));
+                        waitingPatients.add(p);
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("[StaffReceptionService] autoMovePatientsToNextShift ERROR (find patients): " + e.getMessage());
+                continue;
+            }
+
+            if (waitingPatients.isEmpty()) continue;
+
+            // Tìm ca tiếp theo của bác sĩ (cùng ngày ca sau, hoặc ngày tiếp theo)
+            String nextShiftSql =
+                "SELECT TOP 1 ds.id AS slot_id, ds.work_date, s.start_time, s.end_time, s.name AS shift_name " +
+                "FROM doctor_schedules ds " +
+                "JOIN shifts s ON ds.shift_id = s.id " +
+                "WHERE ds.doctor_id = ? " +
+                "AND ds.status = 'APPROVED' " +
+                "AND ds.booked_count < ds.max_slots " +
+                "AND (ds.work_date > ? OR (ds.work_date = ? AND s.start_time > ?)) " +
+                "ORDER BY ds.work_date ASC, s.start_time ASC";
+
+            java.util.Map<String, Object> nextShift = null;
+            try (java.sql.Connection c = DatabaseConfig.getConnection();
+                 java.sql.PreparedStatement ps = c.prepareStatement(nextShiftSql)) {
+                ps.setInt(1, doctorId);
+                ps.setDate(2, java.sql.Date.valueOf(date));
+                ps.setDate(3, java.sql.Date.valueOf(date));
+                ps.setString(4, now.toString());
+                try (java.sql.ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        nextShift = new java.util.HashMap<>();
+                        nextShift.put("slotId", rs.getInt("slot_id"));
+                        nextShift.put("workDate", rs.getDate("work_date").toLocalDate());
+                        nextShift.put("startTime", rs.getTime("start_time").toLocalTime());
+                        nextShift.put("endTime", rs.getTime("end_time").toLocalTime());
+                        nextShift.put("shiftName", rs.getString("shift_name"));
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("[StaffReceptionService] autoMovePatientsToNextShift ERROR (find next): " + e.getMessage());
+                continue;
+            }
+
+            if (nextShift == null) {
+                // Không có ca tiếp theo — bỏ qua, bệnh nhân giữ nguyên
+                System.out.println("[StaffReceptionService] Bác sĩ " + doctorName
+                        + " hết ca " + shiftName + " nhưng không có ca tiếp theo. "
+                        + waitingPatients.size() + " bệnh nhân đang chờ sẽ không được chuyển.");
+                continue;
+            }
+
+            int newSlotId = (int) nextShift.get("slotId");
+            String nextShiftName = (String) nextShift.get("shiftName");
+            java.time.LocalDate nextWorkDate = (java.time.LocalDate) nextShift.get("workDate");
+            String nextDateLabel = nextWorkDate.equals(date) ? "hôm nay" : nextWorkDate.toString();
+
+            // 3. Chuyển từng bệnh nhân
+            for (java.util.Map<String, Object> patient : waitingPatients) {
+                int apptId = (int) patient.get("apptId");
+                String patientName = (String) patient.get("patientName");
+
+                java.sql.Connection conn = null;
+                try {
+                    conn = DatabaseConfig.getConnection();
+                    conn.setAutoCommit(false);
+
+                    // Increment new slot
+                    String incNewSql = "UPDATE doctor_schedules SET booked_count = booked_count + 1 " +
+                            "WHERE id = ? AND booked_count < max_slots AND status = 'APPROVED'";
+                    int newRows;
+                    try (java.sql.PreparedStatement ps = conn.prepareStatement(incNewSql)) {
+                        ps.setInt(1, newSlotId);
+                        newRows = ps.executeUpdate();
+                    }
+                    if (newRows == 0) {
+                        conn.rollback();
+                        System.err.println("[StaffReceptionService] Không thể book slot mới #" + newSlotId + " (đã đầy)");
+                        continue;
+                    }
+
+                    // Update appointment
+                    String updApptSql = "UPDATE appointments SET schedule_id = ?, " +
+                            "appointment_date = ? WHERE id = ? AND schedule_id = ?";
+                    int apptRows;
+                    try (java.sql.PreparedStatement ps = conn.prepareStatement(updApptSql)) {
+                        ps.setInt(1, newSlotId);
+                        ps.setDate(2, java.sql.Date.valueOf(nextWorkDate));
+                        ps.setInt(3, apptId);
+                        ps.setInt(4, oldSlotId);
+                        apptRows = ps.executeUpdate();
+                    }
+                    if (apptRows == 0) {
+                        conn.rollback();
+                        // Rollback the slot increment
+                        try (java.sql.Connection c2 = DatabaseConfig.getConnection();
+                             java.sql.PreparedStatement ps2 = c2.prepareStatement(
+                                     "UPDATE doctor_schedules SET booked_count = CASE WHEN booked_count > 0 THEN booked_count - 1 ELSE 0 END WHERE id = ?")) {
+                            ps2.setInt(1, newSlotId);
+                            ps2.executeUpdate();
+                        } catch (Exception ignored) {}
+                        continue;
+                    }
+
+                    // Decrement old slot
+                    try (java.sql.PreparedStatement ps = conn.prepareStatement(
+                            "UPDATE doctor_schedules SET booked_count = CASE WHEN booked_count > 0 THEN booked_count - 1 ELSE 0 END WHERE id = ?")) {
+                        ps.setInt(1, oldSlotId);
+                        ps.executeUpdate();
+                    }
+
+                    conn.commit();
+                    movedCount++;
+
+                    // Audit log
+                    auditLogDAO.logAction(
+                            "Hệ thống tự động chuyển BN " + patientName + " (#" + apptId + ") "
+                            + "từ ca " + shiftName + " sang ca " + nextShiftName
+                            + " (" + nextDateLabel + ") của BS. " + doctorName,
+                            "System",
+                            "appointments",
+                            "Waiting",
+                            "Waiting"
+                    );
+
+                    // Gửi thông báo cho bệnh nhân
+                    try {
+                        int patientUserId = getUserIdForPatient((int) patient.get("patientId"));
+                        if (patientUserId > 0) {
+                            com.clinic.utils.NotificationHelper.sendCustomNotification(patientUserId,
+                                    "🔄 Lịch khám được chuyển ca tự động",
+                                    "Lịch khám của bạn với BS. " + doctorName
+                                    + " đã được chuyển từ ca " + shiftName
+                                    + " sang ca " + nextShiftName + " (" + nextDateLabel + ")"
+                                    + " do bác sĩ đã hết ca làm việc. Vui lòng kiểm tra lại giờ khám mới.");
+                        }
+                    } catch (Exception ignored) {}
+
+                    System.out.println("[StaffReceptionService] Auto-move: " + patientName
+                            + " (#" + apptId + ") từ " + shiftName + " → " + nextShiftName
+                            + " (" + nextDateLabel + ") — BS. " + doctorName);
+
+                } catch (Exception e) {
+                    if (conn != null) try { conn.rollback(); } catch (Exception ignored) {}
+                    System.err.println("[StaffReceptionService] autoMovePatientsToNextShift ERROR (move): " + e.getMessage());
+                } finally {
+                    if (conn != null) try { conn.setAutoCommit(true); } catch (Exception ignored) {}
+                    DatabaseConfig.closeConnection(conn);
+                }
+            }
+        }
+
+        return movedCount;
     }
 
 

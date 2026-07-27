@@ -33,6 +33,13 @@
     </div>
 </div>
 
+<c:if test="${not empty infoMessage}">
+    <div class="alert alert-light border rounded-4 text-center py-4 mb-4">
+        <i class="bi bi-info-circle fs-4 text-muted mb-2 d-block"></i>
+        ${infoMessage}
+    </div>
+</c:if>
+
 <div class="card border-0 shadow-sm rounded-4 mb-5">
     <div class="card-header bg-transparent border-0 p-4 pb-2 d-flex align-items-center justify-content-between flex-wrap gap-2">
         <div>
@@ -125,7 +132,12 @@
                                         </a>
                                     </td>
                                     <td class="small text-muted">
-                                        <fmt:formatDate value="${inv.createdAt}" pattern="dd/MM/yyyy HH:mm"/>
+                                        <c:choose>
+                                            <c:when test="${not empty inv.createdAt}">
+                                                <fmt:formatDate value="${inv.createdAt}" pattern="dd/MM/yyyy HH:mm"/>
+                                            </c:when>
+                                            <c:otherwise>—</c:otherwise>
+                                        </c:choose>
                                     </td>
                                     <td class="fw-bold text-danger">
                                         <fmt:formatNumber value="${inv.totalAmount}" pattern="#,###"/>đ
@@ -186,15 +198,15 @@
                         <nav aria-label="Page navigation">
                             <ul class="pagination mb-0">
                                 <li class="page-item ${currentPage == 1 ? 'disabled' : ''}">
-                                    <a class="page-link" href="?page=${currentPage - 1}&keyword=${fn:escapeXml(keyword)}">Trước</a>
+                                    <a class="page-link" href="?page=${currentPage - 1}&keyword=${fn:escapeXml(keyword)}&status=${fn:escapeXml(status)}">Trước</a>
                                 </li>
                                 <c:forEach begin="1" end="${totalPages}" var="i">
                                     <li class="page-item ${currentPage == i ? 'active' : ''}">
-                                        <a class="page-link" href="?page=${i}&keyword=${fn:escapeXml(keyword)}">${i}</a>
+                                        <a class="page-link" href="?page=${i}&keyword=${fn:escapeXml(keyword)}&status=${fn:escapeXml(status)}">${i}</a>
                                     </li>
                                 </c:forEach>
                                 <li class="page-item ${currentPage == totalPages ? 'disabled' : ''}">
-                                    <a class="page-link" href="?page=${currentPage + 1}&keyword=${fn:escapeXml(keyword)}">Sau</a>
+                                    <a class="page-link" href="?page=${currentPage + 1}&keyword=${fn:escapeXml(keyword)}&status=${fn:escapeXml(status)}">Sau</a>
                                 </li>
                             </ul>
                         </nav>

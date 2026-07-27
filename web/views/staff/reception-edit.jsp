@@ -198,10 +198,10 @@
                         </div>
                         <div class="col-md-4 cams-form-group">
                             <label class="cams-form-label">Khung giờ còn trống <span class="text-danger">*</span></label>
-                            <input type="hidden" name="scheduleId" id="scheduleId" value="${apt.scheduleId}">
+                            <input type="hidden" name="scheduleId" id="scheduleId" value="${apt.slotId}">
                             <select name="timeSlot" id="timeSlot" class="cams-form-input" required onchange="onSlotChanged()">
                                 <c:if test="${not empty apt.timeSlot}">
-                                    <option value="${apt.timeSlot}" data-schedule-id="${apt.scheduleId}" selected>${apt.timeSlot} (đã đặt)</option>
+                                    <option value="${apt.timeSlot}" data-schedule-id="${apt.slotId}" selected>${apt.timeSlot} (đã đặt)</option>
                                 </c:if>
                                 <option value="">-- Chọn khung giờ --</option>
                             </select>
@@ -404,7 +404,7 @@
 
                 let currentSlot = "${apt.timeSlot}";
                 if (currentSlot && !availableLabels.has(currentSlot)) {
-                    html += '<option value="' + currentSlot + '" data-schedule-id="${apt.scheduleId}" selected>' + currentSlot + ' (đã đặt)</option>';
+                    html += '<option value="' + currentSlot + '" data-schedule-id="${apt.slotId}" selected>' + currentSlot + ' (đã đặt)</option>';
                 }
 
                 slotSelect.innerHTML = html;

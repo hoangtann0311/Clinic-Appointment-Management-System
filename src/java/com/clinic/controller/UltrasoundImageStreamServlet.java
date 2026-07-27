@@ -82,7 +82,10 @@ public class UltrasoundImageStreamServlet extends HttpServlet {
         }
 
         if (!authorized) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền truy cập tệp ảnh y tế này.");
+            System.err.println("[SECURITY] UltrasoundImageStreamServlet: ACCESS DENIED — "
+                    + "userId=" + user.getId() + ", roleId=" + user.getRoleId()
+                    + ", imageId=" + imageId + ", orderId=" + orderId);
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
             return;
         }
 

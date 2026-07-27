@@ -40,6 +40,7 @@ public class AppointmentDAO {
                 "COALESCE(s.service_name, (SELECT STRING_AGG(sa.service_name, N', ') FROM appointment_services aps JOIN services sa ON sa.id = aps.service_id WHERE aps.appointment_id = a.id), N'Khám thai định kỳ') AS service_name, s.price AS service_price, s.duration_mins AS service_dur, " +
                 "s.requires_fasting AS service_fasting, s.requires_full_bladder AS service_bladder, s.required_room_type AS service_room, " +
                 "CASE " +
+                "   WHEN UPPER(a.status) IN ('SUCCESS', 'COMPLETED', 'WAITING', 'INPROGRESS') THEN 'Paid' " +
                 "   WHEN EXISTS ( " +
                 "       SELECT 1 FROM invoices i " +
                 "       WHERE i.appointment_id = a.id " +
@@ -59,7 +60,7 @@ public class AppointmentDAO {
                 "       AND UPPER(i.status) = 'CANCELLED' " +
                 "   ) THEN 'Cancelled' " +
                 "   ELSE 'Unpaid' " +
-                "END AS pre_exam_payment_status, a.created_at, " +
+                "END AS pre_exam_payment_status, " +
                 "sh.name AS shift_name, sh.start_time AS shift_start, sh.end_time AS shift_end " +
                 "FROM appointments a " +
                 "LEFT JOIN patients p ON a.patient_id = p.id " +
@@ -75,6 +76,42 @@ public class AppointmentDAO {
                 list.add(mapRowToAppointment(rs));
             }
         } catch (Exception e) {
+            System.err.println("[AppointmentDAO] getAllAppointments ERROR: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    /** Tối ưu: chỉ lấy appointment của 1 ngày, tránh load toàn bộ DB */
+    public List<Appointment> getAppointmentsByDate(LocalDate date) {
+        List<Appointment> list = new ArrayList<>();
+        String sql = "SELECT a.id, a.patient_id, a.doctor_id, a.pregnancy_id, a.appointment_date, a.booking_source, a.schedule_id, "
+                + "a.symptoms, a.last_menstrual_period, ISNULL(a.is_priority, 0) AS is_priority, a.priority_reason, a.prioritized_at, a.prioritized_by, "
+                + "a.status, a.service_id, a.time_slot, a.queue_number, priority_user.full_name AS prioritized_by_name, "
+                + "p.full_name AS patient_name, p.phone_number AS patient_phone, p.date_of_birth AS patient_dob, "
+                + "d.full_name AS doctor_name, d.specialization AS doctor_spec, "
+                + "COALESCE(s.service_name, N'Khám thai định kỳ') AS service_name, s.price AS service_price, s.duration_mins AS service_dur, "
+                + "s.requires_fasting AS service_fasting, s.requires_full_bladder AS service_bladder, s.required_room_type AS service_room, "
+                + "CASE WHEN UPPER(a.status) IN ('SUCCESS', 'COMPLETED', 'WAITING', 'INPROGRESS') THEN 'Paid' WHEN EXISTS (SELECT 1 FROM invoices i WHERE i.appointment_id = a.id AND UPPER(i.invoice_type) = 'PRE_EXAM' AND UPPER(i.status) = 'PAID') THEN 'Paid' ELSE 'Unpaid' END AS pre_exam_payment_status, "
+                + "sh.name AS shift_name, sh.start_time AS shift_start, sh.end_time AS shift_end "
+                + "FROM appointments a "
+                + "LEFT JOIN patients p ON a.patient_id = p.id "
+                + "LEFT JOIN doctors d ON a.doctor_id = d.id "
+                + "LEFT JOIN users priority_user ON a.prioritized_by = priority_user.id "
+                + "LEFT JOIN services s ON a.service_id = s.id "
+                + "LEFT JOIN doctor_schedules ds ON a.schedule_id = ds.id "
+                + "LEFT JOIN shifts sh ON ds.shift_id = sh.id "
+                + "WHERE a.appointment_date = ?";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setDate(1, java.sql.Date.valueOf(date));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapRowToAppointment(rs));
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[AppointmentDAO] getAppointmentsByDate ERROR: " + e.getMessage());
             e.printStackTrace();
         }
         return list;
@@ -244,14 +281,14 @@ public class AppointmentDAO {
         }
     }
 
-    public Appointment createStaffAppointmentWithHeldSlot(Appointment app, int slotId, Integer bookedByUserId) {
+    public Appointment createStaffAppointmentWithHeldSlot(Appointment app, int slotId, Integer bookedByUserId, double baseFee) {
         // Hold 15 phút — giống online. Staff cần xác nhận thanh toán ngay sau khi
         // bệnh nhân trả tiền. Nếu bệnh nhân chưa sẵn sàng thanh toán → không giữ slot.
         String holdSlotSql = "UPDATE doctor_schedules SET booked_count = booked_count + 1, updated_at = GETDATE() "
                 + "WHERE id = ? AND status = 'APPROVED' AND booked_count < max_slots";
         String insertSql = "INSERT INTO appointments (patient_id, doctor_id, appointment_date, booking_source, symptoms, "
-                + "last_menstrual_period, is_priority, status, service_id, time_slot, queue_number, schedule_id) "
-                + "VALUES (?, ?, ?, 'Staff', ?, ?, ?, ?, ?, ?, ?, ?)";
+                + "last_menstrual_period, is_priority, status, service_id, time_slot, queue_number, schedule_id, base_fee) "
+                + "VALUES (?, ?, ?, 'Staff', ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseConfig.getConnection()) {
             conn.setAutoCommit(false);
@@ -300,6 +337,7 @@ public class AppointmentDAO {
                     insertPs.setTime(9, parseTimeSlot(app.getTimeSlot()));
                     insertPs.setString(10, app.getQueueNumber());
                     insertPs.setInt(11, slotId);
+                    insertPs.setDouble(12, baseFee);
                     insertPs.executeUpdate();
 
                     try (ResultSet keys = insertPs.getGeneratedKeys()) {
@@ -366,7 +404,8 @@ public class AppointmentDAO {
                 "LEFT JOIN doctor_schedules ds ON a.schedule_id = ds.id " +
                 "LEFT JOIN shifts sh ON ds.shift_id = sh.id " +
                 "WHERE a.patient_id = ? " +
-                "ORDER BY a.appointment_date DESC, a.time_slot DESC";
+                "ORDER BY CASE WHEN a.appointment_date >= CAST(GETDATE() AS DATE) THEN 0 ELSE 1 END, " +
+                "a.appointment_date ASC, a.time_slot ASC";
         List<Appointment> list = new ArrayList<>();
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -433,7 +472,8 @@ public class AppointmentDAO {
             }
         }
         
-        sql += "ORDER BY a.appointment_date DESC, a.time_slot DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+        sql += "ORDER BY CASE WHEN a.appointment_date >= CAST(GETDATE() AS DATE) THEN 0 ELSE 1 END, "
+                + "a.appointment_date ASC, a.time_slot ASC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
         
         List<Appointment> list = new ArrayList<>();
         try (Connection conn = DatabaseConfig.getConnection();
@@ -726,7 +766,10 @@ public class AppointmentDAO {
 
                 try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
                     ps.setInt(1, appointmentId);
-                    if (ps.executeUpdate() != 1) {
+                    int updated = ps.executeUpdate();
+                    if (updated != 1) {
+                        System.err.println("[AppointmentDAO] checkInAndRenumber: UPDATE failed for apptId="
+                                + appointmentId + " rowsAffected=" + updated);
                         conn.rollback();
                         return false;
                     }
@@ -734,6 +777,8 @@ public class AppointmentDAO {
 
                 renumberQueueForDoctorInTransaction(conn, apptDate, doctorId);
                 conn.commit();
+                System.out.println("[AppointmentDAO] checkInAndRenumber SUCCESS: apptId=" + appointmentId
+                        + " date=" + apptDate + " doctorId=" + doctorId);
                 return true;
             } catch (SQLException e) {
                 conn.rollback();
@@ -876,7 +921,7 @@ public class AppointmentDAO {
         String updateQueueSql = "UPDATE appointments SET queue_number = ? WHERE id = ?";
 
         try (PreparedStatement selectPs = conn.prepareStatement(selectQueueSql)) {
-            selectPs.setDate(1, java.sql.Date.valueOf(date));
+            selectPs.setObject(1, date);
             selectPs.setInt(2, doctorId);
             try (ResultSet rs = selectPs.executeQuery();
                  PreparedStatement updatePs = conn.prepareStatement(updateQueueSql)) {
@@ -886,7 +931,9 @@ public class AppointmentDAO {
                     updatePs.setInt(2, rs.getInt("id"));
                     updatePs.addBatch();
                 }
-                updatePs.executeBatch();
+                int[] results = updatePs.executeBatch();
+                System.out.println("[AppointmentDAO] renumberQueue: date=" + date + " doctorId=" + doctorId
+                        + " rowsRenumbered=" + results.length);
             }
         }
     }
@@ -1113,38 +1160,135 @@ public class AppointmentDAO {
     }
 
     /**
-     * Quét toàn bộ slot đang HELD nhưng đã hết hạn giữ chỗ (15 phút) mà bệnh nhân
-     * chưa gửi thông tin thanh toán — tự huỷ appointment 'Pending' tương ứng và
-     * nhả slot về AVAILABLE. Được gọi định kỳ bởi SlotHoldExpiryListener.
+     * Quét và tự động huỷ các lịch hẹn quá hạn nhưng chưa được xử lý,
+     * đồng thời giải phóng booked_count tương ứng.
      *
-     * @return số lượng slot đã được nhả (để log).
+     * <p>Hai trường hợp được xử lý trong CÙNG MỘT TRANSACTION SERIALIZABLE:
+     * <ol>
+     *   <li><b>Pending quá ngày:</b> BN đặt online nhưng Staff không duyệt,
+     *       ngày khám đã qua → huỷ + giảm booked_count.</li>
+     *   <li><b>Confirmed + PRE_EXAM Unpaid + quá giờ:</b> BN đã được duyệt
+     *       nhưng không đến quầy nộp tiền trước giờ khám 15 phút
+     *       → huỷ + huỷ HĐ + giảm booked_count.</li>
+     * </ol>
+     *
+     * <p>Chống chạy trùng: mỗi appointment được khoá bằng UPDLOCK, ROWLOCK
+     * trước khi xử lý; booked_count chỉ giảm nếu > 0.
+     *
+     * <p>Được gọi định kỳ bởi {@link com.clinic.config.SlotHoldExpiryListener}.
+     *
+     * @return số lượng appointment đã được huỷ và giải phóng.
      */
     public int releaseExpiredHolds() {
         int released = 0;
-        String selectSql =
-            "SELECT 0 AS id WHERE 1=0";
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement selectPs = conn.prepareStatement(selectSql);
-             ResultSet rs = selectPs.executeQuery()) {
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        java.time.LocalDate today = now.toLocalDate();
 
-            List<Integer> expiredSlotIds = new java.util.ArrayList<>();
-            while (rs.next()) expiredSlotIds.add(rs.getInt("id"));
+        // ── Nhóm 1: Pending đã qua ngày khám ──
+        String pendingSql =
+            "SELECT a.id, a.schedule_id FROM appointments a WITH (UPDLOCK, ROWLOCK) "
+            + "WHERE a.status = 'Pending' AND a.appointment_date < ?";
 
-            for (int slotId : expiredSlotIds) {
-                try (PreparedStatement cancelAppt = conn.prepareStatement(
-                        "UPDATE appointments SET status = 'Cancelled' WHERE schedule_id = ? AND status = 'Pending'")) {
-                    cancelAppt.setInt(1, slotId);
-                    cancelAppt.executeUpdate();
-                }
-                try (PreparedStatement releaseSlot = conn.prepareStatement(
-                        "UPDATE doctor_schedules SET booked_count = CASE WHEN booked_count > 0 THEN booked_count - 1 ELSE 0 END, updated_at = GETDATE() held_until = NULL, updated_at = GETDATE() " +
-                        "WHERE id = ? AND status = 'HELD'")) {
-                    releaseSlot.setInt(1, slotId);
-                    released += releaseSlot.executeUpdate();
+        // ── Nhóm 2: Confirmed + PRE_EXAM Unpaid + ca đã bắt đầu quá 15 phút ──
+        String confirmedSql =
+            "SELECT a.id, a.schedule_id FROM appointments a WITH (UPDLOCK, ROWLOCK) "
+            + "JOIN invoices i ON i.appointment_id = a.id "
+            + "JOIN doctor_schedules ds ON ds.id = a.schedule_id "
+            + "JOIN shifts s ON s.id = ds.shift_id "
+            + "WHERE a.status = 'Confirmed' "
+            + "AND i.invoice_type = 'PRE_EXAM' AND i.status = 'Unpaid' "
+            + "AND DATEADD(MINUTE, 15, "
+            + "    DATEADD(SECOND, DATEDIFF(SECOND, '00:00:00', s.start_time), "
+            + "            CAST(a.appointment_date AS DATETIME))) < GETDATE()";
+
+        Connection conn = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            conn.setAutoCommit(false);
+            conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+
+            // ── Xử lý Nhóm 1: Pending quá ngày ──
+            java.util.List<int[]> pendingList = new java.util.ArrayList<>();
+            try (PreparedStatement ps = conn.prepareStatement(pendingSql)) {
+                ps.setDate(1, java.sql.Date.valueOf(today));
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        pendingList.add(new int[]{rs.getInt("id"), rs.getInt("schedule_id")});
+                    }
                 }
             }
+
+            for (int[] row : pendingList) {
+                int apptId = row[0], scheduleId = row[1];
+                // Huỷ appointment
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "UPDATE appointments SET status = 'Cancelled' WHERE id = ? AND status = 'Pending'")) {
+                    ps.setInt(1, apptId);
+                    if (ps.executeUpdate() != 1) continue; // đã bị đổi bởi tiến trình khác
+                }
+                // Giải phóng booked_count
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "UPDATE doctor_schedules SET booked_count = CASE WHEN booked_count > 0 THEN booked_count - 1 ELSE 0 END, "
+                        + "updated_at = GETDATE() WHERE id = ?")) {
+                    ps.setInt(1, scheduleId);
+                    ps.executeUpdate();
+                }
+                // Huỷ các HĐ Unpaid liên quan (nếu có)
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "UPDATE invoices SET status = 'Cancelled' WHERE appointment_id = ? AND status = 'Unpaid'")) {
+                    ps.setInt(1, apptId);
+                    ps.executeUpdate();
+                }
+                released++;
+            }
+
+            // ── Xử lý Nhóm 2: Confirmed + Unpaid + quá giờ ──
+            java.util.List<int[]> confirmedList = new java.util.ArrayList<>();
+            try (PreparedStatement ps = conn.prepareStatement(confirmedSql)) {
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        confirmedList.add(new int[]{rs.getInt("id"), rs.getInt("schedule_id")});
+                    }
+                }
+            }
+
+            for (int[] row : confirmedList) {
+                int apptId = row[0], scheduleId = row[1];
+                // Huỷ appointment
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "UPDATE appointments SET status = 'Cancelled' WHERE id = ? AND status = 'Confirmed'")) {
+                    ps.setInt(1, apptId);
+                    if (ps.executeUpdate() != 1) continue;
+                }
+                // Huỷ PRE_EXAM invoice Unpaid
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "UPDATE invoices SET status = 'Cancelled' WHERE appointment_id = ? "
+                        + "AND invoice_type = 'PRE_EXAM' AND status = 'Unpaid'")) {
+                    ps.setInt(1, apptId);
+                    ps.executeUpdate();
+                }
+                // Giải phóng booked_count
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "UPDATE doctor_schedules SET booked_count = CASE WHEN booked_count > 0 THEN booked_count - 1 ELSE 0 END, "
+                        + "updated_at = GETDATE() WHERE id = ?")) {
+                    ps.setInt(1, scheduleId);
+                    ps.executeUpdate();
+                }
+                released++;
+            }
+
+            conn.commit();
+            if (released > 0) {
+                System.out.println("[AppointmentDAO] releaseExpiredHolds: released " + released + " expired appointment(s).");
+            }
         } catch (SQLException e) {
-            e.printStackTrace();
+            if (conn != null) { try { conn.rollback(); } catch (SQLException ignored) {} }
+            System.err.println("[AppointmentDAO] releaseExpiredHolds ERROR: " + e.getMessage());
+        } finally {
+            if (conn != null) {
+                try { conn.setAutoCommit(true); } catch (SQLException ignored) {}
+                DatabaseConfig.closeConnection(conn);
+            }
         }
         return released;
     }
@@ -1179,7 +1323,7 @@ public class AppointmentDAO {
         } else {
             sql.append("  AND  a.status <> 'Pending' "); // ẩn lịch chưa được Staff xác nhận thanh toán
         }
-        sql.append("ORDER  BY a.is_priority DESC, a.time_slot ASC");
+        sql.append("ORDER  BY a.is_priority DESC, a.time_slot ASC, a.id ASC");
 
         return query(sql.toString(), ps -> {
             ps.setInt(1, doctorId);
@@ -1247,6 +1391,179 @@ public class AppointmentDAO {
             ps.setInt(1, doctorId);
             if (filterStatus) ps.setString(2, statusFilter);
         });
+    }
+
+    // ── Paginated + keyword search versions ──────────────────────────────────
+
+    /** Single-date: phân trang + tìm kiếm theo tên/SĐT bệnh nhân */
+    public List<Appointment> getByDoctorAndDatePaged(int doctorId, LocalDate date,
+            String statusFilter, String keyword, int offset, int limit) {
+        boolean filterStatus = statusFilter != null && !statusFilter.isBlank();
+        boolean hasKw = keyword != null && !keyword.isBlank();
+
+        StringBuilder sql = new StringBuilder(
+            "SELECT a.id, a.patient_id, a.doctor_id, a.pregnancy_id, " +
+            "       a.appointment_date, a.booking_source, a.symptoms, " +
+            "       a.last_menstrual_period, ISNULL(a.is_priority, 0) AS is_priority, a.priority_reason, a.status, " +
+            "       a.service_id, a.time_slot, a.schedule_id, " +
+            "       COALESCE(u.full_name, pt.full_name) AS patient_name, " +
+            "       sh.name AS shift_name, sh.start_time AS shift_start, sh.end_time AS shift_end " +
+            "FROM   appointments a " +
+            "JOIN   patients  pt ON a.patient_id = pt.id " +
+            "LEFT JOIN users  u  ON pt.user_id   = u.id " +
+            "LEFT JOIN doctor_schedules ds ON a.schedule_id = ds.id " +
+            "LEFT JOIN shifts sh ON ds.shift_id = sh.id " +
+            "WHERE  a.doctor_id = ? " +
+            "  AND  a.appointment_date = ? ");
+
+        if (filterStatus) {
+            sql.append("  AND  a.status = ? ");
+        } else {
+            sql.append("  AND  a.status <> 'Pending' ");
+        }
+        if (hasKw) {
+            sql.append("  AND  (pt.full_name LIKE ? OR pt.phone_number LIKE ?) ");
+        }
+        sql.append("ORDER  BY a.is_priority DESC, a.time_slot ASC, a.id ASC ");
+        sql.append("OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
+
+        return query(sql.toString(), ps -> {
+            int idx = 1;
+            ps.setInt(idx++, doctorId);
+            ps.setDate(idx++, Date.valueOf(date));
+            if (filterStatus) ps.setString(idx++, statusFilter);
+            if (hasKw) {
+                String lk = "%" + keyword.trim() + "%";
+                ps.setString(idx++, lk);
+                ps.setString(idx++, lk);
+            }
+            ps.setInt(idx++, offset);
+            ps.setInt(idx++, limit);
+        });
+    }
+
+    /** Single-date: đếm tổng số bản ghi (cho phân trang) */
+    public int countByDoctorAndDate(int doctorId, LocalDate date,
+            String statusFilter, String keyword) {
+        boolean filterStatus = statusFilter != null && !statusFilter.isBlank();
+        boolean hasKw = keyword != null && !keyword.isBlank();
+
+        StringBuilder sql = new StringBuilder(
+            "SELECT COUNT(*) FROM appointments a " +
+            "JOIN patients pt ON a.patient_id = pt.id " +
+            "LEFT JOIN users u ON pt.user_id = u.id " +
+            "WHERE a.doctor_id = ? AND a.appointment_date = ? ");
+
+        if (filterStatus) {
+            sql.append("AND a.status = ? ");
+        } else {
+            sql.append("AND a.status <> 'Pending' ");
+        }
+        if (hasKw) {
+            sql.append("AND (pt.full_name LIKE ? OR pt.phone_number LIKE ?) ");
+        }
+
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            int idx = 1;
+            ps.setInt(idx++, doctorId);
+            ps.setDate(idx++, Date.valueOf(date));
+            if (filterStatus) ps.setString(idx++, statusFilter);
+            if (hasKw) {
+                String lk = "%" + keyword.trim() + "%";
+                ps.setString(idx++, lk);
+                ps.setString(idx++, lk);
+            }
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) return rs.getInt(1);
+        } catch (SQLException e) { e.printStackTrace(); }
+        return 0;
+    }
+
+    /** Date-range: phân trang + tìm kiếm theo tên/SĐT bệnh nhân */
+    public List<Appointment> getByDoctorDateRangePaged(int doctorId, LocalDate from, LocalDate to,
+            String statusFilter, String keyword, int offset, int limit) {
+        boolean filterStatus = statusFilter != null && !statusFilter.isBlank();
+        boolean hasKw = keyword != null && !keyword.isBlank();
+
+        StringBuilder sql = new StringBuilder(
+            "SELECT a.id, a.patient_id, a.doctor_id, a.pregnancy_id, " +
+            "       a.appointment_date, a.booking_source, a.symptoms, " +
+            "       a.last_menstrual_period, ISNULL(a.is_priority, 0) AS is_priority, a.priority_reason, a.status, " +
+            "       a.service_id, a.time_slot, a.schedule_id, " +
+            "       COALESCE(u.full_name, pt.full_name) AS patient_name, " +
+            "       sh.name AS shift_name, sh.start_time AS shift_start, sh.end_time AS shift_end " +
+            "FROM   appointments a " +
+            "JOIN   patients  pt ON a.patient_id = pt.id " +
+            "LEFT JOIN users  u  ON pt.user_id   = u.id " +
+            "LEFT JOIN doctor_schedules ds ON a.schedule_id = ds.id " +
+            "LEFT JOIN shifts sh ON ds.shift_id = sh.id " +
+            "WHERE  a.doctor_id = ? " +
+            "  AND  a.appointment_date BETWEEN ? AND ? " +
+            "  AND  a.status <> 'Pending' ");
+
+        if (filterStatus) {
+            sql.append("  AND  LOWER(a.status) = LOWER(?) ");
+        }
+        if (hasKw) {
+            sql.append("  AND  (pt.full_name LIKE ? OR pt.phone_number LIKE ?) ");
+        }
+        sql.append("ORDER  BY a.appointment_date ASC, a.is_priority DESC, a.time_slot ASC ");
+        sql.append("OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
+
+        return query(sql.toString(), ps -> {
+            int idx = 1;
+            ps.setInt(idx++, doctorId);
+            ps.setDate(idx++, Date.valueOf(from));
+            ps.setDate(idx++, Date.valueOf(to));
+            if (filterStatus) ps.setString(idx++, statusFilter);
+            if (hasKw) {
+                String lk = "%" + keyword.trim() + "%";
+                ps.setString(idx++, lk);
+                ps.setString(idx++, lk);
+            }
+            ps.setInt(idx++, offset);
+            ps.setInt(idx++, limit);
+        });
+    }
+
+    /** Date-range: đếm tổng số bản ghi (cho phân trang) */
+    public int countByDoctorDateRange(int doctorId, LocalDate from, LocalDate to,
+            String statusFilter, String keyword) {
+        boolean filterStatus = statusFilter != null && !statusFilter.isBlank();
+        boolean hasKw = keyword != null && !keyword.isBlank();
+
+        StringBuilder sql = new StringBuilder(
+            "SELECT COUNT(*) FROM appointments a " +
+            "JOIN patients pt ON a.patient_id = pt.id " +
+            "LEFT JOIN users u ON pt.user_id = u.id " +
+            "WHERE a.doctor_id = ? " +
+            "AND a.appointment_date BETWEEN ? AND ? " +
+            "AND a.status <> 'Pending' ");
+
+        if (filterStatus) {
+            sql.append("AND LOWER(a.status) = LOWER(?) ");
+        }
+        if (hasKw) {
+            sql.append("AND (pt.full_name LIKE ? OR pt.phone_number LIKE ?) ");
+        }
+
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            int idx = 1;
+            ps.setInt(idx++, doctorId);
+            ps.setDate(idx++, Date.valueOf(from));
+            ps.setDate(idx++, Date.valueOf(to));
+            if (filterStatus) ps.setString(idx++, statusFilter);
+            if (hasKw) {
+                String lk = "%" + keyword.trim() + "%";
+                ps.setString(idx++, lk);
+                ps.setString(idx++, lk);
+            }
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) return rs.getInt(1);
+        } catch (SQLException e) { e.printStackTrace(); }
+        return 0;
     }
 
     public Map<String, Integer> countTodayByStatus(int doctorId, LocalDate date) {
@@ -1324,7 +1641,16 @@ public class AppointmentDAO {
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, appointmentId);
             ps.setInt(2, doctorId);
-            return ps.executeUpdate() > 0;
+            int rows = ps.executeUpdate();
+            if (rows > 0) {
+                String invoiceSql = "UPDATE invoices SET status = 'Paid', paid_at = GETDATE() "
+                        + "WHERE appointment_id = ? AND UPPER(invoice_type) = 'PRE_EXAM' AND UPPER(status) != 'PAID'";
+                try (PreparedStatement ips = conn.prepareStatement(invoiceSql)) {
+                    ips.setInt(1, appointmentId);
+                    ips.executeUpdate();
+                } catch (Exception ignored) {}
+            }
+            return rows > 0;
         }
     }
 
@@ -1408,21 +1734,18 @@ public class AppointmentDAO {
         String gestationalAge = calculateGestationalAge(lmp, appDate);
         String status = rs.getString("status");
         
-        String timeSlot = null;
+        java.sql.Time timeSql = null;
+        try {
+            timeSql = rs.getTime("time_slot");
+        } catch (SQLException ignored) {}
+
+        String timeSlot = formatTimeSlot(timeSql, status);
         try {
             String shiftName = rs.getString("shift_name");
-            java.sql.Time shiftStart = rs.getTime("shift_start");
-            java.sql.Time shiftEnd = rs.getTime("shift_end");
-            if (shiftName != null && shiftStart != null && shiftEnd != null) {
-                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
-                timeSlot = shiftName + " (" + shiftStart.toLocalTime().format(formatter) + " - " + shiftEnd.toLocalTime().format(formatter) + ")";
+            if (shiftName != null && !shiftName.isBlank()) {
+                timeSlot = timeSlot + " (" + shiftName + ")";
             }
         } catch (SQLException ignored) {}
-        
-        if (timeSlot == null) {
-            java.sql.Time timeSql = rs.getTime("time_slot");
-            timeSlot = formatTimeSlot(timeSql, status);
-        }
         
         boolean isPriority = rs.getBoolean("is_priority");
         String queueNum = rs.getString("queue_number");
@@ -1444,6 +1767,9 @@ public class AppointmentDAO {
         // có thể NULL. Luôn giữ tên dịch vụ đã tổng hợp từ câu SELECT để giao diện không trống.
         app.setServiceName(rs.getString("service_name"));
         app.setQueueNumber(queueNum);
+        try {
+            app.setBookingSource(rs.getString("booking_source"));
+        } catch (Exception ignored) {}
         try {
             app.setPriorityReason(rs.getString("priority_reason"));
             java.sql.Timestamp prioritizedAt = rs.getTimestamp("prioritized_at");
@@ -1469,6 +1795,12 @@ public class AppointmentDAO {
         } catch (Exception e) {
             app.setPreExamPaymentStatus("Unpaid");
         }
+        try {
+            Timestamp createdAt = rs.getTimestamp("created_at");
+            if (createdAt != null) {
+                app.setCreatedAt(createdAt.toLocalDateTime());
+            }
+        } catch (Exception ignored) {}
         return app;
     }
 
@@ -1570,30 +1902,33 @@ public class AppointmentDAO {
         int slotId = rs.getInt("schedule_id");
         if (!rs.wasNull()) a.setSlotId(slotId);
 
-        Time timeSlot = rs.getTime("time_slot");
-        if (timeSlot != null) {
-            try {
-                Time shiftStart = rs.getTime("shift_start");
-                Time shiftEnd = rs.getTime("shift_end");
-                String shiftName = rs.getString("shift_name");
-                
-                if (shiftStart != null && shiftEnd != null) {
-                    LocalTime s = shiftStart.toLocalTime();
-                    LocalTime e = shiftEnd.toLocalTime();
-                    DateTimeFormatter fmt = DateTimeFormatter.ofPattern("HH:mm");
-                    String label = s.format(fmt) + " - " + e.format(fmt);
-                    if (shiftName != null) {
-                        a.setTimeSlot(shiftName + " (" + label + ")");
-                    } else {
-                        a.setTimeSlot(label);
-                    }
-                } else {
-                    a.setTimeSlot(formatTimeSlot(timeSlot, status));
-                }
-            } catch (SQLException ignored) {
-                a.setTimeSlot(formatTimeSlot(timeSlot, status));
+        try {
+            Time timeSlotSql = rs.getTime("time_slot");
+            if (timeSlotSql != null) {
+                a.setTimeSlot(timeSlotSql.toLocalTime());
             }
+        } catch (SQLException ignored) {
+            // time_slot có thể không tồn tại trong một số queries
         }
+
+        // Đọc thông tin ca làm việc (shift) nếu query có JOIN shifts
+        try {
+            String shiftName = rs.getString("shift_name");
+            if (shiftName != null && !shiftName.isBlank()) {
+                a.setShiftName(shiftName);
+            }
+            Time shiftStartT = rs.getTime("shift_start");
+            if (shiftStartT != null) {
+                a.setShiftStart(shiftStartT.toLocalTime().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")));
+            }
+            Time shiftEndT = rs.getTime("shift_end");
+            if (shiftEndT != null) {
+                a.setShiftEnd(shiftEndT.toLocalTime().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")));
+            }
+        } catch (SQLException ignored) {
+            // shift có thể không có trong một số queries
+        }
+
 
         a.setPatientName(rs.getString("patient_name"));
 
@@ -1606,6 +1941,7 @@ public class AppointmentDAO {
      * Tăng booked_count nguyên tử để chống double-booking.
      */
     public boolean bookSlotAndCreateAppointment(int userId, int patientId, int scheduleId, String expectedTimeSlot, int serviceId, double basePrice, String symptoms, LocalDate lmp, String gestationalAge, java.util.Map<String, String> errors) {
+        String currentStep = "init";
         Connection conn = null;
         PreparedStatement updateSlotPs = null;
         PreparedStatement selectSlotPs = null;
@@ -1618,6 +1954,7 @@ public class AppointmentDAO {
             conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
 
             // 1. Atomic increment booked_count — chỉ tăng nếu còn chỗ
+            currentStep = "UPDATE-booked_count";
             String updateSlotSql = "UPDATE doctor_schedules SET "
                     + "booked_count = booked_count + 1, "
                     + "updated_at = GETDATE() "
@@ -1633,6 +1970,7 @@ public class AppointmentDAO {
             }
 
             // 2. Lấy thông tin doctor_schedule (doctor_id, work_date, giờ từ shifts)
+            currentStep = "SELECT-schedule-info";
             String selectSlotSql = "SELECT ds.doctor_id, ds.work_date, s.start_time, s.end_time "
                     + "FROM doctor_schedules ds "
                     + "INNER JOIN shifts s ON ds.shift_id = s.id "
@@ -1647,6 +1985,11 @@ public class AppointmentDAO {
             }
             int doctorId = rs.getInt("doctor_id");
             Date workDate = rs.getDate("work_date");
+            if (workDate == null) {
+                conn.rollback();
+                errors.put("slotId", "Ca khám không có ngày làm việc (work_date NULL).");
+                return false;
+            }
             Time startTime = rs.getTime("start_time");
             Time endTime = rs.getTime("end_time");
             rs.close(); rs = null;
@@ -1667,6 +2010,7 @@ public class AppointmentDAO {
             }
 
             // Kiểm tra trùng lịch hẹn active trong cùng ngày
+            currentStep = "CHECK-same-day";
             if (hasActiveAppointmentOnDate(conn, patientId, doctorId, workDate.toLocalDate(), null)) {
                 conn.rollback();
                 errors.put("general", "Bệnh nhân đã có 1 lịch khám ngoại trú còn hiệu lực trong ngày này. Không thể đặt thêm lịch mới.");
@@ -1690,12 +2034,15 @@ public class AppointmentDAO {
             double totalAmount = basePrice + servicePrice;
 
             // 4. Tạo lịch hẹn (status = 'Pending', chưa có HĐ — HĐ sẽ được tạo sau khi Lễ tân duyệt)
+            currentStep = "INSERT-appointment";
             String insertApptSql = "INSERT INTO appointments (patient_id, doctor_id, appointment_date, booking_source, symptoms, "
                     + "last_menstrual_period, is_priority, status, service_id, time_slot, schedule_id, base_fee) "
                     + "VALUES (?, ?, ?, 'WEB', ?, ?, 0, 'Pending', ?, ?, ?, ?)";
             insertApptPs = conn.prepareStatement(insertApptSql, Statement.RETURN_GENERATED_KEYS);
             insertApptPs.setInt(1, patientId);
             insertApptPs.setInt(2, doctorId);
+            // Dùng setDate thay vì setObject — setObject gửi date dạng chuỗi
+            // (yyyy-MM-dd) khiến SQL Server parse theo locale DB gây lỗi.
             insertApptPs.setDate(3, workDate);
             insertApptPs.setString(4, symptoms);
             if (lmp != null) {
@@ -1704,9 +2051,16 @@ public class AppointmentDAO {
                 insertApptPs.setNull(5, java.sql.Types.DATE);
             }
             insertApptPs.setInt(6, serviceId > 0 ? serviceId : 0);
-            insertApptPs.setString(7, finalTimeSlotStr);
+            insertApptPs.setTime(7, startTime);
             insertApptPs.setInt(8, scheduleId);
             insertApptPs.setDouble(9, totalAmount);
+
+            System.err.println("[BOOK-SLOT] INSERT params: patientId=" + patientId
+                    + " doctorId=" + doctorId + " workDate=" + workDate
+                    + " symptomsLen=" + (symptoms != null ? symptoms.length() : 0)
+                    + " lmp=" + lmp + " serviceId=" + serviceId
+                    + " timeSlot=" + finalTimeSlotStr
+                    + " scheduleId=" + scheduleId + " totalAmount=" + totalAmount);
 
             insertApptPs.executeUpdate();
 
@@ -1727,13 +2081,19 @@ public class AppointmentDAO {
             // HĐ PRE_EXAM sẽ được tạo bởi approveBookingAndEnsurePreExamInvoice() khi Lễ tân duyệt lịch.
 
             conn.commit();
+            System.err.println("[BOOK-SLOT] SUCCESS: appointment #" + appointmentId
+                    + " created | patientId=" + patientId + " doctorId=" + doctorId
+                    + " workDate=" + workDate + " timeSlot=" + startTime
+                    + " scheduleId=" + scheduleId + " totalAmount=" + totalAmount);
             return true;
         } catch (SQLException e) {
+            System.err.println("[BOOK-SLOT] ERROR at step: " + currentStep + " | msg=" + e.getMessage()
+                    + " | SQLState=" + e.getSQLState());
             e.printStackTrace();
             if (conn != null) {
                 try { conn.rollback(); } catch (SQLException ex) {}
             }
-            errors.put("general", "Lỗi database khi đặt lịch: " + e.getMessage());
+            errors.put("general", "Lỗi database khi đặt lịch (" + currentStep + "): " + e.getMessage());
             return false;
         } finally {
             if (rs != null) { try { rs.close(); } catch (SQLException e) {} }
@@ -1787,11 +2147,11 @@ public class AppointmentDAO {
             updateAppPs.setInt(1, appointmentId);
             updateAppPs.executeUpdate();
 
-            // 3. Close invoices that were never collected. Paid invoices are
+            // 3. Close invoices that were never collected. Paid and Refunded invoices are
             // deliberately left untouched: reception must use a refund flow,
             // not a normal cancellation, once money has been collected.
             String cancelInvoiceSql = "UPDATE invoices SET status = 'Cancelled', payment_note = COALESCE(payment_note, ?) "
-                    + "WHERE appointment_id = ? AND (UPPER(status) != 'PAID' OR status IS NULL)";
+                    + "WHERE appointment_id = ? AND (UPPER(status) NOT IN ('PAID', 'REFUNDED') OR status IS NULL)";
             cancelInvoicePs = conn.prepareStatement(cancelInvoiceSql);
             cancelInvoicePs.setString(1, reason != null ? reason : "Lịch hẹn đã bị hủy");
             cancelInvoicePs.setInt(2, appointmentId);
@@ -1828,31 +2188,107 @@ public class AppointmentDAO {
             }
         }
     }
+
+    /**
+     * Đánh dấu bệnh nhân không đến (NoShow) và trả slot.
+     * Chỉ huỷ hoá đơn Unpaid; hoá đơn Paid giữ nguyên (cần hoàn tiền riêng — P13).
+     */
+    public boolean markNoShowAndReleaseSlot(int appointmentId, int staffUserId, String reason) {
+        Connection conn = null;
+        PreparedStatement selectPs = null;
+        PreparedStatement updateAppPs = null;
+        PreparedStatement updateSlotPs = null;
+        PreparedStatement cancelInvoicePs = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            conn.setAutoCommit(false);
+            conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+
+            // 1. SELECT appointment
+            String selectSql = "SELECT status, schedule_id FROM appointments WITH (UPDLOCK, HOLDLOCK) WHERE id = ?";
+            selectPs = conn.prepareStatement(selectSql);
+            selectPs.setInt(1, appointmentId);
+            rs = selectPs.executeQuery();
+            if (!rs.next()) {
+                conn.rollback();
+                return false;
+            }
+            String currentStatus = rs.getString("status");
+            int slotId = rs.getInt("schedule_id");
+            boolean hasSlot = !rs.wasNull();
+
+            // NoShow chỉ áp dụng cho Pending hoặc Confirmed
+            if (!"Pending".equalsIgnoreCase(currentStatus) && !"Confirmed".equalsIgnoreCase(currentStatus)) {
+                conn.rollback();
+                return false;
+            }
+
+            // 2. Update appointment status to NoShow
+            String updateAppSql = "UPDATE appointments SET status = 'NoShow' WHERE id = ?";
+            updateAppPs = conn.prepareStatement(updateAppSql);
+            updateAppPs.setInt(1, appointmentId);
+            updateAppPs.executeUpdate();
+
+            // 3. Cancel unpaid invoices. Paid and Refunded invoices are left untouched.
+            String cancelInvoiceSql = "UPDATE invoices SET status = 'Cancelled', payment_note = COALESCE(payment_note, ?) "
+                    + "WHERE appointment_id = ? AND UPPER(status) NOT IN ('PAID', 'REFUNDED')";
+            cancelInvoicePs = conn.prepareStatement(cancelInvoiceSql);
+            cancelInvoicePs.setString(1, reason != null ? reason : "Bệnh nhân không đến khám");
+            cancelInvoicePs.setInt(2, appointmentId);
+            cancelInvoicePs.executeUpdate();
+
+            // 4. Release slot
+            if (hasSlot) {
+                String updateSlotSql = "UPDATE doctor_schedules SET "
+                        + "booked_count = CASE WHEN booked_count > 0 THEN booked_count - 1 ELSE 0 END, "
+                        + "updated_at = GETDATE() "
+                        + "WHERE id = ?";
+                updateSlotPs = conn.prepareStatement(updateSlotSql);
+                updateSlotPs.setInt(1, slotId);
+                updateSlotPs.executeUpdate();
+            }
+
+            conn.commit();
+            return true;
+        } catch (SQLException e) {
+            System.err.println("[AppointmentDAO] markNoShowAndReleaseSlot ERROR: " + e.getMessage());
+            if (conn != null) {
+                try { conn.rollback(); } catch (SQLException ex) {}
+            }
+            return false;
+        } finally {
+            if (rs != null) { try { rs.close(); } catch (SQLException e) {} }
+            if (selectPs != null) { try { selectPs.close(); } catch (SQLException e) {} }
+            if (updateAppPs != null) { try { updateAppPs.close(); } catch (SQLException e) {} }
+            if (updateSlotPs != null) { try { updateSlotPs.close(); } catch (SQLException e) {} }
+            if (cancelInvoicePs != null) { try { cancelInvoicePs.close(); } catch (SQLException e) {} }
+            if (conn != null) {
+                try { conn.setAutoCommit(true); } catch (SQLException e) {}
+                DatabaseConfig.closeConnection(conn);
+            }
+        }
+    }
+
     /**
      * Tạo label time_slot dạng "HH:mm - HH:mm" từ shift liên kết với schedule.
      * Dùng khi đổi lịch để lưu nhãn hiển thị thay vì SQL Time.
      */
-    private String getNewSlotLabel(Connection conn, int scheduleId, Time startTimeFallback) throws SQLException {
-        String sql = "SELECT s.start_time, s.end_time FROM doctor_schedules ds " +
+    private Time getNewSlotStartTime(Connection conn, int scheduleId, Time startTimeFallback) throws SQLException {
+        String sql = "SELECT s.start_time FROM doctor_schedules ds " +
                      "INNER JOIN shifts s ON ds.shift_id = s.id WHERE ds.id = ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, scheduleId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     Time st = rs.getTime("start_time");
-                    Time et = rs.getTime("end_time");
-                    String startLabel = st != null ? st.toLocalTime().toString().substring(0, 5) : "00:00";
-                    String endLabel   = et != null ? et.toLocalTime().toString().substring(0, 5) : "";
-                    return startLabel + (endLabel.isEmpty() ? "" : " - " + endLabel);
+                    if (st != null) return st;
                 }
             }
         } catch (Exception e) {
-            System.err.println("[AppointmentDAO] getNewSlotLabel fallback: " + e.getMessage());
+            System.err.println("[AppointmentDAO] getNewSlotStartTime fallback: " + e.getMessage());
         }
-        // Fallback: dùng startTime được truyền vào (dạng HH:mm)
-        return startTimeFallback != null
-                ? startTimeFallback.toLocalTime().toString().substring(0, 5)
-                : "00:00";
+        return startTimeFallback != null ? startTimeFallback : Time.valueOf("00:00:00");
     }
 
     public boolean rescheduleAppointmentTransaction(int appointmentId, int oldSlotId, int newSlotId, int userId, Date workDate, Time startTime, java.util.Map<String, String> errors) {
@@ -1920,12 +2356,11 @@ public class AppointmentDAO {
 
             // 3. Cập nhật appointment: đổi ca, thời gian, và reset về Pending
             // BN đổi lịch → cần Lễ tân duyệt lại cho slot mới → reset Pending
-            // time_slot lưu dạng label "HH:mm - HH:mm" để hiển thị đúng trên UI
-            String newTimeSlotLabel = getNewSlotLabel(conn, newSlotId, startTime);
+            Time newStartTime = getNewSlotStartTime(conn, newSlotId, startTime);
             String updateApptSql = "UPDATE appointments SET appointment_date = ?, time_slot = ?, schedule_id = ?, status = 'Pending' WHERE id = ?";
             updateApptPs = conn.prepareStatement(updateApptSql);
             updateApptPs.setDate(1, workDate);
-            updateApptPs.setString(2, newTimeSlotLabel);
+            updateApptPs.setTime(2, newStartTime);
             updateApptPs.setInt(3, newSlotId);
             updateApptPs.setInt(4, appointmentId);
             updateApptPs.executeUpdate();
@@ -1963,7 +2398,7 @@ public class AppointmentDAO {
         // Luồng đúng: Pending → (Lễ tân duyệt) → Confirmed + PRE_EXAM Unpaid → (BN đến nộp tiền) → Waiting
         // Auto-hủy nhắm vào: Confirmed + PRE_EXAM Unpaid + Ca khám đã bắt đầu quá 15 phút (BN không đến)
         // Không hủy Pending vì Pending chưa có hóa đơn và chưa được xác nhận slot chính thức.
-        String sql = "SELECT a.id, a.created_at, ds.work_date, s.start_time " +
+        String sql = "SELECT a.id, ds.work_date, s.start_time " +
                      "FROM appointments a " +
                      "JOIN invoices i ON a.id = i.appointment_id " +
                      "JOIN doctor_schedules ds ON a.schedule_id = ds.id " +
@@ -1977,11 +2412,10 @@ public class AppointmentDAO {
             java.time.LocalDateTime now = java.time.LocalDateTime.now();
             while (rs.next()) {
                 int id = rs.getInt("id");
-                java.sql.Timestamp createdTs = rs.getTimestamp("created_at");
                 java.sql.Date workDateSql = rs.getDate("work_date");
                 java.sql.Time startTimeSql = rs.getTime("start_time");
-                
-                if (createdTs == null || workDateSql == null || startTimeSql == null) continue;
+
+                if (workDateSql == null || startTimeSql == null) continue;
                 
                 java.time.LocalDateTime shiftStart = java.time.LocalDateTime.of(
                         workDateSql.toLocalDate(), startTimeSql.toLocalTime());

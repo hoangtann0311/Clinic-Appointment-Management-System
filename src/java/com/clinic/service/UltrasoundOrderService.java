@@ -160,11 +160,24 @@ public class UltrasoundOrderService {
             data = normalizedBoundingBox(ai, imageWidth, imageHeight);
             acceptedAiResultId = ai.getId();
         } else if ("Corrected".equals(review)) {
+            // [P9] Corrected = từ chối AI + vẽ tay (hoặc bỏ qua AI hoàn toàn)
             if (!isValidNormalizedPolygon(annotationData)) return false;
+            // Ghi log nếu ca này không qua AI (không có acceptedAiResultId)
+            if (acceptedAiResultId == null) {
+                System.out.println("[UltrasoundOrderService] Ca siêu âm #" + orderId
+                        + " hoàn thành bằng vẽ thủ công, không qua AI.");
+            }
             source = "Sonographer";
             type = "Polygon";
             data = annotationData.trim();
         } else {
+            // "Rejected": KHÔNG được là trạng thái kết thúc (P9).
+            // Bác sĩ siêu âm phải chọn "Corrected" (vẽ tay) hoặc "Accepted" (đồng ý AI) mới được ký.
+            // Nếu chọn "Rejected" — chỉ lưu nháp, không cho ký.
+            if (sign) {
+                System.err.println("[UltrasoundOrderService] Chặn ký với reviewStatus=Rejected cho orderId=" + orderId);
+                return false;
+            }
             if (reason.length() < 5) return false;
             source = "Sonographer";
             if (annotationData != null && !annotationData.isBlank()) {
@@ -497,6 +510,22 @@ public class UltrasoundOrderService {
             String responseBody = response.body();
             int statusCode = response.statusCode();
 
+            // Nếu URL mặc định lỗi 404 do lệch ContextPath, tự động retry với ContextPath chuẩn
+            if (statusCode == 404 && aiUrl.contains("ClinicAppointmentManagementSystem")) {
+                String fallbackUrl = aiUrl.replace("ClinicAppointmentManagementSystem", "Clinic_Appointment_Management_System");
+                System.out.println("[UltrasoundOrderService] Retrying AI analysis with corrected URL: " + fallbackUrl);
+                HttpRequest retryReq = HttpRequest.newBuilder()
+                        .uri(URI.create(fallbackUrl))
+                        .timeout(Duration.ofMillis(AppConfig.getAiReadTimeout()))
+                        .header("Content-Type", "application/json; charset=UTF-8")
+                        .header("X-OCSS-AI-Key", AppConfig.getAiInternalToken())
+                        .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
+                        .build();
+                response = client.send(retryReq, HttpResponse.BodyHandlers.ofString());
+                responseBody = response.body();
+                statusCode = response.statusCode();
+            }
+
             if (statusCode == 200 && responseBody != null) {
                 String status = extractJsonField(responseBody, "status");
                 if ("Success".equalsIgnoreCase(status) || "Ok".equalsIgnoreCase(status)) {
@@ -535,7 +564,7 @@ public class UltrasoundOrderService {
                     if (xminStr != null) result.setXmin(Integer.parseInt(xminStr));
                     if (yminStr != null) result.setYmin(Integer.parseInt(yminStr));
                     if (xmaxStr != null) result.setXmax(Integer.parseInt(xmaxStr));
-                    if (ymaxStr != null) result.setymax(Integer.parseInt(ymaxStr));
+                    if (ymaxStr != null) result.setYmax(Integer.parseInt(ymaxStr));
                     if (detected && !isValidBoundingBox(result, targetImg)) {
                         throw new IllegalArgumentException("Vùng AI không hợp lệ so với ảnh gốc.");
                     }
@@ -548,14 +577,15 @@ public class UltrasoundOrderService {
                     throw new Exception("AI Engine trả về lỗi: " + extractJsonField(responseBody, "errorMessage"));
                 }
             } else {
-                throw new Exception("AI HTTP Status code: " + statusCode);
+                throw new Exception("AI HTTP Status code: " + statusCode + ", Body: " + responseBody);
             }
         } catch (Exception e) {
-            System.err.println("[UltrasoundOrderService] AI analysis failed: " + e.getClass().getSimpleName());
+            System.err.println("[UltrasoundOrderService] AI analysis failed: " + e.getMessage());
+            e.printStackTrace();
             
             // Lưu kết quả lỗi vào DB
             result.setStatus("Failed");
-            result.setErrorMessage("AI Engine tạm thời không thể hoàn tất phân tích.");
+            result.setErrorMessage("AI Engine tạm thời không thể hoàn tất phân tích: " + e.getMessage());
             result.setAnalyzedAt(new Timestamp(System.currentTimeMillis()));
             aiAnalysisResultDAO.update(result);
             return false;
@@ -581,22 +611,12 @@ public class UltrasoundOrderService {
         return aiAnalysisResultDAO.getSuccessfulByImagePath(testOrderId, image.getFilePath());
     }
 
-    /**
-     * Bác sĩ xác nhận kết quả phân tích AI và ghi kết luận chính thức.
-     * Cập nhật trạng thái đơn từ Completed → confirmed
-     * và lưu kết luận chính thức của bác sĩ vào trường message.
-     */
-    public boolean confirmUltrasoundResult(int orderId, int doctorUserId, String doctorMessage) {
-        String notes = trimToLimit(doctorMessage, 2000);
-        if (notes.length() < 20) return false;
-        return ultrasoundReviewDAO.confirmSignedReport(orderId, doctorUserId, notes);
-    }
 
     private String normalizedBoundingBox(AiAnalysisResult ai, int width, int height) {
         double x1 = clamp(ai.getXmin() / (double) width);
         double y1 = clamp(ai.getYmin() / (double) height);
         double x2 = clamp(ai.getXmax() / (double) width);
-        double y2 = clamp(ai.getymax() / (double) height);
+        double y2 = clamp(ai.getYmax() / (double) height);
         return String.format(java.util.Locale.ROOT,
                 "{\"xMin\":%.6f,\"yMin\":%.6f,\"xMax\":%.6f,\"yMax\":%.6f}",
                 Math.min(x1, x2), Math.min(y1, y2), Math.max(x1, x2), Math.max(y1, y2));
@@ -647,7 +667,7 @@ public class UltrasoundOrderService {
     }
 
     private boolean isValidBoundingBox(AiAnalysisResult result, UltrasoundImage image) {
-        Integer x1 = result.getXmin(), y1 = result.getYmin(), x2 = result.getXmax(), y2 = result.getymax();
+        Integer x1 = result.getXmin(), y1 = result.getYmin(), x2 = result.getXmax(), y2 = result.getYmax();
         if (x1 == null || y1 == null || x2 == null || y2 == null
                 || x1 < 0 || y1 < 0 || x2 <= x1 || y2 <= y1) return false;
         if (image.getImageWidth() != null && image.getImageHeight() != null) {

@@ -137,20 +137,32 @@ public class DoctorProfileServlet extends HttpServlet {
         Part avatarPart = req.getPart("avatarFile");
         if (avatarPart != null && avatarPart.getSize() > 0) {
             String originalFileName = getFileName(avatarPart);
-            String contentType = avatarPart.getContentType();
 
             if (originalFileName == null || originalFileName.isEmpty()) {
                 showError(req, resp, doctor, "File ảnh không hợp lệ.");
                 return;
             }
-            if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType)) {
-                showError(req, resp, doctor, "Chỉ hỗ trợ ảnh định dạng JPG, PNG hoặc WEBP.");
-                return;
-            }
+
+            // Giới hạn kích thước trước khi đọc vào bộ nhớ
             if (avatarPart.getSize() > AppConfig.getMaxAvatarFileSize()) {
                 showError(req, resp, doctor, "Kích thước ảnh không được vượt quá 5MB.");
                 return;
             }
+
+            // Validate nội dung thật bằng ImageIO — không tin Content-Type do client gửi.
+            // Cơ chế giống hệt UltrasoundUploadServlet.validateJpegOrPng().
+            ValidatedImage validated;
+            try {
+                validated = validateJpegOrPng(avatarPart, originalFileName);
+            } catch (IllegalArgumentException ex) {
+                showError(req, resp, doctor, ex.getMessage());
+                return;
+            }
+
+            // Phần mở rộng lấy từ định dạng ảnh THẬT do ImageIO phát hiện,
+            // KHÔNG lấy từ tên file gốc do client gửi lên.
+            String extension = "image/png".equals(validated.contentType) ? ".png" : ".jpg";
+            String storedFileName = "doctor-" + doctor.getId() + "-" + UUID.randomUUID() + extension;
 
             String relativeUploadDir = AppConfig.getAvatarUploadDirectory();
             String uploadPath = getServletContext().getRealPath("") + File.separator + relativeUploadDir;
@@ -158,14 +170,26 @@ public class DoctorProfileServlet extends HttpServlet {
             if (!uploadDirFile.exists()) {
                 uploadDirFile.mkdirs();
             }
-
-            String extension = originalFileName.contains(".")
-                    ? originalFileName.substring(originalFileName.lastIndexOf("."))
-                    : "";
-            String storedFileName = "doctor-" + doctor.getId() + "-" + UUID.randomUUID() + extension;
             String filePath = uploadPath + File.separator + storedFileName;
 
-            avatarPart.write(filePath);
+            // Giải mã và ghi lại ảnh qua ImageIO — loại bỏ mọi dữ liệu lạ nhét kèm.
+            try {
+                java.awt.image.BufferedImage image = javax.imageio.ImageIO.read(
+                        avatarPart.getInputStream());
+                if (image == null) {
+                    showError(req, resp, doctor, "Không thể giải mã nội dung ảnh.");
+                    return;
+                }
+                String formatName = "image/png".equals(validated.contentType) ? "png" : "jpg";
+                boolean written = javax.imageio.ImageIO.write(image, formatName, new java.io.File(filePath));
+                if (!written) {
+                    showError(req, resp, doctor, "Không thể lưu ảnh đại diện.");
+                    return;
+                }
+            } catch (IOException e) {
+                showError(req, resp, doctor, "Lỗi xử lý ảnh: " + e.getMessage());
+                return;
+            }
 
             avatarUrl = req.getContextPath() + "/" + relativeUploadDir + "/" + storedFileName;
         }
@@ -234,5 +258,73 @@ public class DoctorProfileServlet extends HttpServlet {
             }
         }
         return null;
+    }
+
+    /**
+     * Validate nội dung thật của file ảnh bằng ImageIO — giống hệt cơ chế
+     * của UltrasoundUploadServlet. Không tin Content-Type do client gửi.
+     *
+     * @throws IllegalArgumentException nếu file không phải ảnh JPEG/PNG hợp lệ
+     */
+    private ValidatedImage validateJpegOrPng(Part part, String originalFileName) {
+        try (java.io.InputStream input = part.getInputStream();
+             javax.imageio.stream.ImageInputStream imageInput =
+                     javax.imageio.ImageIO.createImageInputStream(input)) {
+            if (imageInput == null) {
+                throw new IllegalArgumentException("Nội dung file không phải ảnh JPG/PNG hợp lệ.");
+            }
+            java.util.Iterator<javax.imageio.ImageReader> readers =
+                    javax.imageio.ImageIO.getImageReaders(imageInput);
+            if (!readers.hasNext()) {
+                throw new IllegalArgumentException("Nội dung file không phải ảnh JPG/PNG hợp lệ.");
+            }
+
+            javax.imageio.ImageReader reader = readers.next();
+            try {
+                reader.setInput(imageInput, true, true);
+                String format = reader.getFormatName().toUpperCase(java.util.Locale.ROOT);
+                boolean jpeg = "JPEG".equals(format) || "JPG".equals(format);
+                boolean png = "PNG".equals(format);
+                if (!jpeg && !png) {
+                    throw new IllegalArgumentException("Chỉ chấp nhận ảnh JPEG hoặc PNG.");
+                }
+
+                int width = reader.getWidth(0);
+                int height = reader.getHeight(0);
+                if (width <= 0 || height <= 0) {
+                    throw new IllegalArgumentException("Kích thước ảnh không hợp lệ.");
+                }
+                if ((long) width * height > 40_000_000L) {
+                    throw new IllegalArgumentException("Kích thước ảnh vượt giới hạn an toàn.");
+                }
+
+                // Giải mã thật để loại bỏ file header-only
+                java.awt.image.BufferedImage decoded = reader.read(0);
+                if (decoded == null || decoded.getWidth() != width || decoded.getHeight() != height) {
+                    throw new IllegalArgumentException("Không thể giải mã đầy đủ nội dung ảnh.");
+                }
+
+                String actualContentType = png ? "image/png" : "image/jpeg";
+                return new ValidatedImage(width, height, actualContentType);
+            } finally {
+                reader.dispose();
+            }
+        } catch (IllegalArgumentException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new IllegalArgumentException("Không thể đọc định dạng hình ảnh, vui lòng thử file khác.");
+        }
+    }
+
+    private static final class ValidatedImage {
+        final int width;
+        final int height;
+        final String contentType;
+
+        ValidatedImage(int width, int height, String contentType) {
+            this.width = width;
+            this.height = height;
+            this.contentType = contentType;
+        }
     }
 }

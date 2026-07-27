@@ -24,7 +24,17 @@ public class Appointment {
     private String prioritizedByName;
     private String preExamPaymentStatus;
     private String gestationalAge; // E.g. "10 tuần 2 ngày"
-    private Integer slotId; // nullable
+    private String timeSlot; // Giờ bắt đầu ca (HH:mm) — chỉ dùng để sắp xếp
+
+    // Ca làm việc (join từ shifts)
+    private String shiftName;  // VD: "Ca Sáng"
+    private String shiftStart; // VD: "07:00"
+    private String shiftEnd;   // VD: "12:00"
+
+    // Thời điểm bệnh nhân/lễ tân đặt lịch
+    private java.sql.Timestamp bookedAt;
+
+    private Integer slotId; // nullable (= schedule_id sau khi migrate)
     private LocalDateTime createdAt;
 
     // Complex object associations (for receptionist / HEAD)
@@ -35,7 +45,7 @@ public class Appointment {
     // Transient fields for join results (for doctor / origin/dungdi)
     private String patientName;
     private String serviceName;
-    private String timeSlot; // Stores the String representation like "08:00 - 08:20"
+
 
     // Constructors
     public Appointment() {}
@@ -113,8 +123,27 @@ public class Appointment {
     }
     public void setServiceId(Integer serviceId) { this.serviceId = serviceId; }
 
-    // Reconciling timeSlot
-    public String getTimeSlot() { return timeSlot; }
+    /**
+     * Trả về giờ bắt đầu ca dạng HH:mm để hiển thị.
+     * Không còn logic "+20 phút" vì hệ thống đã chuyển sang ca làm việc.
+     * Dùng getShiftLabel() để hiển thị đầy đủ tên ca + giờ.
+     */
+    public String getTimeSlot() {
+        if (timeSlot == null || timeSlot.isBlank()) return "—";
+        String ts = timeSlot.trim();
+        // Chỉ lấy phần HH:mm (bỏ seconds nếu có)
+        if (ts.matches("^\\d{1,2}:\\d{2}(:\\d{2}(\\.\\d+)?)?$")) {
+            String[] parts = ts.split(":");
+            try {
+                int hour = Integer.parseInt(parts[0]);
+                int minute = Integer.parseInt(parts[1]);
+                return String.format("%02d:%02d", hour, minute);
+            } catch (Exception e) {
+                return ts;
+            }
+        }
+        return ts;
+    }
     public void setTimeSlot(String timeSlot) { this.timeSlot = timeSlot; }
     public void setTimeSlot(LocalTime timeSlot) {
         if (timeSlot != null) {
@@ -122,6 +151,36 @@ public class Appointment {
         } else {
             this.timeSlot = null;
         }
+    }
+
+    /** Trả về nhãn ca đầy đủ: "Ca Sáng (07:00–12:00)" hoặc chỉ giờ bắt đầu nếu không có thông tin shift. */
+    public String getShiftLabel() {
+        if (shiftName != null && !shiftName.isBlank()) {
+            if (shiftStart != null && shiftEnd != null) {
+                return shiftName + " (" + shiftStart + "–" + shiftEnd + ")";
+            }
+            return shiftName;
+        }
+        String ts = getTimeSlot();
+        return "—".equals(ts) ? "—" : "Ca khám " + ts;
+    }
+
+    // Shift getters/setters
+    public String getShiftName()  { return shiftName; }
+    public void setShiftName(String shiftName) { this.shiftName = shiftName; }
+    public String getShiftStart() { return shiftStart; }
+    public void setShiftStart(String shiftStart) { this.shiftStart = shiftStart; }
+    public String getShiftEnd()   { return shiftEnd; }
+    public void setShiftEnd(String shiftEnd) { this.shiftEnd = shiftEnd; }
+
+    // bookedAt
+    public java.sql.Timestamp getBookedAt() { return bookedAt; }
+    public void setBookedAt(java.sql.Timestamp bookedAt) { this.bookedAt = bookedAt; }
+    /** Đặt lúc: 09:45 27/07/2026 */
+    public String getBookedAtDisplay() {
+        if (bookedAt == null) return "";
+        java.time.LocalDateTime ldt = bookedAt.toLocalDateTime();
+        return ldt.format(DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy"));
     }
 
     public String getPatientName() {
@@ -198,6 +257,41 @@ public class Appointment {
 
     public String getPreExamPaymentStatus() { return preExamPaymentStatus; }
     public void setPreExamPaymentStatus(String preExamPaymentStatus) { this.preExamPaymentStatus = preExamPaymentStatus; }
+
+    /**
+     * Trả về trạng thái hiển thị tiếng Việt cho bệnh nhân — MỘT chỗ duy nhất.
+     * Kết hợp appointment.status + preExamPaymentStatus để phân biệt:
+     * "Đã duyệt - chưa thanh toán" vs "Đã duyệt - đã thanh toán".
+     */
+    public String getDisplayStatus() {
+        if (status == null) return "Không xác định";
+        String s = status.trim();
+        if ("Pending".equalsIgnoreCase(s)) {
+            return "Chờ phòng khám duyệt";
+        }
+        if ("Confirmed".equalsIgnoreCase(s)) {
+            if ("Paid".equalsIgnoreCase(preExamPaymentStatus)) {
+                return "Đã duyệt — chờ check-in";
+            }
+            return "Đã duyệt — chưa thanh toán";
+        }
+        if ("Waiting".equalsIgnoreCase(s)) {
+            return "Đã check-in — đang chờ khám";
+        }
+        if ("InProgress".equalsIgnoreCase(s)) {
+            return "Đang khám";
+        }
+        if ("SUCCESS".equalsIgnoreCase(s) || "Completed".equalsIgnoreCase(s)) {
+            return "Đã hoàn tất";
+        }
+        if ("Cancelled".equalsIgnoreCase(s)) {
+            return "Đã huỷ";
+        }
+        if ("NoShow".equalsIgnoreCase(s)) {
+            return "Không đến khám";
+        }
+        return s;
+    }
 
     public Integer getSlotId() { return slotId; }
     public void setSlotId(Integer slotId) { this.slotId = slotId; }

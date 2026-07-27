@@ -18,7 +18,7 @@ public class NotificationHelper {
     public static void newAppointment(int doctorUserId, String patientName,
                                       String appointmentDate, String timeSlot) {
         dao.create(doctorUserId,
-            "📅 Lịch hẹn mới",
+            "Lịch hẹn mới",
             "Bệnh nhân " + patientName + " vừa đặt lịch khám vào " +
             timeSlot + " ngày " + appointmentDate + ".");
     }
@@ -27,7 +27,7 @@ public class NotificationHelper {
     public static void scheduleApproved(int doctorUserId, String workDate,
                                         String startTime, String endTime) {
         dao.create(doctorUserId,
-            "✅ Lịch làm việc được duyệt",
+            "Lịch làm việc được duyệt",
             "Ca làm việc ngày " + workDate + " (" + startTime + " – " + endTime +
             ") của bạn đã được Manager duyệt.");
     }
@@ -37,7 +37,7 @@ public class NotificationHelper {
                                         String startTime, String endTime,
                                         String reason) {
         dao.create(doctorUserId,
-            "❌ Lịch làm việc bị từ chối",
+            "Lịch làm việc bị từ chối",
             "Ca làm việc ngày " + workDate + " (" + startTime + " – " + endTime +
             ") đã bị từ chối. Lý do: " + (reason != null ? reason : "không rõ") + ".");
     }
@@ -45,7 +45,7 @@ public class NotificationHelper {
     public static void draftRecordReminder(int doctorUserId, int recordId,
                                            String patientName) {
         dao.create(doctorUserId,
-            "⏰ Hồ sơ chưa hoàn tất (Draft)",
+            "Hồ sơ chưa hoàn tất (Draft)",
             "Hồ sơ bệnh án #" + recordId + " của " + patientName +
             " đang ở trạng thái nháp (draft) hơn 24 giờ. " +
             "Vui lòng kiểm tra và hoàn tất.");
@@ -55,7 +55,7 @@ public class NotificationHelper {
     public static void riskFlagAlert(int doctorUserId, int recordId,
                                      String patientName, String flags) {
         dao.create(doctorUserId,
-            "⚠️ Bệnh nhân có dấu hiệu nguy cơ",
+            "Bệnh nhân có dấu hiệu nguy cơ",
             "Hồ sơ #" + recordId + " – " + patientName +
             " có dấu hiệu cần theo dõi: " + flags + ". Vui lòng xem lại.");
     }
@@ -104,7 +104,7 @@ public class NotificationHelper {
                     : "Bác sĩ đã chỉ định thực hiện siêu âm \"" + serviceName
                     + "\". Dịch vụ đã nằm trong lịch hẹn của bạn; vui lòng đến phòng siêu âm theo hướng dẫn.";
             dao.create(patientId,
-                "📋 Chỉ định siêu âm mới",
+                "Chỉ định siêu âm mới",
                 message);
         }
     }
@@ -243,5 +243,12 @@ public class NotificationHelper {
                 }
             }
         } catch (Exception e) { e.printStackTrace(); }
+    }
+
+    /** Gửi thông báo tùy chỉnh cho một user (title + message bất kỳ) */
+    public static void sendCustomNotification(int userId, String title, String message) {
+        if (userId > 0) {
+            dao.create(userId, title, message);
+        }
     }
 }

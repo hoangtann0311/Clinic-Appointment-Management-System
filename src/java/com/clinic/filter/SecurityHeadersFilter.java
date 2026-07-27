@@ -45,7 +45,7 @@ public class SecurityHeadersFilter implements Filter {
 
         // ── Security headers cho TẤT CẢ responses ──
         httpRes.setHeader("X-Content-Type-Options", "nosniff");
-        httpRes.setHeader("X-Frame-Options", "DENY");
+        httpRes.setHeader("X-Frame-Options", "SAMEORIGIN");
         httpRes.setHeader("X-XSS-Protection", "1; mode=block");
         httpRes.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
 
