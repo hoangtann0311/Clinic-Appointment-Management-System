@@ -1,6 +1,6 @@
 package com.clinic.controller;
 
-import com.clinic.dao.UserDAO;
+import com.clinic.dao.UserProfileDAO;
 import com.clinic.dao.PatientDAO;
 import com.clinic.model.Patient;
 import com.clinic.model.User;
@@ -16,7 +16,14 @@ import java.time.LocalDate;
 public class PatientProfileServlet extends HttpServlet {
 
     private final PatientDAO patientDAO = new PatientDAO();
-    private final UserDAO userDAO = new UserDAO();
+    /**
+     * DAO hẹp: câu UPDATE chỉ có full_name và phone.
+     * Trước đây chỗ này dùng UserDAO.update(), mà câu lệnh của nó có cả
+     * role_id và status — tuy giá trị lấy từ session nên chưa khai thác được,
+     * nhưng để cột vai trò xuất hiện trong câu UPDATE của trang hồ sơ là rủi ro
+     * leo thang quyền không cần thiết. Năm trang hồ sơ còn lại đều đã tránh.
+     */
+    private final UserProfileDAO userProfileDAO = new UserProfileDAO();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -175,10 +182,10 @@ public class PatientProfileServlet extends HttpServlet {
         boolean ok = patientDAO.updatePatient(patientId, fullName.trim(), phone != null ? phone.trim() : "", dob,
                 address != null ? address.trim() : "", cccdClean);
         if (ok) {
-            // Sync with users table
+            // Sync with users table — chỉ full_name và phone.
             user.setFullName(fullName.trim());
             user.setPhone(phone != null ? phone.trim() : "");
-            userDAO.update(user);
+            userProfileDAO.updateBasicInfo(user.getId(), user.getFullName(), user.getPhone());
             
             // Log action
             new com.clinic.dao.AuditLogDAO().logAction(
@@ -190,8 +197,10 @@ public class PatientProfileServlet extends HttpServlet {
             );
 
             session.setAttribute("user", user);
-            session.setAttribute("successMessage", "Hồ sơ cá nhân đã được cập nhật thành công!");
-            response.sendRedirect(request.getContextPath() + "/home");
+            // Quay lại chính trang hồ sơ và báo tại chỗ, đồng nhất với 5 vai trò kia.
+            // Tham số saved=1 khớp khối <c:if test="${not empty saved}"> sẵn có trong
+            // patient_profile.jsp, và doGet đã nạp sẵn tham số này vào request.
+            response.sendRedirect(request.getContextPath() + "/patient/profile?saved=1");
         } else {
             request.setAttribute("error", "Không thể cập nhật hồ sơ. Vui lòng thử lại.");
             renderProfileWithError(request, response, user);
