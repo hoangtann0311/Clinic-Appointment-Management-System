@@ -335,20 +335,23 @@ public class InvoiceDAO {
 
     public int createOrAppendPostExamServiceInvoice(Connection conn, int appointmentId, int serviceId, java.math.BigDecimal price) throws SQLException {
         String selectSql = "SELECT id, total_amount, status FROM invoices WITH (UPDLOCK, HOLDLOCK) WHERE appointment_id = ? AND UPPER(invoice_type) = 'POST_EXAM'";
+        int invoiceId;
         try (PreparedStatement ps = conn.prepareStatement(selectSql)) {
             ps.setInt(1, appointmentId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    int existingId = rs.getInt("id");
+                    invoiceId = rs.getInt("id");
                     java.math.BigDecimal curAmt = rs.getBigDecimal("total_amount");
                     java.math.BigDecimal newAmt = curAmt != null ? curAmt.add(price != null ? price : java.math.BigDecimal.ZERO) : price;
                     String updateSql = "UPDATE invoices SET total_amount = ? WHERE id = ?";
                     try (PreparedStatement ups = conn.prepareStatement(updateSql)) {
                         ups.setBigDecimal(1, newAmt);
-                        ups.setInt(2, existingId);
+                        ups.setInt(2, invoiceId);
                         ups.executeUpdate();
                     }
-                    return existingId;
+                    // Liên kết dịch vụ với hóa đơn (dùng chung connection tránh deadlock FK)
+                    ensureInvoiceItem(conn, invoiceId, serviceId, "service", price.doubleValue(), 1);
+                    return invoiceId;
                 }
             }
         }
@@ -358,7 +361,12 @@ public class InvoiceDAO {
             ips.setBigDecimal(2, price);
             ips.executeUpdate();
             try (ResultSet keys = ips.getGeneratedKeys()) {
-                if (keys.next()) return keys.getInt(1);
+                if (keys.next()) {
+                    invoiceId = keys.getInt(1);
+                    // Liên kết dịch vụ với hóa đơn mới (dùng chung connection tránh deadlock FK)
+                    ensureInvoiceItem(conn, invoiceId, serviceId, "service", price.doubleValue(), 1);
+                    return invoiceId;
+                }
             }
         }
         return -1;
@@ -370,6 +378,60 @@ public class InvoiceDAO {
         } catch (SQLException e) {
             System.err.println("[InvoiceDAO] createOrAppendPostExamServiceInvoice ERROR: " + e.getMessage());
             return -1;
+        }
+    }
+
+    /**
+     * Đảm bảo invoice_items có dòng cho dịch vụ — liên kết dịch vụ với hóa đơn.
+     * Nếu đã có dòng cho service_id này trong invoice này thì cập nhật, ngược lại INSERT mới.
+     * <p>
+     * Dùng connection riêng — chỉ gọi ngoài transaction.
+     * Trong transaction phải dùng {@link #ensureInvoiceItem(Connection, int, int, String, double, int)}.
+     */
+    public void ensureInvoiceItem(int invoiceId, int serviceId, String itemType, double unitPrice, int quantity) {
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            ensureInvoiceItem(conn, invoiceId, serviceId, itemType, unitPrice, quantity);
+        } catch (SQLException e) {
+            System.err.println("[InvoiceDAO] ensureInvoiceItem ERROR: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Cùng logic như {@link #ensureInvoiceItem(int, int, String, double, int)}
+     * nhưng dùng chung connection — bắt buộc khi đang ở trong một transaction
+     * để tránh deadlock FK giữa hai connection.
+     */
+    private void ensureInvoiceItem(Connection conn, int invoiceId, int serviceId,
+                                   String itemType, double unitPrice, int quantity)
+            throws SQLException {
+        String checkSql = "SELECT id FROM invoice_items WHERE invoice_id = ? AND item_id = ? AND item_type = ?";
+        try (PreparedStatement ps = conn.prepareStatement(checkSql)) {
+            ps.setInt(1, invoiceId);
+            ps.setInt(2, serviceId);
+            ps.setString(3, itemType);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    String upd = "UPDATE invoice_items SET unit_price = ?, quantity = ?, subtotal = ? WHERE id = ?";
+                    try (PreparedStatement up = conn.prepareStatement(upd)) {
+                        up.setDouble(1, unitPrice);
+                        up.setInt(2, quantity);
+                        up.setDouble(3, unitPrice * quantity);
+                        up.setInt(4, rs.getInt("id"));
+                        up.executeUpdate();
+                    }
+                } else {
+                    String ins = "INSERT INTO invoice_items (invoice_id, item_type, item_id, quantity, unit_price, subtotal) VALUES (?, ?, ?, ?, ?, ?)";
+                    try (PreparedStatement in = conn.prepareStatement(ins)) {
+                        in.setInt(1, invoiceId);
+                        in.setString(2, itemType);
+                        in.setInt(3, serviceId);
+                        in.setInt(4, quantity);
+                        in.setDouble(5, unitPrice);
+                        in.setDouble(6, unitPrice * quantity);
+                        in.executeUpdate();
+                    }
+                }
+            }
         }
     }
 

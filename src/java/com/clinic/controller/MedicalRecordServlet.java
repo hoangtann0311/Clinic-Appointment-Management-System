@@ -102,25 +102,89 @@ public class MedicalRecordServlet extends HttpServlet {
                 java.util.List<MedicalRecord> records = dao.getClinicalHistoryForDoctor(patientId, doctorId);
                 String patientName = getPatientNameById(patientId);
 
-                // Load thêm dữ liệu siêu âm & đơn thuốc cho từng record
+                // Batch load siêu âm & đơn thuốc — 1 query mỗi loại thay vì N queries
                 java.util.Map<Integer, Boolean> hasUltrasoundMap = new java.util.HashMap<>();
                 java.util.Map<Integer, Boolean> ultrasoundCompletedMap = new java.util.HashMap<>();
                 java.util.Map<Integer, com.clinic.model.Prescription> rxMap = new java.util.HashMap<>();
-                com.clinic.dao.PrescriptionDAO prescriptionDAO = new com.clinic.dao.PrescriptionDAO();
 
-                for (MedicalRecord rec : records) {
-                    int apptId = rec.getAppointmentId();
-                    boolean hasUs = dao.hasAnyUltrasoundOrderForAppointment(apptId);
-                    hasUltrasoundMap.put(rec.getId(), hasUs);
-                    if (hasUs) {
-                        ultrasoundCompletedMap.put(rec.getId(),
-                                !dao.hasBlockingUltrasoundOrdersForAppointment(apptId));
+                if (!records.isEmpty()) {
+                    // Gom các appointment_id và record_id
+                    java.util.Set<Integer> apptIds = new java.util.HashSet<>();
+                    java.util.Set<Integer> recordIds = new java.util.HashSet<>();
+                    for (MedicalRecord rec : records) {
+                        apptIds.add(rec.getAppointmentId());
+                        if (rec.getId() > 0) recordIds.add(rec.getId());
                     }
-                    // Load đơn thuốc nếu record có id
-                    if (rec.getId() > 0) {
-                        com.clinic.model.Prescription rx = prescriptionDAO.getByMedicalRecordId(rec.getId());
-                        if (rx != null && rx.getItems() != null && !rx.getItems().isEmpty()) {
-                            rxMap.put(rec.getId(), rx);
+
+                    // 1 query batch lấy tất cả ultrasound orders cho các appointment
+                    if (!apptIds.isEmpty()) {
+                        try (java.sql.Connection c = com.clinic.config.DatabaseConfig.getConnection();
+                             java.sql.PreparedStatement ps = c.prepareStatement(
+                                     "SELECT mr.id AS record_id, mr.appointment_id, " +
+                                     "  CASE WHEN COUNT(to2.id) > 0 THEN 1 ELSE 0 END AS has_us, " +
+                                     "  CASE WHEN SUM(CASE WHEN to2.status IN ('Pending','Ordered','InProgress','Uploaded') THEN 1 ELSE 0 END) > 0 THEN 1 ELSE 0 END AS has_blocking " +
+                                     "FROM medical_records mr " +
+                                     "LEFT JOIN test_orders to2 ON to2.medical_record_id = mr.id " +
+                                     "WHERE mr.appointment_id IN (" + String.join(",", apptIds.stream().map(String::valueOf).toArray(String[]::new)) + ") " +
+                                     "GROUP BY mr.id, mr.appointment_id")) {
+                            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                                while (rs.next()) {
+                                    int recId = rs.getInt("record_id");
+                                    hasUltrasoundMap.put(recId, rs.getInt("has_us") > 0);
+                                    ultrasoundCompletedMap.put(recId, rs.getInt("has_blocking") == 0);
+                                }
+                            }
+                        } catch (Exception e) {
+                            System.err.println("[MedicalRecordServlet] batch ultrasound load: " + e.getMessage());
+                        }
+                    }
+
+                    // 1 query batch lấy prescriptions cho các record
+                    if (!recordIds.isEmpty()) {
+                        com.clinic.dao.PrescriptionDAO prescriptionDAO = new com.clinic.dao.PrescriptionDAO();
+                        try (java.sql.Connection c = com.clinic.config.DatabaseConfig.getConnection();
+                             java.sql.PreparedStatement ps = c.prepareStatement(
+                                     "SELECT p.id, p.medical_record_id, p.prescription_code, p.status, p.created_at, " +
+                                     "  pi.id AS item_id, pi.medicine_id, pi.quantity, pi.dosage, m.name AS med_name, m.unit AS med_unit " +
+                                     "FROM prescriptions p " +
+                                     "JOIN prescription_items pi ON pi.prescription_id = p.id " +
+                                     "JOIN medicines m ON m.id = pi.medicine_id " +
+                                     "WHERE p.medical_record_id IN (" + String.join(",", recordIds.stream().map(String::valueOf).toArray(String[]::new)) + ") " +
+                                     "ORDER BY p.medical_record_id, pi.id")) {
+                            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                                com.clinic.model.Prescription currentRx = null;
+                                int currentRecId = -1;
+                                while (rs.next()) {
+                                    int recId = rs.getInt("medical_record_id");
+                                    if (currentRecId != recId) {
+                                        if (currentRx != null && !currentRx.getItems().isEmpty()) {
+                                            rxMap.put(currentRecId, currentRx);
+                                        }
+                                        currentRx = new com.clinic.model.Prescription();
+                                        currentRx.setId(rs.getInt("id"));
+                                        currentRx.setPrescriptionCode(rs.getString("prescription_code"));
+                                        currentRx.setStatus(rs.getString("status"));
+                                        java.sql.Timestamp ts = rs.getTimestamp("created_at");
+                                        if (ts != null) currentRx.setCreatedAt(ts.toLocalDateTime());
+                                        currentRx.setItems(new java.util.ArrayList<>());
+                                        currentRecId = recId;
+                                    }
+                                    if (currentRx != null) {
+                                        com.clinic.model.PrescriptionItem item = new com.clinic.model.PrescriptionItem();
+                                        item.setId(rs.getInt("item_id"));
+                                        item.setMedicineId(rs.getInt("medicine_id"));
+                                        item.setQuantity(rs.getInt("quantity"));
+                                        item.setDosage(rs.getString("dosage"));
+                                        item.setMedicineName(rs.getString("med_name"));
+                                        currentRx.getItems().add(item);
+                                    }
+                                }
+                                if (currentRx != null && !currentRx.getItems().isEmpty()) {
+                                    rxMap.put(currentRecId, currentRx);
+                                }
+                            }
+                        } catch (Exception e) {
+                            System.err.println("[MedicalRecordServlet] batch rx load: " + e.getMessage());
                         }
                     }
                 }
@@ -779,10 +843,22 @@ public class MedicalRecordServlet extends HttpServlet {
                 dao.hasAnyUltrasoundOrderForAppointment(apptId));
 
         List<Service> allUltrasound = serviceDAO.findUltrasoundServices();
+        // Batch query: lấy tất cả service_id đã booked cho appointment này (1 query thay vì N)
+        java.util.Set<Integer> bookedServiceIds = new java.util.HashSet<>();
+        try (java.sql.Connection c = com.clinic.config.DatabaseConfig.getConnection();
+             java.sql.PreparedStatement ps = c.prepareStatement(
+                     "SELECT service_id FROM appointment_services WHERE appointment_id = ? " +
+                     "UNION SELECT service_id FROM appointments WHERE id = ? AND service_id > 0")) {
+            ps.setInt(1, apptId);
+            ps.setInt(2, apptId);
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) bookedServiceIds.add(rs.getInt("service_id"));
+            }
+        } catch (Exception ignored) {}
         List<Service> bookedUltrasound = new ArrayList<>();
         List<Service> additionalUltrasound = new ArrayList<>();
         for (Service s : allUltrasound) {
-            if (appointmentDAO.hasBookedService(apptId, s.getId())) {
+            if (bookedServiceIds.contains(s.getId())) {
                 bookedUltrasound.add(s);
             } else {
                 additionalUltrasound.add(s);

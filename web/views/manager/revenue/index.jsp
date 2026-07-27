@@ -256,7 +256,6 @@
                                     <th>Dịch Vụ</th>
                                     <th>Bác Sĩ</th>
                                     <th>Ngày Thanh Toán</th>
-                                    <th>Phương Thức</th>
                                     <th style="text-align:right;">Số Tiền</th>
                                     <th>Trạng Thái</th>
                                     <th style="text-align:center;">Chi Tiết</th>
@@ -303,17 +302,6 @@
                                                 </c:when>
                                                 <c:when test="${not empty inv.createdAt}">
                                                     <fmt:formatDate value="${inv.createdAt}" pattern="dd/MM/yyyy"/>
-                                                </c:when>
-                                                <c:otherwise>—</c:otherwise>
-                                            </c:choose>
-                                        </td>
-                                        <td>
-                                            <c:choose>
-                                                <c:when test="${inv.paymentMethod == 'Cash'}">
-                                                    <span style="color:#059669;"><i class="bi bi-cash me-1"></i>Tiền mặt</span>
-                                                </c:when>
-                                                <c:when test="${inv.paymentMethod == 'BankTransfer'}">
-                                                    <span style="color:#2563EB;"><i class="bi bi-bank me-1"></i>CK</span>
                                                 </c:when>
                                                 <c:otherwise>—</c:otherwise>
                                             </c:choose>

@@ -37,11 +37,14 @@ public class MedicalRecordDAO {
         "  a.symptoms, " +
         "  CONVERT(varchar, a.last_menstrual_period, 23)     AS last_menstrual_period, " +
         "  a.pregnancy_id, " +
-        "  d.full_name AS doctor_name " +
+        "  d.full_name AS doctor_name, " +
+        "  sh.name AS shift_name, sh.start_time AS shift_start, sh.end_time AS shift_end " +
         "FROM medical_records mr " +
         "JOIN appointments a ON mr.appointment_id = a.id " +
         "JOIN patients pt    ON a.patient_id = pt.id " +
-        "LEFT JOIN doctors d ON a.doctor_id = d.id ";
+        "LEFT JOIN doctors d ON a.doctor_id = d.id " +
+        "LEFT JOIN doctor_schedules ds ON a.schedule_id = ds.id " +
+        "LEFT JOIN shifts sh ON ds.shift_id = sh.id ";
 
     public MedicalRecord getByAppointmentId(int appointmentId) {
         try (Connection conn = DatabaseConfig.getConnection();
@@ -516,6 +519,15 @@ public class MedicalRecordDAO {
         try { mr.setPatientDob(rs.getString("patient_dob")); } catch (SQLException ignored) {}
         mr.setAppointmentDate(rs.getString("appointment_date"));
         mr.setTimeSlot(rs.getString("time_slot"));
+        // Tạo shiftLabel từ shift_name + start_time + end_time
+        try {
+            String sn = rs.getString("shift_name");
+            String ss = rs.getString("shift_start");
+            String se = rs.getString("shift_end");
+            if (sn != null && ss != null && se != null) {
+                mr.setShiftLabel(sn + " (" + ss.substring(0, 5) + "–" + se.substring(0, 5) + ")");
+            }
+        } catch (SQLException ignored) {}
         mr.setSymptoms(rs.getString("symptoms"));
         mr.setLastMenstrualPeriod(rs.getString("last_menstrual_period"));
         int pid = rs.getInt("pregnancy_id"); if (!rs.wasNull()) mr.setPregnancyId(pid);

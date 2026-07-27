@@ -110,15 +110,6 @@
                 </a>
             </li>
 
-            <li class="admin-sidebar-section">Tài khoản</li>
-            <li>
-                <a href="${pageContext.request.contextPath}/staff/profile"
-                   class="${fn:contains(requestURI, '/staff/profile') ? 'active' : ''}">
-                    <i class="bi bi-person-circle"></i>
-                    <span>Hồ Sơ Cá Nhân</span>
-                </a>
-            </li>
-
         </ul>
     </aside>
 
@@ -274,39 +265,29 @@
                                 </div>
                                 <c:if test="${preInvoice.status == 'PendingConfirmation' || preInvoice.status == 'Unpaid'}">
                                     <hr class="my-3">
-                                    <form method="POST" action="${pageContext.request.contextPath}/admin/reception/edit">
-                                        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
-                                        <input type="hidden" name="id" value="${apt.id}">
-                                        <input type="hidden" name="action" value="confirmPayment">
-                                        <div class="row g-3">
-                                            <div class="col-md-3">
-                                                <label class="form-label text-muted small fw-bold">PHƯƠNG THỨC</label>
-                                                <c:set var="editPayMethod" value="${empty preInvoice.paymentMethod ? 'Cash' : preInvoice.paymentMethod}"/>
-                                                <input type="hidden" name="paymentMethod" value="${editPayMethod}">
-                                                <select class="form-select" disabled>
-                                                    <option value="Cash" ${editPayMethod == 'Cash' ? 'selected' : ''}>Tiền mặt</option>
-                                                    <option value="BankTransfer" ${editPayMethod == 'BankTransfer' ? 'selected' : ''}>Chuyển khoản</option>
-                                                </select>
-                                            </div>
-                                            <div class="col-md-3" id="txCodeContainer" style="display: none;">
-                                                <label class="form-label text-muted small fw-bold">MÃ GIAO DỊCH <span class="text-danger">*</span></label>
-                                                <input type="text" class="form-control" name="transactionCode" placeholder="VD: FT24090...">
-                                            </div>
-                                            <div class="col-md-4">
-                                                <label class="form-label text-muted small fw-bold">GHI CHÚ</label>
-                                                <input type="text" class="form-control" name="paymentNote" placeholder="Thông tin thêm...">
-                                            </div>
-                                            <div class="col-md-2 d-flex align-items-end">
-                                                <button type="submit" class="btn btn-success fw-bold w-100">
-                                                    <i class="bi bi-check-lg me-1"></i>
-                                                    <c:choose>
-                                                        <c:when test="${preInvoice.status == 'Unpaid'}">Xác nhận TT</c:when>
-                                                        <c:otherwise>Đã thanh toán</c:otherwise>
-                                                    </c:choose>
-                                                </button>
-                                            </div>
+                                    <div class="row g-3">
+                                        <div class="col-md-3">
+                                            <label class="form-label text-muted small fw-bold">PHƯƠNG THỨC</label>
+                                            <c:set var="editPayMethod" value="${empty preInvoice.paymentMethod ? 'Cash' : preInvoice.paymentMethod}"/>
+                                            <select class="form-select" disabled>
+                                                <option value="Cash" ${editPayMethod == 'Cash' ? 'selected' : ''}>Tiền mặt</option>
+                                                <option value="BankTransfer" ${editPayMethod == 'BankTransfer' ? 'selected' : ''}>Chuyển khoản</option>
+                                            </select>
                                         </div>
-                                    </form>
+                                        <div class="col-md-4">
+                                            <label class="form-label text-muted small fw-bold">GHI CHÚ</label>
+                                            <input type="text" class="form-control" id="editPaymentNote" placeholder="Thông tin thêm...">
+                                        </div>
+                                        <div class="col-md-2 d-flex align-items-end">
+                                            <button type="button" class="btn btn-success fw-bold w-100" onclick="confirmPaymentFromEdit()">
+                                                <i class="bi bi-check-lg me-1"></i>
+                                                <c:choose>
+                                                    <c:when test="${preInvoice.status == 'Unpaid'}">Xác nhận TT</c:when>
+                                                    <c:otherwise>Đã thanh toán</c:otherwise>
+                                                </c:choose>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </c:if>
                             </div>
                         </div>
@@ -598,6 +579,23 @@
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') closeSidebar();
     });
+
+    function confirmPaymentFromEdit() {
+        if (!confirm('Xác nhận thanh toán tiền mặt cho bệnh nhân này? Nếu đã xác nhận, không thể hoàn tác.')) return;
+        var f = document.createElement('form');
+        f.method = 'POST';
+        f.action = '${pageContext.request.contextPath}/admin/reception/edit';
+        var csrf = document.createElement('input'); csrf.type = 'hidden'; csrf.name = '_csrf'; csrf.value = '${sessionScope.csrfToken}'; f.appendChild(csrf);
+        var id = document.createElement('input'); id.type = 'hidden'; id.name = 'id'; id.value = '${apt.id}'; f.appendChild(id);
+        var action = document.createElement('input'); action.type = 'hidden'; action.name = 'action'; action.value = 'confirmPayment'; f.appendChild(action);
+        var pm = document.createElement('input'); pm.type = 'hidden'; pm.name = 'paymentMethod'; pm.value = 'Cash'; f.appendChild(pm);
+        var note = document.getElementById('editPaymentNote');
+        if (note && note.value.trim()) {
+            var pn = document.createElement('input'); pn.type = 'hidden'; pn.name = 'paymentNote'; pn.value = note.value.trim(); f.appendChild(pn);
+        }
+        document.body.appendChild(f);
+        f.submit();
+    }
 </script>
 </body>
 </html>

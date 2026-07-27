@@ -85,7 +85,6 @@
                                 <th>Mã lịch hẹn</th>
                                 <th>Ngày tạo</th>
                                 <th>Số tiền</th>
-                                <th>Phương thức</th>
                                 <th class="text-center">Trạng thái</th>
                                 <th class="text-end pe-3">Ghi chú</th>
                             </tr>
@@ -141,19 +140,6 @@
                                     </td>
                                     <td class="fw-bold text-danger">
                                         <fmt:formatNumber value="${inv.totalAmount}" pattern="#,###"/>đ
-                                    </td>
-                                    <td class="small">
-                                        <c:choose>
-                                            <c:when test="${inv.paymentMethod == 'Cash'}">
-                                                <span style="color:#15803d;"><i class="bi bi-cash-stack me-1"></i>Tiền mặt</span>
-                                            </c:when>
-                                            <c:when test="${inv.paymentMethod == 'BankTransfer'}">
-                                                <span style="color:#0d6efd;"><i class="bi bi-bank me-1"></i>Chuyển khoản</span>
-                                            </c:when>
-                                            <c:otherwise>
-                                                <span class="text-muted">—</span>
-                                            </c:otherwise>
-                                        </c:choose>
                                     </td>
                                     <td class="text-center">
                                         <c:choose>

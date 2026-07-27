@@ -123,15 +123,6 @@
                     <span>Lịch Làm Việc</span>
                 </a>
             </li>
-
-            <li class="admin-sidebar-section">Tài khoản</li>
-            <li>
-                <a href="${pageContext.request.contextPath}/staff/profile"
-                   class="${fn:contains(requestURI, '/staff/profile') ? 'active' : ''}">
-                    <i class="bi bi-person-circle"></i>
-                    <span>Hồ Sơ Cá Nhân</span>
-                </a>
-            </li>
         </ul>
     </aside>
 
